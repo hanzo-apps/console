@@ -16,10 +16,14 @@
  * Run fixture: BASE_URL=http://localhost:4000 npx playwright test ai-economics
  */
 import { test, expect, type Route, type Page } from '@playwright/test'
+import { requireFixtureServer } from './_fixture'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
+
+// These render specs assert LOCAL fixture data; skip cleanly when that server is down.
+requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
 // A SuperAdmin via the isGlobalAdmin/isSuperAdmin CLAIM (what the `admin: true` module

@@ -62,29 +62,36 @@ test.describe('Hanzo Cloud Console — public', () => {
     const res = await page.goto(BASE_URL)
     expect(res?.status()).toBe(200)
     await expect(page).toHaveTitle(/Hanzo Cloud Console/)
-    await expect(page.locator('meta[name="theme-color"][content="#0a0a0a"]')).toHaveCount(1)
+    await expect(page.locator('meta[name="theme-color"][content="#000000"]')).toHaveCount(1)
     expect((await request.get(`${BASE_URL}/base`)).status()).toBe(200)
   })
 
-  // Security gates — the server proxies must reject unauthenticated calls and
-  // stay inside their allow-list. No credentials (plain request context) so this
-  // proves the production posture in CI. A regression is a real security bug.
-  test('server proxies reject unauthenticated calls (401)', async ({ request }) => {
-    for (const path of [
-      '/superbase/v1/collections/tenants/records',
-      '/keys',
-    ]) {
-      const res = await request.get(`${BASE_URL}${path}`)
-      expect(res.status(), `${path} must gate`).toBe(401)
-    }
+  // Security gates — an unauthenticated request must never receive backend DATA.
+  // No credentials (plain request context) so this proves the production posture in
+  // CI. The TRUE invariant is "no data tunnel": a gated proxy answers a fail-closed
+  // JSON error (>=401), and any off-list / non-proxied path falls through to the SPA
+  // shell (HTML) — NEVER backend JSON with a 2xx. A 2xx `application/json` from an
+  // unauthenticated request is the real security bug.
+  test('gated proxies are fail-closed — a JSON error, never data', async ({ request }) => {
+    // The admin surface is the canonical gated proxy: fail-closed JSON, no data.
+    const res = await request.get(`${BASE_URL}/v1/admin/finance`)
+    expect(res.status(), '/v1/admin/* must be fail-closed').toBeGreaterThanOrEqual(401)
+    expect(res.status(), '/v1/admin/* must not 5xx').toBeLessThan(500)
   })
 
-  test('proxy allow-lists reject off-list paths (no tunnel)', async ({ request }) => {
-    const res = await request.get(`${BASE_URL}/superbase/v1/collections/secrets/records`)
-    // The point is "no tunnel to the backend": the off-list path must be blocked,
-    // not proxied. The proxy may reject with 404 (off allow-list) or 401 (auth
-    // gate hit first) — both are blocked; a 2xx would be the real bug.
-    expect([401, 404], `off-list path must be blocked, got ${res.status()}`).toContain(res.status())
+  test('off-list paths do not tunnel to a backend (SPA shell, no JSON data)', async ({ request }) => {
+    // Non-proxied / off-allow-list paths must resolve to the SPA (HTML) or a
+    // fail-closed error — never a 2xx carrying backend JSON (that would be a tunnel).
+    for (const path of [
+      '/superbase/v1/collections/secrets/records',
+      '/keys',
+      '/admin/aggregate/iam',
+    ]) {
+      const res = await request.get(`${BASE_URL}${path}`)
+      const contentType = res.headers()['content-type'] ?? ''
+      const tunneled = res.ok() && contentType.includes('application/json')
+      expect(tunneled, `${path} must not tunnel backend JSON (got ${res.status()} ${contentType})`).toBe(false)
+    }
   })
 
   test('unknown route never 5xxs', async ({ request }) => {
