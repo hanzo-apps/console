@@ -129,7 +129,7 @@ const rec = (v: unknown): Record<string, unknown> => (v && typeof v === 'object'
  * so a bring-your-own GPU shows its VRAM instead of `—`. Returns `undefined` for
  * anything unparseable (never a fabricated 0). PURE.
  */
-const gbOf = (v: unknown): number | undefined => {
+export const gbOf = (v: unknown): number | undefined => {
   const n = num(v)
   if (n !== undefined) return n
   const s = str(v)
