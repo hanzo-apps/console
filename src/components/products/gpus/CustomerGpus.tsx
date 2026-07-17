@@ -35,12 +35,14 @@ import {
 } from '~/lib/api/visor'
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { gpuClustersOf } from '~/lib/api/compute'
+import { FleetApi, onlineCount, type FleetWorker } from '~/lib/api/fleet'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { useDetailPane } from '~/components/DetailPane'
 import { productColorHex } from '~/lib/products/colors'
 import { LaunchDrawer } from '../machines/LaunchDrawer'
 import { ConnectGpuDrawer } from './ConnectGpuDrawer'
+import { ConnectedMachines } from './ConnectedMachines'
 import { FundingNote } from '../machines/FundingNote'
 import { interpretPlatformError } from '../platform/state'
 import { GpuTabBar, gpuTabId } from './tabs'
@@ -152,27 +154,41 @@ const machineColumns: Column<VisorMachine>[] = [
 
 type CustomerGpuData = {
   catalog: VisorGpuSize[]
+  /** Cloud-provisioned GPU VMs (BYO boxes excluded — they are the fleet below). */
   machines: VisorMachine[]
+  /** The BYO connect fleet with live heartbeat (`GET /v1/fleet/workers`). */
+  workers: Async<FleetWorker[]>
   clusters: Async<Cluster[]>
   /** Catalog still loading (gates the catalog-derived tabs). */
   loading: boolean
   reload: () => void
 }
 
-/** Load every CUSTOMER-scoped GPU source: the visor catalog + the org's own GPU
- *  machines (`/v1/vm`), and the org's own clusters (`/v1/clusters`). All independent
- *  so a slow/denied source never blocks another; the catalog gates first render. */
+/** Load every CUSTOMER-scoped GPU source: the visor catalog, the org's cloud GPU
+ *  machines (`/v1/machines`), the BYO connect fleet (`/v1/fleet/workers`), and the
+ *  org's own clusters (`/v1/clusters`). All independent so a slow/denied source never
+ *  blocks another; the catalog gates first render. */
 function useCustomerGpuData(): CustomerGpuData {
   const [catalog, setCatalog] = useState<VisorGpuSize[]>([])
   const [machines, setMachines] = useState<VisorMachine[]>([])
+  const [workers, setWorkers] = useState<Async<FleetWorker[]>>({ phase: 'loading' })
   const [clusters, setClusters] = useState<Async<Cluster[]>>({ phase: 'loading' })
   const [loading, setLoading] = useState(true)
 
   const reload = useCallback(() => {
     setLoading(true)
+    setWorkers({ phase: 'loading' })
     setClusters({ phase: 'loading' })
     VisorApi.gpus().then(setCatalog).catch(() => setCatalog([])).finally(() => setLoading(false))
-    VisorApi.machines().then((m) => setMachines(m.filter(isGpuMachine))).catch(() => setMachines([]))
+    // Cloud GPU VMs only — the BYO boxes are the connect fleet (shown ONCE below, with
+    // live heartbeat, from /v1/fleet/workers), so they are excluded here to avoid a
+    // double-listing of the same machine.
+    VisorApi.machines()
+      .then((m) => setMachines(m.filter((x) => isGpuMachine(x) && (x.provider ?? '').toLowerCase() !== 'byo')))
+      .catch(() => setMachines([]))
+    FleetApi.workers()
+      .then((data) => setWorkers({ phase: 'ready', data }))
+      .catch((e) => setWorkers({ phase: 'error', error: interpretPlatformError(e) }))
     PlatformApi.listClusters()
       .then((data) => setClusters({ phase: 'ready', data }))
       .catch((e) => setClusters({ phase: 'error', error: interpretPlatformError(e) }))
@@ -180,7 +196,7 @@ function useCustomerGpuData(): CustomerGpuData {
 
   useEffect(() => reload(), [reload])
 
-  return { catalog, machines, clusters, loading, reload }
+  return { catalog, machines, workers, clusters, loading, reload }
 }
 
 // ── Module ────────────────────────────────────────────────────────────────────
@@ -188,7 +204,10 @@ function useCustomerGpuData(): CustomerGpuData {
 export function CustomerGpus({ params }: { params?: Record<string, string> }) {
   const tab = gpuTabId(params?.tab)
   const detail = useDetailPane()
-  const { catalog, machines, clusters, loading, reload } = useCustomerGpuData()
+  const { catalog, machines, workers, clusters, loading, reload } = useCustomerGpuData()
+
+  const connectedCount = workers.phase === 'ready' ? workers.data.length : 0
+  const onlineConnected = workers.phase === 'ready' ? onlineCount(workers.data) : 0
 
   const available = useMemo(() => launchableGpus(catalog), [catalog])
   const models = useMemo(() => distinctModelCount(available), [available])
@@ -290,7 +309,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
       {tab === 'settings' ? (
         <CustomerSettingsTab
           accelerators={available.length}
-          machines={machines.length}
+          machines={machines.length + connectedCount}
           clusters={clusters.phase === 'ready' ? clusters.data.length : 0}
           onLaunch={() => launch()}
         />
@@ -309,37 +328,30 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
         <FundingNote kind="gpu" />
 
         <XStack flexWrap="wrap" gap="$3" items="stretch">
+          <StatCard label="Connected machines" value={String(connectedCount)} sub={connectedCount ? `${onlineConnected} online · hanzo gpu connect` : 'hanzo gpu connect'} />
           <StatCard
             label="Accelerators"
             value={String(available.length)}
             sub={models ? `${models} GPU model${models === 1 ? '' : 's'} · available to launch` : 'available to launch'}
           />
-          <StatCard label="From" value={cheapest != null ? fmtHourly(cheapest) : DASH} sub="cheapest accelerator" />
-          <StatCard label="Your GPU machines" value={String(machines.length)} sub={machines.length ? 'running' : 'none yet'} />
+          <StatCard label="Cloud GPU machines" value={String(machines.length)} sub={machines.length ? 'running' : 'none yet'} />
           <StatCard label="GPU clusters" value={clusters.phase === 'ready' ? String(gpuClusters.length) : DASH} sub={gpuClusters.length ? 'dedicated' : 'shared Hanzo Cloud'} />
         </XStack>
 
+        {/* The BYO connect fleet — your own hardware, with live heartbeat. */}
+        <ConnectedMachines workers={workers} reload={reload} onConnect={connect} />
+
+        {/* Cloud-provisioned GPU VMs (shown when any; the deploy path is the header +
+            the live catalog below, so no redundant empty card here). */}
         {machines.length ? (
           <YStack gap="$2">
             <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
-              <Text fontSize="$4" fontWeight="800" color="$color12">Your GPU machines</Text>
+              <Text fontSize="$4" fontWeight="800" color="$color12">Cloud GPU machines</Text>
               <Text fontSize="$1" color="$color10">{machines.length} running · full list in GPUs</Text>
             </XStack>
-            <DataTable columns={machineColumns} rows={machines.slice(0, 5)} rowKey={(m) => m.id} empty="No GPU machines yet." />
+            <DataTable columns={machineColumns} rows={machines.slice(0, 5)} rowKey={(m) => m.id} empty="No cloud GPU machines yet." />
           </YStack>
-        ) : (
-          <Card borderWidth={1} borderColor="$borderColor" borderStyle="dashed" p="$5" items="center" gap="$2">
-            <Rocket size={20} />
-            <Text fontSize="$3" fontWeight="700">Add your first GPU</Text>
-            <Text fontSize="$2" color="$color11" text="center" maxW={460}>
-              Bring a GPU you already own into your fleet, or deploy one in the cloud in seconds. Cloud GPUs are prepay-only, charged to your payment card with a 24-hour minimum.
-            </Text>
-            <XStack gap="$2" flexWrap="wrap" justify="center">
-              <Button size="$2" borderWidth={1} borderColor="$borderColor" icon={<Cable size={15} />} onPress={connect}>Connect GPU</Button>
-              <Button size="$2" theme="light" icon={<Rocket size={15} />} onPress={() => launch()}>Deploy GPU</Button>
-            </XStack>
-          </Card>
-        )}
+        ) : null}
 
         <YStack gap="$2">
           <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
@@ -359,10 +371,12 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
   function renderGpus() {
     return (
       <YStack gap="$4">
+        <ConnectedMachines workers={workers} reload={reload} onConnect={connect} />
+
         {machines.length ? (
           <YStack gap="$2">
-            <Text fontSize="$4" fontWeight="800" color="$color12">Your GPU machines</Text>
-            <DataTable columns={machineColumns} rows={machines} rowKey={(m) => m.id} empty="No GPU machines yet." />
+            <Text fontSize="$4" fontWeight="800" color="$color12">Cloud GPU machines</Text>
+            <DataTable columns={machineColumns} rows={machines} rowKey={(m) => m.id} empty="No cloud GPU machines yet." />
           </YStack>
         ) : null}
 

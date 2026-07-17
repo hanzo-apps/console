@@ -90,6 +90,16 @@ describe('white-label cloud tenants (7stars / yotoda)', () => {
     expect(resolveConfig('cloud.yotoda.tech').docsUrl).toBe('https://docs.yotoda.tech')
   })
 
+  it('derives a per-brand pay.<brand> host (white-label-safe — never crosses brands)', () => {
+    // The Wallet "Top up" links here in a new tab; each brand gets ITS OWN payment host.
+    expect(resolveConfig('console.hanzo.ai').payUrl).toBe('https://pay.hanzo.ai')
+    expect(resolveConfig('cloud.lux.cloud').payUrl).toBe('https://pay.lux.cloud')
+    expect(resolveConfig('cloud.zoo.cloud').payUrl).toBe('https://pay.zoo.cloud')
+    expect(resolveConfig('cloud.7stars.dev').payUrl).toBe('https://pay.7stars.dev')
+    // A non-hanzo brand NEVER links to pay.hanzo.ai (white-label isolation).
+    expect(resolveConfig('cloud.lux.cloud').payUrl).not.toContain('hanzo')
+  })
+
   it('admin.<tenant> still uses the ONE global admin app+org, keeping the brand', () => {
     expect(resolveConfig('admin.7stars.dev').iamClientId).toBe('admin-console')
     expect(resolveConfig('admin.7stars.dev').iamOrgName).toBe('admin')

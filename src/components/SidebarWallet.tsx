@@ -7,15 +7,18 @@
  * so this footer no longer repeats the name/avatar — it is purely the wallet:
  * - The balance row → the in-console **Billing** module (`/billing`): balance, usage,
  *   invoices — the org's own data, scoped to the active org.
- * - **Top up** → the in-console card top-up (`/billing/credits`). **Sign out** beneath.
+ * - **Top up** → the brand's hosted payment page (`config.payUrl`, e.g. pay.hanzo.ai)
+ *   in a NEW TAB. Display + link only: the wallet never hosts a card form or mints
+ *   credit — the hosted page owns payment. **Sign out** beneath.
  *
  * The balance comes from the per-tenant `/billing/*` server proxy, scoped to the
  * caller's OWN org — the exact credit the gateway debits.
  */
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { ChevronRight, LogOut, Wallet } from '@hanzogui/lucide-icons-2'
+import { ChevronRight, ExternalLink, LogOut, Wallet } from '@hanzogui/lucide-icons-2'
 
+import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { useCloudBalance, spendableCents, balanceSplitLabel } from '~/lib/billing/live-balance'
 
@@ -38,8 +41,11 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
 
   const balanceText = cents === null ? '—' : fmtUsd(cents)
   const openCost = () => router.push('/billing')
-  // In-console card top-up (Square) — the /billing/credits page.
-  const openTopUp = () => router.push('/billing/credits')
+  // Top up → the brand's hosted payment page in a new tab (display + link only; the
+  // console never hosts a card form or mints credit — pay.<brand> owns payment).
+  const openTopUp = () => {
+    if (typeof window !== 'undefined') window.open(config.payUrl, '_blank', 'noopener,noreferrer')
+  }
 
   if (collapsed) {
     // Two stacked affordances: wallet/top-up + sign out (the identity is the top avatar).
@@ -72,7 +78,7 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
         {splitText ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{splitText}</Text> : null}
       </YStack>
 
-      <Button size="$2" onPress={openTopUp}>Top up</Button>
+      <Button size="$2" onPress={openTopUp} iconAfter={<ExternalLink size={13} />} aria-label="Top up — opens the payment page in a new tab">Top up</Button>
       <Button size="$2" chromeless icon={<LogOut size={15} />} onPress={() => void signOut()} justify="center">
         Sign out
       </Button>
