@@ -328,6 +328,31 @@ export async function post<T = string>(path: string, body?: unknown, query?: Que
   return r
 }
 
+/**
+ * IAM over the SAME `/v1` path + resilient fetch as every cloud call — IAM's
+ * `{status,msg,data,data2}` envelope IS our `ApiResponse`, so there is no second
+ * client. These target `/v1/iam/<segment>`, which the cloud IAM edge (org-scoped)
+ * serves in the one-binary console and the `/v1` bearer proxy forwards in the split
+ * one — ONE path, ONE gate, in both topologies. `iamList` surfaces `data2` (the
+ * total) that plain `get` drops.
+ */
+export async function iamList<T>(segment: string, query?: Query): Promise<{ rows: T[]; total: number }> {
+  const r = await request<T[]>('GET', `iam/${segment}`, { query })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  const rows = Array.isArray(r.data) ? r.data : []
+  return { rows, total: typeof r.data2 === 'number' ? r.data2 : rows.length }
+}
+
+export async function iamOne<T>(segment: string, query?: Query): Promise<T> {
+  const r = await request<T>('GET', `iam/${segment}`, { query })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  if (r.data === undefined || r.data === null) throw new ApiError('Not found', 404)
+  return r.data
+}
+
+export const iamMutate = (segment: string, body?: unknown, query?: Query): Promise<void> =>
+  post<unknown>(`iam/${segment}`, body, query).then(() => undefined)
+
 /** Owner/name -> the `id` query param the backend expects (`owner/name`). */
 export const idOf = (owner: string, name: string): string => `${owner}/${encodeURIComponent(name)}`
 
