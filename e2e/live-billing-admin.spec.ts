@@ -43,13 +43,22 @@ test.describe('LIVE v8.4.15 — (b) admin gate fail-closed', () => {
       const res = await request.get(`${CONSOLE}/v1/admin/${head}`)
       expect(res.status(), `${CONSOLE}/v1/admin/${head} must be 403`).toBe(403)
     }
-    // The console's OWN H1 route is also fail-closed.
+    // The console's OWN admin-aggregate route refuses data too. On the standalone
+    // console it's a 403 gate; on the go:embed console.hanzo.ai the Next BFF route is
+    // pruned, so it falls through to the SPA shell (HTML) — both refuse. The invariant
+    // is "no data tunnel": >=401 OR HTML, never a 2xx carrying backend JSON.
     const own = await request.get(`${CONSOLE}/admin/aggregate/overview`)
-    expect(own.status(), 'console app /admin/aggregate gate must be 403').toBe(403)
-    // Least privilege: iam/kms are NOT reachable through the aggregate rewrite.
+    const ownCt = own.headers()['content-type'] ?? ''
+    expect(own.ok() && ownCt.includes('application/json'), 'console /admin/aggregate must not tunnel backend JSON').toBe(false)
+    // Least privilege: iam/kms are NOT reachable through the aggregate rewrite —
+    // they fall through to the SPA shell (HTML), never backend JSON. The invariant
+    // is "no data tunnel": a >=401 gate OR an HTML SPA response is fine; a 2xx
+    // carrying application/json backend data would be the real leak.
     for (const head of ['iam', 'kms']) {
       const res = await request.get(`${CONSOLE}/admin/aggregate/${head}`)
-      expect([403, 404], `${head} must not tunnel via aggregate`).toContain(res.status())
+      const contentType = res.headers()['content-type'] ?? ''
+      const tunneled = res.ok() && contentType.includes('application/json')
+      expect(tunneled, `${head} must not tunnel backend JSON via aggregate (got ${res.status()} ${contentType})`).toBe(false)
     }
     // Edge-guarded admin host: cold hit is refused (401 forward-auth) — never open.
     const edge = await request.get(`${ADMIN}/v1/admin/overview`)
