@@ -45,7 +45,7 @@ async function consoleGet(): Promise<SessionResult | null> {
  *  "anonymous-user" for the chat product; an anonymous session is NOT signed in. */
 async function casibaseAccount(): Promise<Account | null> {
   try {
-    const account = await get<Account>('iam/get-account')
+    const account = await get<Account>('get-account')
     if (!account || account.type === 'anonymous-user') return null
     return account
   } catch {
@@ -103,7 +103,7 @@ export const AccountApi = {
   },
 
   /** Exchange the IAM OAuth code+state for a casibase session cookie (redirect flow). */
-  signin: (code: string, state: string) => post<Account>('iam/signin', undefined, { code, state }),
+  signin: (code: string, state: string) => post<Account>('signin', undefined, { code, state }),
 
   /**
    * Redeem an ADMIN credential login's OAuth code into the console's OWN durable session
@@ -141,7 +141,7 @@ export const AccountApi = {
       }
     }
     try {
-      await post('iam/signout')
+      await post('signout')
     } catch {
       /* best-effort */
     }
@@ -157,7 +157,7 @@ export const AccountApi = {
   updatePreferences: async (
     partial: Record<string, unknown>,
   ): Promise<Record<string, unknown>> => {
-    const r = await post<Record<string, unknown>>('iam/update-preferences', partial)
+    const r = await post<Record<string, unknown>>('update-preferences', partial)
     return r.data ?? {}
   },
 }
