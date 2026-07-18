@@ -337,6 +337,7 @@ describe('config: unified product shell (five faces)', () => {
     ads: 'ads.hanzo.ai',
     social: 'social.hanzo.ai',
     sentry: 'sentry.hanzo.ai',
+    dns: 'dns.hanzo.ai',
   }
 
   it('resolveConfig(host).shell is the host face; a full-console host is "console"', () => {
