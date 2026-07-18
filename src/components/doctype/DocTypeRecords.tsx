@@ -133,4 +133,3 @@ export function DocTypeRecords({ client, doctype, onOpen, onCreate, project, tit
   )
 }
 
-export default DocTypeRecords

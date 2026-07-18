@@ -61,4 +61,3 @@ export function AIAccountsModule({ params }: { params: Record<string, string> })
   )
 }
 
-export default AIAccountsModule

@@ -50,7 +50,6 @@ const rows = (payload: unknown) => arrayUnder(payload, ['data', 'items', 'rows']
 
 /** The startup pipeline stages (cloud stage machine; `rejected` is terminal). */
 export const STARTUP_STAGES = ['applied', 'screened', 'qualified', 'credits-offered', 'onboarded', 'rejected'] as const
-export type StartupStage = (typeof STARTUP_STAGES)[number]
 
 /** The AI screen stored on an application. */
 export type ScreenResult = {

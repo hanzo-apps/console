@@ -376,4 +376,3 @@ export function PaymentMethodsModule(_props: { params: Record<string, string> })
   )
 }
 
-export default PaymentMethodsModule

@@ -3404,10 +3404,6 @@ export const productModules: ProductModule[] = [
   categoryRouteModule,
 ]
 
-/** Look up an in-console module by id (base path segment). */
-export const findModule = (id: string): ProductModule | undefined =>
-  productModules.find((m) => m.id === id)
-
 /** Look up any catalog entry by id. */
 export const findEntry = (id: string): CatalogEntry | undefined =>
   catalog.find((e) => e.id === id)
@@ -3500,20 +3496,3 @@ export const visibleCatalogByCategory = (
     .filter((g) => g.entries.length > 0)
 }
 
-/**
- * Products a customer could ADD (enable) — the "Add product" flow's source. The
- * brand-scoped, non-admin catalog MINUS the always-on essentials MINUS what the org
- * already has enabled. Grouped by category in display order; empty groups dropped.
- * Super admins have nothing to add (they see everything already) → empty.
- */
-export const addableCatalogByCategory = (
-  showAdmin: boolean,
-  enabled: string[] | null,
-): { category: ProductCategory; entries: CatalogEntry[] }[] => {
-  if (showAdmin || enabled == null) return []
-  const set = new Set<string>([...ALWAYS_ON_PRODUCTS, ...enabled])
-  const addable = catalog.filter((e) => !isAdminEntry(e) && inBrand(e) && !set.has(e.id))
-  return brandCategoryOrder()
-    .map((category) => ({ category, entries: addable.filter((e) => e.category === category) }))
-    .filter((g) => g.entries.length > 0)
-}

@@ -94,4 +94,3 @@ export function BillingModule({ params }: { params: Record<string, string> }) {
   )
 }
 
-export default BillingModule

@@ -23,7 +23,6 @@
  * the caller renders as an honest state — never placeholder spend.
  */
 import { ApiError, restGet, billingProxyV1Url } from './client'
-import type { CloudBalance } from './wallet'
 
 // Billing usage/balance build the canonical `/v1/billing/*` path (the /v1-first law),
 // one builder `billingProxyV1Url`. Standalone: `/v1/billing/*` resolves to the console's
@@ -316,11 +315,6 @@ export function recent(records: UsageRecord[], n: number): UsageRecord[] {
 /** Fetch the org's raw usage records through the per-tenant `/v1/billing/usage` proxy. */
 export async function fetchUsageRecords(): Promise<UsageRecord[]> {
   return restGet<unknown>(billingProxyV1Url('usage')).then(normalizeUsageRecords)
-}
-
-/** Fetch the org's cloud-credit balance (USD cents) through the same proxy. */
-export async function fetchBalance(currency = 'usd'): Promise<CloudBalance> {
-  return restGet<CloudBalance>(`${billingProxyV1Url('balance')}?currency=${encodeURIComponent(currency)}`)
 }
 
 export { ApiError }
