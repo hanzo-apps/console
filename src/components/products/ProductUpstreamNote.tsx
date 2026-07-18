@@ -47,4 +47,3 @@ export function ProductUpstreamNote({ pathname }: { pathname: string }) {
   )
 }
 
-export default ProductUpstreamNote

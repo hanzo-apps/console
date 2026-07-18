@@ -184,4 +184,3 @@ export function RouterPolicyEditor(_props: { params: Record<string, string> }) {
   )
 }
 
-export default RouterPolicyEditor

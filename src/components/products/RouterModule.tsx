@@ -395,4 +395,3 @@ function TrainingContributionCard() {
   )
 }
 
-export default RouterModule

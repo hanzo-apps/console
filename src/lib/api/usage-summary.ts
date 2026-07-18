@@ -18,7 +18,6 @@ import { restGet, originV1Url } from './client'
 
 /** The window grammar the backend understands (ResolveCloudUsageWindow). */
 export type UsageRange = '24h' | '7d' | '30d'
-export const USAGE_RANGES: readonly UsageRange[] = ['24h', '7d', '30d']
 
 // ── Defensive coercion (a shape drift degrades, never throws) ────────────────
 const num = (v: unknown): number => {

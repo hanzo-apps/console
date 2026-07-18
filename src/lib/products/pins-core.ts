@@ -33,7 +33,6 @@ export type PinModel = { pins: PinEntry[]; groups: string[] }
 /** A display bucket: a group with its ordered entries. */
 export type PinGroupView = { name: string; label: string; entries: PinEntry[] }
 
-export const EMPTY_MODEL: PinModel = { pins: [], groups: [] }
 
 /** Sensible first-run pins so the section isn't empty (must be real catalog ids). */
 export const DEFAULT_PINNED_IDS = ['models', 'chat']

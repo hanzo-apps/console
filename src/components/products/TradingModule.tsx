@@ -440,4 +440,3 @@ export function TradingModule(props: { params: Record<string, string> }) {
   )
 }
 
-export default TradingModule

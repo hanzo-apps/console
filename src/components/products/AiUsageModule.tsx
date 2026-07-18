@@ -12,4 +12,3 @@ export function AiUsageModule(_props: { params: Record<string, string> }) {
   return <AiUsagePanels />
 }
 
-export default AiUsageModule
