@@ -186,7 +186,7 @@ export function SlideOver({
                 {title}
               </Text>
               {headerRight}
-              <Button size="$2" chromeless icon={<X size={18} />} onPress={onClose} aria-label="Close" />
+              <Button chromeless width={44} height={44} icon={<X size={18} />} onPress={onClose} aria-label="Close" />
             </XStack>
             <ScrollView flex={1}>
               <YStack flex={1} p="$4" gap="$3">

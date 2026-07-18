@@ -457,9 +457,9 @@ export function DnsModule(_props: { params: Record<string, string> }) {
       key: 'name',
       header: 'Zone',
       render: (z) => (
-        <XStack items="center" gap="$2">
+        <XStack items="center" gap="$2" flex={1} minW={0}>
           <Globe size={14} color="#9a9a9a" />
-          <Text fontSize="$3" color="$color12" numberOfLines={1}>{displayZone(z.name)}</Text>
+          <Text fontSize="$3" color="$color12" numberOfLines={1} flex={1} minW={0}>{displayZone(z.name)}</Text>
         </XStack>
       ),
     },
@@ -479,13 +479,15 @@ export function DnsModule(_props: { params: Record<string, string> }) {
     {
       key: 'actions',
       header: '',
-      width: 92,
+      width: 108,
       align: 'right',
+      // ≥44px hit areas + a wide Edit↔Delete gap so the destructive Delete is hard
+      // to mis-tap on touch (the icon glyph stays small; the tap target is 44×44).
       render: (r) =>
         active ? (
-          <XStack gap="$1" justify="flex-end">
-            <Button size="$2" chromeless icon={<Pencil size={15} />} aria-label="Edit record" onPress={() => setDialog({ kind: 'editRecord', zone: active, record: r })} />
-            <Button size="$2" chromeless icon={<Trash2 size={15} />} aria-label="Delete record" onPress={() => setDialog({ kind: 'deleteRecord', zone: active, record: r })} />
+          <XStack gap="$3" justify="flex-end">
+            <Button chromeless width={44} height={44} icon={<Pencil size={15} />} aria-label="Edit record" onPress={() => setDialog({ kind: 'editRecord', zone: active, record: r })} />
+            <Button chromeless width={44} height={44} icon={<Trash2 size={15} />} aria-label="Delete record" onPress={() => setDialog({ kind: 'deleteRecord', zone: active, record: r })} />
           </XStack>
         ) : null,
     },
@@ -496,7 +498,7 @@ export function DnsModule(_props: { params: Record<string, string> }) {
   return (
     <YStack gap="$4" p="$4">
       {inZone ? (
-        <Button chromeless size="$2" icon={<ArrowLeft size={15} />} self="flex-start" onPress={backToZones}>
+        <Button chromeless size="$3" minH={44} icon={<ArrowLeft size={15} />} self="flex-start" onPress={backToZones}>
           All zones
         </Button>
       ) : null}
