@@ -118,4 +118,3 @@ export function MarketsModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default MarketsModule

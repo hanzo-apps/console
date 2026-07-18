@@ -275,4 +275,3 @@ function KV({ k, v, mono, wrap }: { k: string; v: string; mono?: boolean; wrap?:
   )
 }
 
-export default AuditModule

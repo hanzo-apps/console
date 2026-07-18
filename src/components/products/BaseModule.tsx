@@ -22,4 +22,3 @@ export function BaseModule({ params }: { params: Record<string, string> }) {
   return <BasesManager params={params} />
 }
 
-export default BaseModule

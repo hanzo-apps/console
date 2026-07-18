@@ -239,4 +239,3 @@ export function ConnectionsModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default ConnectionsModule

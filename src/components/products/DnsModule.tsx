@@ -164,4 +164,3 @@ export function DnsModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default DnsModule
