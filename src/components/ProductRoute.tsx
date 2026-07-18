@@ -55,4 +55,3 @@ export function ProductRoute({ slug }: { slug: string[] }) {
   )
 }
 
-export default ProductRoute

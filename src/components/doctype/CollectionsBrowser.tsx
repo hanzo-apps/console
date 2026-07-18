@@ -178,4 +178,3 @@ export function CollectionsBrowser({ client, module, label, subtitle, onOpen, se
   )
 }
 
-export default CollectionsBrowser

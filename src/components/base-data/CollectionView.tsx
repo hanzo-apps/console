@@ -133,4 +133,3 @@ export function CollectionView({ api, collection, onOpen, onCreate, title }: Col
   )
 }
 
-export default CollectionView

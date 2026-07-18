@@ -80,4 +80,3 @@ export function ErpModule({ params = {} }: { params?: Record<string, string> }) 
   )
 }
 
-export default ErpModule

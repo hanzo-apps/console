@@ -35,4 +35,3 @@ export function ProductSubpageModule({ entry, subpage }: { entry: CatalogEntry; 
   }
 }
 
-export default ProductSubpageModule

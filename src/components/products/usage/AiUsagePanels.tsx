@@ -100,4 +100,3 @@ export function AiUsagePanels({
   )
 }
 
-export default AiUsagePanels

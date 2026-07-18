@@ -74,7 +74,6 @@ export function BasesManager({ params }: { params: Record<string, string> }) {
   return <BasesList api={api} nav={nav} />
 }
 
-export default BasesManager
 
 type Nav = { toList: () => void; toNew: () => void; toBase: (id: string) => void }
 
