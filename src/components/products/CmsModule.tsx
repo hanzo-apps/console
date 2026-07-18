@@ -83,4 +83,3 @@ export function CmsModule({ params = {} }: { params?: Record<string, string> }) 
   )
 }
 
-export default CmsModule

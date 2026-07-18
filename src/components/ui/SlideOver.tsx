@@ -204,4 +204,3 @@ export function SlideOver({
   )
 }
 
-export { LG as SLIDEOVER_LG }

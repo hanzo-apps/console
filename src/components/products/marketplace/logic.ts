@@ -112,4 +112,3 @@ export function listingTitle(m: CatalogEntry): string {
 }
 
 /** The context reach of a listing in tokens, or null (never fabricated). */
-export const listingContext = (m: CatalogEntry): number | null => modelContext(m)

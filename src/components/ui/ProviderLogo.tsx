@@ -17,7 +17,6 @@
  *      (still scannable by colour); truly-unknown → a neutral initials chip.
  */
 import { Text, XStack, useTheme } from '@hanzo/gui'
-import { Server } from '@hanzogui/lucide-icons-2'
 
 import { normalizeBrand, brandForModel, BRANDS, providerInitials } from './brand'
 import { BRAND_MARK, type BrandMark } from './brand-marks'
@@ -198,15 +197,5 @@ export function ProviderLogo({
   )
 }
 
-/** A generic fallback mark for an unspecified provider (used sparingly). */
-export function GenericLogo({ size = 24 }: { size?: number }) {
-  return (
-    <XStack width={size} height={size} items="center" justify="center" rounded={Math.round(size * 0.28)} bg="$color3" borderWidth={1} borderColor="$borderColor">
-      <Server size={Math.round(size * 0.56)} color="$color11" />
-    </XStack>
-  )
-}
-
 // Boxes is re-exported as the conventional "custom model" mark for callers that
 // render a non-provider tile next to ProviderLogo (keeps the icon source single).
-export { Boxes as CustomModelMark } from '@hanzogui/lucide-icons-2'
