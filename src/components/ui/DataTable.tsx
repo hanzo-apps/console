@@ -112,30 +112,41 @@ export function DataTable<T>({
                   cursor={onRowPress ? 'pointer' : undefined}
                   onPress={onRowPress ? () => onRowPress(row) : undefined}
                 >
-                  {columns.map((c) => (
-                    <YStack
-                      key={c.key}
-                      width={c.width}
-                      flex={c.width ? undefined : 1}
-                      minW={c.width ? undefined : FLEX_MIN_COL_W}
-                      justify="center"
-                      items={c.align === 'right' ? 'flex-end' : 'flex-start'}
-                    >
-                      {c.render ? (
-                        c.render(row)
-                      ) : (
-                        <Text
-                          fontSize="$3"
-                          numberOfLines={1}
-                          color="$color12"
-                          text={c.align === 'right' ? 'right' : 'left'}
-                          className={c.mono ? 'hz-mono' : undefined}
-                        >
-                          {String((row as Record<string, unknown>)[c.key] ?? '')}
-                        </Text>
-                      )}
-                    </YStack>
-                  ))}
+                  {columns.map((c) => {
+                    // A cell value is either a column's rendered node or the raw
+                    // `String(row[key])`. Whenever it resolves to a PRIMITIVE
+                    // (string|number) — the default cell OR a `render()` that returns
+                    // `String(count)` / `ttl` / `priority` — it is wrapped in the ONE
+                    // styled Text below, so the primitive can never emit a bare text
+                    // node (illegal under a native View → RN red-box + console spam)
+                    // and always picks up the numeric mono/align styling. Element
+                    // renders (Text/badges/cells) pass through untouched.
+                    const cell = c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? '')
+                    return (
+                      <YStack
+                        key={c.key}
+                        width={c.width}
+                        flex={c.width ? undefined : 1}
+                        minW={c.width ? undefined : FLEX_MIN_COL_W}
+                        justify="center"
+                        items={c.align === 'right' ? 'flex-end' : 'flex-start'}
+                      >
+                        {typeof cell === 'string' || typeof cell === 'number' ? (
+                          <Text
+                            fontSize="$3"
+                            numberOfLines={1}
+                            color="$color12"
+                            text={c.align === 'right' ? 'right' : 'left'}
+                            className={c.mono ? 'hz-mono' : undefined}
+                          >
+                            {cell}
+                          </Text>
+                        ) : (
+                          cell
+                        )}
+                      </YStack>
+                    )
+                  })}
                 </XStack>
               ))}
             </YStack>

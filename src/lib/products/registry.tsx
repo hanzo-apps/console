@@ -153,6 +153,7 @@ import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
 import { MetricsModule } from '~/components/products/MetricsModule'
 import { DnsModule } from '~/components/products/DnsModule'
+import { DomainsModule } from '~/components/products/DomainsModule'
 import { PlaygroundModule } from '~/components/products/PlaygroundModule'
 import { PromptCreateModule, PromptMetricsModule, PromptsModule } from '~/components/products/PromptsModule'
 import { EvalsModule } from '~/components/products/EvalsModule'
@@ -1574,6 +1575,22 @@ export const catalog: CatalogEntry[] = [
     // Real per-org managed DNS via hanzodns (zones + records → CoreDNS + Cloudflare
     // sync) on the unified /v1/dns surface; honest states until the route is bound.
     routes: [{ path: '', component: DnsModule }],
+  },
+  {
+    // Domains — REGISTER names (distinct from DNS, which manages records). Backed by
+    // the Hanzo Domains control plane (cloud clients/domain → name.com reseller):
+    // search/price/buy over /v1/domain, billed to the org's prepaid balance, the
+    // domain born on Hanzo nameservers with its zone handed to hanzoai/dns.
+    id: 'domains',
+    label: 'Domains',
+    icon: Tag,
+    description: 'Search, register, and renew domain names.',
+    gcp: 'Cloud Domains',
+    category: 'Network',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: DomainsModule }],
   },
   {
     id: 'cdn',
