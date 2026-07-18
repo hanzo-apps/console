@@ -71,9 +71,27 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
     // mints it OUTBOUND toward commerce from the validated principal, so stamping
     // it from the browser was inert — dropped.)
     'X-Org-Id': currentOrg(),
-    // Project sub-scope — the canonical `X-Project-Id` (evalsvc reads it; other
-    // svcs as project scoping lands). Sent only when a project is selected.
-    ...(s.project ? { 'X-Project-Id': s.project } : {}),
+    // Project sub-scope. ONE fact (the selected project, from lib/scope.ts) leaves
+    // this ONE seam in two wire forms, because an INTENT and an ASSERTION must not
+    // share a name — conflating them is what makes a header "forgeable":
+    //   - `X-Act-As-Project` is the INTENT: a request, never a claim. A validating
+    //     boundary checks it against the caller's scope set and MINTS the
+    //     authoritative `X-Project-Id` from it, then drops the intent — exactly what
+    //     `X-Act-As-Org` → `X-Org-Id` does for the org switch (gateway
+    //     iamauth.EffectiveOrg). It is what makes a project switch AUTHORIZED rather
+    //     than asserted, so the switcher drives the mint instead of naming the value.
+    //   - `X-Project-Id` is the ASSERTION the boundaries that exist TODAY read, and
+    //     it is advisory at every one of them: the gateway STRIPS it at ingress; the
+    //     `/v1`, `/vm` and `/commerce` bearer proxies DROP it (a browser-chosen
+    //     project must not pick cloud's per-project eval key — see the RED MED-1
+    //     suite in lib/server/bearer-proxy.test.ts); only the off-gateway readers
+    //     (`/paas`, under its own admin gate + server-resolved org, and the embed's
+    //     cloud, which sanitizes it) still honor it.
+    // Both are sent only when a project is selected (absent = org-level), so the
+    // absent-header ⟺ default-project wire contract is unchanged. The assertion
+    // retires once the gateway mints `X-Project-Id` from the intent — at which point
+    // no browser-supplied project reaches any backend and this collapses to one form.
+    ...(s.project ? { 'X-Act-As-Project': s.project, 'X-Project-Id': s.project } : {}),
     // Actor sub-identity — the signed-in USER (`<owner>/<name>`), so org + project +
     // USER all pass on EVERY call. Present only when a session is resolved (absent
     // pre-sign-in / SSR); the gateway treats it as advisory, identity being
