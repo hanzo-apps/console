@@ -206,6 +206,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // (/v1/vpcs[/:id], /v1/load-balancers[/:id]).
   'vpcs',
   'load-balancers',
+  // Managed DNS (hanzoai/dns control plane: CoreDNS + the hanzodns plugin) — per-org
+  // zones + records, FULL CRUD: /v1/dns/zones[/:zone[/records[/:id]]]. cloud's `dns`
+  // head forwards to the dns control plane, resolving the org from the Bearer owner
+  // (a cookie-only call 403s) and, for a Cloudflare-connected zone, using the org's
+  // KMS-sealed connector token — so it routes through /v1 exactly like the rest. The
+  // single `dns` head admits the zones list/create/delete + the records sub-paths.
+  'dns',
   // Platform aggregates (read-only, derived): deploy targets, CI pipelines, image/
   // binary builds, and versioned releases (/v1/{environments,pipelines,builds,releases}).
   'environments',

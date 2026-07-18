@@ -67,6 +67,14 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/projects/my-site')).toBe(true)
   })
 
+  it('admits the managed DNS surface (zones + records CRUD sub-paths)', () => {
+    expect(CLOUD_HEADS).toContain('dns')
+    expect(allowCloudSurface('v1/dns/zones')).toBe(true)
+    expect(allowCloudSurface('v1/dns/zones/example.com.')).toBe(true)
+    expect(allowCloudSurface('v1/dns/zones/example.com./records')).toBe(true)
+    expect(allowCloudSurface('v1/dns/zones/example.com./records/rec-1')).toBe(true)
+  })
+
   it('admits the ML serving surface (the Inference endpoints source), per-org via the Bearer', () => {
     expect(CLOUD_HEADS).toContain('ml')
     expect(allowCloudSurface('v1/ml/models')).toBe(true)
