@@ -41,7 +41,7 @@ export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars' | '7stars' | 'yotoda'
  * identity (which IAM you log into, the wordmark) is resolved separately by
  * `brandFromHost`, so a face NEVER crosses brands (sentry.lux.cloud is the lux brand).
  */
-export type ShellId = 'console' | 'billing' | 'marketing' | 'ads' | 'social' | 'sentry'
+export type ShellId = 'console' | 'billing' | 'marketing' | 'ads' | 'social' | 'sentry' | 'dns'
 
 export type ConsoleConfig = {
   /** Resolved brand id (from hostname). */
@@ -342,6 +342,17 @@ export function isSentryHost(host?: string | null): boolean {
 }
 
 /**
+ * True on the dedicated DNS host (dns.<brand>, e.g. dns.hanzo.ai) — the SAME console
+ * image wearing the DNS-management product face (the DnsModule). Strict `dns.` prefix.
+ * dns.hanzo.ai is a DNS-faced alias of console.hanzo.ai (same cloud backend), so it
+ * boots straight into the DNS dashboard while console.hanzo.ai keeps it as one product
+ * among many — one shared surface, two entry points.
+ */
+export function isDnsHost(host?: string | null): boolean {
+  return normHost(host).startsWith('dns.')
+}
+
+/**
  * The product shell a host wears, resolved at runtime — the ONE resolver for EVERY
  * console FACE. `NEXT_PUBLIC_PRODUCT_SHELL` overrides for dev/preview (any host → a
  * chosen face); otherwise each dedicated host (or its legacy `NEXT_PUBLIC_*_ONLY=1`
@@ -351,12 +362,13 @@ export function isSentryHost(host?: string | null): boolean {
  */
 export function shellFromHost(host?: string | null): ShellId {
   const env = process.env.NEXT_PUBLIC_PRODUCT_SHELL
-  if (env === 'billing' || env === 'marketing' || env === 'ads' || env === 'social' || env === 'sentry' || env === 'console') return env
+  if (env === 'billing' || env === 'marketing' || env === 'ads' || env === 'social' || env === 'sentry' || env === 'dns' || env === 'console') return env
   if (isBillingOnly(host)) return 'billing'
   if (isMarketing(host)) return 'marketing'
   if (isAds(host)) return 'ads'
   if (isSocial(host)) return 'social'
   if (isSentryHost(host)) return 'sentry'
+  if (isDnsHost(host)) return 'dns'
   return 'console'
 }
 
