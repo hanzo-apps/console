@@ -181,7 +181,7 @@ export function AdminO11yModule() {
               <XStack items="center" gap="$2">
                 <Boxes size={15} />
                 <Text fontSize="$4" fontWeight="700">
-                  LLM generations (Langfuse)
+                  LLM generations
                 </Text>
               </XStack>
               <XStack gap="$3" flexWrap="wrap">
@@ -189,7 +189,7 @@ export function AdminO11yModule() {
                 <Kpi icon={<Coins size={15} />} label="Generation cost" value={d ? `$${d.llm.costUsd.toFixed(4)}` : '—'} caption="fleet-wide" />
               </XStack>
               <Text fontSize="$2" color="$color10">
-                Detailed generation traces populate here as Langfuse ingestion grows — no figures are fabricated.
+                Detailed generation traces populate here as generation ingestion grows — no figures are fabricated.
               </Text>
             </Card>
           </XStack>
