@@ -78,4 +78,3 @@ export function HelpModule({ params = {} }: { params?: Record<string, string> })
   )
 }
 
-export default HelpModule

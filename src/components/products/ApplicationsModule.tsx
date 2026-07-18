@@ -17,4 +17,3 @@ export function ApplicationsModule(props: { params: Record<string, string> }) {
   return <PaasApplications {...props} />
 }
 
-export default ApplicationsModule

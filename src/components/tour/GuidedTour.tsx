@@ -192,4 +192,3 @@ export function GuidedTour({
   )
 }
 
-export default GuidedTour

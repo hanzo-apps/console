@@ -19,7 +19,6 @@ const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 const SECRET = (process.env.TURNSTILE_SECRET_KEY ?? '').trim()
 
 /** True when Turnstile is provisioned (secret present) and therefore enforced. */
-export const turnstileEnabled = (): boolean => SECRET !== ''
 
 export type TurnstileResult = { ok: true } | { ok: false; reason: string }
 

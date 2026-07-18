@@ -400,4 +400,3 @@ export function AIAccountsMachines(_props: { params: Record<string, string> }) {
   )
 }
 
-export default AIAccountsMachines

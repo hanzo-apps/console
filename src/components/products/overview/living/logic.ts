@@ -55,17 +55,6 @@ export function formatMetric(value: number, unit: MetricUnit = 'count'): string 
   }
 }
 
-/**
- * The number the count-up animation should target for a unit. Money counts up in
- * DOLLARS (not cents) so the animated digits read naturally; everything else counts
- * up in its own value. (The tile formats the interpolated number back via `formatMetric`
- * on the same unit, so `cents` must animate in cents too — we keep the raw value and
- * let the formatter divide. This returns the raw value; the divisor is in `formatMetric`.)
- */
-export function metricTarget(value: number): number {
-  return Number.isFinite(value) ? value : 0
-}
-
 /** A delta descriptor for a KPI, or null when there's no prior basis (honest "—"). */
 export function deltaOf(kpi: OverviewKpi | undefined): { pct: number; up: boolean } | null {
   if (!kpi || kpi.prior === undefined || !Number.isFinite(kpi.prior) || kpi.prior === 0) return null

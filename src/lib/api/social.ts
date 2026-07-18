@@ -61,11 +61,9 @@ export type Provider = (typeof PROVIDERS)[number]
 
 /** Account connection lifecycle (cloud rejects an unknown status; '' → connected). */
 export const ACCOUNT_STATUSES = ['connected', 'disconnected', 'error'] as const
-export type AccountStatus = (typeof ACCOUNT_STATUSES)[number]
 
 /** Post lifecycle (cloud rejects an unknown status; '' → draft). */
 export const POST_STATUSES = ['draft', 'scheduled', 'published', 'failed'] as const
-export type PostStatus = (typeof POST_STATUSES)[number]
 
 export type Account = {
   id: string
