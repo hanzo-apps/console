@@ -1,165 +1,646 @@
 'use client'
 
 /**
- * DNS — per-org managed DNS (zones + records), backed by the hanzodns control
- * plane (CoreDNS + Cloudflare sync). The browser hits console2's origin with just
- * the session cookie on the unified `/v1/dns` surface (api.hanzo.ai gateway →
- * hanzodns); records are org-scoped by the `X-Org-Id` the cloud client stamps.
- * Honest states on 401/404/503 — never fabricates a zone or record.
+ * DNS — per-org managed DNS as a full CRUD dashboard over the hanzodns control
+ * plane (`hanzoai/dns`: CoreDNS + the `hanzodns` plugin), on the unified `/v1/dns`
+ * surface. ONE screen manages BOTH authoritative zones (served from CoreDNS
+ * in-cluster) AND connected Cloudflare zones (records synced to Cloudflare via the
+ * per-org KMS-sealed connector token) — a provider badge on every zone says which
+ * backend serves it.
  *
- * hanzodns owns the write path (a change to a zone re-syncs to CoreDNS in-cluster
- * AND to Cloudflare), so this view manages what exists and reflects sync status;
- * it does not invent authoritative records.
+ * Master → detail, in-component: the zones list (name · provider · record count ·
+ * DNSSEC · status) drills into a zone's records TABLE with add / edit / delete, the
+ * Cloudflare orange-cloud Proxied toggle (only on a proxyable record of a Cloudflare
+ * zone), TTL and type. "Connect Cloudflare" kicks the existing
+ * `/v1/integrations/cloudflare/connect` OAuth flow (reusing `IntegrationsApi`, DRY).
+ *
+ * Every read/write is same-origin, keyless and org-scoped SERVER-SIDE (the `/v1`
+ * bearer BFF mints a short-lived user token; the cloud `dns` head resolves the org
+ * from the token owner), so no credential reaches the browser. States are honest:
+ * loading skeletons, a `BackendStateCard` on a `/v1/dns` failure, and real empty
+ * states — it never fabricates a zone or a record. Until the cloud `dns` provider
+ * route is bound it shows the honest "not available yet" card, never placeholder data.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { DataTable, type FieldDefinition } from '@hanzo/data'
+import { ArrowLeft, Cloud, Globe, Pencil, Plus, RefreshCw, Server, ShieldCheck, Trash2 } from '@hanzogui/lucide-icons-2'
 
+import {
+  DnsApi,
+  RECORD_TYPES,
+  createBody,
+  patchBody,
+  validateRecord,
+  validateZoneName,
+  hasPriority,
+  isProxyable,
+  isCloudflare,
+  providerLabel,
+  displayZone,
+  type DnsRecord,
+  type RecordInput,
+  type RecordType,
+  type Zone,
+} from '~/lib/api/dns'
+import { IntegrationsApi } from '~/lib/api/integrations'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { DataTable, type Column } from '~/components/ui/DataTable'
+import { EmptyState } from '~/components/ui/EmptyState'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { ApiError } from '~/lib/api/client'
+import { StatusTag } from '~/components/ui/StatusTag'
+import { SlideOver } from '~/components/ui/SlideOver'
+import { FieldRow, FieldText, FieldTextArea, FieldSelect, FieldSwitch } from '~/components/ui/Field'
+import { useToast } from '~/components/ui/Toast'
 
-/** A DNS zone as hanzodns `/v1/dns/zones` returns it. */
-interface Zone {
-  id: string
-  name?: string
-  provider?: string
-  records?: number
-  status?: string
-  updatedTime?: string
-  [k: string]: unknown
+/** Cloudflare brand orange — used ONLY for the Cloudflare provider/proxy affordances. */
+const CF_ORANGE = '#F38020'
+
+type Async<T> =
+  | { phase: 'loading' }
+  | { phase: 'error'; error: BackendState }
+  | { phase: 'ready'; data: T }
+
+// ── Small presentational cells ───────────────────────────────────────────────
+
+/** Provider pill — Cloudflare (orange cloud) vs Authoritative (CoreDNS, neutral). */
+function ProviderBadge({ provider }: { provider: string }) {
+  const cf = isCloudflare(provider)
+  return (
+    <XStack
+      items="center"
+      gap="$1.5"
+      px="$2"
+      py="$1"
+      rounded="$2"
+      bg="$color3"
+      style={cf ? { backgroundColor: 'rgba(243,128,32,0.14)' } : undefined}
+    >
+      {cf ? <Cloud size={12} color={CF_ORANGE} /> : <Server size={12} color="#9a9a9a" />}
+      <Text fontSize="$1" color={cf ? undefined : '$color11'} style={cf ? { color: CF_ORANGE } : undefined}>
+        {providerLabel(provider)}
+      </Text>
+    </XStack>
+  )
 }
 
-/** A record within a zone (`/v1/dns/zones/{name}/records`). */
-interface DnsRecord {
-  id: string
-  name?: string
-  type?: string
-  value?: string
-  ttl?: number
-  [k: string]: unknown
+/** DNSSEC state cell. */
+function DnssecCell({ dnssec }: { dnssec: boolean }) {
+  if (!dnssec) return <Text fontSize="$2" color="$color10">Off</Text>
+  return (
+    <XStack items="center" gap="$1">
+      <ShieldCheck size={13} color="$green10" />
+      <Text fontSize="$2" color="$color11">On</Text>
+    </XStack>
+  )
 }
 
-const ZONE_FIELDS: FieldDefinition[] = [
-  { name: 'name', label: 'Zone', type: 'text', width: 220 },
-  { name: 'provider', label: 'Provider', type: 'text', width: 130 },
-  { name: 'records', label: 'Records', type: 'number', width: 100 },
-  { name: 'status', label: 'Sync', type: 'text', width: 120 },
-  { name: 'updatedTime', label: 'Updated', type: 'dateTime' },
-]
+/** Proxy cell — the orange-cloud state, meaningful only for a proxyable record of a
+ *  Cloudflare zone; otherwise an honest em-dash (proxy N/A). */
+function ProxiedCell({ zone, record }: { zone: Zone; record: DnsRecord }) {
+  if (!isCloudflare(zone.provider) || !isProxyable(record.type)) return <Text fontSize="$2" color="$color9">—</Text>
+  return record.proxied ? (
+    <XStack items="center" gap="$1">
+      <Cloud size={13} color={CF_ORANGE} />
+      <Text fontSize="$2" style={{ color: CF_ORANGE }}>Proxied</Text>
+    </XStack>
+  ) : (
+    <XStack items="center" gap="$1">
+      <Cloud size={13} color="#9a9a9a" />
+      <Text fontSize="$2" color="$color10">DNS only</Text>
+    </XStack>
+  )
+}
 
-const RECORD_FIELDS: FieldDefinition[] = [
-  { name: 'name', label: 'Name', type: 'text', width: 220 },
-  { name: 'type', label: 'Type', type: 'text', width: 90 },
-  { name: 'ttl', label: 'TTL', type: 'number', width: 90 },
-  { name: 'value', label: 'Value', type: 'text' },
-]
+/** The per-org summary bar (real derived counts). */
+function SummaryBar({ zones }: { zones: Zone[] }) {
+  const cf = zones.filter((z) => isCloudflare(z.provider)).length
+  const cells: { label: string; value: number }[] = [
+    { label: 'Zones', value: zones.length },
+    { label: 'Cloudflare', value: cf },
+    { label: 'Authoritative', value: zones.length - cf },
+    { label: 'Records', value: zones.reduce((n, z) => n + z.recordCount, 0) },
+  ]
+  return (
+    <XStack gap="$3" flexWrap="wrap">
+      {cells.map((c) => (
+        <YStack key={c.label} gap="$1" borderWidth={1} borderColor="$borderColor" rounded="$4" px="$4" py="$3" minW={140}>
+          <Text fontSize="$1" color="$color10">{c.label}</Text>
+          <Text fontSize="$6" fontWeight="500" className="hz-tnum">{c.value}</Text>
+        </YStack>
+      ))}
+    </XStack>
+  )
+}
 
-async function getJSON<T>(path: string): Promise<T[]> {
-  const res = await fetch(path, {
-    credentials: 'include',
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  })
-  if (!res.ok) {
-    let msg = `DNS ${res.status}`
+// ── Forms (rendered inside the shared SlideOver) ─────────────────────────────
+
+/** Create-zone form → real POST /v1/dns/zones. */
+function ZoneForm({ onDone }: { onDone: (created?: Zone) => void }) {
+  const toast = useToast()
+  const [name, setName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = async () => {
+    const v = validateZoneName(name)
+    if (v) {
+      setErr(v)
+      return
+    }
+    setSaving(true)
+    setErr(null)
     try {
-      const body = await res.json()
-      if (body?.error || body?.msg) msg = String(body.error ?? body.msg)
-    } catch { /* not JSON */ }
-    throw new ApiError(msg, res.status)
+      const z = await DnsApi.zones.create(name)
+      toast.success(`Created zone ${displayZone(z.name)}`)
+      onDone(z)
+    } catch (e) {
+      setErr(classifyBackend(e).message || 'Failed to create zone.')
+      setSaving(false)
+    }
   }
-  const json = await res.json().catch(() => null)
-  const items = Array.isArray(json) ? json : (json?.items ?? json?.zones ?? json?.records ?? json?.data ?? [])
-  return Array.isArray(items) ? items : []
-}
-
-export function DnsModule(_props: { params: Record<string, string> }) {
-  const [zones, setZones] = useState<Zone[]>([])
-  const [zone, setZone] = useState<Zone | null>(null)
-  const [records, setRecords] = useState<DnsRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [state, setState] = useState<BackendState | null>(null)
-
-  const loadZones = useCallback(async () => {
-    setLoading(true)
-    setState(null)
-    setZone(null)
-    try {
-      setZones(await getJSON<Zone>('/v1/dns/zones'))
-    } catch (e) {
-      setState(classifyBackend(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  const openZone = useCallback(async (z: Zone) => {
-    setZone(z)
-    setLoading(true)
-    setState(null)
-    try {
-      setRecords(await getJSON<DnsRecord>(`/v1/dns/zones/${encodeURIComponent(z.name ?? z.id)}/records`))
-    } catch (e) {
-      setState(classifyBackend(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadZones() }, [loadZones])
-
-  const inZone = zone !== null
 
   return (
-    <YStack gap="$4">
+    <YStack gap="$3">
+      <FieldRow label="Zone (domain)">
+        <FieldText value={name} onChange={setName} placeholder="example.com" disabled={saving} />
+      </FieldRow>
+      <Text fontSize="$2" color="$color10">
+        Records for a new zone resolve from CoreDNS in-cluster (authoritative). Connect Cloudflare to sync a zone to
+        Cloudflare instead.
+      </Text>
+      {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+      <PrimaryButton onPress={submit} disabled={saving} icon={<Plus size={16} />}>
+        {saving ? 'Creating…' : 'Create zone'}
+      </PrimaryButton>
+    </YStack>
+  )
+}
+
+/** Sensible per-type placeholder for the Value field (honest examples, never fake data). */
+function contentPlaceholder(type: RecordType): string {
+  switch (type) {
+    case 'A': return '192.0.2.1'
+    case 'AAAA': return '2001:db8::1'
+    case 'CNAME': return 'target.example.com'
+    case 'MX': return 'mail.example.com'
+    case 'TXT': return 'v=spf1 include:_spf.example.com ~all'
+    case 'NS': return 'ns1.example.com'
+    case 'SRV': return '10 5 5060 sip.example.com'
+    case 'CAA': return '0 issue "letsencrypt.org"'
+    default: return ''
+  }
+}
+
+/** Create OR edit a record → POST (create) / PATCH minimal-diff (edit). */
+function RecordForm({ zone, record, onDone }: { zone: Zone; record?: DnsRecord; onDone: () => void }) {
+  const toast = useToast()
+  const cf = isCloudflare(zone.provider)
+  const [name, setName] = useState(record?.name ?? '')
+  const [type, setType] = useState<RecordType>(record?.type ?? 'A')
+  const [content, setContent] = useState(record?.content ?? '')
+  const [ttl, setTtl] = useState(String(record?.ttl ?? 300))
+  const [priority, setPriority] = useState(String(record?.priority ?? 10))
+  const [proxied, setProxied] = useState(record?.proxied ?? false)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const input = (): RecordInput => ({
+    name,
+    type,
+    content,
+    ttl: Number(ttl.trim()),
+    priority: Number(priority.trim()),
+    proxied,
+  })
+
+  const submit = async () => {
+    const inp = input()
+    const v = validateRecord(inp)
+    if (v) {
+      setErr(v)
+      return
+    }
+    setSaving(true)
+    setErr(null)
+    try {
+      if (record) {
+        const patch = patchBody(record, inp, cf)
+        if (Object.keys(patch).length === 0) {
+          toast.info('No changes to save')
+          onDone()
+          return
+        }
+        await DnsApi.records.update(zone.name, record.id, patch)
+        toast.success(`Updated ${inp.name}`)
+      } else {
+        await DnsApi.records.create(zone.name, createBody(inp, cf))
+        toast.success(`Added ${inp.type} ${inp.name || '@'}`)
+      }
+      onDone()
+    } catch (e) {
+      setErr(classifyBackend(e).message || 'Failed to save record.')
+      setSaving(false)
+    }
+  }
+
+  const showProxy = cf && isProxyable(type)
+
+  return (
+    <YStack gap="$3">
+      <FieldRow label="Name">
+        <FieldText value={name} onChange={setName} placeholder="www  (or @ for the apex)" disabled={saving} />
+      </FieldRow>
+      <FieldRow label="Type">
+        <FieldSelect value={type} options={[...RECORD_TYPES]} onChange={(v) => setType(v as RecordType)} disabled={saving} />
+      </FieldRow>
+      <FieldRow label="Value">
+        {type === 'TXT' ? (
+          <FieldTextArea value={content} onChange={setContent} disabled={saving} rows={3} />
+        ) : (
+          <FieldText value={content} onChange={setContent} placeholder={contentPlaceholder(type)} disabled={saving} />
+        )}
+      </FieldRow>
+      <FieldRow label="TTL (seconds)">
+        <FieldText value={ttl} onChange={setTtl} placeholder="300" disabled={saving} />
+      </FieldRow>
+      {hasPriority(type) ? (
+        <FieldRow label="Priority">
+          <FieldText value={priority} onChange={setPriority} placeholder="10" disabled={saving} />
+        </FieldRow>
+      ) : null}
+      {showProxy ? (
+        <FieldRow label="Proxy (Cloudflare)">
+          <XStack items="center" gap="$2">
+            <FieldSwitch checked={proxied} onChange={setProxied} disabled={saving} />
+            <Text fontSize="$2" color="$color10">
+              {proxied ? 'Proxied — traffic routes through Cloudflare.' : 'DNS only — resolves to the origin.'}
+            </Text>
+          </XStack>
+        </FieldRow>
+      ) : null}
+      {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+      <PrimaryButton onPress={submit} disabled={saving}>
+        {saving ? 'Saving…' : record ? 'Save changes' : 'Add record'}
+      </PrimaryButton>
+    </YStack>
+  )
+}
+
+/** A destructive confirm panel (shared by zone + record delete). */
+function ConfirmDelete({
+  message,
+  confirmLabel,
+  run,
+  onDone,
+}: {
+  message: string
+  confirmLabel: string
+  run: () => Promise<void>
+  onDone: () => void
+}) {
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const go = async () => {
+    setBusy(true)
+    setErr(null)
+    try {
+      await run()
+      onDone()
+    } catch (e) {
+      setErr(classifyBackend(e).message || 'Failed to delete.')
+      setBusy(false)
+    }
+  }
+  return (
+    <YStack gap="$3">
+      <Text fontSize="$3" color="$color11">{message}</Text>
+      {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+      <XStack gap="$2" flexWrap="wrap">
+        <Button
+          onPress={go}
+          disabled={busy}
+          icon={<Trash2 size={15} />}
+          style={{ backgroundColor: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
+        >
+          {busy ? 'Deleting…' : confirmLabel}
+        </Button>
+        <Button chromeless onPress={() => onDone()} disabled={busy}>
+          Cancel
+        </Button>
+      </XStack>
+    </YStack>
+  )
+}
+
+// ── Dialog model (ONE SlideOver, many contents — DRY) ────────────────────────
+
+type Dialog =
+  | { kind: 'none' }
+  | { kind: 'newZone' }
+  | { kind: 'newRecord'; zone: Zone }
+  | { kind: 'editRecord'; zone: Zone; record: DnsRecord }
+  | { kind: 'deleteZone'; zone: Zone }
+  | { kind: 'deleteRecord'; zone: Zone; record: DnsRecord }
+
+// ── Module ───────────────────────────────────────────────────────────────────
+
+export function DnsModule(_props: { params: Record<string, string> }) {
+  const toast = useToast()
+  const [zonesState, setZonesState] = useState<Async<Zone[]>>({ phase: 'loading' })
+  const [active, setActive] = useState<Zone | null>(null)
+  const [recordsState, setRecordsState] = useState<Async<DnsRecord[]>>({ phase: 'loading' })
+  const [dialog, setDialog] = useState<Dialog>({ kind: 'none' })
+  const [cf, setCf] = useState<{ available: boolean; connected: boolean } | null>(null)
+
+  const loadZones = useCallback(async (): Promise<Zone[]> => {
+    setZonesState({ phase: 'loading' })
+    try {
+      const zones = await DnsApi.zones.list()
+      setZonesState({ phase: 'ready', data: zones })
+      return zones
+    } catch (e) {
+      setZonesState({ phase: 'error', error: classifyBackend(e) })
+      return []
+    }
+  }, [])
+
+  const loadRecords = useCallback(async (zone: Zone) => {
+    setRecordsState({ phase: 'loading' })
+    try {
+      setRecordsState({ phase: 'ready', data: await DnsApi.records.list(zone.name) })
+    } catch (e) {
+      setRecordsState({ phase: 'error', error: classifyBackend(e) })
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadZones()
+  }, [loadZones])
+
+  // Cloudflare connection status — best-effort. A 404/unavailable (connector not
+  // registered on this deployment) hides the chip; the Connect button stays and
+  // reports honestly on press.
+  useEffect(() => {
+    let alive = true
+    IntegrationsApi.get('cloudflare')
+      .then((p) => alive && setCf({ available: p.available, connected: p.connected }))
+      .catch(() => alive && setCf(null))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const openZone = useCallback(
+    (zone: Zone) => {
+      setActive(zone)
+      void loadRecords(zone)
+    },
+    [loadRecords],
+  )
+
+  const backToZones = useCallback(() => {
+    setActive(null)
+    void loadZones()
+  }, [loadZones])
+
+  // After a record mutation: refresh zone counts + records, and re-sync the active
+  // zone object (its recordCount changed).
+  const afterRecordChange = useCallback(async () => {
+    setDialog({ kind: 'none' })
+    if (!active) return
+    const zones = await loadZones()
+    const fresh = zones.find((z) => z.name === active.name) ?? active
+    setActive(fresh)
+    await loadRecords(fresh)
+  }, [active, loadZones, loadRecords])
+
+  const afterZoneCreate = useCallback(
+    (created?: Zone) => {
+      setDialog({ kind: 'none' })
+      void loadZones()
+      // Land in the new zone so the user can add records immediately.
+      if (created) openZone(created)
+    },
+    [loadZones, openZone],
+  )
+
+  const afterZoneDelete = useCallback(() => {
+    setDialog({ kind: 'none' })
+    setActive(null)
+    void loadZones()
+  }, [loadZones])
+
+  const connectCloudflare = useCallback(async () => {
+    try {
+      const { authorizeUrl } = await IntegrationsApi.connect('cloudflare')
+      if (authorizeUrl) {
+        window.location.assign(authorizeUrl)
+        return
+      }
+      toast.error('Could not start the Cloudflare connection.')
+    } catch (e) {
+      const s = classifyBackend(e)
+      toast.error(
+        'Cloudflare not connected',
+        s.kind === 'not-initialized' || s.kind === 'unavailable'
+          ? 'The Cloudflare connector isn’t configured on this deployment yet.'
+          : s.message,
+      )
+    }
+  }, [toast])
+
+  // ── Column defs ──
+  const zoneColumns: Column<Zone>[] = [
+    {
+      key: 'name',
+      header: 'Zone',
+      render: (z) => (
+        <XStack items="center" gap="$2">
+          <Globe size={14} color="#9a9a9a" />
+          <Text fontSize="$3" color="$color12" numberOfLines={1}>{displayZone(z.name)}</Text>
+        </XStack>
+      ),
+    },
+    { key: 'provider', header: 'Provider', width: 150, render: (z) => <ProviderBadge provider={z.provider} /> },
+    { key: 'records', header: 'Records', width: 90, align: 'right', mono: true, render: (z) => String(z.recordCount) },
+    { key: 'dnssec', header: 'DNSSEC', width: 100, render: (z) => <DnssecCell dnssec={z.dnssec} /> },
+    { key: 'status', header: 'Status', width: 110, render: (z) => <StatusTag status={z.status} /> },
+  ]
+
+  const recordColumns: Column<DnsRecord>[] = [
+    { key: 'name', header: 'Name', render: (r) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{r.name || '@'}</Text> },
+    { key: 'type', header: 'Type', width: 80, render: (r) => <Text fontSize="$2" className="hz-mono" color="$color11">{r.type}</Text> },
+    { key: 'content', header: 'Value', render: (r) => <Text fontSize="$3" className="hz-mono" color="$color12" numberOfLines={1}>{r.content}</Text> },
+    { key: 'ttl', header: 'TTL', width: 80, align: 'right', mono: true, render: (r) => String(r.ttl) },
+    { key: 'priority', header: 'Prio', width: 64, align: 'right', mono: true, render: (r) => (hasPriority(r.type) ? String(r.priority) : '—') },
+    { key: 'proxied', header: 'Proxy', width: 110, render: (r) => active ? <ProxiedCell zone={active} record={r} /> : null },
+    {
+      key: 'actions',
+      header: '',
+      width: 92,
+      align: 'right',
+      render: (r) =>
+        active ? (
+          <XStack gap="$1" justify="flex-end">
+            <Button size="$2" chromeless icon={<Pencil size={15} />} aria-label="Edit record" onPress={() => setDialog({ kind: 'editRecord', zone: active, record: r })} />
+            <Button size="$2" chromeless icon={<Trash2 size={15} />} aria-label="Delete record" onPress={() => setDialog({ kind: 'deleteRecord', zone: active, record: r })} />
+          </XStack>
+        ) : null,
+    },
+  ]
+
+  const inZone = active !== null
+
+  return (
+    <YStack gap="$4" p="$4">
+      {inZone ? (
+        <Button chromeless size="$2" icon={<ArrowLeft size={15} />} self="flex-start" onPress={backToZones}>
+          All zones
+        </Button>
+      ) : null}
+
       <PageHeader
-        title={inZone ? `DNS · ${zone?.name ?? zone?.id}` : 'DNS'}
+        title={inZone ? `DNS · ${displayZone(active!.name)}` : 'DNS'}
         subtitle={
           inZone
-            ? 'Records in this zone — synced to CoreDNS (in-cluster) and Cloudflare by hanzodns.'
-            : 'Per-org managed DNS zones — provider, record count, and sync status (hanzodns).'
+            ? isCloudflare(active!.provider)
+              ? 'Cloudflare-backed zone — records sync to Cloudflare via the org connector.'
+              : 'Authoritative zone — records resolve from CoreDNS in-cluster.'
+            : 'Manage authoritative and connected Cloudflare zones + records from one screen.'
         }
         actions={
-          <XStack gap="$2">
-            {inZone && (
-              <Button size="$3" onPress={loadZones} disabled={loading}>All zones</Button>
-            )}
-            <Button size="$3" onPress={inZone ? () => openZone(zone!) : loadZones} disabled={loading}>
-              Refresh
-            </Button>
-          </XStack>
+          inZone ? (
+            <>
+              <PrimaryButton onPress={() => setDialog({ kind: 'newRecord', zone: active! })} icon={<Plus size={16} />}>
+                New record
+              </PrimaryButton>
+              <Button onPress={() => void loadRecords(active!)} icon={<RefreshCw size={16} />}>
+                Refresh
+              </Button>
+              <Button
+                icon={<Trash2 size={16} />}
+                onPress={() => setDialog({ kind: 'deleteZone', zone: active! })}
+                aria-label="Delete zone"
+              >
+                Delete zone
+              </Button>
+            </>
+          ) : (
+            <>
+              {cf?.connected ? (
+                <XStack items="center" gap="$1.5" px="$2.5" py="$1.5" rounded="$3" style={{ backgroundColor: 'rgba(243,128,32,0.14)' }}>
+                  <Cloud size={14} color={CF_ORANGE} />
+                  <Text fontSize="$2" style={{ color: CF_ORANGE }}>Cloudflare connected</Text>
+                </XStack>
+              ) : (
+                <Button onPress={connectCloudflare} icon={<Cloud size={16} color={CF_ORANGE} />}>
+                  Connect Cloudflare
+                </Button>
+              )}
+              <PrimaryButton onPress={() => setDialog({ kind: 'newZone' })} icon={<Plus size={16} />}>
+                New zone
+              </PrimaryButton>
+              <Button onPress={() => void loadZones()} icon={<RefreshCw size={16} />}>
+                Refresh
+              </Button>
+            </>
+          )
         }
       />
-      {state ? (
-        <BackendStateCard
-          state={state}
-          onRetry={inZone ? () => openZone(zone!) : loadZones}
-          hint={inZone ? 'endpoint · GET /v1/dns/zones/{zone}/records' : 'endpoint · GET /v1/dns/zones'}
-        />
-      ) : inZone ? (
-        <DataTable
-          fields={RECORD_FIELDS}
-          records={records as Array<Record<string, unknown>>}
-          loading={loading}
-          empty="No records in this zone yet."
+
+      {inZone ? (
+        // ── Records view ──
+        recordsState.phase === 'error' ? (
+          <BackendStateCard
+            state={recordsState.error}
+            onRetry={() => void loadRecords(active!)}
+            hint="endpoint · GET /v1/dns/zones/{zone}/records"
+          />
+        ) : recordsState.phase === 'ready' && recordsState.data.length === 0 ? (
+          <EmptyState
+            icon={Globe}
+            title={`No records in ${displayZone(active!.name)}`}
+            description="Add a record to start resolving names in this zone."
+            primary={{ label: 'New record', onPress: () => setDialog({ kind: 'newRecord', zone: active! }) }}
+          />
+        ) : (
+          <DataTable<DnsRecord>
+            columns={recordColumns}
+            rows={recordsState.phase === 'ready' ? recordsState.data : []}
+            loading={recordsState.phase === 'loading'}
+            empty="No records in this zone yet."
+            rowKey={(r) => r.id}
+          />
+        )
+      ) : // ── Zones view ──
+      zonesState.phase === 'error' ? (
+        <BackendStateCard state={zonesState.error} onRetry={() => void loadZones()} hint="endpoint · GET /v1/dns/zones" />
+      ) : zonesState.phase === 'ready' && zonesState.data.length === 0 ? (
+        <EmptyState
+          icon={Globe}
+          title="No DNS zones yet"
+          description="Create a zone to manage its records, or connect Cloudflare to bring your existing zones in."
+          primary={{ label: 'New zone', onPress: () => setDialog({ kind: 'newZone' }) }}
+          secondary={{ label: 'Connect Cloudflare', onPress: connectCloudflare }}
         />
       ) : (
-        <DataTable
-          fields={ZONE_FIELDS}
-          records={zones as Array<Record<string, unknown>>}
-          loading={loading}
-          onOpen={(row) => openZone(row as Zone)}
-          empty="No DNS zones yet. Create one with the hanzodns API or CLI."
-        />
+        <YStack gap="$4">
+          {zonesState.phase === 'ready' ? <SummaryBar zones={zonesState.data} /> : null}
+          <DataTable<Zone>
+            columns={zoneColumns}
+            rows={zonesState.phase === 'ready' ? zonesState.data : []}
+            loading={zonesState.phase === 'loading'}
+            empty="No DNS zones yet."
+            rowKey={(z) => z.id}
+            onRowPress={openZone}
+          />
+        </YStack>
       )}
-      {!state && !inZone && (
-        <XStack>
-          <Text fontSize="$2" color="$color10">
-            Zones and records are the source of truth in hanzodns; edits re-sync to CoreDNS + Cloudflare. Provision via the hanzodns API (`POST /v1/dns/zones`) or CLI.
-          </Text>
-        </XStack>
-      )}
+
+      {/* ONE SlideOver, content by dialog kind. */}
+      <SlideOver
+        open={dialog.kind !== 'none'}
+        onClose={() => setDialog({ kind: 'none' })}
+        title={
+          dialog.kind === 'newZone'
+            ? 'New zone'
+            : dialog.kind === 'newRecord'
+              ? `New record · ${displayZone(dialog.zone.name)}`
+              : dialog.kind === 'editRecord'
+                ? `Edit ${dialog.record.name || '@'} (${dialog.record.type})`
+                : dialog.kind === 'deleteZone'
+                  ? `Delete zone ${displayZone(dialog.zone.name)}`
+                  : dialog.kind === 'deleteRecord'
+                    ? 'Delete record'
+                    : ''
+        }
+        icon={dialog.kind === 'deleteZone' || dialog.kind === 'deleteRecord' ? Trash2 : Globe}
+        ariaLabel="DNS dialog"
+      >
+        {dialog.kind === 'newZone' ? (
+          <ZoneForm onDone={afterZoneCreate} />
+        ) : dialog.kind === 'newRecord' ? (
+          <RecordForm zone={dialog.zone} onDone={afterRecordChange} />
+        ) : dialog.kind === 'editRecord' ? (
+          <RecordForm zone={dialog.zone} record={dialog.record} onDone={afterRecordChange} />
+        ) : dialog.kind === 'deleteZone' ? (
+          <ConfirmDelete
+            message={`Delete ${displayZone(dialog.zone.name)} and all ${dialog.zone.recordCount} of its records? This cannot be undone.`}
+            confirmLabel="Delete zone"
+            run={() => DnsApi.zones.remove(dialog.zone.name)}
+            onDone={afterZoneDelete}
+          />
+        ) : dialog.kind === 'deleteRecord' ? (
+          <ConfirmDelete
+            message={`Delete the ${dialog.record.type} record “${dialog.record.name || '@'}” → ${dialog.record.content}?`}
+            confirmLabel="Delete record"
+            run={() => DnsApi.records.remove(dialog.zone.name, dialog.record.id)}
+            onDone={afterRecordChange}
+          />
+        ) : null}
+      </SlideOver>
     </YStack>
   )
 }

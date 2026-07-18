@@ -1550,8 +1550,11 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/dns',
     docs: ext.dns,
     kind: 'module',
-    // Real per-org managed DNS via hanzodns (zones + records → CoreDNS + Cloudflare
-    // sync) on the unified /v1/dns surface; honest states until the route is bound.
+    // Real per-org managed DNS as a full CRUD dashboard over hanzodns (zones +
+    // records → CoreDNS + Cloudflare sync) on the unified /v1/dns surface: zones
+    // list (provider · record count · DNSSEC · status) → drill into a zone →
+    // records add/edit/delete + the Cloudflare orange-cloud Proxied toggle; honest
+    // states until the cloud dns provider route is bound.
     routes: [{ path: '', component: DnsModule }],
   },
   {
