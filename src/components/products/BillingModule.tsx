@@ -11,6 +11,8 @@
  * fabricated data — every number is real or an honest absent state):
  *   Overview      — balance, month-to-date spend, linear projection, spend trend.
  *   Reports       — cost breakdown by service (model/provider), filterable + charts.
+ *   Accounts      — which account pays and in what order: attach an account to the
+ *                   org or to one project, and reorder the chain commerce resolves.
  *   Budgets       — create/list spend budgets (real `/v1/billing/spend-alerts`).
  *   Invoices      — invoice history + download (`/v1/billing/invoices`).
  *   Subscriptions — the org's plans/status/renewal (reuses `SubscriptionsModule`).
@@ -27,6 +29,7 @@ import { Button, XStack } from '@hanzo/gui'
 
 import { BillingOverview } from './billing/BillingOverview'
 import { BillingReports } from './billing/BillingReports'
+import { BillingAccounts } from './billing/BillingAccounts'
 import { BillingBudgets } from './billing/BillingBudgets'
 import { BillingInvoices } from './billing/BillingInvoices'
 import { SubscriptionsModule } from './SubscriptionsModule'
@@ -37,6 +40,7 @@ import { BillingCredits } from './billing/BillingCredits'
 const TABS: { id: string; label: string }[] = [
   { id: '', label: 'Overview' },
   { id: 'reports', label: 'Reports' },
+  { id: 'accounts', label: 'Accounts' },
   { id: 'budgets', label: 'Budgets' },
   { id: 'invoices', label: 'Invoices' },
   { id: 'subscriptions', label: 'Subscriptions' },
@@ -71,6 +75,8 @@ export function BillingModule({ params }: { params: Record<string, string> }) {
 
       {tab === 'reports' ? (
         <BillingReports params={params} />
+      ) : tab === 'accounts' ? (
+        <BillingAccounts params={params} />
       ) : tab === 'budgets' ? (
         <BillingBudgets params={params} />
       ) : tab === 'invoices' ? (

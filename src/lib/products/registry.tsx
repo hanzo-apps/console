@@ -2270,6 +2270,7 @@ export const catalog: CatalogEntry[] = [
     ],
     subpages: [
       { slug: 'reports', label: 'Reports' },
+      { slug: 'accounts', label: 'Accounts' },
       { slug: 'budgets', label: 'Budgets' },
       { slug: 'invoices', label: 'Invoices' },
       { slug: 'subscriptions', label: 'Subscriptions' },
