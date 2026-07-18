@@ -235,7 +235,7 @@ const withQuery = (base: string, query?: Query): string => {
 }
 
 async function request<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   opts: { query?: Query; body?: unknown; absoluteUrl?: string; headers?: Record<string, string> } = {},
 ): Promise<ApiResponse<T>> {
@@ -306,6 +306,33 @@ export async function originPost<T>(path: string, body?: unknown, query?: Query,
   const r = await request<T>('POST', path, { query, body, absoluteUrl: originV1Url(path), headers })
   if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
   return r.data
+}
+
+/**
+ * Envelope PUT / PATCH / DELETE pinned to the console's OWN origin (`<origin>/v1/<path>`)
+ * — the idempotent-upsert / partial-edit / remove twins of `originPost`. Used by the
+ * admin AGGREGATE mutations that need a verb beyond POST (`PUT /v1/admin/promos` upserts
+ * the single platform promo; `PATCH`/`DELETE /v1/admin/spend-caps/:id` edit/remove a cap).
+ * They terminate at the global-admin-gated `app/admin/aggregate` proxy — which applies the
+ * same-origin CSRF check on every mutating method (PUT/PATCH/DELETE included) — so pinning
+ * the ORIGIN (not `config.cloudUrl`) keeps a split-origin `NEXT_PUBLIC_CLOUD_URL` from
+ * routing the write around the console gate. Same casibase envelope unwrap + `ApiError`.
+ */
+export async function originPut<T>(path: string, body?: unknown, query?: Query): Promise<T> {
+  const r = await request<T>('PUT', path, { query, body, absoluteUrl: originV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r.data
+}
+
+export async function originPatch<T>(path: string, body?: unknown, query?: Query): Promise<T> {
+  const r = await request<T>('PATCH', path, { query, body, absoluteUrl: originV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r.data
+}
+
+export async function originDelete(path: string, query?: Query): Promise<void> {
+  const r = await request<unknown>('DELETE', path, { query, absoluteUrl: originV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
 }
 
 /**
