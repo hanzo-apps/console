@@ -267,4 +267,3 @@ export function CollectionBuilder({ client, module, existing, onSaved, onCancel 
   )
 }
 
-export default CollectionBuilder

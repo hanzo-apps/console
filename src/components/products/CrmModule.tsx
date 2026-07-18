@@ -386,4 +386,3 @@ export function CrmModule({ params }: { params: Record<string, string> }) {
   )
 }
 
-export default CrmModule

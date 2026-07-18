@@ -637,4 +637,3 @@ function seedFromLast(s: Session): SessionEvent[] {
   ]
 }
 
-export default MissionControlModule

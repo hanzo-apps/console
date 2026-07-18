@@ -36,7 +36,6 @@ declare global {
   }
 }
 
-export type SquareEnv = 'sandbox' | 'production'
 
 /**
  * The Web Payments SDK CDN URL for an environment. Fail-safe: anything that is
