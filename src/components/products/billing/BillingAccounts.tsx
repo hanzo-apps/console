@@ -288,4 +288,3 @@ export function BillingAccounts({ params }: { params: Record<string, string> }) 
   )
 }
 
-export default BillingAccounts

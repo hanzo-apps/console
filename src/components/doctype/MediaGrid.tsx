@@ -244,4 +244,3 @@ function ErrorBar({ message }: { message: string }) {
   )
 }
 
-export default MediaGrid
