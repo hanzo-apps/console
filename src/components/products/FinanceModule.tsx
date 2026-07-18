@@ -36,4 +36,3 @@ export function FinanceModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default FinanceModule

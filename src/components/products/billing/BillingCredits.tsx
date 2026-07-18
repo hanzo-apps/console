@@ -284,4 +284,3 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
   )
 }
 
-export default BillingCredits

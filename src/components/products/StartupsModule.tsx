@@ -293,4 +293,3 @@ export function StartupsModule() {
   )
 }
 
-export default StartupsModule

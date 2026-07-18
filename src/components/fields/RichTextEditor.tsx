@@ -277,12 +277,3 @@ function ToolBtn({
 function Sep() {
   return <span className="hz-rt-sep" aria-hidden />
 }
-
-/** Read the flattened plain text of the current editor (used by callers/tests). */
-export function readPlainText(editor: LexicalEditor): string {
-  let text = ''
-  editor.getEditorState().read(() => {
-    text = $getRoot().getTextContent()
-  })
-  return text
-}

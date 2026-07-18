@@ -281,4 +281,3 @@ export function SubscriptionsModule(_props: { params: Record<string, string> }) 
   )
 }
 
-export default SubscriptionsModule

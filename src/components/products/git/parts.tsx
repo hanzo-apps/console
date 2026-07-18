@@ -63,33 +63,6 @@ export function CopyButton({
   )
 }
 
-/** A monospace, copyable URL row (clone / SSH) with a copy control. */
-export function UrlRow({ label, value }: { label: string; value: string }) {
-  return (
-    <YStack gap="$1">
-      <Text fontSize="$2" color="$color10">
-        {label}
-      </Text>
-      <XStack
-        items="center"
-        gap="$2"
-        px="$2.5"
-        py="$2"
-        borderWidth={1}
-        borderColor="$borderColor"
-        rounded="$3"
-        bg="$color1"
-        minW={0}
-      >
-        <Text className="hz-mono" fontSize="$2" color="$color12" flex={1} numberOfLines={1} selectable>
-          {value || '—'}
-        </Text>
-        {value ? <CopyButton value={value} ariaLabel={`Copy ${label}`} /> : null}
-      </XStack>
-    </YStack>
-  )
-}
-
 /**
  * The clone panel — a segmented HTTPS/SSH toggle over one copyable URL box, the gitea
  * "Clone" affordance. Shows whichever protocol is selected; copy yields the raw URL.
@@ -409,4 +382,3 @@ export function ComingSoonTab({
 }
 
 /** The Actions tab body — same honest empty, with the run icon. */
-export const ActionsIcon = () => <Play size={22} color="$color10" />

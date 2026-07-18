@@ -240,4 +240,3 @@ function SourceBadge({ label, ok }: { label: string; ok: boolean }) {
   )
 }
 
-export default UsageModule

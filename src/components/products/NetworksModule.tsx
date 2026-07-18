@@ -107,4 +107,3 @@ export function NetworksModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default NetworksModule
