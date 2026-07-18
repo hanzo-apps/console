@@ -6,6 +6,7 @@ import {
   isAdsHost,
   isSocialHost,
   isSentryHost,
+  isDnsHost,
   brandFromHost,
   type ShellId,
 } from '~/config'
@@ -16,9 +17,9 @@ import {
 // is ORTHOGONAL to the brand (a face never crosses a brand). Pure (host passed in /
 // env restored), so no window mocking.
 
-const ALL: ShellId[] = ['console', 'billing', 'marketing', 'ads', 'social', 'sentry']
-/** The five single-product FACES (everything but the full console). */
-const FACES: ShellId[] = ['billing', 'marketing', 'ads', 'social', 'sentry']
+const ALL: ShellId[] = ['console', 'billing', 'marketing', 'ads', 'social', 'sentry', 'dns']
+/** The single-product FACES (everything but the full console). */
+const FACES: ShellId[] = ['billing', 'marketing', 'ads', 'social', 'sentry', 'dns']
 
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_PRODUCT_SHELL
@@ -60,10 +61,12 @@ describe('product-shell descriptor', () => {
     expect(shellFor('ads').wordmark).toBe('Ads')
     expect(shellFor('social').wordmark).toBe('Social')
     expect(shellFor('sentry').wordmark).toBe('Sentry')
+    expect(shellFor('dns').wordmark).toBe('DNS')
   })
 
-  it('sentry boots into Issues; every other face indexes on Overview', () => {
+  it('sentry boots into Issues, dns into Zones; every other face indexes on Overview', () => {
     expect(shellFor('sentry').indexLabel).toBe('Issues')
+    expect(shellFor('dns').indexLabel).toBe('Zones')
     for (const id of ['billing', 'marketing', 'ads', 'social'] as ShellId[]) {
       expect(shellFor(id).indexLabel).toBe('Overview')
     }
@@ -77,9 +80,11 @@ describe('shellFromHost — ONE resolver, five faces', () => {
     expect(shellFromHost('ads.hanzo.ai')).toBe('ads')
     expect(shellFromHost('social.hanzo.ai')).toBe('social')
     expect(shellFromHost('sentry.hanzo.ai')).toBe('sentry')
+    expect(shellFromHost('dns.hanzo.ai')).toBe('dns')
     // works on any brand host, not just hanzo
     expect(shellFromHost('marketing.lux.cloud')).toBe('marketing')
     expect(shellFromHost('social.zoo.ngo')).toBe('social')
+    expect(shellFromHost('dns.lux.cloud')).toBe('dns')
   })
 
   it('the host predicates agree with the resolver', () => {
@@ -87,6 +92,7 @@ describe('shellFromHost — ONE resolver, five faces', () => {
     expect(isAdsHost('ads.hanzo.ai')).toBe(true)
     expect(isSocialHost('social.hanzo.ai')).toBe(true)
     expect(isSentryHost('sentry.hanzo.ai')).toBe(true)
+    expect(isDnsHost('dns.hanzo.ai')).toBe(true)
     // a look-alike (mymarketing.) is NOT a face host
     expect(isMarketingHost('mymarketing.hanzo.ai')).toBe(false)
     expect(shellFromHost('mymarketing.hanzo.ai')).toBe('console')
@@ -130,5 +136,6 @@ describe('shellFromHost — ONE resolver, five faces', () => {
     expect(brandFromHost('marketing.zoo.ngo')).toBe('zoo')
     expect(brandFromHost('ads.lux.cloud')).toBe('lux')
     expect(brandFromHost('social.pars.cloud')).toBe('pars')
+    expect(brandFromHost('dns.zoo.ngo')).toBe('zoo')
   })
 })
