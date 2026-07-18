@@ -16,19 +16,25 @@
  * use. Distinct from IAM "Projects" (org resource scope) and PaaS "Applications"
  * (container apps) — this is the hanzo.app buildable-sites store only.
  *
- * One list + an optional per-site detail rail (real deployment history). Per row TWO
- * actions: "Open site" (the live URL) and "Edit in hanzo.app" (`/dev?project=<slug>`,
- * the deep-link the builder honors). Every state is honest: loading, a true empty
- * state ("build one in hanzo.app"), and the shared BackendStateCard on 401/403/404/
- * 503 — never a fabricated row.
+ * One list + an optional per-site detail rail showing the project's REAL
+ * compute/platform resources: its live URL, a resource band (Compute · Storage ·
+ * Domains · Deployments), the project-scoped bound-host list (`/v1/projects/:slug/
+ * domains`), and full deploy history (`/v1/projects/:slug/deployments`). Storage is
+ * the live deployment's actual bytes/files; Compute is an honest `—` (a buildable
+ * site is edge-served and cloud exposes no project-scoped machine/GPU attribution).
+ * Per row TWO actions: "Open site" (the live URL) and "Edit in hanzo.app"
+ * (`/dev?project=<slug>`, the deep-link the builder honors). Every state is honest:
+ * loading, a true empty state ("build one in hanzo.app"), and the shared
+ * BackendStateCard on 401/403/404/503 — never a fabricated row.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { AppWindow, ExternalLink, Pencil, RefreshCw, X } from '@hanzogui/lucide-icons-2'
+import { AppWindow, Cpu, ExternalLink, Globe, HardDrive, Pencil, RefreshCw, Rocket, X } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { AppsApi, builderEditUrl, type App, type AppDeployment } from '~/lib/api/apps'
+import { PlatformSitesApi } from '~/lib/api/platform-sites'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
@@ -99,7 +105,7 @@ function RowActions({ app }: { app: App }) {
 type DetailState =
   | { phase: 'loading' }
   | { phase: 'error'; error: BackendState }
-  | { phase: 'ready'; app: App; deployments: AppDeployment[] }
+  | { phase: 'ready'; app: App; deployments: AppDeployment[]; domains: string[] }
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -111,21 +117,188 @@ function Fact({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Self-contained by slug: loads the site (`GET /v1/projects/:slug`) and its
- * deploy history (`.../deployments`) so the rail renders identically whether opened
- * from a row press or a `/apps/:slug` deep link. A deployments failure degrades that
- * section (the site facts still render); a site-load failure shows the honest error.
+ * The deployment whose files are actually SERVED — the site's live footprint: the
+ * app's current deployment, else the newest `live`, else the newest overall. PURE.
+ * Drives the honest per-project Storage figure (real bytes/files, never fabricated).
+ */
+function liveDeployment(app: App, deployments: AppDeployment[]): AppDeployment | null {
+  if (app.currentDeploymentId) {
+    const cur = deployments.find((d) => d.id === app.currentDeploymentId)
+    if (cur) return cur
+  }
+  return deployments.find((d) => (d.status || '').toLowerCase() === 'live') ?? deployments[0] ?? null
+}
+
+/**
+ * One compact, monochrome resource stat tile (Compute / Storage / Domains /
+ * Deployments). `value` is pre-formatted by the caller so an absent metric is an
+ * honest em-dash — never a fabricated number. Two-up in the detail rail.
+ */
+function ResourceStat({ icon, label, value, caption }: { icon: ReactNode; label: string; value: string; caption?: string }) {
+  return (
+    <YStack flex={1} minW={128} gap="$1" p="$2.5" borderWidth={1} borderColor="$borderColor" rounded="$4" bg="$color1">
+      <XStack items="center" gap="$1.5">
+        {icon}
+        <Text fontSize="$1" color="$color10">{label}</Text>
+      </XStack>
+      <Text fontSize="$6" fontWeight="700" color="$color12" numberOfLines={1} className="hz-mono">{value}</Text>
+      {caption ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{caption}</Text> : null}
+    </YStack>
+  )
+}
+
+/**
+ * The per-project detail body: the project's live URL + its REAL compute/platform
+ * resources — deployments, storage footprint, bound domains — sourced from the cloud
+ * `/v1/projects/:slug/*` store. Every figure is real or an honest em-dash: Storage is
+ * the live deployment's actual bytes/files; Domains is the project-scoped bound-host
+ * list; Compute is `—` because a buildable site is edge-served and cloud exposes no
+ * project-scoped machine/GPU attribution (org compute lives at `/v1/gpus` + `/vm`).
+ */
+function AppDetailBody({ app, deployments, domains }: { app: App; deployments: AppDeployment[]; domains: string[] }) {
+  const liveDep = liveDeployment(app, deployments)
+  const latest = deployments[0] ?? null
+  const host = (app.liveUrl || '').replace(/^https?:\/\//, '').replace(/\/+$/, '')
+
+  return (
+    <>
+      <XStack gap="$2" items="center">
+        <StatusTag status={app.status || 'unknown'} />
+        {app.framework ? <Text fontSize="$2" color="$color10">{app.framework}</Text> : null}
+      </XStack>
+
+      {/* Live URL — the project's primary served host (real; linked). */}
+      {app.liveUrl ? (
+        <XStack gap="$1.5" items="center" minW={0}>
+          <Globe size={13} color="$color10" />
+          <Text
+            fontSize="$2"
+            color="$color11"
+            numberOfLines={1}
+            style={{ cursor: 'pointer', textDecoration: 'underline' }}
+            onPress={() => openHref(app.liveUrl)}
+          >
+            {host}
+          </Text>
+        </XStack>
+      ) : (
+        <Text fontSize="$2" color="$color10">Not deployed yet.</Text>
+      )}
+
+      <XStack gap="$2" flexWrap="wrap">
+        {app.liveUrl ? (
+          <Button size="$2" chromeless icon={<ExternalLink size={14} />} onPress={() => openHref(app.liveUrl)}>
+            <Text fontSize="$2" color="$color11">Open site</Text>
+          </Button>
+        ) : null}
+        <Button size="$2" icon={<Pencil size={14} />} onPress={() => openHref(editUrl(app.slug))}>
+          <Text fontSize="$2">Edit in hanzo.app</Text>
+        </Button>
+      </XStack>
+
+      {/* Resources — the project's REAL compute/platform footprint (honest zeros). */}
+      <YStack gap="$2" pt="$2" borderTopWidth={1} borderColor="$borderColor">
+        <Text fontSize="$2" fontWeight="700" color="$color11">Resources</Text>
+        <XStack gap="$2" flexWrap="wrap">
+          <ResourceStat
+            icon={<Cpu size={13} color="$color10" />}
+            label="Compute"
+            value="—"
+            caption="edge-served · no GPUs"
+          />
+          <ResourceStat
+            icon={<HardDrive size={13} color="$color10" />}
+            label="Storage"
+            value={liveDep && liveDep.bytes > 0 ? fmtBytes(liveDep.bytes) : '—'}
+            caption={liveDep ? `${(liveDep.files || 0).toLocaleString()} files · v${liveDep.version}` : 'no deploys'}
+          />
+          <ResourceStat
+            icon={<Globe size={13} color="$color10" />}
+            label="Domains"
+            value={String(domains.length)}
+            caption={domains.length ? 'bound hosts' : 'none bound'}
+          />
+          <ResourceStat
+            icon={<Rocket size={13} color="$color10" />}
+            label="Deployments"
+            value={String(deployments.length)}
+            caption={latest ? latest.status || 'unknown' : 'none yet'}
+          />
+        </XStack>
+      </YStack>
+
+      {/* Bound domains (subdomain + custom hosts) — real, project-scoped. */}
+      {domains.length ? (
+        <YStack gap="$1.5" pt="$2" borderTopWidth={1} borderColor="$borderColor">
+          <Text fontSize="$2" fontWeight="700" color="$color11">Domains</Text>
+          {domains.slice(0, 8).map((d) => (
+            <XStack key={d} items="center" justify="space-between" gap="$2" py="$1">
+              <XStack items="center" gap="$1.5" minW={0} flex={1}>
+                <Globe size={12} color="$color10" />
+                <Text fontSize="$2" color="$color12" numberOfLines={1}>{d}</Text>
+              </XStack>
+              <Button size="$1" chromeless aria-label={`Open ${d}`} icon={<ExternalLink size={12} />} onPress={() => openHref(`https://${d}/`)} />
+            </XStack>
+          ))}
+          {domains.length > 8 ? <Text fontSize="$1" color="$color10">+{domains.length - 8} more</Text> : null}
+        </YStack>
+      ) : null}
+
+      {/* Facts */}
+      <YStack gap="$1.5" pt="$2" borderTopWidth={1} borderColor="$borderColor">
+        <Fact label="Slug" value={app.slug} />
+        <Fact label="Repo" value={app.repo.url || '—'} />
+        <Fact label="Bucket" value={app.bucket || '—'} />
+        <Fact label="Created" value={fmtTime(app.createdAt)} />
+        <Fact label="Updated" value={fmtTime(app.updatedAt)} />
+      </YStack>
+
+      {/* Deployment history */}
+      <YStack gap="$2" pt="$2" borderTopWidth={1} borderColor="$borderColor">
+        <Text fontSize="$2" fontWeight="700" color="$color11">Deployment history</Text>
+        {deployments.length === 0 ? (
+          <Text fontSize="$2" color="$color10">No deployments yet.</Text>
+        ) : (
+          deployments.slice(0, 12).map((d) => (
+            <XStack key={d.id} items="center" justify="space-between" gap="$2" py="$1">
+              <YStack minW={0} flex={1}>
+                <Text fontSize="$2" fontWeight="600" numberOfLines={1}>
+                  v{d.version}{d.commit ? ` · ${d.commit.slice(0, 7)}` : ''}{d.source ? ` · ${d.source}` : ''}
+                </Text>
+                <Text fontSize="$1" color="$color10" numberOfLines={1}>
+                  {fmtTime(d.createdAt)} · {d.files || 0} files · {fmtBytes(d.bytes)}
+                </Text>
+              </YStack>
+              <StatusTag status={d.status || 'unknown'} />
+            </XStack>
+          ))
+        )}
+      </YStack>
+    </>
+  )
+}
+
+/**
+ * Self-contained by slug: loads the site (`GET /v1/projects/:slug`), its deploy
+ * history (`.../deployments`) and its bound domains (`.../domains`) so the rail
+ * renders the project's full resource footprint identically whether opened from a row
+ * press or a `/apps/:slug` deep link. Deployments/domains failures degrade those
+ * sections independently (the site facts still render); a site-load failure shows the
+ * honest error.
  */
 function AppDetail({ slug, onClose }: { slug: string; onClose: () => void }) {
   const [state, setState] = useState<DetailState>({ phase: 'loading' })
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
+    // The site is required (its failure is the honest error); deployments + bound
+    // domains degrade INDEPENDENTLY to empty so one blip never blanks the rail.
     Promise.all([
       AppsApi.get(slug),
       AppsApi.deployments(slug).catch(() => [] as AppDeployment[]),
+      PlatformSitesApi.listDomains(slug).catch(() => [] as string[]),
     ])
-      .then(([app, deployments]) => setState({ phase: 'ready', app, deployments }))
+      .then(([app, deployments, domains]) => setState({ phase: 'ready', app, deployments, domains }))
       .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
   }, [slug])
   useEffect(() => { load() }, [load])
@@ -144,52 +317,7 @@ function AppDetail({ slug, onClose }: { slug: string; onClose: () => void }) {
       ) : state.phase === 'error' ? (
         <BackendStateCard state={state.error} onRetry={load} hint={`endpoint · GET /v1/projects/${slug}`} />
       ) : (
-        <>
-          <XStack gap="$2" items="center">
-            <StatusTag status={state.app.status || 'unknown'} />
-            {state.app.framework ? <Text fontSize="$2" color="$color10">{state.app.framework}</Text> : null}
-          </XStack>
-
-          <XStack gap="$2" flexWrap="wrap">
-            {state.app.liveUrl ? (
-              <Button size="$2" chromeless icon={<ExternalLink size={14} />} onPress={() => openHref(state.app.liveUrl)}>
-                <Text fontSize="$2" color="$color11">Open site</Text>
-              </Button>
-            ) : null}
-            <Button size="$2" icon={<Pencil size={14} />} onPress={() => openHref(editUrl(state.app.slug))}>
-              <Text fontSize="$2">Edit in hanzo.app</Text>
-            </Button>
-          </XStack>
-
-          <YStack gap="$1.5" pt="$1" borderTopWidth={1} borderColor="$borderColor">
-            <Fact label="Slug" value={state.app.slug} />
-            <Fact label="Live URL" value={state.app.liveUrl || '—'} />
-            <Fact label="Repo" value={state.app.repo.url || '—'} />
-            <Fact label="Created" value={fmtTime(state.app.createdAt)} />
-            <Fact label="Updated" value={fmtTime(state.app.updatedAt)} />
-          </YStack>
-
-          <YStack gap="$2" pt="$1" borderTopWidth={1} borderColor="$borderColor">
-            <Text fontSize="$2" fontWeight="700" color="$color11">Deployments</Text>
-            {state.deployments.length === 0 ? (
-              <Text fontSize="$2" color="$color10">No deployments yet.</Text>
-            ) : (
-              state.deployments.slice(0, 12).map((d) => (
-                <XStack key={d.id} items="center" justify="space-between" gap="$2" py="$1">
-                  <YStack minW={0} flex={1}>
-                    <Text fontSize="$2" fontWeight="600" numberOfLines={1}>
-                      v{d.version}{d.commit ? ` · ${d.commit.slice(0, 7)}` : ''}{d.source ? ` · ${d.source}` : ''}
-                    </Text>
-                    <Text fontSize="$1" color="$color10" numberOfLines={1}>
-                      {fmtTime(d.createdAt)} · {d.files || 0} files · {fmtBytes(d.bytes)}
-                    </Text>
-                  </YStack>
-                  <StatusTag status={d.status || 'unknown'} />
-                </XStack>
-              ))
-            )}
-          </YStack>
-        </>
+        <AppDetailBody app={state.app} deployments={state.deployments} domains={state.domains} />
       )}
     </Card>
   )
