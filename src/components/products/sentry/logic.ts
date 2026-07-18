@@ -94,15 +94,6 @@ export function fmtDurationMs(ms: number): string {
 
 // ── Time period ───────────────────────────────────────────────────────────────
 
-export const PERIOD_LABEL: Record<Period, string> = {
-  '1h': 'Last hour',
-  '24h': 'Last 24h',
-  '7d': 'Last 7 days',
-  '14d': 'Last 14 days',
-  '30d': 'Last 30 days',
-  '90d': 'Last 90 days',
-}
-
 /** Issue sort options (label ↔ the `sort` query value). */
 export const ISSUE_SORTS: { value: 'lastSeen' | 'firstSeen' | 'freq'; label: string }[] = [
   { value: 'lastSeen', label: 'Last seen' },

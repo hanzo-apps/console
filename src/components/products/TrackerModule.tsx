@@ -718,4 +718,3 @@ export function TrackerModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default TrackerModule

@@ -21,7 +21,6 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { AccentButton, StatusDot } from './parts'
 import {
-  PHASE_DOT,
   endpointDailyRequests,
   fmtCount,
   fmtUsd,
@@ -344,9 +343,4 @@ export function openDeployPane(pane: DetailPaneApi, args: { onDeployed: () => vo
 /** Open an external URL in a new tab (SSR-guarded). */
 export function openExternal(href: string): void {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
-}
-
-/** A small status-dot + label used by callers that don't import parts directly. */
-export function PhaseDot({ phase }: { phase: Endpoint['phase'] }) {
-  return <StatusDot color={PHASE_DOT[phase]} />
 }

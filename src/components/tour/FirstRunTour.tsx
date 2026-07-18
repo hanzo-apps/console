@@ -58,4 +58,3 @@ export function FirstRunTour() {
   return <GuidedTour steps={CONSOLE_TOUR} open={open} onClose={close} onFinish={close} />
 }
 
-export default FirstRunTour

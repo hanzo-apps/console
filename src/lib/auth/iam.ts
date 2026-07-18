@@ -50,7 +50,6 @@ export const getProviderSigninUrl = (provider: string): string =>
   `${getSigninUrl()}&provider_hint=${encodeURIComponent(provider)}`
 
 /** Full IAM signup URL. */
-export const getSignupUrl = (): string => iam().getSignupUrl()
 
 // ── Graceful re-auth: return the user to their task after re-signing in ────────
 // A mid-task session expiry (a proxy 401) should not dump the user on the home

@@ -249,7 +249,6 @@ export const findBotTemplate = (id: string): BotTemplate | undefined =>
   BOT_TEMPLATES.find((t) => t.id === id)
 
 /** The env var names a template's image reads that identify it as a bot of this kind. */
-export const templateImageMatch = (t: BotTemplate): string => t.image
 
 /**
  * True when a deployed app (by its image repository) is an instance of a bot
