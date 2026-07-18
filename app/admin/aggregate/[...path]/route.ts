@@ -95,21 +95,40 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
 /**
  * POST — the GLOBAL-admin mutations that ride the same god-view gate
- * (`/v1/admin/providers/{toggle,primary}`). Identical path through `getAdminGate`
- * (fail-closed 403) → `forwardWithUserBearer`, which applies the same-origin CSRF
- * check to this mutating method BEFORE resolving the user, streams the JSON body
- * through, and re-validates the path against `allowAdminSurface` (so a POST can only
- * ever reach an allowed head — never `iam`/`kms`, never a traversal).
+ * (`/v1/admin/providers/{toggle,primary}`, `/v1/admin/spend-caps` create). Identical
+ * path through `getAdminGate` (fail-closed 403) → `forwardWithUserBearer`, which applies
+ * the same-origin CSRF check to this mutating method BEFORE resolving the user, streams
+ * the JSON body through, and re-validates the path against `allowAdminSurface` (so a POST
+ * can only ever reach an allowed head — never `iam`/`kms`, never a traversal).
  */
 export async function POST(req: NextRequest, ctx: Ctx) {
   return handle(req, ctx)
 }
 
 /**
- * PUT — the GLOBAL-admin enablement set (`PUT /v1/admin/enablement`, flip an item
- * off|beta|ga + grant orgs). Same gate + same CSRF/traversal hardening as POST;
- * `allowAdminSurface` admits only `v1/admin/enablement`, nothing else.
+ * PUT — the GLOBAL-admin upserts on the same god-view gate (`PUT /v1/admin/enablement`
+ * flip an item off|beta|ga + grant orgs; `PUT /v1/admin/promos` upsert the single
+ * platform plan promo). Same gate + same CSRF/traversal hardening as POST;
+ * `allowAdminSurface` admits only the declared heads, nothing else.
  */
 export async function PUT(req: NextRequest, ctx: Ctx) {
+  return handle(req, ctx)
+}
+
+/**
+ * PATCH — the GLOBAL-admin partial edits (`PATCH /v1/admin/spend-caps/:id?org=<slug>`,
+ * override an org's usage cap). Same gate + same CSRF/traversal hardening; the `:id`
+ * sub-path passes because `allowAdminSurface` admits `v1/admin/spend-caps[/...]`.
+ */
+export async function PATCH(req: NextRequest, ctx: Ctx) {
+  return handle(req, ctx)
+}
+
+/**
+ * DELETE — the GLOBAL-admin removals (`DELETE /v1/admin/spend-caps/:id?org=<slug>`,
+ * remove an org's usage cap). Same gate + CSRF/traversal hardening as the other
+ * mutating verbs; only an allow-listed head/sub-path is ever reached.
+ */
+export async function DELETE(req: NextRequest, ctx: Ctx) {
   return handle(req, ctx)
 }
