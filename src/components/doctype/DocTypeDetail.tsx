@@ -257,4 +257,3 @@ export function DocTypeDetail({ client, doctype, name, project, onBack, onView }
   )
 }
 
-export default DocTypeDetail

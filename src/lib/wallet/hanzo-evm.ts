@@ -77,10 +77,6 @@ export const formatHusd = (value: bigint): string => ethers.formatUnits(value, H
 /** Base units (18 decimals) from a human HUSD string. Throws on a bad amount. */
 export const parseHusd = (amount: string): bigint => ethers.parseUnits(amount.trim(), HUSD.decimals)
 
-/** HUSD whole units → USD cents (1 HUSD = 100 cents), floored. */
-export const husdToCents = (amount: string): number =>
-  Math.round(Number.parseFloat(amount) * 100)
-
 /**
  * Ensure the wallet is on Hanzo Mainnet (36963), adding the network if unknown.
  * No-op when already on the chain. Surfaces the wallet's own error otherwise.

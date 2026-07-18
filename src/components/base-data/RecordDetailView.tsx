@@ -251,4 +251,3 @@ export function RecordDetailView({ api, collection, recordId, onBack, onView }: 
   )
 }
 
-export default RecordDetailView
