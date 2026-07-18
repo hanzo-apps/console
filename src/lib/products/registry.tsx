@@ -108,6 +108,7 @@ import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
+import { UsageCapsPromoModule } from '~/components/products/admin/UsageCapsPromoModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
 import { RoutingModule } from '~/components/products/admin/RoutingModule'
 import { ModelsModule } from '~/components/products/ModelsModule'
@@ -658,6 +659,26 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: SaasModule }],
+  },
+  {
+    // admin.hanzo.ai USAGE CAPS & PROMO — the platform config surface for two levers:
+    // the single plan PROMO (percent-off applied to paid plans, over `/v1/admin/promos`)
+    // and cross-tenant CAP oversight/override (list/create/edit/delete any org's usage
+    // caps over `/v1/admin/spend-caps?org=<slug>`). GLOBAL-ADMIN ONLY (`admin: true` hides
+    // it from every customer's nav/launcher/palette; both surfaces are server-gated by
+    // getAdminGate behind `/admin/aggregate`). A config surface (not money-moving) — the
+    // caps model reuses the tenant SpendAlert primitive, so `budgets-logic` is shared, no fork.
+    id: 'usage-caps-promo',
+    label: 'Usage Caps & Promo',
+    icon: Gift,
+    description: 'Set the platform plan promo, and oversee or override any organization’s usage caps.',
+    gcp: 'Billing budgets / Promotions',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: UsageCapsPromoModule }],
   },
   {
     // admin.hanzo.ai CUSTOMERS board — the operator cockpit: the live fleet customer
