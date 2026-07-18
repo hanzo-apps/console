@@ -246,6 +246,34 @@ describe('X-Project-Id drop — cross-tenant eval isolation (RED MED-1)', () => 
 })
 
 /**
+ * INTENT NEVER REACHES A BACKEND — `X-Act-As-Project` (client.ts baseHeaders) is a
+ * REQUEST to act in a project, not a claim of one. It is addressed to whichever
+ * boundary can VALIDATE it against the caller's scope set and mint the authoritative
+ * `X-Project-Id`; a backend that received the raw intent would be reading an
+ * unvalidated, browser-chosen value under a different name — the very confusion the
+ * two names exist to prevent. `upstreamHeaders` rebuilds the upstream header set from
+ * scratch, so the intent is dropped by construction; this pins it, including under
+ * `forwardScope` (a proxy opting into the sub-scope must forward the ASSERTION it
+ * trusts, never the intent).
+ */
+describe('X-Act-As-Project — the intent is consumed by a boundary, never forwarded', () => {
+  it('never rides to a backend, with or without forwardScope', () => {
+    const req = reqWith({ 'X-Act-As-Project': 'atlas', 'X-Project-Id': 'atlas' })
+    expect(upstreamHeaders(req, 'maxpower', false, {})['X-Act-As-Project']).toBeUndefined()
+    expect(upstreamHeaders(req, 'maxpower', false, { forwardScope: true })['X-Act-As-Project']).toBeUndefined()
+  })
+
+  it('a forged intent cannot smuggle a project past the /v1 drop', () => {
+    // The RED MED-1 drop above removes X-Project-Id; the intent must not be a way
+    // back in for the same browser-chosen value under another name.
+    const req = reqWith({ 'X-Act-As-Project': 'victim-org' })
+    const h = upstreamHeaders(req, 'maxpower', false, {})
+    expect(Object.values(h)).not.toContain('victim-org')
+    expect(h['X-Org-Id']).toBe('maxpower') // org stays the bearer owner, authoritative
+  })
+})
+
+/**
  * End-to-end forward (RED LOW-2) — the two-stage normalize→revalidate defense at the
  * TOP of forwardWithUserBearer, exercised through the real function with a mocked
  * fetch + identity. A rewrite-fed traversal (what reaches `app/v1/[...path]` after
