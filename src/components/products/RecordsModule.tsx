@@ -194,4 +194,3 @@ function CollectionsIndex({ api, onOpen }: { api: BaseDataApi; onOpen: (name: st
   )
 }
 
-export default RecordsModule

@@ -379,4 +379,3 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default MarketplaceModule

@@ -20,7 +20,6 @@ import {
   type LinksView,
 } from '~/lib/api/affiliates'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
-import { MetricCard } from '~/components/ui/Metric'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -356,17 +355,5 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
         </YStack>
       )}
     </PanelCard>
-  )
-}
-
-// A tiny re-export so the module can show the profit-share basis as a stat if desired.
-export function MarginBasisTile({ marginBps, rateBps }: { marginBps: number; rateBps: number }) {
-  return (
-    <MetricCard
-      icon={<TrendingUp size={16} color="#a371f7" />}
-      label="Profit share"
-      value={ratePct(rateBps)}
-      caption={`of Hanzo’s ${ratePct(marginBps)} margin`}
-    />
   )
 }

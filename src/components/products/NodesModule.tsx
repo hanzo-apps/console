@@ -268,4 +268,3 @@ export function NodesModule(_props: { params: Record<string, string> }) {
   )
 }
 
-export default NodesModule

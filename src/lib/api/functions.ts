@@ -139,7 +139,6 @@ export const METRICS_RANGES: MetricsRange[] = ['1H', '6H', '24H', '7D', '30D']
 
 /** How the invocations chart groups its lines. */
 export type MetricsGroupBy = 'function' | 'namespace' | 'status'
-export const METRICS_GROUP_BY: MetricsGroupBy[] = ['function', 'namespace', 'status']
 
 // ── Normalizers (pure — unit-tested) ────────────────────────────────────────
 
