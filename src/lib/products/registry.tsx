@@ -1892,18 +1892,19 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
-    // GitOps — the native ArgoCD replacement. A SuperAdmin PLATFORM surface
-    // (admin: true → hidden from every customer's nav/launcher/palette) that reads
-    // the live services.hanzo.ai operator CRs through cloud's /v1/gitops/* — the
+    // Deploy — the native ArgoCD replacement, rendered as a Railway-grade fleet MAP
+    // (the surface cd.hanzo.ai serves). A PLATFORM surface (admin: true → hidden from
+    // every customer's nav/launcher/palette today; the org-scoped projection opens it
+    // per-org) that reads the live operator App CRs through cloud's /v1/deploy/* — the
     // console holds NO cluster credentials; cloud holds the k8s client and enforces
-    // SuperAdmin server-side. Every CR is an application: its declared image, folded
-    // health + sync, owned-resource tree, logs, and one-click rollback (patch the CR
-    // spec.image.tag → the hanzo-operator reconciles). The rich topology/diff mounts
-    // @hanzo/ui/gitops when that reusable export ships (see gitops/ui-contract.ts).
+    // authz server-side. Every CR is a live node: its declared image, folded health +
+    // sync, owned-resource topology, CI builds, logs, and confirm-gated Sync/Rollback
+    // (rollback pins the CR image tag to a prior clean-semver release → the operator
+    // reconciles). The map/drawer are the shared @hanzo/canvas primitive.
     id: 'gitops',
-    label: 'GitOps',
+    label: 'Deploy',
     icon: GitBranch,
-    description: 'The native deploy plane — every operator CR (services.hanzo.ai) with live health, sync, resource topology, logs, and one-click rollback. No ArgoCD.',
+    description: 'The fleet deploy map — every operator App CR as a live node with reconciled health, sync, resource topology, CI builds, logs, and one-click rollback. No ArgoCD.',
     gcp: 'Cloud Deploy / ArgoCD',
     category: 'Platform',
     status: 'enabled',

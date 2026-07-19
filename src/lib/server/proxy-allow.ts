@@ -305,12 +305,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // `orgs` head admits the org-scoped entitlements sub-path (the console never calls any
   // other `orgs/*` surface; keep the tunnel to exactly what's used).
   'orgs',
-  // GitOps deploy plane (cloud reads the services.hanzo.ai operator CRs):
-  // /v1/gitops/{applications, :name/tree, :name/resource/:ref, :name/logs} +
-  // POST :name/{rollback,sync}. cloud holds the k8s client + enforces SuperAdmin
-  // server-side; the single `gitops` head admits every sub-path. The console never
-  // touches the cluster — a cookie-only call 403s like the rest.
-  'gitops',
+  // CD / deploy plane (cloud clients/deploy reads the operator hanzo.ai/v1 App CRs):
+  // /v1/deploy/{applications, health, :name/tree, :name/resource/:ref, :name/logs} +
+  // POST :name/{rollback,sync}. cloud holds the k8s client + enforces authz
+  // server-side (today SuperAdmin-only; the org-scoped projection keys it by the
+  // Bearer owner). The single `deploy` head admits every sub-path; the console never
+  // touches the cluster — a cookie-only/forbidden call 403s like the rest.
+  'deploy',
   // Hanzo Git (cloud clients/git): /v1/git/repos[/:name[/{refs,tree,blob,commits,readme}]].
   // The org's hosted code repositories — the native-Go git host welded into the cloud
   // binary (smart-HTTP + the /v1/git control plane + the JSON browse surface). The
