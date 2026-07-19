@@ -14,10 +14,10 @@ import { Button, Card, Image, Popover, Text, XStack, YStack } from '@hanzo/gui'
 import { Copy, Trash2, Plus, Upload, Braces, Play, Square, ChevronDown, X, SlidersHorizontal, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
 import { MessageCard } from './MessageCard'
-import { ModelPicker } from './ModelPicker'
+import { ModelSelector } from '~/components/products/ModelSelector'
 import { VariablesEditor } from './VariablesEditor'
 import type { Composer as ComposerState } from './useComposer'
-import type { ModelOption } from './useModels'
+import type { CatalogEntry } from '~/lib/api/aicatalog'
 
 const SYSTEM_MAX = 2048
 const USER_MAX = 16384
@@ -64,7 +64,7 @@ export function Composer({
 }: {
   composer: ComposerState
   mode: 'chat' | 'completions'
-  models: ModelOption[]
+  models: CatalogEntry[]
   modelsLoading: boolean
   running: boolean
   onRun: () => void
@@ -117,9 +117,9 @@ export function Composer({
     >
       {/* Model chip row */}
       <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
-        <ModelPicker
+        <ModelSelector
+          models={models}
           value={composer.model}
-          options={models}
           onChange={composer.setModel}
           disabled={running || modelsLoading}
         />

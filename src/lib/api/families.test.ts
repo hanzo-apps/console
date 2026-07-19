@@ -7,6 +7,7 @@ import {
   isCurrentGen,
   isFreeAlias,
   groupByFamily,
+  groupModelsByFamily,
   filterFamilies,
   totalModels,
   displayLabel,
@@ -198,13 +199,13 @@ describe('filterFamilies — search across families', () => {
   })
 })
 
-describe('FAMILIES registry — Zen first, every family mark-backed', () => {
-  it('starts with Zen and lists the known gateway vendors', () => {
-    expect(FAMILIES[0].id).toBe('zen')
-    expect(FAMILIES[0].label).toBe('Zen')
+describe('FAMILIES registry — house first, contract order, every family mark-backed', () => {
+  it('lists the house brands (Enso, Zen) + Anthropic, OpenAI first, then vendors alphabetical', () => {
+    expect(FAMILIES[0].id).toBe('enso')
+    expect(FAMILIES[0].label).toBe('Enso')
     expect(FAMILIES.map((f) => f.id)).toEqual([
-      'zen', 'openai', 'anthropic', 'google', 'meta', 'deepseek', 'qwen',
-      'mistral', 'zhipu', 'moonshot', 'minimax', 'nvidia', 'xai',
+      'enso', 'zen', 'anthropic', 'openai',
+      'deepseek', 'google', 'meta', 'minimax', 'mistral', 'moonshot', 'nvidia', 'qwen', 'xai', 'zhipu',
     ])
   })
   it('labels each family with the canonical vendor name', () => {
@@ -235,7 +236,7 @@ describe('families ↔ brand — every family renders a real colour + distinct i
     const bodies = new Set<string>()
     for (const f of FAMILIES) {
       const key = normalizeBrand(f.logo)
-      if (key === null || key === 'zen' || key === 'hanzo') continue // first-party SVG mark
+      if (key === null || key === 'zen' || key === 'hanzo' || key === 'enso') continue // first-party SVG mark
       expect(BRANDS[key].bg, `BRANDS[${key}].bg`).toMatch(HEX)
       const mark = BRAND_MARK[key]
       expect(mark, `family "${f.id}" (brand ${key}) must have a curated mark`).toBeDefined()
@@ -258,7 +259,46 @@ describe('families ↔ brand — every family renders a real colour + distinct i
     expect(fam.id).toBe(brandKey)
     const key = normalizeBrand(fam.logo)
     expect(key).toBe(brandKey)
-    if (key === null || key === 'zen' || key === 'hanzo') throw new Error('unreachable')
+    if (key === null || key === 'zen' || key === 'hanzo' || key === 'enso') throw new Error('unreachable')
     expect(BRANDS[key].bg).toBe(hex)
+  })
+})
+
+/**
+ * Enso is the current house model line — its OWN family, rendered with the house
+ * (Hanzo) mark, pinned FIRST (before legacy Zen). The contract order the unified
+ * ModelSelector replicates is: Enso, Zen, Anthropic, OpenAI, then vendors alphabetical.
+ */
+describe('house brands + contract family order', () => {
+  const enso = m({ name: 'enso', available: true })
+  const ensoMini = m({ id: 'enso-mini', name: 'Enso Mini', provider: 'hanzo', available: true })
+
+  it('resolves an enso model to its own house family (label Enso, house logo)', () => {
+    expect(familyOf(enso).id).toBe('enso')
+    expect(familyOf(enso).label).toBe('Enso')
+    expect(familyOf(ensoMini).id).toBe('enso')
+    // The Enso family renders the house (Hanzo) mark, not a third-party hue — its logo
+    // resolves to the first-party brand, exactly like Zen.
+    expect(normalizeBrand(familyOf(enso).logo)).toBe('enso')
+  })
+
+  it('orders Enso, Zen, Anthropic, OpenAI first, then vendors alphabetically', () => {
+    const groups = groupByFamily([enso, zen5flash, gpt4o, claude, deepseek, gemma])
+    expect(groups.map((g) => g.id)).toEqual(['enso', 'zen', 'anthropic', 'openai', 'deepseek', 'google'])
+  })
+})
+
+describe('groupModelsByFamily — chatOnly toggles modality filtering', () => {
+  it('chatOnly:false groups non-chat modalities under their family (image/video kept)', () => {
+    const groups = groupModelsByFamily([zen5flash, zen3image, zen3video, zen3embed], { chatOnly: false })
+    const zen = groups.find((g) => g.id === 'zen')!
+    const names = zen.models.map((x) => x.name)
+    expect(names).toContain('zen3-image')
+    expect(names).toContain('zen3-video')
+    expect(names).toContain('zen3-embedding')
+  })
+  it('chatOnly (default) still drops non-chat modalities', () => {
+    const groups = groupModelsByFamily([zen5flash, zen3image], { chatOnly: true })
+    expect(groups.find((g) => g.id === 'zen')!.models.map((x) => x.name)).not.toContain('zen3-image')
   })
 })

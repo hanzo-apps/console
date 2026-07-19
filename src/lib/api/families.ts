@@ -59,8 +59,12 @@ const has = (s: string, ...subs: string[]): boolean => subs.some((x) => s.includ
  * brand resolver (`familyOf` handles any OTHER resolvable vendor + the catch-all).
  */
 const FAMILY_BRANDS: BrandKey[] = [
-  'zen', 'openai', 'anthropic', 'google', 'meta', 'deepseek', 'qwen',
-  'mistral', 'zhipu', 'moonshot', 'minimax', 'nvidia', 'xai',
+  // Contract order (hanzo.chat): the house brands first (Enso, then legacy Zen), then
+  // the two flagship proprietary vendors (Anthropic, OpenAI), then every other vendor
+  // ALPHABETICAL by label. `familyRank` enforces this at grouping time; this registry
+  // mirrors it for the family marks/labels.
+  'enso', 'zen', 'anthropic', 'openai',
+  'deepseek', 'google', 'meta', 'minimax', 'mistral', 'moonshot', 'nvidia', 'qwen', 'xai', 'zhipu',
 ]
 
 export const FAMILIES: Family[] = FAMILY_BRANDS.map((key) => ({ id: key, label: brandLabel(key), logo: key }))
@@ -143,24 +147,47 @@ function sortMembers(models: CatalogEntry[]): CatalogEntry[] {
   })
 }
 
-/** Family display rank: the KNOWN vendors in `FAMILIES` order (Zen first), then any
- *  other resolvable vendor (e.g. Cohere), then the catch-all ("Other models") last. */
-const FAMILY_RANK = new Map<string, number>(FAMILIES.map((f, i) => [f.id, i]))
+/** The families pinned to the TOP of every picker, in order: the house brands (Enso,
+ *  then legacy Zen) then the two flagship proprietary vendors. This is the hanzo.chat
+ *  family order, shared by the model selector AND the Models browser — ONE ordering. */
+const PINNED_FAMILIES = ['enso', 'zen', 'anthropic', 'openai'] as const
+
+/** Family display rank: the pinned families in order, then every OTHER resolvable
+ *  vendor at one shared rank (→ sorted ALPHABETICALLY by label by the caller's tiebreak),
+ *  then the honest catch-all ("Other models") always last. */
 function familyRank(id: string): number {
-  if (id === OTHER_FAMILY.id) return FAMILY_RANK.size + 1
-  return FAMILY_RANK.get(id) ?? FAMILY_RANK.size
+  const i = PINNED_FAMILIES.indexOf(id as (typeof PINNED_FAMILIES)[number])
+  if (i >= 0) return i
+  if (id === OTHER_FAMILY.id) return Number.MAX_SAFE_INTEGER
+  return PINNED_FAMILIES.length
+}
+
+/** Options for `groupModelsByFamily`. */
+export type GroupModelsOptions = {
+  /**
+   * Chat-only — keep just current-gen text/vision models (the hanzo.chat picker set).
+   * Default `true`. When `false`, EVERY modality is grouped (image/video/audio/
+   * embedding) for a modality-specific picker — still current-gen and de-aliased.
+   */
+  chatOnly?: boolean
 }
 
 /**
- * Group the catalog into vendor families — Zen first, then the gateway vendors in
- * order — keeping only current-gen chat models and NEVER dropping a model for want of
- * a curated family (an unrecognized vendor lands in the honest catch-all). PURE — the
- * ONE place the browser's grouping is decided.
+ * Group the catalog into vendor families — the pinned families first (Enso, Zen,
+ * Anthropic, OpenAI) then every other vendor alphabetically — NEVER dropping a model
+ * for want of a curated family (an unrecognized vendor lands in the honest catch-all).
+ * `chatOnly` (default) keeps only current-gen chat models; set it false for a
+ * modality-specific picker. PURE — the ONE place the app's family grouping is decided.
+ * This is the console-local twin of `@hanzo/ui/models` `groupModelsByFamily` (the
+ * console runs @hanzo/gui, not the shadcn build, so the taxonomy lives here — see
+ * `ModelSelector`).
  */
-export function groupByFamily(catalog: CatalogEntry[]): FamilyGroup[] {
+export function groupModelsByFamily(catalog: CatalogEntry[], opts: GroupModelsOptions = {}): FamilyGroup[] {
+  const chatOnly = opts.chatOnly ?? true
   const buckets = new Map<string, { family: Family; models: CatalogEntry[] }>()
   for (const m of catalog) {
-    if (!isChatModel(m) || !isCurrentGen(m) || isFreeAlias(m)) continue
+    if (chatOnly && !isChatModel(m)) continue
+    if (!isCurrentGen(m) || isFreeAlias(m)) continue
     const family = familyOf(m)
     const b = buckets.get(family.id)
     if (b) b.models.push(m)
@@ -172,6 +199,12 @@ export function groupByFamily(catalog: CatalogEntry[]): FamilyGroup[] {
       const sorted = sortMembers(models)
       return { id: family.id, label: family.label, logo: family.logo, models: sorted, available: sorted.filter((mm) => mm.available).length }
     })
+}
+
+/** Chat-only family grouping — the hanzo.chat picker set (the historical name, kept as
+ *  the DRY default over `groupModelsByFamily`). PURE. */
+export function groupByFamily(catalog: CatalogEntry[]): FamilyGroup[] {
+  return groupModelsByFamily(catalog, { chatOnly: true })
 }
 
 /** Filter grouped families by a query (name/id/provider), dropping empty families. PURE. */
