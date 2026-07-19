@@ -17,9 +17,10 @@
  * Honest by construction: a missing signal is never guessed up to Healthy — an
  * empty phase with no replica data folds to `Unknown`.
  */
-import type { ServiceEdgeData, ServiceKind, ServiceNodeData, ServiceStatus } from '@hanzo/canvas/pure'
+import type { ServiceEdgeData, ServiceKind, ServiceNodeData, ServiceStatus, XYPosition } from '@hanzo/canvas/pure'
 
 import type { Application, AppTree, HealthStatus, ResourceNode, SyncStatus } from '~/lib/api/gitops'
+import { inferAppCapability } from '~/lib/products/subsystems'
 
 // ── Health fold ──────────────────────────────────────────────────────────────
 
@@ -271,4 +272,145 @@ export function rollbackTargets(a: Application): string[] {
     out.push(tag)
   }
   return out
+}
+
+/**
+ * A clean release semver `vX.Y.Z` (optionally `-suffix`) — the exact shape cloud's
+ * `/v1/deploy/{name}/rollback` accepts (`paas.IsSemverTag`). The rollback dialog is
+ * fed the app's git tags filtered by this, so a user can only pick a real prior
+ * release (and cloud re-validates), never a fat-fingered arbitrary tag.
+ */
+const SEMVER_TAG_RE = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/
+export const isReleaseTag = (tag: string): boolean => SEMVER_TAG_RE.test(tag.trim())
+
+/**
+ * Roll-backable release targets from an app's real git tags (or any candidate list):
+ * clean semver only, the current declared tag removed, newest first, de-duplicated.
+ * `newestFirst` sorts descending by semver so the most recent releases lead.
+ */
+export function releaseTargets(current: string, tags: string[]): string[] {
+  const seen = new Set<string>([current.trim()])
+  const out: string[] = []
+  for (const raw of tags) {
+    const tag = raw.trim()
+    if (!tag || seen.has(tag) || !isReleaseTag(tag)) continue
+    seen.add(tag)
+    out.push(tag)
+  }
+  return out.sort(compareSemverDesc)
+}
+
+/** Descending semver compare (numeric parts), suffix-tolerant; non-semver sink last. */
+export function compareSemverDesc(a: string, b: string): number {
+  const pa = semverParts(a)
+  const pb = semverParts(b)
+  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pb[i] - pa[i]
+  return b.localeCompare(a)
+}
+function semverParts(tag: string): [number, number, number] {
+  const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(tag.trim())
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [-1, -1, -1]
+}
+
+// ── Fleet map fold (Application[] → the @hanzo/canvas node model) ─────────────
+
+/** The repo basename of an image repository, e.g. `ghcr.io/hanzoai/iam` → `iam`. */
+export function repoBaseName(repository: string): string {
+  const s = (repository || '').trim().replace(/:.*/, '')
+  const base = s.split('/').filter(Boolean).pop() ?? ''
+  return base.toLowerCase()
+}
+
+/** Per-repo git facts folded onto a node's source (from a single `GitApi.repos()`). */
+export interface FleetGit {
+  /** `owner/name` display ref for the SourceRef. */
+  ref: string
+  branch?: string
+  /** Short HEAD sha, when known. */
+  head?: string
+}
+
+/** Per-repo latest CI build (from a single `BuildsApi.list()`), for deploy time. */
+export interface FleetBuild {
+  status?: string
+  /** Epoch ms of the build start, when known. */
+  startedAt?: number
+}
+
+export interface FleetExtras {
+  /** repoBase → git repo facts (source shows git repo+branch when present). */
+  gitByRepo?: Map<string, FleetGit>
+  /** repoBase → latest build (fills a node's deploy time when the CR reports none). */
+  buildByRepo?: Map<string, FleetBuild>
+}
+
+/** A stable node id for a fleet app, namespaced by env so the same name across envs never collides. */
+export const fleetNodeId = (a: Application): string => `app:${a.env || a.namespace}:${a.name}`
+
+/**
+ * Fold the fleet of `/v1/deploy` applications into `@hanzo/canvas` service nodes.
+ * NODES ONLY — the App-CR dataset declares no in-band relationship between
+ * applications, so no edge is invented (honest by construction; a resource-level
+ * topology with real owner→child edges is the per-app drawer's `treeToGraph`).
+ *
+ * Node status is the authoritative CD health (never conflated with CI/build
+ * status). `source` prefers the real git repo+branch (best-effort, from a single
+ * repos read) and degrades to the declared image ref; `deployedAt` prefers the
+ * CR's own change time and degrades to the latest build's start. Every node is a
+ * thing `/v1/deploy` actually returned; missing enrichment never drops a node.
+ */
+export function foldFleet(apps: Application[], extras: FleetExtras = {}): ServiceNodeData[] {
+  const sorted = [...apps].sort(
+    (a, b) => (a.env || a.namespace).localeCompare(b.env || b.namespace) || a.name.localeCompare(b.name),
+  )
+  return sorted.map((a) => fleetNode(a, extras))
+}
+
+function fleetNode(a: Application, extras: FleetExtras): ServiceNodeData {
+  const { health } = resolveApp(a)
+  const base = repoBaseName(a.image.repository)
+  const git = extras.gitByRepo?.get(base)
+  const build = extras.buildByRepo?.get(base)
+  return {
+    id: fleetNodeId(a),
+    name: a.name,
+    kind: 'app',
+    status: healthToServiceStatus(health),
+    statusLabel: a.phase || health,
+    typeLabel: a.role ? a.role.charAt(0).toUpperCase() + a.role.slice(1) : 'App',
+    source: appSource(a, git),
+    capability: inferAppCapability({ slug: a.name, imageRepo: a.image.repository, name: a.name }),
+    deployedAt: a.updatedAt || build?.startedAt || undefined,
+    region: a.env || undefined,
+    href: `/gitops/${encodeURIComponent(a.name)}`,
+  }
+}
+
+/** A node's source: the real git repo+branch when enriched, else the declared image ref. */
+function appSource(a: Application, git?: FleetGit): ServiceNodeData['source'] {
+  if (git?.ref) return { kind: 'repo', ref: git.ref, branch: git.branch }
+  const repo = a.image.repository
+  if (!repo) return undefined
+  return { kind: 'image', ref: a.image.tag ? `${repo}:${a.image.tag}` : repo }
+}
+
+/**
+ * Deterministic squarish GRID positions for the fleet nodes (id → x/y). The fleet
+ * has no edges, so the edge-driven layered layout would stack everything in one
+ * column; a grid reads as a clean Railway board and `ProjectCanvas` fitView scales
+ * it to any viewport (touch pan/zoom on mobile). Byte-identical for the same ids.
+ */
+export function gridPositions(
+  ids: string[],
+  opts: { cols?: number; colGap?: number; rowGap?: number } = {},
+): Record<string, XYPosition> {
+  const n = ids.length
+  const cols = Math.max(1, opts.cols ?? Math.ceil(Math.sqrt(n)))
+  const colGap = opts.colGap ?? 320
+  const rowGap = opts.rowGap ?? 152
+  const pos: Record<string, XYPosition> = {}
+  ids.forEach((id, i) => {
+    pos[id] = { x: (i % cols) * colGap, y: Math.floor(i / cols) * rowGap }
+  })
+  return pos
 }
