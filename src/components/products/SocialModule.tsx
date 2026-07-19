@@ -499,8 +499,8 @@ export function SocialModule(_props: { params: Record<string, string> }) {
   return (
     <YStack gap="$4" p="$4">
       <PageHeader
-        title="Social"
-        subtitle="Compose, schedule and publish across networks — per org, over the native /v1/social engine."
+        title="Publish"
+        subtitle="Compose, schedule and publish your content across networks — per org, over the native /v1/social engine."
         actions={
           <>
             <PrimaryButton onPress={() => setCreatingPost(true)} icon={<Plus size={16} />}>
