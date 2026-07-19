@@ -99,6 +99,7 @@ import { Users,
   Compass,
   Droplet,
   AlertTriangle,
+  Cloud,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId, type ShellId } from '~/config'
@@ -154,6 +155,7 @@ import { StatusModule } from '~/components/products/StatusModule'
 import { MetricsModule } from '~/components/products/MetricsModule'
 import { DnsModule } from '~/components/products/DnsModule'
 import { DomainsModule } from '~/components/products/DomainsModule'
+import { CloudflareModule } from '~/components/products/CloudflareModule'
 import { PlaygroundModule } from '~/components/products/PlaygroundModule'
 import { PromptCreateModule, PromptMetricsModule, PromptsModule } from '~/components/products/PromptsModule'
 import { EvalsModule } from '~/components/products/EvalsModule'
@@ -1591,6 +1593,22 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: DomainsModule }],
+  },
+  {
+    // Cloudflare — the org's OWN connected Cloudflare account, managed in-console
+    // over the asset plane at /v1/integrations/cloudflare/* (cloud clients/cloudflare).
+    // Sits beside DNS because it drives the SAME per-org KMS-sealed token hanzodns
+    // uses for Cloudflare-synced zones. Pages + Workers are wired; R2/KV/D1 are
+    // honest Phase-2 tabs. Connecting the account is the generic integrations flow.
+    id: 'cloudflare',
+    label: 'Cloudflare',
+    icon: Cloud,
+    description: 'Manage your connected Cloudflare Pages, Workers, and routes.',
+    category: 'Network',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: CloudflareModule }],
   },
   {
     id: 'cdn',
