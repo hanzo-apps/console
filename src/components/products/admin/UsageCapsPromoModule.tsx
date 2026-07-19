@@ -78,10 +78,12 @@ function Loading({ label }: { label: string }) {
 }
 
 function Note({ message, tone = 'info' }: { message: string; tone?: 'info' | 'error' }) {
+  const isErr = tone === 'error'
   return (
     <XStack items="center" gap="$2">
-      <TriangleAlert size={14} opacity={tone === 'error' ? 1 : 0.6} />
-      <Text fontSize="$2" color={tone === 'error' ? '$red11' : '$color11'}>
+      {/* A success confirmation reads as a green check, never a warning triangle. */}
+      {isErr ? <TriangleAlert size={14} color="$red11" /> : <Check size={14} color="$green11" />}
+      <Text fontSize="$2" color={isErr ? '$red11' : '$color11'}>
         {message}
       </Text>
     </XStack>
@@ -192,7 +194,7 @@ function PromoTab() {
   const live = state.data
   return (
     <YStack gap="$4">
-      <Panel title="Current promo" right={<Button size="$2" icon={<RefreshCw size={15} />} onPress={load} />}>
+      <Panel title="Current promo" grow={false} right={<Button size="$2" icon={<RefreshCw size={15} />} onPress={load} />}>
         <XStack gap="$5" flexWrap="wrap">
           <Fact label="State" value={promoSummary(live)} />
           <Fact label="Percent off" value={`${live.percentOff}%`} />
@@ -201,7 +203,7 @@ function PromoTab() {
         </XStack>
       </Panel>
 
-      <Panel title="Edit promo">
+      <Panel title="Edit promo" grow={false}>
         <YStack gap="$3">
           <FieldRow label="Percent off">
             <FieldSlider
@@ -562,7 +564,7 @@ function CapsTab() {
 
   return (
     <YStack gap="$4">
-      <Panel title="Target organization">
+      <Panel title="Target organization" grow={false}>
         <XStack gap="$3" items="flex-end" flexWrap="wrap">
           <YStack gap="$1.5" flex={1} minW={220}>
             <Text fontSize="$2" color="$color11">
