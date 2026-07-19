@@ -10,7 +10,7 @@
 
 /** Canonical brand keys the whole app resolves provider/family strings down to. */
 export type BrandKey =
-  | 'zen' | 'hanzo'
+  | 'zen' | 'hanzo' | 'enso'
   | 'openai' | 'qwen' | 'deepseek' | 'meta' | 'mistral' | 'google'
   | 'anthropic' | 'zhipu' | 'moonshot' | 'minimax' | 'nvidia' | 'xai' | 'cohere' | 'microsoft'
 
@@ -22,9 +22,12 @@ export type BrandKey =
 export function normalizeBrand(raw: string): BrandKey | null {
   const p = raw.trim().toLowerCase()
   if (!p) return null
-  // First-party. A zen* model id or the zen/zenlm provider → Zen (the house brand,
-  // rendered as the Hanzo mark). Bare "hanzo" (the company/gateway provider) → the
-  // same block-H. Zen NEVER resolves to an upstream family (brand policy).
+  // First-party house brands. Enso is the current house model line (`enso`,
+  // `enso-mini`, …); it renders the Hanzo mark like Zen but is its OWN family so it
+  // surfaces first in the picker. A zen* model id or the zen/zenlm provider → Zen
+  // (the legacy house brand, also the Hanzo mark). Bare "hanzo" (the company/gateway
+  // provider) → the same block-H. None of these resolve to an upstream family.
+  if (p === 'enso' || /^enso([\d.\-]|$)/.test(p)) return 'enso'
   if (p === 'zen' || p === 'zenlm' || /^zen[\d-]/.test(p)) return 'zen'
   if (p === 'hanzo') return 'hanzo'
   // Third-party families (match provider strings AND their model-name tells).
@@ -61,8 +64,9 @@ export function brandForModel(idOrName: string, provider: string): BrandKey | nu
   return normalizeBrand(idOrName) ?? normalizeBrand(provider)
 }
 
-/** Brand-colored monogram tiles for third-party families. Fixed brand hues. */
-export const BRANDS: Record<Exclude<BrandKey, 'zen' | 'hanzo'>, { bg: string; label: string }> = {
+/** Brand-colored monogram tiles for third-party families. Fixed brand hues.
+ *  The house brands (zen/hanzo/enso) render the Hanzo mark, not a hue tile. */
+export const BRANDS: Record<Exclude<BrandKey, 'zen' | 'hanzo' | 'enso'>, { bg: string; label: string }> = {
   openai:    { bg: '#000000', label: 'AI' },
   qwen:      { bg: '#615CED', label: 'Q' },
   deepseek:  { bg: '#4D6BFE', label: 'DS' },
@@ -88,6 +92,7 @@ export const BRANDS: Record<Exclude<BrandKey, 'zen' | 'hanzo'>, { bg: string; la
 export const BRAND_LABEL: Record<BrandKey, string> = {
   zen: 'Zen',
   hanzo: 'Zen',
+  enso: 'Enso',
   openai: 'OpenAI',
   qwen: 'Qwen',
   deepseek: 'DeepSeek',
