@@ -35,7 +35,7 @@ describe('normalizeBrand', () => {
     const bodies = new Set<string>()
     for (const f of FAMILIES) {
       const brand = normalizeBrand(f.logo)
-      if (brand === 'zen' || brand === 'hanzo') continue // first-party → Hanzo block-H
+      if (brand === 'zen' || brand === 'hanzo' || brand === 'enso') continue // first-party → Hanzo block-H
       const mark = brand ? BRAND_MARK[brand] : undefined
       expect(mark, `family ${f.id} (brand ${brand}) must have a curated mark`).toBeDefined()
       // No two families share the same glyph body → every family is visually distinct.
