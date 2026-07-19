@@ -8,7 +8,7 @@
  * and errors), rendered as-is. Nothing is fabricated — a run that scores nothing
  * is shown as a real failure, not a fake success.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Play } from '@hanzogui/lucide-icons-2'
 
@@ -16,7 +16,10 @@ import { EvalsApi, type EvalRunSummary, type EvalItemResult } from '~/lib/api'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { ModelPicker } from '../ModelPicker'
+import { ModelSelector } from '../ModelSelector'
+import { useModelCatalog } from '../useModelCatalog'
+import { groupByFamily } from '~/lib/api/families'
+import { modelId } from '~/lib/api/aicatalog'
 
 const itemColumns: Column<EvalItemResult>[] = [
   { key: 'itemId', header: 'Item', width: 150, render: (r) => (
@@ -45,6 +48,17 @@ export function EvalRunView() {
   const [running, setRunning] = useState(false)
   const [summary, setSummary] = useState<EvalRunSummary | null>(null)
   const [error, setError] = useState<BackendState | null>(null)
+
+  // The live gateway catalog feeds BOTH selectors (model under test + judge).
+  const catalog = useModelCatalog()
+  // Seed the model under test with the top family model (Zen default surfaces first)
+  // once the catalog is ready, so the form is ready-to-run — the judge stays blank
+  // (defaults to the model under test on the server).
+  useEffect(() => {
+    if (catalog.phase !== 'ready' || model) return
+    const first = groupByFamily(catalog.entries)[0]?.models[0]
+    if (first) setModel(modelId(first))
+  }, [catalog.phase, catalog.entries, model])
 
   const run = async () => {
     if (!dataset.trim() || !model.trim()) {
@@ -82,7 +96,7 @@ export function EvalRunView() {
             <FieldText value={dataset} onChange={setDataset} placeholder="dataset name" />
           </FieldRow>
           <FieldRow label="Model under test">
-            <ModelPicker value={model} onChange={setModel} autoselect />
+            <ModelSelector models={catalog.entries} value={model} onChange={setModel} size="sm" />
           </FieldRow>
           <FieldRow label="Run name">
             <FieldText value={runName} onChange={setRunName} placeholder="auto if blank" />
@@ -91,7 +105,13 @@ export function EvalRunView() {
             <FieldText value={limit} onChange={setLimit} placeholder="20" />
           </FieldRow>
           <FieldRow label="Judge model">
-            <ModelPicker value={judgeModel} onChange={setJudgeModel} placeholder="defaults to model under test" />
+            <ModelSelector
+              models={catalog.entries}
+              value={judgeModel}
+              onChange={setJudgeModel}
+              size="sm"
+              placeholder="defaults to model under test"
+            />
           </FieldRow>
           <FieldRow label="Judge criteria">
             <FieldTextArea value={criteria} onChange={setCriteria} rows={3} />
