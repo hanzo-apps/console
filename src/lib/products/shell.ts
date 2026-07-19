@@ -45,7 +45,7 @@ export const PRODUCT_SHELLS: Record<ShellId, ProductShell> = {
   billing: { id: 'billing', rootId: 'billing', indexLabel: 'Overview', wordmark: '', home: 'billing' },
   marketing: { id: 'marketing', rootId: 'marketing', indexLabel: 'Overview', wordmark: 'Marketing', home: 'marketing' },
   ads: { id: 'ads', rootId: 'ads', indexLabel: 'Overview', wordmark: 'Ads', home: 'ads' },
-  social: { id: 'social', rootId: 'social', indexLabel: 'Overview', wordmark: 'Social', home: 'social' },
+  social: { id: 'social', rootId: 'social', indexLabel: 'Overview', wordmark: 'Publish', home: 'social' },
   sentry: { id: 'sentry', rootId: 'sentry', indexLabel: 'Issues', wordmark: 'Sentry', home: 'sentry' },
   dns: { id: 'dns', rootId: 'dns', indexLabel: 'Zones', wordmark: 'DNS', home: 'dns' },
 }

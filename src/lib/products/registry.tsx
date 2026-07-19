@@ -2828,16 +2828,19 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AdsModule }],
   },
   {
-    // Social — the in-process fold of the live social stack (github.com/hanzoai/social:
-    // social-backend/frontend/orchestrator, a Postiz-style scheduler) over the REAL
-    // native-Go cloud `/v1/social` surface (cloud clients/social on Base/SQLite: a
-    // per-org accounts+posts store, twin of clients/crm). The host→mode twin of the
-    // Billing Center: social.hanzo.ai boots THIS product alone (config.socialOnly).
-    // Per-org, honest-empty by construction — every state is loading / BackendStateCard / empty.
+    // Publish (formerly "Social") — the in-process fold of the live social stack
+    // (github.com/hanzoai/social: social-backend/frontend/orchestrator, a Postiz-style
+    // scheduler) over the REAL native-Go cloud `/v1/social` surface (cloud clients/social
+    // on Base/SQLite: a per-org accounts+posts store, twin of clients/crm). The host→mode
+    // twin of the Billing Center: social.hanzo.ai boots THIS product alone
+    // (config.socialOnly). Per-org, honest-empty by construction — every state is loading
+    // / BackendStateCard / empty. DISPLAY renamed to "Publish"; the internal id 'social',
+    // the /v1/social seam, and the social.hanzo.ai host mapping are UNCHANGED (one seam,
+    // one name for the value — only the label moved).
     id: 'social',
-    label: 'Social',
+    label: 'Publish',
     icon: Share2,
-    description: 'Posts and accounts across networks (X, Instagram, LinkedIn, TikTok) — your social surface, per org.',
+    description: 'Queue and publish your content everywhere — schedule and post across networks (X, Instagram, LinkedIn, TikTok), per org.',
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/cloud',
