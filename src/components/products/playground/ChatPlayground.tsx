@@ -213,7 +213,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
               <Composer
                 composer={composer}
                 mode={mode}
-                models={models.options}
+                models={models.entries}
                 modelsLoading={models.phase === 'loading'}
                 running={run.running}
                 onRun={() => void onRun()}

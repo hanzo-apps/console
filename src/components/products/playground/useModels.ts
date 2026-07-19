@@ -1,25 +1,26 @@
 'use client'
 
 /**
- * useModels — the REAL model catalog for the composer's model picker.
+ * useModels — the REAL model catalog for the composer, as `ModelOption[]`.
  *
- * Source is the rich `/v1/pricing/models` catalog via `aicatalog.fetchCatalog`
- * (through the keyless `/ai` proxy, so the user bearer is attached server-side) —
- * the SAME 375-model catalog the Models page renders. Each option carries the
- * model's real context window, $/Mtok input/output price, true provider, and live
- * availability, so the chip's "128K context" badge and the COST box are real, not
- * fabricated. Honest loading/error state; an unreachable catalog never invents rows.
+ * Built on the ONE shared catalog hook (`~/components/products/useModelCatalog` →
+ * `aicatalog.fetchCatalog`, through the keyless `/ai` proxy). It derives the composer's
+ * `ModelOption` view (clean name, provider, context, $/Mtok in/out, availability,
+ * featured, premium) AND passes the raw rich `entries` straight through — the unified
+ * `ModelSelector` groups those by family. One fetch, one honest loading/error state; an
+ * unreachable catalog never invents rows.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import {
-  fetchCatalog,
   modelId,
   modelContext,
   modelDisplayName,
   displayProvider,
+  type CatalogEntry,
 } from '~/lib/api/aicatalog'
-import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { useModelCatalog } from '~/components/products/useModelCatalog'
+import type { BackendState } from '~/components/ui/BackendState'
 import type { ModelPricing } from '~/lib/api'
 
 /** A pickable model with the facts the composer needs. */
@@ -44,51 +45,41 @@ export type ModelOption = {
   premium?: boolean
 }
 
-type State =
-  | { phase: 'loading' }
-  | { phase: 'error'; error: BackendState }
-  | { phase: 'ready'; options: ModelOption[] }
-
 export type ModelsCatalog = {
-  phase: State['phase']
+  phase: 'loading' | 'error' | 'ready'
   options: ModelOption[]
+  /** The raw rich catalog entries — fed straight into the unified `ModelSelector`. */
+  entries: CatalogEntry[]
   error: BackendState | null
   byId: Map<string, ModelOption>
   reload: () => void
 }
 
 export function useModels(): ModelsCatalog {
-  const [state, setState] = useState<State>({ phase: 'loading' })
+  const cat = useModelCatalog()
 
-  const reload = useCallback(() => {
-    setState({ phase: 'loading' })
-    fetchCatalog()
-      .then((entries) => {
-        const options: ModelOption[] = entries
-          .map((m) => ({
-            id: modelId(m),
-            // Fall back to the id so a live-only entry (no rich name) never renders blank.
-            name: modelDisplayName(m) || modelId(m),
-            provider: displayProvider(m.provider),
-            context: modelContext(m),
-            inputPrice: typeof m.pricing?.input === 'number' ? m.pricing.input : null,
-            outputPrice: typeof m.pricing?.output === 'number' ? m.pricing.output : null,
-            available: m.available,
-            featured: !!m.featured,
-            premium: !!m.premium,
-          }))
-          .filter((o) => o.id.length > 0)
-        setState({ phase: 'ready', options })
-      })
-      .catch((e) => setState({ phase: 'error', error: classifyBackend(e) }))
-  }, [])
+  const options = useMemo<ModelOption[]>(
+    () =>
+      cat.entries
+        .map((m) => ({
+          id: modelId(m),
+          // Fall back to the id so a live-only entry (no rich name) never renders blank.
+          name: modelDisplayName(m) || modelId(m),
+          provider: displayProvider(m.provider),
+          context: modelContext(m),
+          inputPrice: typeof m.pricing?.input === 'number' ? m.pricing.input : null,
+          outputPrice: typeof m.pricing?.output === 'number' ? m.pricing.output : null,
+          available: m.available,
+          featured: !!m.featured,
+          premium: !!m.premium,
+        }))
+        .filter((o) => o.id.length > 0),
+    [cat.entries],
+  )
 
-  useEffect(() => reload(), [reload])
-
-  const options = state.phase === 'ready' ? state.options : []
   const byId = useMemo(() => new Map(options.map((o) => [o.id, o])), [options])
 
-  return { phase: state.phase, options, error: state.phase === 'error' ? state.error : null, byId, reload }
+  return { phase: cat.phase, options, entries: cat.entries, error: cat.error, byId, reload: cat.reload }
 }
 
 /** The `ModelPricing` ($/Mtok) the cost helper expects, or null when unpriced. */

@@ -156,11 +156,11 @@ export function RouterPolicyEditor(_props: { params: Record<string, string> }) {
             <Text fontSize="$2" color="$color11" maxW={720}>
               Each task maps to an ordered model pool; the first servable model wins. Leave a task
               empty to inherit the platform default. Comma-separate model ids (e.g.{' '}
-              <Text style={{ fontFamily: 'monospace' }}>zen4-coder, qwen3-coder</Text>).
+              <Text style={{ fontFamily: 'monospace' }}>zen5-coder, qwen3-coder</Text>).
             </Text>
             {TASKS.map((t) => (
               <FieldRow key={t} label={t}>
-                <FieldText value={form[t]} onChange={(v) => setTask(t, v)} disabled={busy} placeholder={t === 'default' ? 'zen4, gpt-4o' : 'inherit default'} />
+                <FieldText value={form[t]} onChange={(v) => setTask(t, v)} disabled={busy} placeholder={t === 'default' ? 'zen5, gpt-4o' : 'inherit default'} />
               </FieldRow>
             ))}
           </Card>

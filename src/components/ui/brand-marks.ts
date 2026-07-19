@@ -3,7 +3,7 @@
  * distinct, recognizable glyph (not a colored letter, not a generic circle). Keyed
  * by the canonical `BrandKey` (`./brand`), consumed ONLY by `ProviderLogo`, so every
  * surface that renders a family/provider avatar (the Models catalog family headers +
- * rows, the playground ModelPicker rail + rows, Marketplace, Provider admin,
+ * rows, the unified ModelSelector family headers + rows, Marketplace, Provider admin,
  * Providers explore) gets the same marks for free. DRY: one family → one mark.
  *
  * Each mark is our OWN simple, tasteful, monochrome inline SVG — an avatar that
