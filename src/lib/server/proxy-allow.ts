@@ -22,6 +22,13 @@ export const CLOUD_HEADS: readonly string[] = [
   'search',
   's3',
   'docdb',
+  // DNS control plane (hanzoai/dns at dns.hanzo.ai): /v1/dns/{zones,sync}[/…]. The
+  // consolidated DNS service — authoritative zones served by CoreDNS plus
+  // third-party providers (Cloudflare) via the org's KMS-sealed token. The
+  // service validates the IAM JWT and scopes every zone/record to the owner claim,
+  // and 403s a cookie-only call, so it routes through /v1 exactly like the data
+  // resources.
+  'dns',
   // Serverless + prompt/agent/eval surfaces (org resolved from the Bearer owner claim).
   'functions',
   'prompts',
