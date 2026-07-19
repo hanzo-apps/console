@@ -114,6 +114,7 @@ export function ProviderLogo({
   provider,
   model,
   size = 24,
+  mono = false,
 }: {
   /** The provider/family/vendor NAME (a group-level tell, e.g. "OpenAI", "Anthropic"). */
   provider: string
@@ -124,9 +125,20 @@ export function ProviderLogo({
    */
   model?: string
   size?: number
+  /**
+   * Monochrome — render every family mark on a neutral tile in the theme foreground
+   * colour instead of the brand hue. The unified model selector (hanzo.chat-style,
+   * one calm mark per family) uses this so the list reads as ONE system, not a
+   * confetti of vendor hues. The mark GEOMETRY is unchanged, only the colour.
+   */
+  mono?: boolean
 }) {
   const theme = useTheme()
   const brand = model && model.trim() ? brandForModel(model, provider) : normalizeBrand(provider)
+
+  // Monochrome tile treatment (shared by every family branch below when `mono`).
+  const monoTileBg = theme.color3?.get() ?? '#e5e5e5'
+  const monoFg = theme.color12?.get() ?? '#111111'
 
   // Integration provider glyphs — our own inline SVG marks (no external asset). Slack
   // reads on a white tile (with a subtle border so it doesn't float on dark), GitHub
@@ -148,12 +160,12 @@ export function ProviderLogo({
     )
   }
 
-  // First-party — Zen (the house brand) and Hanzo both render the block-H mark,
-  // knocked out of a filled tile so our own models read on-brand. Zen NEVER shows an
-  // upstream family glyph (brand policy) — it IS the Hanzo mark.
-  if (brand === 'zen' || brand === 'hanzo') {
-    const tileBg = theme.color12?.get() ?? '#111111'
-    const fg = theme.color1?.get() ?? '#ffffff' // cut-out mark: the tile's contrast color
+  // First-party house — Zen, Hanzo, and Enso all render the block-H mark, knocked out
+  // of a filled tile so our own models read on-brand. They NEVER show an upstream
+  // family glyph (brand policy) — the house IS the Hanzo mark.
+  if (brand === 'zen' || brand === 'hanzo' || brand === 'enso') {
+    const tileBg = mono ? monoTileBg : theme.color12?.get() ?? '#111111'
+    const fg = mono ? monoFg : theme.color1?.get() ?? '#ffffff' // cut-out mark: the tile's contrast color
     return (
       <Tile size={size} bg={tileBg}>
         <HanzoHMark size={Math.round(size * 0.56)} color={fg} />
@@ -163,21 +175,26 @@ export function ProviderLogo({
 
   // Known third-party family — brand-colored tile with its OWN distinct mark (a
   // recognizable monochrome glyph), or a crisp white monogram when no mark is curated.
+  // In `mono`, the SAME mark renders in the theme foreground on a neutral tile.
   if (brand) {
     const { bg, label } = BRANDS[brand]
     const mark = BRAND_MARK[brand]
+    const tileBg = mono ? monoTileBg : bg
+    const fg = mono ? monoFg : '#ffffff'
     if (mark) {
       return (
-        <Tile size={size} bg={bg}>
-          <BrandGlyph mark={mark} size={Math.round(size * 0.66)} color="#ffffff" />
+        <Tile size={size} bg={tileBg}>
+          <BrandGlyph mark={mark} size={Math.round(size * 0.66)} color={fg} />
         </Tile>
       )
     }
     // Shrink the glyph a touch as the monogram gets longer so 2–3 chars still fit.
     const fontScale = label.length >= 3 ? 0.34 : label.length === 2 ? 0.4 : 0.46
+    // `fg` is a runtime string (brand white or the mono theme fg), so it rides `style`
+    // — the strict Tamagui `color` prop only takes a token/literal (like the neutral chip).
     return (
-      <Tile size={size} bg={bg}>
-        <Text fontSize={Math.round(size * fontScale)} fontWeight="800" color="#ffffff" style={{ letterSpacing: -0.5 }}>
+      <Tile size={size} bg={tileBg}>
+        <Text fontSize={Math.round(size * fontScale)} fontWeight="800" style={{ letterSpacing: -0.5, color: fg }}>
           {label}
         </Text>
       </Tile>
