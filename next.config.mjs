@@ -41,7 +41,9 @@ function guiPackages() {
   // source (no compiled dist), so the shared Base UI is transpiled here the same
   // way Gui is. @hanzo/usage ships its <UsagePanel> (`/react`) as TSX source for the
   // same reason (its headless core `.`/`/node` are compiled dist and pass through).
-  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/canvas', '@hanzo/finance-ui', '@hanzo/usage', 'react-native-web', ...scoped]
+  // @hanzo/ui (v8, the shared shell: AppHeader/BrandMark/OrgSwitcher/orgScope)
+  // also ships raw TS source.
+  return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/canvas', '@hanzo/finance-ui', '@hanzo/usage', '@hanzo/ui', 'react-native-web', ...scoped]
 }
 
 /**
