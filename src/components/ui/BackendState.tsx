@@ -18,7 +18,14 @@ import { TriangleAlert, CreditCard } from '@hanzogui/lucide-icons-2'
 import { ApiError } from '~/lib/api'
 import { startReauth } from '~/lib/auth/iam'
 
-export type BackendStateKind = 'not-initialized' | 'unavailable' | 'access' | 'signin' | 'billing' | 'error'
+export type BackendStateKind =
+  | 'not-initialized'
+  | 'unavailable'
+  | 'not-implemented'
+  | 'access'
+  | 'signin'
+  | 'billing'
+  | 'error'
 
 export type BackendState = { kind: BackendStateKind; message: string }
 
@@ -35,6 +42,10 @@ export function classifyBackend(e: unknown): BackendState {
   const message = e instanceof Error ? e.message : String(e)
   if (status === 503) return { kind: 'not-initialized', message }
   if (status === 404 || status === 405) return { kind: 'unavailable', message }
+  // 501 — the route EXISTS and answers honestly that its body ships later (the
+  // Cloudflare R2/KV/D1 Phase-2 seams). Distinct from 404 (not mounted here): the
+  // capability is real and planned, so say that rather than "not available yet".
+  if (status === 501) return { kind: 'not-implemented', message }
   if (status === 402) return { kind: 'billing', message }
   if (status === 401) return { kind: 'signin', message }
   if (status === 403) return { kind: 'access', message }
@@ -56,6 +67,7 @@ export function classifyRead(e: unknown): BackendState | null {
 const TITLES: Record<BackendStateKind, string> = {
   'not-initialized': 'Backend not initialized',
   unavailable: 'Not available on this deployment yet',
+  'not-implemented': 'Not yet available',
   access: 'Not enabled for your account',
   signin: 'Your session expired',
   billing: 'Add credits to continue',
@@ -67,6 +79,9 @@ const BODIES: Record<BackendStateKind, string> = {
     'The /v1 route is mounted but its runtime (or the console API key it proxies to) is not configured on this deployment yet. Real data appears here once it is — no placeholder data is shown.',
   unavailable:
     'This endpoint is not mounted at the gateway on this host yet. The view lights up automatically once the route is live.',
+  // 501 — a real, planned capability whose body ships in a later phase.
+  'not-implemented':
+    'This capability is planned but not wired yet. The backend answers honestly rather than pretending it worked — nothing here is fabricated, and the view lights up automatically once it ships.',
   // 403 for a SIGNED-IN user — never "sign in".
   access:
     "You're signed in, but this isn't enabled for your organization on this deployment, or it's an admin-only surface. It appears here automatically once your account has access — nothing is fabricated.",
