@@ -9,9 +9,11 @@ import { GuiProvider } from '@hanzo/gui'
 import { NextThemeProvider, useRootTheme } from '@hanzogui/next-theme'
 import { registerDefaultFields, registerField } from '@hanzo/data'
 import { AnalyticsProvider } from '@hanzo/capture/react'
+import { IamProvider } from '@hanzo/iam/react'
 
 import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
+import { iamConfig } from '~/lib/auth/iam'
 import { EntitlementsProvider } from '~/lib/entitlements-context'
 import { AnalyticsBridge } from './Analytics'
 import { OrgAccentProvider } from './OrgAccentProvider'
@@ -55,6 +57,7 @@ export function Provider({ children }: { children: ReactNode }) {
   // up the org's brand color on load, DRY.
   const tree = useMemo(
     () => (
+      <IamProvider config={iamConfig()}>
       <SessionProvider>
         <OrgAccentProvider />
         {/* Entitlements live inside the session (they read the signed-in account +
@@ -70,6 +73,7 @@ export function Provider({ children }: { children: ReactNode }) {
           </AnalyticsProvider>
         </EntitlementsProvider>
       </SessionProvider>
+      </IamProvider>
     ),
     [children],
   )
