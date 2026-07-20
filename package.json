@@ -22,6 +22,7 @@
     "@hanzo/data": "^1.2.0",
     "@hanzo/finance-ui": "0.1.1",
     "@hanzo/gui": "7.3.0",
+    "@hanzo/iam": "^0.13.6",
     "@hanzo/iam-js-sdk": "0.19.1",
     "@hanzo/logo": "^1.0.13",
     "@hanzo/ui": "^8.0.5",

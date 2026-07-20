@@ -1,59 +1,145 @@
 /**
- * Hanzo IAM (OIDC) client.
+ * Hanzo IAM (OIDC) client — the ONE credential source for the console.
  *
- * Wraps `@hanzo/iam-js-sdk`. The SDK touches `window`/`sessionStorage`, so it is
- * constructed lazily and only in the browser. Sign-in is the standard authorize
- * redirect: `getSigninUrl()` -> IAM login -> our `/auth/callback?code&state` ->
- * the backend `/v1/iam/signin` exchanges code+state for a session cookie.
+ * Built on `@hanzo/iam`'s browser SDK (the `IAM` class from `@hanzo/iam/browser`):
+ * a single redirect + PKCE (RFC 7636) authorize flow where IAM (hanzo.id) owns every
+ * credential step. There is NO inline password form, NO ROPC (`/v1/iam/login`), NO
+ * confidential-client BFF code->cookie exchange — the browser drives one authorize
+ * redirect to `${iamUrl}/v1/iam/oauth/authorize` and completes the token exchange
+ * itself via PKCE (no client secret). Social providers, email-code, MFA and wallet
+ * all live on IAM's hosted login; the console never reconstructs an IdP URL.
+ *
+ * The SDK stores its tokens in `sessionStorage` (`hanzo_iam_*`). This module exposes
+ * a browser-only singleton so the API client can read the bearer synchronously and
+ * the session provider / callback route can start + complete the flow. The React
+ * `<IamProvider>` (mounted at the root) constructs its OWN `IAM` from the SAME
+ * `iamConfig()`, so it shares that token store — the two views stay consistent.
  */
-import Sdk from '@hanzo/iam-js-sdk'
+import { IAM, type IAMConfig } from '@hanzo/iam/browser'
 
 import { config } from '~/config'
 
 /** Path IAM redirects back to after authorize. */
 export const CALLBACK_PATH = '/auth/callback'
 
-let sdk: Sdk | null = null
+/**
+ * An in-memory `Storage` used ONLY during SSR — Next server-renders the `<IamProvider>`
+ * client component, and the SDK's constructor falls back to the bare `sessionStorage`
+ * global (undefined in Node → ReferenceError) unless a `storage` is supplied. On the
+ * client the real `window.sessionStorage` is used, so tokens persist across the redirect.
+ */
+function memoryStorage(): Storage {
+  const m = new Map<string, string>()
+  return {
+    get length() {
+      return m.size
+    },
+    clear: () => m.clear(),
+    getItem: (k: string) => (m.has(k) ? (m.get(k) as string) : null),
+    key: (i: number) => Array.from(m.keys())[i] ?? null,
+    removeItem: (k: string) => {
+      m.delete(k)
+    },
+    setItem: (k: string, v: string) => {
+      m.set(k, String(v))
+    },
+  } as Storage
+}
 
-function iam(): Sdk {
-  if (typeof window === 'undefined') {
-    throw new Error('IAM SDK is browser-only')
+/**
+ * The IAM SDK configuration for this host's brand. Shared by the browser singleton
+ * below AND the React `<IamProvider>` (Provider.tsx) so both drive the same PKCE
+ * flow against the same token store. Per-brand issuer + client come from `config`
+ * (resolved from the hostname); on an admin host `config` already switches to the
+ * reserved `admin-console` app in the `admin` org.
+ */
+export function iamConfig(): IAMConfig {
+  return {
+    serverUrl: config.iamUrl,
+    clientId: config.iamClientId,
+    organization: config.iamOrgName,
+    redirectUri: `${typeof window !== 'undefined' ? window.location.origin : ''}${CALLBACK_PATH}`,
+    scope: 'openid profile email',
+    storage: typeof window !== 'undefined' ? window.sessionStorage : memoryStorage(),
   }
-  if (!sdk) {
-    sdk = new Sdk({
-      serverUrl: config.iamUrl,
-      clientId: config.iamClientId,
-      appName: config.iamAppName,
-      organizationName: config.iamOrgName,
-      redirectPath: CALLBACK_PATH,
-      scope: 'openid profile email',
-    })
-  }
+}
+
+let sdk: IAM | null = null
+
+/** The browser IAM singleton (browser-only — the SDK touches `window`/`sessionStorage`). */
+export function iamSdk(): IAM {
+  if (typeof window === 'undefined') throw new Error('IAM SDK is browser-only')
+  if (!sdk) sdk = new IAM(iamConfig())
   return sdk
 }
 
-/** Full IAM authorize URL to begin sign-in. */
-export const getSigninUrl = (): string => iam().getSigninUrl()
+/** Begin sign-in: redirect the browser to IAM's authorize endpoint (PKCE). */
+export function signinRedirect(): Promise<void> {
+  return iamSdk().signinRedirect()
+}
 
-/**
- * Authorize URL that hints a specific social provider (IAM provider names, e.g.
- * `provider-github`, `provider-google`).
- *
- * The hint rides on the standard authorize redirect as `provider_hint`: IAM
- * (hanzo.id) owns each provider's OAuth — client id, scope, callback — so the
- * console never reconstructs github.com/accounts.google.com URLs. IAM advances
- * straight to the provider when it recognises the hint, and otherwise renders
- * its login page with the same providers; either way the console stays one
- * authorize call with no duplicated IdP config.
- */
-export const getProviderSigninUrl = (provider: string): string =>
-  `${getSigninUrl()}&provider_hint=${encodeURIComponent(provider)}`
+/** Complete sign-in on the `/auth/callback` route — the PKCE token exchange. */
+export async function handleIamCallback(): Promise<void> {
+  await iamSdk().handleCallback()
+}
 
-/** Full IAM signup URL. */
+/** The current IAM access token (bearer), or null when signed out / on the server. */
+export function iamAccessToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return iamSdk().getAccessToken()
+  } catch {
+    return null
+  }
+}
 
-// ── Graceful re-auth: return the user to their task after re-signing in ────────
-// A mid-task session expiry (a proxy 401) should not dump the user on the home
-// page — we stash where they were and the callback lands them back there.
+/** A valid (auto-refreshed if needed) access token, or null. */
+export async function iamValidAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null
+  try {
+    return await iamSdk().getValidAccessToken()
+  } catch {
+    return null
+  }
+}
+
+/** The signed-in user's OIDC claims (userinfo), or null. */
+export async function iamUserInfo(): Promise<Record<string, unknown> | null> {
+  if (typeof window === 'undefined') return null
+  try {
+    return await iamSdk().getUserInfo()
+  } catch {
+    return null
+  }
+}
+
+/** Seconds until the current access token expires (null when absent/expired). */
+export function iamExpiresInSeconds(): number | null {
+  const t = iamAccessToken()
+  if (!t) return null
+  try {
+    const claims = JSON.parse(atob(t.split('.')[1])) as { exp?: number }
+    if (!claims.exp) return null
+    const secs = claims.exp - Math.floor(Date.now() / 1000)
+    return secs > 0 ? secs : null
+  } catch {
+    return null
+  }
+}
+
+/** Clear all IAM tokens (sign out, client side). */
+export function iamSignOut(): void {
+  if (typeof window === 'undefined') return
+  try {
+    iamSdk().clearTokens()
+  } catch {
+    /* best-effort */
+  }
+}
+
+// -- Graceful re-auth: return the user to their task after re-signing in --------
+// A mid-task session expiry (a 401) should not dump the user on the home page — we
+// stash where they were and the callback lands them back there.
 
 const RETURN_TO_KEY = 'hz_return_to'
 
@@ -92,5 +178,5 @@ export function takeReturnTo(): string {
 export function startReauth(): void {
   if (typeof window === 'undefined') return
   stashReturnTo()
-  window.location.assign(getSigninUrl())
+  void signinRedirect()
 }
