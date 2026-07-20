@@ -1,11 +1,10 @@
 /**
- * A typed sample of the cloud-owned `/v1/gitops` contract — the shape this
- * surface is coded against while the backend routes come online.
+ * A typed sample of the console's CD view-models (what `lib/api/gitops` normalizes
+ * cloud's `/v1/deploy` DTOs INTO) — the shape the pure folds are exercised against.
  *
- * It is NOT wired into the live board (the repo never fabricates data: a
- * not-yet-live endpoint renders an honest `BackendStateCard`). It is the concrete
- * contract fixture the pure folds are exercised against in `logic.test.ts`, and a
- * ready reference for the FE↔cloud contract + any future story/e2e harness.
+ * It is NOT wired into the live map (the repo never fabricates data: a forbidden /
+ * not-yet-routed read renders an honest state). It is the concrete fixture the pure
+ * folds run over in `logic.test.ts`, and a ready reference for the folds + e2e.
  */
 import type { Application, AppTree } from '~/lib/api/gitops'
 
