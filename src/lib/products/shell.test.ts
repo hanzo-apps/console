@@ -59,7 +59,7 @@ describe('product-shell descriptor', () => {
     expect(shellFor('billing').wordmark).toBe('') // legacy look, unchanged
     expect(shellFor('marketing').wordmark).toBe('Marketing')
     expect(shellFor('ads').wordmark).toBe('Ads')
-    expect(shellFor('social').wordmark).toBe('Social')
+    expect(shellFor('social').wordmark).toBe('Publish') // Social → Publish (display rename)
     expect(shellFor('sentry').wordmark).toBe('Sentry')
     expect(shellFor('dns').wordmark).toBe('DNS')
   })
