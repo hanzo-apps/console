@@ -173,9 +173,64 @@ describe('fetchCatalog — resilient when the pricing overlay is down (the 502 f
     expect(cat.map((m) => m.id)).toContain('zen5-mini')
   })
 
-  it('still throws when the live /v1/models set itself is unreachable', async () => {
+  it('degrades to the browsable fixture catalog when the WHOLE gateway is down', async () => {
+    // Both /v1/pricing/models AND /v1/models 502 — the catalog must still render from
+    // the checked-in fixture (honest: nothing is Live), never an error card.
     vi.stubGlobal('fetch', () => Promise.resolve(new Response('bad gateway', { status: 502 })))
-    await expect(fetchCatalog()).rejects.toBeTruthy()
+    const cat = await fetchCatalog() // must NOT throw — the fixture guarantees a result
+    expect(cat.length).toBeGreaterThan(100) // the ~340-model openrouter fixture
+    expect(cat.every((m) => m.available === false)).toBe(true) // no live routing set → nothing Live
+    // A representative fixture row carries real capability + price + context.
+    const jamba = cat.find((m) => m.id === 'ai21/jamba-large-1.7')!
+    expect(jamba).toBeDefined()
+    expect(jamba.contextWindow).toBe(256000)
+    expect(jamba.pricing?.input).toBe(2)
+  })
+})
+
+describe('fetchCatalog — fixture base + live overlay (guaranteed browsable ~400 catalog)', () => {
+  beforeEach(() => {
+    ;(globalThis as { window?: unknown }).window = {
+      location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
+      localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    }
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  it('includes fixture models the live catalog never mentions, marked Catalog not Live', async () => {
+    // Live pricing carries only zen; live routing carries only zen — the fixture's
+    // hundreds of third-party models must still appear (browsable), none of them Live.
+    vi.stubGlobal('fetch', (url: string) =>
+      url.includes('pricing')
+        ? Promise.resolve(new Response(JSON.stringify({ models: [zen] }), { status: 200, headers: { 'content-type': 'application/json' } }))
+        : Promise.resolve(new Response(JSON.stringify({ object: 'list', data: [{ id: 'zen3-omni' }] }), { status: 200, headers: { 'content-type': 'application/json' } })),
+    )
+    const cat = await fetchCatalog()
+    const jamba = cat.find((m) => m.id === 'ai21/jamba-large-1.7')!
+    expect(jamba).toBeDefined() // fixture model present even though live never mentioned it
+    expect(jamba.available).toBe(false) // honest: not in the live routing set
+    expect(cat.length).toBeGreaterThan(100)
+  })
+
+  it('lets LIVE pricing win over the fixture on an overlapping id', async () => {
+    // Take a real fixture id and re-price it live; the live price must override.
+    vi.stubGlobal('fetch', (url: string) =>
+      url.includes('pricing')
+        ? Promise.resolve(
+            new Response(
+              JSON.stringify({ models: [{ id: 'ai21/jamba-large-1.7', name: 'AI21: Jamba Large 1.7', pricing: { input: 99, output: 199 } }] }),
+              { status: 200, headers: { 'content-type': 'application/json' } },
+            ),
+          )
+        : Promise.resolve(new Response(JSON.stringify({ object: 'list', data: [] }), { status: 200, headers: { 'content-type': 'application/json' } })),
+    )
+    const cat = await fetchCatalog()
+    const jamba = cat.find((m) => m.id === 'ai21/jamba-large-1.7')!
+    expect(jamba.pricing?.input).toBe(99) // live pricing beat the fixture's 2
+    expect(jamba.contextWindow).toBe(256000) // fixture fills the field live omitted
   })
 })
 

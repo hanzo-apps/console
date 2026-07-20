@@ -24,6 +24,7 @@
 import { restGet, originV1Url } from './client'
 import type { BlendModel } from '~/lib/models/blend'
 import { brandForModel, brandLabel } from '~/components/ui/brand'
+import catalogFixture from './catalog.data.json'
 
 /** A model as the rich pricing catalog publishes it. All fields optional-safe. */
 export type RichModel = {
@@ -64,9 +65,35 @@ type PricingCatalog = { models?: RichModel[]; total?: number; updated?: string }
 type LiveModel = RichModel & { owned_by?: string }
 type LiveModels = { data?: LiveModel[] }
 
+/**
+ * The GUARANTEED catalog base — a checked-in fixture synced from hanzoai/enso-bench
+ * `priors/openrouter_models.json` (see `scripts/sync-models.mjs`), imported at BUILD
+ * TIME. It makes the catalog browsable (~340 models, capabilities + context + price)
+ * even when the live gateway is unreachable; the live overlay below always wins where
+ * it exists. Every field is copied from the prior — nothing here is fabricated.
+ */
+const FIXTURE_MODELS: RichModel[] = ((catalogFixture as { models?: RichModel[] }).models ?? [])
+
 /** The live routing/availability key for a model: id (third-party) else name (Zen). */
 const liveKey = (m: { id?: string | null; name?: string }): string =>
   (m.id ?? m.name ?? '').trim().toLowerCase()
+
+/**
+ * Merge two catalog sources by stable id, PRIMARY winning field-by-field: a model in
+ * both keeps `primary`'s fields and inherits only the keys `primary` lacks from
+ * `secondary`; a model only in `secondary` is appended. So live pricing always
+ * overrides the fixture's, and the fixture only fills what the live catalog omits.
+ */
+function mergeById(primary: RichModel[], secondary: RichModel[]): RichModel[] {
+  const byId = new Map<string, RichModel>()
+  for (const m of secondary) byId.set(modelId(m).toLowerCase(), { ...m })
+  for (const m of primary) {
+    const key = modelId(m).toLowerCase()
+    const prev = byId.get(key)
+    byId.set(key, prev ? { ...prev, ...m } : { ...m })
+  }
+  return [...byId.values()]
+}
 
 /** A catalog model joined with its live-availability flag. */
 export type CatalogEntry = RichModel & { available: boolean }
@@ -119,23 +146,26 @@ export function modelDisplayName(m: RichModel): string {
 }
 
 /**
- * Fetch the live model set and join the rich pricing overlay. The live routing
- * set (`/v1/models`) is the PRIMARY source — always routed, it returns the full
- * servable catalog (incl the current Zen family); its failure IS the backend
- * error. The rich pricing catalog (`/v1/pricing/models`) is a BEST-EFFORT overlay
- * (name/description/context/price): on some ingresses it is unrouted/502, so a
- * failure there degrades to the live set rather than blanking the whole catalog —
- * the SAME resilience `CloudModelApi.list` already uses. Throws only when the live
- * set itself is unreachable.
+ * Assemble the catalog: the guaranteed fixture base, the rich pricing overlay, and the
+ * live routing set, in that order of increasing authority. The fixture
+ * (`catalog.data.json`) makes the catalog ALWAYS browsable — a full gateway outage
+ * degrades to it (every model honestly "Catalog", none "Live") rather than an error
+ * card. The rich pricing catalog (`/v1/pricing/models`) overlays fresh name/context/
+ * price where present (its fields win over the fixture's); on ingresses where it is
+ * unrouted/502 the fixture carries the catalog. The live routing set (`/v1/models`)
+ * marks each servable model Available and contributes the current Zen family the older
+ * bundles omit; when it too is unreachable, nothing is Live but the catalog still
+ * renders. Never throws — the fixture guarantees a non-empty result.
  */
 export async function fetchCatalog(): Promise<CatalogEntry[]> {
   const [cat, live] = await Promise.all([
     restGet<PricingCatalog>(originV1Url('pricing/models')).catch(() => ({ models: [] }) as PricingCatalog),
-    restGet<LiveModels>(originV1Url('models')),
+    restGet<LiveModels>(originV1Url('models')).catch(() => ({ data: [] }) as LiveModels),
   ])
   const liveArr = live.data ?? []
   const liveSet = new Set(liveArr.map(liveKey).filter(Boolean))
-  const catModels = cat.models ?? []
+  // The fixture is the base; live pricing wins where it overlaps, and fills the rest.
+  const catModels = mergeById(cat.models ?? [], FIXTURE_MODELS)
   const catKeys = new Set(catModels.map((m) => modelId(m).toLowerCase()))
   const entries: CatalogEntry[] = catModels.map((m) => ({
     ...m,
