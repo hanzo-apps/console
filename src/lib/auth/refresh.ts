@@ -1,9 +1,10 @@
 /**
- * Silent console-session refresh — the ONE client entry point, single-flight.
+ * Silent session refresh — the ONE client entry point, single-flight.
  *
  * Both the proactive timer (SessionProvider) and the reactive 401 handler (the API
- * client) call `refreshSession()`. It POSTs `/auth/refresh` (server-side rotation —
- * the browser holds no token) and returns whether the session was renewed.
+ * client) call `refreshSession()`. It delegates to the `@hanzo/iam` SDK's refresh
+ * grant (RFC 6749 `refresh_token`) — IAM owns the credential, the console holds only
+ * the SDK's sessionStorage token store. There is NO `/auth/refresh` BFF POST any more.
  *
  * SINGLE-FLIGHT is load-bearing, not an optimization: IAM refresh tokens are
  * one-time-use rotating, so two concurrent refreshes would race — the first rotates
@@ -11,30 +12,24 @@
  * healthy session. Sharing ONE in-flight promise means every concurrent caller (the
  * timer + N parallel 401s) awaits the SAME single rotation.
  */
-import { IS_EMBED } from '~/lib/embed'
+import { iamValidAccessToken } from './iam'
 
 let inflight: Promise<boolean> | null = null
 
 /**
- * Refresh the console session if one exists. Resolves true when the session was
- * renewed (HTTP 200), false otherwise (no session, or the refresh token is
- * expired/revoked → the caller falls through to graceful re-auth). Never throws.
+ * Refresh the IAM access token if a valid refresh token exists. Resolves true when a
+ * live token is available afterwards, false otherwise (signed out, or the refresh
+ * token is expired/revoked → the caller falls through to graceful re-auth). Never throws.
  */
 export function refreshSession(): Promise<boolean> {
-  // The static embed has no BFF /auth/refresh handler (POST → 405). There is no
-  // durable console session to rotate there — the casibase session is the source —
-  // so skip the doomed probe entirely (identical fallback, no 405 console noise).
-  if (IS_EMBED) return Promise.resolve(false)
+  if (typeof window === 'undefined') return Promise.resolve(false)
   if (inflight) return inflight
   inflight = (async () => {
     try {
-      const res = await fetch('/auth/refresh', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-      })
-      return res.ok
+      // getValidAccessToken() returns the current token, or transparently runs the
+      // refresh grant when it is expired — the SDK's own single rotation.
+      const token = await iamValidAccessToken()
+      return !!token
     } catch {
       return false
     } finally {
