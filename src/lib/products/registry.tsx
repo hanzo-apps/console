@@ -892,10 +892,16 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: ModelsModule },
       { path: 'routing/:name', component: ModelsModule },
     ],
-    // Models is a CUSTOMER surface — everyone browses the live catalog. The
-    // routing POLICY, though, is admin-only shared-gateway config (hidden from a
-    // customer's sub-nav; graceful notice if reached directly).
-    subpages: [{ slug: 'routing', label: 'Routing', admin: true }],
+    // Models is a CUSTOMER surface — everyone browses the live catalog, the
+    // published benchmark leaderboard, and their OWN org's blend (which models the
+    // Enso tiers form over). The routing POLICY, though, is admin-only
+    // shared-gateway config (hidden from a customer's sub-nav; graceful notice if
+    // reached directly).
+    subpages: [
+      { slug: 'leaderboard', label: 'Leaderboard' },
+      { slug: 'blend', label: 'Blend' },
+      { slug: 'routing', label: 'Routing', admin: true },
+    ],
   },
   {
     // The org-user AI Usage & Training surface — the customer face of the virtual

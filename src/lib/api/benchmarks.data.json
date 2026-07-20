@@ -1,0 +1,2493 @@
+{
+  "source": "hanzoai/enso-bench priors/leaderboard.json + harness/arms.py",
+  "benchmarks": {
+    "mmlu_pro": "MMLU-Pro",
+    "gpqa_diamond": "GPQA-Diamond",
+    "livecodebench": "LiveCodeBench v6",
+    "livecodebench_pro": "LiveCodeBench Pro",
+    "swe_bench_pro": "SWE-Bench Pro",
+    "terminal_bench": "Terminal-Bench 2.1",
+    "humanitys_last_exam": "Humanity's Last Exam",
+    "scicode": "SciCode",
+    "charxiv_reasoning": "CharXiv Reasoning",
+    "tau3_banking": "tau3 Banking",
+    "mrcr_v2": "MRCR v2",
+    "long_context_reasoning": "Long-Context Reasoning"
+  },
+  "taskBench": {
+    "code": [
+      "livecodebench",
+      "livecodebench_pro",
+      "swe_bench_pro"
+    ],
+    "swe": [
+      "swe_bench_pro",
+      "terminal_bench",
+      "livecodebench"
+    ],
+    "reasoning": [
+      "gpqa_diamond",
+      "humanitys_last_exam",
+      "mmlu_pro"
+    ],
+    "science": [
+      "gpqa_diamond",
+      "scicode"
+    ],
+    "math": [
+      "gpqa_diamond",
+      "mmlu_pro"
+    ],
+    "long_context": [
+      "mrcr_v2",
+      "long_context_reasoning"
+    ],
+    "vision": [
+      "charxiv_reasoning"
+    ],
+    "general": [
+      "mmlu_pro",
+      "gpqa_diamond"
+    ]
+  },
+  "models": [
+    {
+      "model": "gpt-5.6-sol",
+      "vendor": "OpenAI",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 90.4,
+          "source": "hanzo-measured"
+        }
+      },
+      "price": 25,
+      "intelligence": 90.4
+    },
+    {
+      "model": "gpt-5.2-pro",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 87.4,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis)"
+        },
+        "gpqa_diamond": {
+          "value": 93.2,
+          "source": "LLM Stats — GPQA leaderboard (self-reported, src OpenAI)"
+        }
+      },
+      "price": 138.6,
+      "intelligence": 90.3
+    },
+    {
+      "model": "claude-opus-4.5",
+      "vendor": "Anthropic",
+      "scores": {
+        "mmlu_pro": {
+          "value": 89.5,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 89.5
+    },
+    {
+      "model": "google/gemini-3.1-pro",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 88.5,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 88.5
+    },
+    {
+      "model": "claude-4.1-opus",
+      "vendor": "Anthropic",
+      "scores": {
+        "mmlu_pro": {
+          "value": 88,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 88
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "vendor": "OpenAI",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 87.9,
+          "source": "hanzo-measured"
+        }
+      },
+      "price": 12.5,
+      "intelligence": 87.9
+    },
+    {
+      "model": "/claude-opus-4-8",
+      "vendor": "Anthropic",
+      "scores": {
+        "livecodebench": {
+          "value": 87.8,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 87.8
+    },
+    {
+      "model": "claude-4.5-sonnet",
+      "vendor": "Anthropic",
+      "scores": {
+        "mmlu_pro": {
+          "value": 87.5,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 87.5
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro",
+      "vendor": "DeepSeek",
+      "scores": {
+        "livecodebench": {
+          "value": 87.5,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 87.5
+    },
+    {
+      "model": "/gpt-5.3-codex",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 87.3,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 87.3
+    },
+    {
+      "model": "fable-5",
+      "vendor": "Anthropic",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 81.3,
+          "source": "hanzo-measured"
+        },
+        "livecodebench": {
+          "value": 92.9,
+          "source": "fugu-report"
+        }
+      },
+      "price": 42,
+      "intelligence": 87.1
+    },
+    {
+      "model": "kimi/kimi-k2.6",
+      "vendor": "Moonshot",
+      "scores": {
+        "livecodebench": {
+          "value": 86.8,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 86.8
+    },
+    {
+      "model": "nvidia-nemotron-3-ultra-550b",
+      "vendor": "NVIDIA",
+      "scores": {
+        "mmlu_pro": {
+          "value": 86.8,
+          "source": "DigitalOcean — State of the Union's Open Source AI (general models table + prose)"
+        }
+      },
+      "price": null,
+      "intelligence": 86.8
+    },
+    {
+      "model": "/gpt-5-mini",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 86.6,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 86.6
+    },
+    {
+      "model": "deepseek-3.2",
+      "vendor": "DeepSeek",
+      "scores": {
+        "mmlu_pro": {
+          "value": 86.2,
+          "source": "do-catalog"
+        }
+      },
+      "price": 1.17,
+      "intelligence": 86.2
+    },
+    {
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 86,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 86
+    },
+    {
+      "model": "/gpt-5",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 85.9,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 85.9
+    },
+    {
+      "model": "/gpt-5.2",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 85.4,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 85.4
+    },
+    {
+      "model": "openai-o3",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 85.3,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 85.3
+    },
+    {
+      "model": "/gpt-5.5",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 85.3,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 85.3
+    },
+    {
+      "model": "openai-o1",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 84.1,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 84.1
+    },
+    {
+      "model": "/gpt-5.4",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 84.1,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 84.1
+    },
+    {
+      "model": "/o3",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 83.9,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 83.9
+    },
+    {
+      "model": "kimi/kimi-k2.5",
+      "vendor": "Moonshot",
+      "scores": {
+        "livecodebench": {
+          "value": 83.9,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 83.9
+    },
+    {
+      "model": "sonnet-4.5",
+      "vendor": "Anthropic",
+      "scores": {
+        "livecodebench_pro": {
+          "value": 1412,
+          "source": "CodeSOTA — LiveCodeBench Pro leaderboard"
+        },
+        "tau2_bench": {
+          "value": 72,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        },
+        "mmlu_pro": {
+          "value": 86,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis; non-thinking; Thinking variant = 87.5 on same page)"
+        },
+        "gpqa_diamond": {
+          "value": 81.6,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "mrcr_v2": {
+          "value": 47.1,
+          "source": "LLM-Registry MRCR v2 (8-needle) leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": 83.8
+    },
+    {
+      "model": "/claude-opus-4-5-20251101",
+      "vendor": "Anthropic",
+      "scores": {
+        "livecodebench": {
+          "value": 83.7,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 83.7
+    },
+    {
+      "model": "nvidia-nemotron-3-super-120b-a12b-bf16",
+      "vendor": "NVIDIA",
+      "scores": {
+        "mmlu_pro": {
+          "value": 83.7,
+          "source": "CodeSOTA — MMLU-Pro Leaderboard (vendor self-reported; rank 19)"
+        }
+      },
+      "price": null,
+      "intelligence": 83.7
+    },
+    {
+      "model": "/gpt-5.1-codex",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 83.6,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 83.6
+    },
+    {
+      "model": "/gpt-oss-120b",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 83.2,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 83.2
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "vendor": "OpenAI",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 82.8,
+          "source": "hanzo-measured"
+        }
+      },
+      "price": 5,
+      "intelligence": 82.8
+    },
+    {
+      "model": "nemotron-3-super",
+      "vendor": "NVIDIA",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 82.7,
+          "source": "LLM Stats — GPQA leaderboard (self-reported, src build.nvidia.com)"
+        }
+      },
+      "price": 0.4,
+      "intelligence": 82.7
+    },
+    {
+      "model": "opus-4.1",
+      "vendor": "Anthropic",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 22.7,
+          "source": "SWE-Bench Pro paper (arXiv:2509.16941v1), Table 1 — public set (N=731), SWE-Agent scaffold"
+        },
+        "tau2_bench": {
+          "value": 56,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        },
+        "mmlu_pro": {
+          "value": 88,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis)"
+        },
+        "gpqa_diamond": {
+          "value": 76.3,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        }
+      },
+      "price": 63,
+      "intelligence": 82.2
+    },
+    {
+      "model": "/claude-sonnet-4-6",
+      "vendor": "Anthropic",
+      "scores": {
+        "livecodebench": {
+          "value": 82.1,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 82.1
+    },
+    {
+      "model": "zai/glm-5",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 81.9,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 81.9
+    },
+    {
+      "model": "zai/glm-5.1",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 81.4,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 81.4
+    },
+    {
+      "model": "/deepseek-v3p2",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 80.7,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 80.7
+    },
+    {
+      "model": "/gpt-oss-20b",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 80.4,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 80.4
+    },
+    {
+      "model": "deepseek-v3.2-exp",
+      "vendor": "DeepSeek",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 79.9,
+          "source": "DeepSeek-V3.2-Exp model card (Hugging Face)"
+        },
+        "aime_2025": {
+          "value": 89.3,
+          "source": "DeepSeek-V3.2-Exp GitHub README (evaluation table)"
+        }
+      },
+      "price": null,
+      "intelligence": 79.9
+    },
+    {
+      "model": "alibaba-qwen3-32b",
+      "vendor": "Alibaba",
+      "scores": {
+        "mmlu_pro": {
+          "value": 79.8,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 79.8
+    },
+    {
+      "model": "deepseek-r1-distill-llama-70b",
+      "vendor": "DeepSeek",
+      "scores": {
+        "mmlu_pro": {
+          "value": 79.5,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 79.5
+    },
+    {
+      "model": "minimax/minimax-m2.5",
+      "vendor": "MiniMax",
+      "scores": {
+        "livecodebench": {
+          "value": 79.2,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 79.2
+    },
+    {
+      "model": "google/gemini-2.5-pro-03-25",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 79.2,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 79.2
+    },
+    {
+      "model": "openai-o3-mini",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 79.1,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 79.1
+    },
+    {
+      "model": "qwen3-coder-480b-a35b",
+      "vendor": "Alibaba",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 38.7,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        },
+        "mmlu_pro": {
+          "value": 78.8,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis)"
+        }
+      },
+      "price": null,
+      "intelligence": 78.8
+    },
+    {
+      "model": "deepseek-r1",
+      "vendor": "DeepSeek",
+      "scores": {
+        "livecodebench_pro": {
+          "value": 1161,
+          "source": "CodeSOTA — LiveCodeBench Pro leaderboard"
+        },
+        "terminal_bench": {
+          "value": 19.1,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 84.4,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis; row label 'R1', DeepSeek)"
+        },
+        "gpqa_diamond": {
+          "value": 71.5,
+          "source": "DeepSeek-R1 model card (Hugging Face)"
+        },
+        "aime_2025": {
+          "value": 70,
+          "source": "DeepSeek-R1-0528 model card, Hugging Face (evaluation table + intro figure)"
+        }
+      },
+      "price": null,
+      "intelligence": 78
+    },
+    {
+      "model": "haiku-4.5",
+      "vendor": "Anthropic",
+      "scores": {
+        "terminal_bench": {
+          "value": 43.8,
+          "source": "Vals AI"
+        },
+        "mmlu_pro": {
+          "value": 80,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis; non-thinking)"
+        },
+        "gpqa_diamond": {
+          "value": 72.2,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "mrcr_v2": {
+          "value": 13.8,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": null,
+      "intelligence": 76.1
+    },
+    {
+      "model": "claude-haiku-4.5",
+      "vendor": "Anthropic",
+      "scores": {
+        "mmlu_pro": {
+          "value": 76,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 76
+    },
+    {
+      "model": "gemini-3.1-pro",
+      "vendor": "Google",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 94.3,
+          "source": "fugu-report"
+        },
+        "swe_bench_pro": {
+          "value": 54.2,
+          "source": "fugu-report"
+        },
+        "livecodebench": {
+          "value": 88.5,
+          "source": "fugu-report"
+        },
+        "livecodebench_pro": {
+          "value": 2887,
+          "source": "CodeSOTA — LiveCodeBench Pro leaderboard"
+        },
+        "terminal_bench": {
+          "value": 73.8,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 58.9,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 91,
+          "source": "Vals AI — MMLU Pro leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 44.7,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 57.6,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": null,
+      "intelligence": 75.5
+    },
+    {
+      "model": "/claude-sonnet-4-5-20250929",
+      "vendor": "Anthropic",
+      "scores": {
+        "livecodebench": {
+          "value": 73,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 73
+    },
+    {
+      "model": "/o3-mini",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 71.5,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 71.5
+    },
+    {
+      "model": "llama3.3-70b",
+      "vendor": "Meta",
+      "scores": {
+        "mmlu_pro": {
+          "value": 71.3,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 71.3
+    },
+    {
+      "model": "gpt-5.2",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 85.9,
+          "source": "do-catalog"
+        },
+        "swe_bench_pro": {
+          "value": 29.9,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        },
+        "livecodebench_pro": {
+          "value": 2393,
+          "source": "LiveCodeBench Pro official leaderboard data endpoint"
+        },
+        "tau2_bench": {
+          "value": 83,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        },
+        "gpqa_diamond": {
+          "value": 91.7,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 35.5,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 70,
+          "source": "yage.ai long-context benchmark survey (citing OpenAI GPT-5.2 blog)"
+        },
+        "aime_2025": {
+          "value": 99,
+          "source": "Artificial Analysis — AIME 2025 Benchmark Leaderboard"
+        }
+      },
+      "price": 11.55,
+      "intelligence": 71
+    },
+    {
+      "model": "deepseek-4-flash",
+      "vendor": "DeepSeek",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 70.7,
+          "source": "hanzo-measured"
+        }
+      },
+      "price": 0.2,
+      "intelligence": 70.7
+    },
+    {
+      "model": "/deepseek-r1",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 70.2,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 70.2
+    },
+    {
+      "model": "/gpt-5-nano",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 70.2,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 70.2
+    },
+    {
+      "model": "o3",
+      "vendor": "OpenAI",
+      "scores": {
+        "livecodebench_pro": {
+          "value": 1010,
+          "source": "CodeSOTA — LiveCodeBench Pro leaderboard"
+        },
+        "scicode": {
+          "value": 41,
+          "source": "Artificial Analysis"
+        },
+        "tau2_bench": {
+          "value": 52,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        },
+        "mmlu_pro": {
+          "value": 85.3,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis)"
+        },
+        "gpqa_diamond": {
+          "value": 84.1,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "charxiv_reasoning": {
+          "value": 78.6,
+          "source": "CharXiv official leaderboard (Princeton PLI)"
+        },
+        "aime_2025": {
+          "value": 88.9,
+          "source": "DeepSeek-R1-0528 model card, Hugging Face (comparison figure benchmark.png)"
+        }
+      },
+      "price": 6.8,
+      "intelligence": 70.1
+    },
+    {
+      "model": "gpt-5.5",
+      "vendor": "OpenAI",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 93.6,
+          "source": "fugu-report"
+        },
+        "swe_bench_pro": {
+          "value": 58.6,
+          "source": "fugu-report"
+        },
+        "livecodebench": {
+          "value": 85.3,
+          "source": "fugu-report"
+        },
+        "terminal_bench": {
+          "value": 84.3,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 56.1,
+          "source": "Artificial Analysis"
+        },
+        "humanitys_last_exam": {
+          "value": 44.3,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 83,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 8.25,
+      "intelligence": 69.8
+    },
+    {
+      "model": "zai/glm-5.2",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 69.5,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 69.5
+    },
+    {
+      "model": "opus-4.8",
+      "vendor": "Anthropic",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 86.9,
+          "source": "hanzo-measured"
+        },
+        "swe_bench_pro": {
+          "value": 69.2,
+          "source": "fugu-report"
+        },
+        "livecodebench": {
+          "value": 87.8,
+          "source": "fugu-report"
+        },
+        "terminal_bench": {
+          "value": 84.6,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 53.5,
+          "source": "Artificial Analysis"
+        },
+        "humanitys_last_exam": {
+          "value": 45.7,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 75.2,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 21,
+      "intelligence": 68.5
+    },
+    {
+      "model": "mimo-v2.5-pro",
+      "vendor": "Xiaomi",
+      "scores": {
+        "mmlu_pro": {
+          "value": 68.5,
+          "source": "CodeSOTA — MMLU-Pro Leaderboard (vendor self-reported; rank 49; requested as 'MiMo V2.5')"
+        }
+      },
+      "price": 2.52,
+      "intelligence": 68.5
+    },
+    {
+      "model": "/claude-opus-4-1-20250805",
+      "vendor": "Anthropic",
+      "scores": {
+        "livecodebench": {
+          "value": 66.5,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 66.5
+    },
+    {
+      "model": "gpt-4o-mini",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 64.8,
+          "source": "do-catalog"
+        }
+      },
+      "price": null,
+      "intelligence": 64.8
+    },
+    {
+      "model": "gpt-5.4",
+      "vendor": "OpenAI",
+      "scores": {
+        "terminal_bench": {
+          "value": 78.3,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 56.6,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 91.7,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 41.6,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 67.8,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 12.5,
+      "intelligence": 63.3
+    },
+    {
+      "model": "opus-4.5",
+      "vendor": "Anthropic",
+      "scores": {
+        "scicode": {
+          "value": 47,
+          "source": "Artificial Analysis"
+        },
+        "tau2_bench": {
+          "value": 84,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        },
+        "mmlu_pro": {
+          "value": 89.5,
+          "source": "Artificial Analysis — MMLU-Pro Benchmark Leaderboard (page header ranking prose)"
+        },
+        "gpqa_diamond": {
+          "value": 85.9,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 28.4,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 62.7
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "vendor": "DeepSeek",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 76.3,
+          "source": "hanzo-measured"
+        },
+        "terminal_bench": {
+          "value": 64,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 50,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 87.5,
+          "source": "CodeSOTA — MMLU-Pro Leaderboard (vendor self-reported; rank 4)"
+        },
+        "humanitys_last_exam": {
+          "value": 35.9,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 48.4,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 2.5,
+      "intelligence": 62.4
+    },
+    {
+      "model": "gpt-4.1",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 80.6,
+          "source": "do-catalog"
+        },
+        "livecodebench_pro": {
+          "value": 606,
+          "source": "LiveCodeBench Pro official leaderboard data endpoint"
+        },
+        "scicode": {
+          "value": 38.1,
+          "source": "Artificial Analysis"
+        },
+        "tau2_bench": {
+          "value": 56,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        },
+        "gpqa_diamond": {
+          "value": 65.4,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "charxiv_reasoning": {
+          "value": 56.7,
+          "source": "CharXiv official leaderboard (Princeton PLI)"
+        },
+        "aime_2025": {
+          "value": 37,
+          "source": "Kimi K2 GitHub README (instruct-model evaluation table)"
+        }
+      },
+      "price": null,
+      "intelligence": 61.4
+    },
+    {
+      "model": "llama-4-maverick",
+      "vendor": "Meta",
+      "scores": {
+        "livecodebench_pro": {
+          "value": 528,
+          "source": "LiveCodeBench Pro official leaderboard data endpoint"
+        },
+        "terminal_bench": {
+          "value": 7.9,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 33.1,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 80.5,
+          "source": "DigitalOcean — State of the Union's Open Source AI (general-purpose models table)"
+        },
+        "gpqa_diamond": {
+          "value": 69.4,
+          "source": "Vals AI — GPQA Diamond leaderboard (Fireworks-hosted)"
+        }
+      },
+      "price": 0.75,
+      "intelligence": 61
+    },
+    {
+      "model": "llama-3.3-70b-instruct",
+      "vendor": "Meta",
+      "scores": {
+        "mmlu_pro": {
+          "value": 71.3,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis)"
+        },
+        "gpqa_diamond": {
+          "value": 50.5,
+          "source": "LLM Stats — GPQA leaderboard (self-reported, src Meta MODEL_CARD)"
+        }
+      },
+      "price": null,
+      "intelligence": 60.9
+    },
+    {
+      "model": "glm-5",
+      "vendor": "Zhipu",
+      "scores": {
+        "scicode": {
+          "value": 46.2,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 86,
+          "source": "CodeSOTA — MMLU-Pro Leaderboard (vendor self-reported; rank 12)"
+        },
+        "gpqa_diamond": {
+          "value": 83.3,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 27.2,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 2.07,
+      "intelligence": 60.7
+    },
+    {
+      "model": "gpt-5",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 82,
+          "source": "do-catalog"
+        },
+        "swe_bench_pro": {
+          "value": 41.8,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        },
+        "livecodebench_pro": {
+          "value": 2176,
+          "source": "CodeSOTA — LiveCodeBench Pro leaderboard"
+        },
+        "terminal_bench": {
+          "value": 35.2,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 42.9,
+          "source": "Artificial Analysis"
+        },
+        "tau2_bench": {
+          "value": 62.5,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        },
+        "gpqa_diamond": {
+          "value": 85.6,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 25.3,
+          "source": "Humanity's Last Exam official leaderboard (agi.safe.ai)"
+        },
+        "aime_2025": {
+          "value": 94.6,
+          "source": "OpenAI — Introducing GPT-5"
+        }
+      },
+      "price": 8.25,
+      "intelligence": 58.9
+    },
+    {
+      "model": "glm-5.2",
+      "vendor": "Zhipu",
+      "scores": {
+        "terminal_bench": {
+          "value": 77.9,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 50.5,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 85.6,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 40.1,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 51.6,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 3.73,
+      "intelligence": 58.7
+    },
+    {
+      "model": "mimo-v2.5",
+      "vendor": "Xiaomi",
+      "scores": {
+        "terminal_bench": {
+          "value": 63.7,
+          "source": "Artificial Analysis"
+        },
+        "livecodebench": {
+          "value": 81.5,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        },
+        "scicode": {
+          "value": 43.1,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 81.6,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 25.2,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 0.24,
+      "intelligence": 57.9
+    },
+    {
+      "model": "nemotron-3-ultra-550b-a55b",
+      "vendor": "NVIDIA",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 86.1,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 26.6,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 1.54,
+      "intelligence": 56.3
+    },
+    {
+      "model": "deepseek-v3.2",
+      "vendor": "DeepSeek",
+      "scores": {
+        "terminal_bench": {
+          "value": 46.8,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 38.7,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 83.7,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis; non-thinking 'DeepSeek V3.2')"
+        },
+        "gpqa_diamond": {
+          "value": 80.3,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 22.2,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 56.2
+    },
+    {
+      "model": "minimax-m2.5",
+      "vendor": "MiniMax",
+      "scores": {
+        "scicode": {
+          "value": 42.6,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 80.1,
+          "source": "CodeSOTA — MMLU-Pro Leaderboard (vendor self-reported; rank 37)"
+        },
+        "gpqa_diamond": {
+          "value": 82.1,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 19.1,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 0.76,
+      "intelligence": 56
+    },
+    {
+      "model": "/gpt-4.1",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 54.7,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 54.7
+    },
+    {
+      "model": "gpt-5-mini",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 82.8,
+          "source": "do-catalog"
+        },
+        "terminal_bench": {
+          "value": 3.7,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 39.2,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 80.3,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 14.6,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 1.65,
+      "intelligence": 54.2
+    },
+    {
+      "model": "gpt-oss-120b",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 80.8,
+          "source": "do-catalog"
+        },
+        "swe_bench_pro": {
+          "value": 16.2,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        },
+        "livecodebench_pro": {
+          "value": 1299,
+          "source": "LiveCodeBench Pro official leaderboard data endpoint"
+        },
+        "terminal_bench": {
+          "value": 26.2,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 38.9,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 78.5,
+          "source": "Vals AI — GPQA Diamond leaderboard (Fireworks-hosted)"
+        },
+        "humanitys_last_exam": {
+          "value": 18.5,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 0.41,
+      "intelligence": 54.2
+    },
+    {
+      "model": "sonnet-4.6",
+      "vendor": "Anthropic",
+      "scores": {
+        "terminal_bench": {
+          "value": 71.2,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 46.9,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 85.6,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 30,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 72.4,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": null,
+      "intelligence": 54.2
+    },
+    {
+      "model": "glm-5.1",
+      "vendor": "Zhipu",
+      "scores": {
+        "terminal_bench": {
+          "value": 61.8,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 43.8,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 84.5,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 28,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 27.4,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 3.63,
+      "intelligence": 52.1
+    },
+    {
+      "model": "o3-mini",
+      "vendor": "OpenAI",
+      "scores": {
+        "livecodebench_pro": {
+          "value": 1688,
+          "source": "LiveCodeBench Pro official leaderboard data endpoint"
+        },
+        "terminal_bench": {
+          "value": 4.5,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 39.9,
+          "source": "Artificial Analysis"
+        },
+        "tau2_bench": {
+          "value": 31.3,
+          "source": "Artificial Analysis (tau2-Bench Telecom)"
+        },
+        "mmlu_pro": {
+          "value": 79.1,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis; o3 Mini High = 80.2 on same page)"
+        },
+        "gpqa_diamond": {
+          "value": 75.5,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 12.3,
+          "source": "Artificial Analysis"
+        },
+        "aime_2025": {
+          "value": 76.7,
+          "source": "DeepSeek-R1-0528 model card, Hugging Face (comparison table)"
+        }
+      },
+      "price": 3.74,
+      "intelligence": 51.7
+    },
+    {
+      "model": "/o1",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 50.3,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 50.3
+    },
+    {
+      "model": "o1",
+      "vendor": "OpenAI",
+      "scores": {
+        "scicode": {
+          "value": 35.8,
+          "source": "Artificial Analysis"
+        },
+        "tau2_bench": {
+          "value": 62.6,
+          "source": "Artificial Analysis (tau2-Bench Telecom)"
+        },
+        "mmlu_pro": {
+          "value": 84.1,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis)"
+        },
+        "gpqa_diamond": {
+          "value": 73.2,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 8,
+          "source": "Humanity's Last Exam official leaderboard (agi.safe.ai)"
+        },
+        "charxiv_reasoning": {
+          "value": 55.1,
+          "source": "CharXiv official leaderboard (Princeton PLI)"
+        }
+      },
+      "price": 51,
+      "intelligence": 50.3
+    },
+    {
+      "model": "gemini-2.5-pro",
+      "vendor": "Google",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 13.5,
+          "source": "SWE-Bench Pro paper (arXiv:2509.16941v1), Table 1 — public set (N=731), SWE-Agent scaffold"
+        },
+        "livecodebench_pro": {
+          "value": 1769,
+          "source": "CodeSOTA — LiveCodeBench Pro leaderboard"
+        },
+        "scicode": {
+          "value": 42.8,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 86.2,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis)"
+        },
+        "humanitys_last_exam": {
+          "value": 21.6,
+          "source": "Humanity's Last Exam official leaderboard (agi.safe.ai)"
+        },
+        "mrcr_v2": {
+          "value": 58,
+          "source": "LLM-Registry MRCR v2 (8-needle) leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": 50.2
+    },
+    {
+      "model": "kimi-k2.5",
+      "vendor": "Moonshot",
+      "scores": {
+        "terminal_bench": {
+          "value": 45.7,
+          "source": "Artificial Analysis"
+        },
+        "livecodebench": {
+          "value": 0.8,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        },
+        "scicode": {
+          "value": 49,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 87.1,
+          "source": "CodeSOTA — MMLU-Pro Leaderboard (vendor self-reported; rank 5)"
+        },
+        "gpqa_diamond": {
+          "value": 84.1,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 29.4,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 33,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 1.69,
+      "intelligence": 50.1
+    },
+    {
+      "model": "qwen3.5-397b-a17b",
+      "vendor": "Alibaba",
+      "scores": {
+        "terminal_bench": {
+          "value": 51.3,
+          "source": "Artificial Analysis"
+        },
+        "livecodebench": {
+          "value": 0.8,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        },
+        "scicode": {
+          "value": 42,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 87.8,
+          "source": "CodeSOTA — MMLU-Pro Leaderboard (vendor self-reported; rank 3)"
+        },
+        "gpqa_diamond": {
+          "value": 88.4,
+          "source": "LLM Stats — GPQA leaderboard (self-reported, src qwenlm.github.io)"
+        },
+        "humanitys_last_exam": {
+          "value": 27.3,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 2.04,
+      "intelligence": 49.3
+    },
+    {
+      "model": "/llama4-maverick-instruct-basic",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 47.3,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 47.3
+    },
+    {
+      "model": "gpt-oss-20b",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 74.8,
+          "source": "do-catalog"
+        },
+        "livecodebench_pro": {
+          "value": 1030,
+          "source": "LiveCodeBench Pro official leaderboard data endpoint"
+        },
+        "terminal_bench": {
+          "value": 13.9,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 34.4,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 68.9,
+          "source": "Vals AI — GPQA Diamond leaderboard (Fireworks-hosted)"
+        },
+        "humanitys_last_exam": {
+          "value": 9.8,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 0.37,
+      "intelligence": 47
+    },
+    {
+      "model": "gpt-5.3-codex",
+      "vendor": "OpenAI",
+      "scores": {
+        "scicode": {
+          "value": 53.2,
+          "source": "Artificial Analysis"
+        },
+        "humanitys_last_exam": {
+          "value": 39.9,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 11.55,
+      "intelligence": 46.5
+    },
+    {
+      "model": "gpt-5-nano",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 77.2,
+          "source": "do-catalog"
+        },
+        "scicode": {
+          "value": 36.6,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 63.4,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 7.7,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 0.33,
+      "intelligence": 46.2
+    },
+    {
+      "model": "kimi-k2.6",
+      "vendor": "Moonshot",
+      "scores": {
+        "terminal_bench": {
+          "value": 65.9,
+          "source": "Artificial Analysis"
+        },
+        "livecodebench": {
+          "value": 0.9,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        },
+        "scicode": {
+          "value": 53.5,
+          "source": "Artificial Analysis"
+        },
+        "gpqa_diamond": {
+          "value": 89.1,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 35.9,
+          "source": "Artificial Analysis"
+        },
+        "mrcr_v2": {
+          "value": 39,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 2.71,
+      "intelligence": 44.9
+    },
+    {
+      "model": "/gpt-4o",
+      "vendor": "Other",
+      "scores": {
+        "livecodebench": {
+          "value": 43.4,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 43.4
+    },
+    {
+      "model": "gpt-4o",
+      "vendor": "OpenAI",
+      "scores": {
+        "mmlu_pro": {
+          "value": 80.3,
+          "source": "do-catalog"
+        },
+        "swe_bench_pro": {
+          "value": 4.9,
+          "source": "SWE-Bench Pro paper (arXiv:2509.16941v1), Table 1 — public set (N=731), SWE-Agent scaffold"
+        },
+        "livecodebench_pro": {
+          "value": 210,
+          "source": "LiveCodeBench Pro official leaderboard data endpoint"
+        },
+        "scicode": {
+          "value": 33.3,
+          "source": "Artificial Analysis"
+        },
+        "tau2_bench": {
+          "value": 25.1,
+          "source": "Artificial Analysis (tau2-Bench Telecom)"
+        },
+        "gpqa_diamond": {
+          "value": 53.8,
+          "source": "Vals AI — GPQA Diamond leaderboard"
+        },
+        "humanitys_last_exam": {
+          "value": 2.7,
+          "source": "Humanity's Last Exam official leaderboard (agi.safe.ai)"
+        }
+      },
+      "price": null,
+      "intelligence": 42.5
+    },
+    {
+      "model": "/claude-haiku-4-5-20251001",
+      "vendor": "Anthropic",
+      "scores": {
+        "livecodebench": {
+          "value": 41.2,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 41.2
+    },
+    {
+      "model": "deepseek-r1-0528",
+      "vendor": "DeepSeek",
+      "scores": {
+        "scicode": {
+          "value": 40.3,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 40.3
+    },
+    {
+      "model": "qwen3-32b",
+      "vendor": "Alibaba",
+      "scores": {
+        "terminal_bench": {
+          "value": 5.2,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 28,
+          "source": "Artificial Analysis"
+        },
+        "mmlu_pro": {
+          "value": 72.7,
+          "source": "Price Per Token — MMLU-Pro Leaderboard (data from Artificial Analysis; non-thinking; Qwen3 32B Thinking = 79.8 on same page)"
+        },
+        "humanitys_last_exam": {
+          "value": 8.3,
+          "source": "Artificial Analysis"
+        },
+        "aime_2025": {
+          "value": 72.9,
+          "source": "DeepSeek-R1-0528 model card, Hugging Face (Qwen3 comparison table)"
+        }
+      },
+      "price": 0.49,
+      "intelligence": 36.3
+    },
+    {
+      "model": "together/meta-llama/llama-3.3-70b-instruct-turbo",
+      "vendor": "Meta",
+      "scores": {
+        "livecodebench": {
+          "value": 36.3,
+          "source": "Vals AI — LiveCodeBench (v6)"
+        }
+      },
+      "price": null,
+      "intelligence": 36.3
+    },
+    {
+      "model": "nvidia-nemotron-3-super",
+      "vendor": "NVIDIA",
+      "scores": {
+        "terminal_bench": {
+          "value": 38.6,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 36,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 36
+    },
+    {
+      "model": "gemma-4-31b",
+      "vendor": "Google",
+      "scores": {
+        "terminal_bench": {
+          "value": 43.4,
+          "source": "Artificial Analysis"
+        },
+        "livecodebench": {
+          "value": 0.8,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        },
+        "gpqa_diamond": {
+          "value": 84.3,
+          "source": "LLM Stats — GPQA leaderboard (self-reported, src HF blog/gemma4)"
+        },
+        "humanitys_last_exam": {
+          "value": 22.7,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 0.44,
+      "intelligence": 35.9
+    },
+    {
+      "model": "qwen3-coder-480b",
+      "vendor": "Alibaba",
+      "scores": {
+        "scicode": {
+          "value": 35.9,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 35.9
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "vendor": "DeepSeek",
+      "scores": {
+        "humanitys_last_exam": {
+          "value": 32.1,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 32.1
+    },
+    {
+      "model": "4.5-sonnet",
+      "vendor": "Anthropic",
+      "scores": {
+        "terminal_bench": {
+          "value": 55.8,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 42.8,
+          "source": "Artificial Analysis"
+        },
+        "humanitys_last_exam": {
+          "value": 17.3,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 30
+    },
+    {
+      "model": "4.1-opus",
+      "vendor": "Anthropic",
+      "scores": {
+        "scicode": {
+          "value": 40.9,
+          "source": "Artificial Analysis"
+        },
+        "humanitys_last_exam": {
+          "value": 11.9,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 26.4
+    },
+    {
+      "model": "llama-3.3-70b",
+      "vendor": "Meta",
+      "scores": {
+        "terminal_bench": {
+          "value": 4.9,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 26,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 26
+    },
+    {
+      "model": "4.5-haiku",
+      "vendor": "Anthropic",
+      "scores": {
+        "terminal_bench": {
+          "value": 44.2,
+          "source": "Artificial Analysis"
+        },
+        "scicode": {
+          "value": 34.4,
+          "source": "Artificial Analysis"
+        },
+        "humanitys_last_exam": {
+          "value": 9.7,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 22
+    },
+    {
+      "model": "nemotron-3-ultra",
+      "vendor": "NVIDIA",
+      "scores": {
+        "terminal_bench": {
+          "value": 53.9,
+          "source": "Artificial Analysis"
+        },
+        "livecodebench": {
+          "value": 0.9,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        },
+        "scicode": {
+          "value": 39.9,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": 1.54,
+      "intelligence": 20.4
+    },
+    {
+      "model": "nvidia-nemotron-3-super-120b-a12b",
+      "vendor": "NVIDIA",
+      "scores": {
+        "humanitys_last_exam": {
+          "value": 19.2,
+          "source": "Artificial Analysis"
+        }
+      },
+      "price": null,
+      "intelligence": 19.2
+    },
+    {
+      "model": "deepseek-r1*",
+      "vendor": "DeepSeek",
+      "scores": {
+        "humanitys_last_exam": {
+          "value": 8.5,
+          "source": "Humanity's Last Exam official leaderboard (agi.safe.ai)"
+        }
+      },
+      "price": null,
+      "intelligence": 8.5
+    },
+    {
+      "model": "gemma-4-26b-a4b",
+      "vendor": "Google",
+      "scores": {
+        "livecodebench": {
+          "value": 0.8,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        }
+      },
+      "price": 0.44,
+      "intelligence": 0.8
+    },
+    {
+      "model": "gpt-oss-120b-high",
+      "vendor": "OpenAI",
+      "scores": {
+        "livecodebench": {
+          "value": 0.8,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        }
+      },
+      "price": 0.41,
+      "intelligence": 0.8
+    },
+    {
+      "model": "gemma-4-12b",
+      "vendor": "Google",
+      "scores": {
+        "livecodebench": {
+          "value": 0.7,
+          "source": "LLM-Stats — LiveCodeBench v6 (provider self-reported)"
+        }
+      },
+      "price": 0.44,
+      "intelligence": 0.7
+    },
+    {
+      "model": "gpt-5.4-*",
+      "vendor": "OpenAI",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 59.1,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        }
+      },
+      "price": 12.5,
+      "intelligence": null
+    },
+    {
+      "model": "claude-opus-4-5-20251101",
+      "vendor": "Anthropic",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 45.9,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "gemini-3.1-pro-*",
+      "vendor": "Google",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 46.1,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "claude-4-5-sonnet",
+      "vendor": "Anthropic",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 43.6,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "claude-4-5-haiku",
+      "vendor": "Anthropic",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 39.5,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "deepseek-v3p2",
+      "vendor": "DeepSeek",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 15.6,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "llama4-maverick-17b-instruct",
+      "vendor": "Meta",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 5.2,
+          "source": "Scale Labs — SWE-Bench Pro Public Leaderboard"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "qwen-3-32b",
+      "vendor": "Alibaba",
+      "scores": {
+        "swe_bench_pro": {
+          "value": 3.4,
+          "source": "SWE-Bench Pro paper (arXiv:2509.16941v1), Table 1 — public set (N=731), SWE-Agent scaffold"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "gpt-5.5-—-codex-agent",
+      "vendor": "OpenAI",
+      "scores": {
+        "terminal_bench": {
+          "value": 83.1,
+          "source": "Terminal-Bench official leaderboard (tbench.ai)"
+        }
+      },
+      "price": 8.25,
+      "intelligence": null
+    },
+    {
+      "model": "gpt-5.4-—-codex-cli",
+      "vendor": "OpenAI",
+      "scores": {
+        "terminal_bench": {
+          "value": 77.3,
+          "source": "Snorkel AI (TB 2.1 representative-pairs table)"
+        }
+      },
+      "price": 12.5,
+      "intelligence": null
+    },
+    {
+      "model": "gpt-5.3-codex-—-codex-cli",
+      "vendor": "OpenAI",
+      "scores": {
+        "terminal_bench": {
+          "value": 79.1,
+          "source": "Snorkel AI (TB 2.1 representative-pairs table)"
+        }
+      },
+      "price": 11.55,
+      "intelligence": null
+    },
+    {
+      "model": "opus-4.8-—-code-agent",
+      "vendor": "Anthropic",
+      "scores": {
+        "terminal_bench": {
+          "value": 78.9,
+          "source": "Terminal-Bench official leaderboard (tbench.ai)"
+        }
+      },
+      "price": 21,
+      "intelligence": null
+    },
+    {
+      "model": "sonnet-4.6-—-code",
+      "vendor": "Anthropic",
+      "scores": {
+        "terminal_bench": {
+          "value": 58.5,
+          "source": "Snorkel AI (TB 2.1 representative-pairs table)"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "glm-5.1-—-code-agent",
+      "vendor": "Zhipu",
+      "scores": {
+        "terminal_bench": {
+          "value": 58.7,
+          "source": "Terminal-Bench official leaderboard (tbench.ai)"
+        }
+      },
+      "price": 3.63,
+      "intelligence": null
+    },
+    {
+      "model": "claude-sonnet-4.5",
+      "vendor": "Anthropic",
+      "scores": {
+        "tau2_bench": {
+          "value": 70,
+          "source": "Sierra tau2-bench official leaderboard (taubench.com)"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "gpt-4o-241120",
+      "vendor": "OpenAI",
+      "scores": {
+        "charxiv_reasoning": {
+          "value": 50.5,
+          "source": "CharXiv official leaderboard (Princeton PLI)"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "gpt-4o-240513",
+      "vendor": "OpenAI",
+      "scores": {
+        "charxiv_reasoning": {
+          "value": 47.1,
+          "source": "CharXiv official leaderboard (Princeton PLI)"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    },
+    {
+      "model": "nemotron-3-super-120b",
+      "vendor": "NVIDIA",
+      "scores": {
+        "mrcr_v2": {
+          "value": 38.1,
+          "source": "Context Arena (ZeroEval) — GDM-MRCRv2 Full (8-Needle) API"
+        }
+      },
+      "price": 0.4,
+      "intelligence": null
+    },
+    {
+      "model": "gemma-4-31b-it",
+      "vendor": "Google",
+      "scores": {
+        "mrcr_v2": {
+          "value": 66.4,
+          "source": "LLM-Registry MRCR v2 (8-needle) leaderboard"
+        }
+      },
+      "price": 0.44,
+      "intelligence": null
+    },
+    {
+      "model": "gemini-2.5-pro-0506",
+      "vendor": "Google",
+      "scores": {
+        "aime_2025": {
+          "value": 83,
+          "source": "DeepSeek-R1-0528 model card, Hugging Face (comparison figure benchmark.png)"
+        }
+      },
+      "price": null,
+      "intelligence": null
+    }
+  ],
+  "aliases": [
+    [
+      "openai-gpt-5.4-pro",
+      "gpt-5.4-pro"
+    ],
+    [
+      "openai-o1",
+      "o1"
+    ],
+    [
+      "claude-opus-4.8",
+      "opus-4.8"
+    ],
+    [
+      "anthropic-claude-opus-4.6",
+      "opus-4.6"
+    ],
+    [
+      "anthropic-claude-4.1-opus",
+      "opus-4.1"
+    ],
+    [
+      "claude-fable-5",
+      "fable-5"
+    ],
+    [
+      "anthropic-claude-4.6-sonnet",
+      "claude-4.6-sonnet"
+    ],
+    [
+      "openai-gpt-5.2",
+      "gpt-5.2"
+    ],
+    [
+      "openai-gpt-5.3-codex",
+      "gpt-5.3-codex"
+    ],
+    [
+      "openai-gpt-5.1-codex-max",
+      "gpt-5.1-codex-max"
+    ],
+    [
+      "openai-gpt-5.4",
+      "gpt-5.4"
+    ],
+    [
+      "openai-gpt-5",
+      "gpt-5"
+    ],
+    [
+      "openai-o3",
+      "o3"
+    ],
+    [
+      "openai-o3-mini",
+      "o3-mini"
+    ],
+    [
+      "anthropic-claude-5-sonnet",
+      "claude-5-sonnet"
+    ],
+    [
+      "qwen3.5-397b-a17b",
+      "qwen3.5-397b"
+    ],
+    [
+      "openai-gpt-5-mini",
+      "gpt-5-mini"
+    ],
+    [
+      "nemotron-3-ultra-550b",
+      "nemotron-3-ultra"
+    ],
+    [
+      "nvidia-nemotron-3-super-120b",
+      "nemotron-3-super"
+    ],
+    [
+      "arcee-trinity-large-thinking",
+      "arcee-trinity"
+    ],
+    [
+      "alibaba-qwen3-32b",
+      "qwen3-32b"
+    ],
+    [
+      "gemma-4-31B-it",
+      "gemma-4"
+    ],
+    [
+      "mistral-3-14B",
+      "ministral-3-14b"
+    ],
+    [
+      "openai-gpt-5.4-nano",
+      "gpt-5.4-nano"
+    ],
+    [
+      "openai-gpt-oss-120b",
+      "gpt-oss-120b"
+    ],
+    [
+      "openai-gpt-oss-20b",
+      "gpt-oss-20b"
+    ],
+    [
+      "openai-gpt-5-nano",
+      "gpt-5-nano"
+    ],
+    [
+      "deepseek/deepseek-v4-pro",
+      "deepseek-v4-pro@openrouter"
+    ],
+    [
+      "qwen/qwen3.5-397b-a17b",
+      "qwen3.5-397b@openrouter"
+    ],
+    [
+      "z-ai/glm-5.2",
+      "glm-5.2@openrouter"
+    ],
+    [
+      "anthropic/claude-opus-4.8",
+      "opus-4.8@openrouter"
+    ],
+    [
+      "openai/gpt-5.6-sol",
+      "gpt-5.6-sol@openrouter"
+    ]
+  ]
+}
