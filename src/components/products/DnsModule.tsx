@@ -52,6 +52,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { FieldRow, FieldText, FieldTextArea, FieldSelect, FieldSwitch } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
+import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
 
 /** Cloudflare brand orange — used ONLY for the Cloudflare provider/proxy affordances. */
 const CF_ORANGE = '#F38020'
@@ -283,53 +284,6 @@ function RecordForm({ zone, record, onDone }: { zone: Zone; record?: DnsRecord; 
       <PrimaryButton onPress={submit} disabled={saving}>
         {saving ? 'Saving…' : record ? 'Save changes' : 'Add record'}
       </PrimaryButton>
-    </YStack>
-  )
-}
-
-/** A destructive confirm panel (shared by zone + record delete). */
-function ConfirmDelete({
-  message,
-  confirmLabel,
-  run,
-  onDone,
-}: {
-  message: string
-  confirmLabel: string
-  run: () => Promise<void>
-  onDone: () => void
-}) {
-  const toast = useToast()
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const go = async () => {
-    setBusy(true)
-    setErr(null)
-    try {
-      await run()
-      onDone()
-    } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to delete.')
-      setBusy(false)
-    }
-  }
-  return (
-    <YStack gap="$3">
-      <Text fontSize="$3" color="$color11">{message}</Text>
-      {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
-      <XStack gap="$2" flexWrap="wrap">
-        <Button
-          onPress={go}
-          disabled={busy}
-          icon={<Trash2 size={15} />}
-          style={{ backgroundColor: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
-        >
-          {busy ? 'Deleting…' : confirmLabel}
-        </Button>
-        <Button chromeless onPress={() => onDone()} disabled={busy}>
-          Cancel
-        </Button>
-      </XStack>
     </YStack>
   )
 }
