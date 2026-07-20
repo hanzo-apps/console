@@ -15,6 +15,7 @@ import { currentOrg } from '~/lib/org-scope'
 import { currentActor } from '~/lib/actor-scope'
 import { getScope } from '~/lib/scope'
 import { refreshSession } from '~/lib/auth/refresh'
+import { iamAccessToken } from '~/lib/auth/iam'
 import { applyCsrfToInit, csrfRequired, clearCsrfToken } from './csrf'
 
 export type ApiResponse<T> = {
@@ -61,7 +62,12 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
   // deploys, …) org + project + environment scoped with no per-module change.
   const s = getScope()
   const actor = currentActor()
+  // @hanzo/iam is the ONE credential: carry the PKCE access token as a Bearer on
+  // every cloud call (cloud's SanitizeIdentity validates the JWT — aud=<brand>-cloud).
+  // No session cookie / BFF exchange; a signed-out request simply omits it.
+  const bearer = iamAccessToken()
   return {
+    ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
     'Accept-Language': acceptLanguage(),
     // ONE canonical org header. Both the provisioning sub-service and the casibase
     // data-scoping filters (ai `GetEffectiveOrg`, controllers/org_resolver.go) read
