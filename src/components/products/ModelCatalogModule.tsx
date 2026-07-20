@@ -29,11 +29,13 @@ import {
   modelContext,
   modelDisplayName,
   modelId,
+  supportsVision,
   fmtPrice,
   fmtContext,
   type CatalogEntry,
   type Plan,
 } from '~/lib/api/aicatalog'
+import { priorFor } from '~/lib/api/benchmarks'
 import {
   groupByFamily,
   filterFamilies,
@@ -205,6 +207,9 @@ function ModelDetailPanel({ m, plans, onBack }: { m: CatalogEntry; plans: Plan[]
 /** One model row inside a family section — click for the full detail. */
 function ModelRow({ m, brand, onOpen }: { m: CatalogEntry; brand: string; onOpen: () => void }) {
   const isDefault = modelId(m).toLowerCase() === DEFAULT_MODEL
+  // Best published score for this model in the enso-bench corpus, or null when it
+  // has never been benchmarked publicly.
+  const bench = priorFor(modelId(m))?.intelligence ?? null
   return (
     <XStack
       items="center"
@@ -224,6 +229,9 @@ function ModelRow({ m, brand, onOpen }: { m: CatalogEntry; brand: string; onOpen
             {displayLabel(m)}
           </Text>
           {isDefault ? <Pill label="Default" tone="brand" /> : null}
+          {/* Capability, from the catalog's own features — absent, not "no", when
+              the upstream publishes nothing. */}
+          {supportsVision(m) ? <Pill label="Vision" /> : null}
           {m.specs?.params ? (
             <Text fontSize="$1" color="$color10">
               {m.specs.params}
@@ -236,12 +244,31 @@ function ModelRow({ m, brand, onOpen }: { m: CatalogEntry; brand: string; onOpen
           </Text>
         ) : null}
       </YStack>
+      {/* Benchmark headline from the published prior corpus — an em-dash when the
+          model has no published score. Never a zero, never a guess. */}
+      <Text
+        className={TNUM}
+        fontSize="$2"
+        color={bench == null ? '$color10' : '$color12'}
+        width={48}
+        text="right"
+        display="none"
+        $md={{ display: 'flex' }}
+      >
+        {bench == null ? '—' : bench.toFixed(1)}
+      </Text>
       {/* Context column: hidden on phones (mobile-first) so rows never overflow. */}
       <Text className={TNUM} fontSize="$2" color="$color11" width={72} text="right" display="none" $md={{ display: 'flex' }}>
         {fmtContext(modelContext(m))}
       </Text>
-      <Text className={TNUM} fontSize="$2" color="$color12" width={72} $md={{ width: 80 }} text="right">
-        {fmtPrice(m.pricing?.input)}/M
+      {/* Both sides of the price: in/out $ per Mtok, the two numbers a cost decision
+          actually needs (output dominates reasoning traffic). */}
+      <Text className={TNUM} fontSize="$2" color="$color12" width={72} $md={{ width: 96 }} text="right">
+        {fmtPrice(m.pricing?.input)}
+        <Text fontSize="$1" color="$color10">
+          {' / '}
+        </Text>
+        {fmtPrice(m.pricing?.output)}
       </Text>
       <XStack width={72} $md={{ width: 96 }} justify="flex-end">
         {m.available ? <Pill label="● Live" tone="live" /> : <Pill label="Catalog" />}

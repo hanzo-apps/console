@@ -22,6 +22,8 @@
  * cross-references availability by the right key, and shows a clean row name.
  */
 import { restGet, originV1Url } from './client'
+import type { BlendModel } from '~/lib/models/blend'
+import { brandForModel, brandLabel } from '~/components/ui/brand'
 
 /** A model as the rich pricing catalog publishes it. All fields optional-safe. */
 export type RichModel = {
@@ -203,6 +205,44 @@ export function modelType(m: RichModel): string {
   if (n.includes('vision') || n.includes('-vl') || n.includes('omni') || n.includes('-vision'))
     return 'Vision'
   return 'Text'
+}
+
+/**
+ * Does the model accept IMAGE INPUT? Read from the catalog's own `features` list
+ * first (the authoritative field when the upstream publishes it), falling back to the
+ * id/name modality derived by `modelType`.
+ *
+ * Note this is INPUT capability: an image-GENERATION model ("Image") is not a
+ * vision-capable chat model and is deliberately excluded.
+ */
+export function supportsVision(m: RichModel): boolean {
+  const feats = (m.features ?? []).map((f) => f.toLowerCase())
+  if (feats.some((f) => f.includes('vision') || f.includes('image') || f.includes('multimodal')))
+    return true
+  return modelType(m) === 'Vision'
+}
+
+/**
+ * Project a catalog row onto the model shape the blend reasons about (id + vendor +
+ * the two prices). One projection, so the blend builder and the router agree on which
+ * price a tier band is computed from — the LIVE catalog price, never a stale table.
+ *
+ * The vendor is resolved IDENTITY-FIRST via `brandForModel` — the same resolver the
+ * avatar uses — so a gateway-served model (tagged provider "hanzo") reads as its TRUE
+ * vendor. Resolving from the provider string alone would label a Zhipu or Moonshot
+ * model "Zen" beside its own Zhipu/Moonshot logo, the exact mismatch `brandLabel`
+ * exists to prevent. Falls back to the provider when the id carries no vendor tell.
+ */
+export function toBlendModel(m: CatalogEntry): BlendModel {
+  const id = modelId(m)
+  const brand = brandForModel(id, m.provider ?? '')
+  return {
+    id,
+    name: modelDisplayName(m),
+    vendor: brand ? brandLabel(brand) : displayProvider(m.provider),
+    priceIn: typeof m.pricing?.input === 'number' ? m.pricing.input : null,
+    priceOut: typeof m.pricing?.output === 'number' ? m.pricing.output : null,
+  }
 }
 
 /** The distinct model types present in a set (for the Type filter). */
