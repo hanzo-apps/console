@@ -19,8 +19,10 @@ import {
 } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Dialog, Input, ScrollView, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
-import { Lock, Search } from '@hanzogui/lucide-icons-2'
+import { CreditCard, Lock, Search, Users } from '@hanzogui/lucide-icons-2'
+import { SURFACES, type Surface } from '@hanzo/ui/product'
 
+import { getBrand } from '~/lib/branding/brands'
 import { findEntry, visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
 import { orderEntries } from '~/lib/products/order'
 import { searchCatalog } from '~/lib/products/search'
@@ -30,6 +32,15 @@ import { openProduct } from '~/lib/products/open'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { useEntitlements } from '~/lib/entitlements-context'
 import { filterEntitled } from '~/lib/entitlements'
+
+/**
+ * Cross-surface tiles — the shared five-surface app switcher's entries that live
+ * OUTSIDE this console: hanzo.team (from `SURFACES`) + billing.hanzo.ai. Hanzo
+ * brand only (white-label law: a lux/zoo/pars host never shows a Hanzo surface).
+ */
+const BILLING_SURFACE: Surface = { id: 'billing', label: 'Billing', href: 'https://billing.hanzo.ai', hint: 'billing.hanzo.ai' }
+const CROSS_SURFACES: Surface[] = [...SURFACES.filter((s) => s.id === 'team'), BILLING_SURFACE]
+const SURFACE_ICONS = { team: Users, billing: CreditCard } as const
 
 type LauncherApi = { isOpen: boolean; open: () => void; close: () => void }
 
@@ -77,6 +88,37 @@ function Tile({ entry, color, active, onPress }: { entry: CatalogEntry; color: s
       </XStack>
       <Text fontSize="$2" fontWeight="600" color="$color12" numberOfLines={1}>
         {entry.label}
+      </Text>
+    </YStack>
+  )
+}
+
+/** A launcher tile for a cross-surface entry (opens in a new tab). */
+function SurfaceTile({ surface, onPress }: { surface: Surface; onPress: () => void }) {
+  const Icon = SURFACE_ICONS[surface.id as keyof typeof SURFACE_ICONS] ?? Users
+  return (
+    <YStack
+      onPress={onPress}
+      cursor="pointer"
+      width={132}
+      height={124}
+      p="$3"
+      gap="$2.5"
+      items="center"
+      justify="center"
+      rounded="$6"
+      borderWidth={1}
+      borderColor="transparent"
+      hoverStyle={{ bg: '$color3' }}
+    >
+      <XStack width={56} height={56} items="center" justify="center" rounded="$7" bg="$color3">
+        <Icon size={26} />
+      </XStack>
+      <Text fontSize="$2" fontWeight="600" color="$color12" numberOfLines={1}>
+        {surface.label}
+      </Text>
+      <Text fontSize="$1" color="$color10" numberOfLines={1}>
+        {surface.hint}
       </Text>
     </YStack>
   )
@@ -184,18 +226,39 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                   </XStack>
                 )
               ) : (
-                groups.map((group) => (
-                  <YStack key={group.category} gap="$2">
-                    <Text fontSize="$2" color="$color10" fontWeight="800" textTransform="uppercase" px="$2">
-                      {group.category}
-                    </Text>
-                    <XStack flexWrap="wrap" gap="$2">
-                      {group.entries.map((entry) => (
-                        <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} active={entry.id === activeId} onPress={() => activate(entry)} />
-                      ))}
-                    </XStack>
-                  </YStack>
-                ))
+                <>
+                  {groups.map((group) => (
+                    <YStack key={group.category} gap="$2">
+                      <Text fontSize="$2" color="$color10" fontWeight="800" textTransform="uppercase" px="$2">
+                        {group.category}
+                      </Text>
+                      <XStack flexWrap="wrap" gap="$2">
+                        {group.entries.map((entry) => (
+                          <Tile key={entry.id} entry={entry} color={colorOf(entry.id)} active={entry.id === activeId} onPress={() => activate(entry)} />
+                        ))}
+                      </XStack>
+                    </YStack>
+                  ))}
+                  {getBrand().id === 'hanzo' ? (
+                    <YStack gap="$2">
+                      <Text fontSize="$2" color="$color10" fontWeight="800" textTransform="uppercase" px="$2">
+                        Surfaces
+                      </Text>
+                      <XStack flexWrap="wrap" gap="$2">
+                        {CROSS_SURFACES.map((s) => (
+                          <SurfaceTile
+                            key={s.id}
+                            surface={s}
+                            onPress={() => {
+                              onOpenChange(false)
+                              if (typeof window !== 'undefined') window.open(s.href, '_blank', 'noopener')
+                            }}
+                          />
+                        ))}
+                      </XStack>
+                    </YStack>
+                  ) : null}
+                </>
               )}
             </YStack>
           </ScrollView>

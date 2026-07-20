@@ -16,6 +16,8 @@
  * content uses `currentColor` (except the Zoo mark, which is intentionally
  * full-color) so the mark adapts to the dark/light theme with no per-theme asset.
  */
+import { MARK_PATHS, MARK_VIEWBOX } from '@hanzo/logo/logos'
+
 import { brandFromHost, config, type BrandId } from '~/config'
 
 export type { BrandId }
@@ -37,22 +39,17 @@ export type Brand = {
   readonly logoContent: string
 }
 
-// Hanzo — the canonical blocky-"H" mark. Byte-identical geometry to
-// `src/components/ui/HanzoMark.tsx` (5 paths, no opacity facets), so the default
-// Hanzo render matches the existing chrome. Do not reintroduce a hand-drawn H.
+// Hanzo — the canonical 7-path shaded H from @hanzo/logo (`MARK_PATHS`, the ONE
+// home of the geometry: five currentColor body blocks + two shade slivers).
+// Never re-type the path data; never reintroduce a hand-drawn H.
 const HANZO: Brand = {
   id: 'hanzo',
   brandName: 'Hanzo',
   orgName: 'Hanzo Industries Inc.',
   websiteUrl: 'https://hanzo.ai',
   adminDomain: 'hanzo.ai',
-  logoViewBox: '0 0 67 67',
-  logoContent:
-    '<path d="M22.21 67V44.6369H0V67H22.21Z"/>' +
-    '<path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/>' +
-    '<path d="M22.21 0H0V22.3184H22.21V0Z"/>' +
-    '<path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/>' +
-    '<path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/>',
+  logoViewBox: MARK_VIEWBOX,
+  logoContent: MARK_PATHS,
 }
 
 // Lux — downward triangle (the explorer/console v1 registry mark, currentColor).

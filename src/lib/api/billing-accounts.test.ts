@@ -85,12 +85,12 @@ describe('chain — the ORDER is commerce’s answer, rendered as returned', () 
   it('scopes the read to a project when one is selected, else org-level', async () => {
     const c1 = captureFetch({ chain: [] })
     await BillingAccountApi.chain('apollo')
-    expect(c1[0].url).toContain('/billing/v1/chain?project=apollo')
+    expect(c1[0].url).toContain('/v1/billing/chain?project=apollo')
 
     vi.unstubAllGlobals()
     const c2 = captureFetch({ chain: [] })
     await BillingAccountApi.chain()
-    expect(c2[0].url).toContain('/billing/v1/chain')
+    expect(c2[0].url).toContain('/v1/billing/chain')
     expect(c2[0].url).not.toContain('project=')
   })
 
@@ -145,10 +145,10 @@ describe('bind — the browser names a KIND, never a holder id', () => {
     expect('holderId' in b).toBe(false)
   })
 
-  it('POSTs to the per-tenant billing proxy (never a bare /v1/billing)', async () => {
+  it('POSTs to the per-tenant billing proxy (the /v1-first filesystem route)', async () => {
     const calls = captureFetch({}, 200)
     await BillingAccountApi.bind({ holderKind: 'org' }, 'acct_x', 0)
-    expect(calls[0].url).toBe(`${ORIGIN}/billing/v1/bindings`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/bindings`)
     expect(calls[0].init.method).toBe('POST')
   })
 
@@ -159,7 +159,7 @@ describe('bind — the browser names a KIND, never a holder id', () => {
     await BillingAccountApi.bind({ holderKind: 'org' }, 'acct_x', 0)
     await BillingAccountApi.bind({ holderKind: 'org' }, 'acct_x', 5)
     expect(calls.map((c) => c.init.method)).toEqual(['POST', 'POST'])
-    expect(calls.map((c) => c.url)).toEqual([`${ORIGIN}/billing/v1/bindings`, `${ORIGIN}/billing/v1/bindings`])
+    expect(calls.map((c) => c.url)).toEqual([`${ORIGIN}/v1/billing/bindings`, `${ORIGIN}/v1/billing/bindings`])
     expect(bodyOf(calls[1]).priority).toBe(5)
   })
 })
@@ -169,6 +169,6 @@ describe('unbind', () => {
     const calls = captureFetch(null, 204)
     await BillingAccountApi.unbind('bnd_abc')
     expect(calls[0].init.method).toBe('DELETE')
-    expect(calls[0].url).toBe(`${ORIGIN}/billing/v1/bindings/bnd_abc`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/bindings/bnd_abc`)
   })
 })
