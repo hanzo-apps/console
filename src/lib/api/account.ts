@@ -25,9 +25,10 @@ function accountFromClaims(claims: Record<string, unknown>): Account | null {
     const v = claims[k]
     return typeof v === 'string' && v ? v : undefined
   }
-  const owner = str('owner') ?? str('organization')
-  // A signed-in casdoor user is `<owner>/<name>`; `sub` is often `owner/name`.
+  // A signed-in casdoor user is `<owner>/<name>`; `sub` is `owner/name` — derive
+  // BOTH from it: the OIDC userinfo response carries no `owner`/`organization` claim.
   const sub = str('sub') ?? ''
+  const owner = str('owner') ?? str('organization') ?? (sub.includes('/') ? sub.split('/')[0] : undefined)
   const name = str('name') ?? str('preferred_username') ?? (sub.includes('/') ? sub.split('/')[1] : sub)
   if (!owner || !name) return null
   const props = claims['properties']
