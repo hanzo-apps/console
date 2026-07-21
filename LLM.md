@@ -3175,3 +3175,23 @@ Desktop-only (lg+); open state persists via the ONE preferences store
 - Verification: `tsc --noEmit` clean; `vitest` 2756 passed (+5 workbench logic; 8 skipped);
   `next build` ✓; `npm run build:embed` ✓; the workbench render spec green locally.
   Ships to console.hanzo.ai via the next cloud release embedding `console@main`.
+
+## Studio embedded — every Studio capability usable in-console (v8.4.145)
+
+The `studio` product no longer renders the NativeOverview brochure: `StudioModule`
+embeds the FULL Hanzo Studio app (home gallery · node editor via a Studio/Editor
+toggle · queue/GPUs/copilot inside the frame) in a first-party SAME-SITE iframe —
+studio.<brand> shares the console host's eTLD+1, so Studio's own IAM session
+cookies flow and its OIDC leg completes silently for a signed-in user (a live
+hanzo.id session never renders the login — authorize just 302s). When the frame
+cannot establish a session (expired IAM cookie — the login page sends
+frame-ancestors 'none' by design), the header's "Full screen" is the honest
+fallback; nothing embedded is fabricated. WHITE-LABEL: `studioUrl(host)` in
+config is the ONE gate — only a brand with its OWN instance gets a URL (hanzo →
+studio.hanzo.ai); every other brand gets null → an honest not-provisioned card,
+NEVER another brand's Studio (locked by 2 config tests). The shared per-product
+Status/Logs/Metrics/Settings subpages are untouched (base-slug routing).
+Verification: tsc clean; vitest 2758 (+2); next build ✓; build:embed ✓; local
+render proof (seeded-auth recipe) shows toggle + Full screen + the live iframe
+src. Reaches cloud.hanzo.ai/console.hanzo.ai on the next cloud release embedding
+console@main.
