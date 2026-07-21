@@ -1288,6 +1288,7 @@ export const catalog: CatalogEntry[] = [
     ],
     subpages: [
       { slug: 'gpus', label: 'GPUs' },
+      { slug: 'queue', label: 'Queue' },
       { slug: 'clusters', label: 'Clusters' },
       { slug: 'pools', label: 'Pools' },
       { slug: 'pricing', label: 'Pricing' },
