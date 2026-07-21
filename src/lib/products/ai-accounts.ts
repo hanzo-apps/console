@@ -44,7 +44,7 @@ export const MODE_LABEL: Record<ConnectMode, string> = {
 
 /**
  * The org-level smart-routing defaults an admin set for the whole org, read from
- * cloud-api `GET /v1/get-routing-defaults`. `autoRoutingActive` = routing is
+ * cloud-api `GET /v1/router/defaults`. `autoRoutingActive` = routing is
  * enabled for the org at all; `defaultSessionRouting` = the default on/off a new
  * session inherits when the user has no explicit override.
  */

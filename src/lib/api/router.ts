@@ -3,9 +3,9 @@
  * over the canonical same-origin `/v1` surface (v1-first: no service prefix, no
  * nested version).
  *
- *   GET  /v1/get-router-policy          → the effective policy resolved for the
+ *   GET  /v1/router/policy              → the effective policy resolved for the
  *                                         caller's org (org > "*" > conf)
- *   POST /v1/update-router-policy       → upsert the caller's OWN org policy
+ *   PUT  /v1/router/policy              → upsert the caller's OWN org policy
  *   GET  /v1/router/stats               → the org-scoped routing aggregate (cost
  *                                         saved, quality proxy, distributions)
  *   GET  /v1/get-training-contribution  → the org's opt-in flag
@@ -23,7 +23,7 @@
  * allowlist (empty = all allowed) + a savings↔quality dial (0..1). An empty
  * prefer + 0 ceiling clears the org override (reverts to "*" then conf).
  */
-import { originGet, originPost } from './client'
+import { originGet, originPost, originPut } from './client'
 
 /** One servable model the org may allow the router to pick from (rows the allowlist multi-select). */
 export type RouterModel = { id: string; name: string }
@@ -43,10 +43,10 @@ export type RouterPolicy = {
 
 export const RouterPolicyApi = {
   /** The effective policy resolved for the caller's own org (org > "*" > conf). */
-  get: (): Promise<RouterPolicy> => originGet('get-router-policy'),
-  /** Upsert the caller's OWN org policy (prefer + costCeiling + enabledModels + qualityBias).
-   *  Empty prefer + 0 ceiling + empty allowlist clears the override. */
-  save: (body: RouterPolicy): Promise<RouterPolicy> => originPost('update-router-policy', body),
+  get: (): Promise<RouterPolicy> => originGet('router/policy'),
+  /** Upsert the caller's OWN org policy (prefer + costCeiling + enabledModels + qualityBias)
+   *  via PUT — empty prefer + 0 ceiling + empty allowlist clears the override. */
+  save: (body: RouterPolicy): Promise<RouterPolicy> => originPut('router/policy', body),
 }
 
 // ── Routing observability (GET /v1/router/stats) ─────────────────────────────

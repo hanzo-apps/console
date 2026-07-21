@@ -4,8 +4,8 @@
  *
  * ┌─ ENDPOINT STATUS ──────────────────────────────────────────────────────────┐
  * │ TODO(hanzoai/ai): the OrgSettings row does not yet PERSIST the three blend  │
- * │ columns. Required, on the existing `/v1/get-org-settings` +                 │
- * │ `/v1/update-org-settings` pair (no new endpoint — the row is the natural    │
+ * │ columns. Required, on the existing `/v1/org/settings` GET + PUT noun         │
+ * │ (no new endpoint — the row is the natural                                   │
  * │ home, beside routerPrefer/routerCostCeiling):                               │
  * │                                                                             │
  * │   enabledModels   string[] | null   allowlist; null/absent = inherit all    │
@@ -28,7 +28,7 @@
  * replaces the WHOLE row from the POST body, so every write carries the raw row
  * through unchanged and overrides only the three blend fields.
  */
-import { originGet, originPost } from './client'
+import { originGet, originPut } from './client'
 import type { BlendModel, BlendSpec } from '~/lib/models/blend'
 import { INHERIT_ALL } from '~/lib/models/blend'
 
@@ -96,7 +96,7 @@ export const OrgBlendApi = {
    * backend cannot hold it yet" state, never an invented allowlist.
    */
   get: async (owner: string): Promise<BlendState> => {
-    const raw = await originGet<unknown>('get-org-settings', { owner })
+    const raw = await originGet<unknown>('org/settings', { owner })
     return { spec: specFromRow(raw), persisted: rowHasBlend(raw) }
   },
 
@@ -106,10 +106,10 @@ export const OrgBlendApi = {
    * dropped — the caller must say so rather than claim success.
    */
   save: async (owner: string, spec: BlendSpec): Promise<BlendState> => {
-    const current = await originGet<unknown>('get-org-settings', { owner })
+    const current = await originGet<unknown>('org/settings', { owner })
     const row = { ...asRecord(current), owner, ...rowFromSpec(spec) }
-    await originPost('update-org-settings', row, { owner })
-    const after = await originGet<unknown>('get-org-settings', { owner })
+    await originPut('org/settings', row, { owner })
+    const after = await originGet<unknown>('org/settings', { owner })
     return { spec: specFromRow(after), persisted: rowHasBlend(after) }
   },
 
