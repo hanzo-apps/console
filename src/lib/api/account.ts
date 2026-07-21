@@ -13,6 +13,7 @@ import {
   iamExpiresInSeconds,
   iamSignOut,
 } from '~/lib/auth/iam'
+import { config } from '~/config'
 import { type Account } from './types'
 
 /** Result of resolving the current session: the account + the IAM access-token
@@ -25,11 +26,21 @@ function accountFromClaims(claims: Record<string, unknown>): Account | null {
     const v = claims[k]
     return typeof v === 'string' && v ? v : undefined
   }
-  // A signed-in casdoor user is `<owner>/<name>`; `sub` is `owner/name` — derive
-  // BOTH from it: the OIDC userinfo response carries no `owner`/`organization` claim.
+  // The deployed OIDC userinfo may omit `owner`, and `sub` is the user UUID (not
+  // owner/name). Resolve owner: explicit claim -> sub-prefix (older owner/name
+  // tokens) -> the console's configured IAM org. A valid session must NEVER
+  // dead-end at account=null (that loops /signin).
   const sub = str('sub') ?? ''
-  const owner = str('owner') ?? str('organization') ?? (sub.includes('/') ? sub.split('/')[0] : undefined)
-  const name = str('name') ?? str('preferred_username') ?? (sub.includes('/') ? sub.split('/')[1] : sub)
+  const owner =
+    str('owner') ??
+    str('organization') ??
+    (sub.includes('/') ? sub.split('/')[0] : undefined) ??
+    config.iamOrgName
+  const name =
+    str('name') ??
+    str('preferred_username') ??
+    str('email') ??
+    (sub.includes('/') ? sub.split('/')[1] : sub)
   if (!owner || !name) return null
   const props = claims['properties']
   return {
