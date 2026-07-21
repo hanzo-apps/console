@@ -3136,3 +3136,42 @@ and the two new tabs are `:tab` routes on the existing entry.
   gotchas worth knowing for the next spec: the first-run `OnboardingGate` is a full
   takeover that must be marked done (`hz_onboarding_done:<owner>`), and `OrgGate` needs
   `hanzo.console.org.selected`, or the page under test never mounts.
+
+## Workbench — the persistent Developers dock (Stripe-Workbench pattern) (v8.4.143)
+
+A bottom Developers dock on every dashboard page (the Stripe Workbench footer-shell
+pattern): a slim always-there bar ("Developers" + a `$` prompt + quick icons) that
+expands into a drawer with three tabs — available anywhere without leaving the page.
+Desktop-only (lg+); open state persists via the ONE preferences store
+(`workbenchOpen`). Mounted once in `DashboardShell` below the content ScrollView.
+
+- **Overview** — the org's real API activity (requests · errors · tokens · spend,
+  last 24h) rolled up from the charged commerce usage ledger (`fetchUsageRecords` +
+  `totalsOf`/`withinRange` — the aimetrics primitives, nothing forked), with deep
+  links to AI Metrics + API keys. Real numbers or an honest zero, never mocked.
+- **Logs** — the 50 most recent charged calls (time · model · status · tokens ·
+  cost), the same ledger rows the Logs product renders.
+- **Shell** — a READ-ONLY same-origin `/v1` explorer: `GET /v1/models` (or just
+  `models`) runs as the caller through the ONE `/v1` surface (bearer BFF standalone /
+  cloud-native in the embed) and pretty-prints the JSON, output bounded. Mutations
+  are refused with an honest message — they belong in the product UIs. Command
+  parsing + output bounding are the pure `workbench/logic.ts` (scheme/traversal/
+  method-refusal unit-tested).
+- Files: `src/components/workbench/{Workbench.tsx,logic.ts,logic.test.ts}` + the one
+  `DashboardShell` mount. No new route handlers → no build:embed churn.
+- **Render-proven** (`e2e/workbench.spec.ts`, mocked network on the local dev
+  server): the bar renders, the drawer opens with the exact mocked ledger roll-up
+  (3 req · 1 error · 1590 tokens · $0.16), Logs shows the rows, the shell runs a
+  real `/v1/models` GET and refuses `DELETE`. Screenshots
+  `e2e-shots/workbench-{overview,shell}.png`. NEW render-spec gotchas (post the
+  IAM-PKCE auth move): identity is seeded via `sessionStorage`
+  `hanzo_iam_access_token` (forged unsigned JWT w/ future `exp`) +
+  `hanzo_iam_expires_at`, userinfo served by route-mocking `**/userinfo` (let
+  `.well-known` 404 — the SDK synthesizes endpoints); and the first-run GUIDED TOUR
+  overlays the whole page at z=100000, so seed `hz_tour_seen:v1:<owner>` alongside
+  `hz_onboarding_done:<owner>` or every click hangs on actionability. The older
+  `/auth/session`-mock specs (e.g. budgets-responsive) are stale against this auth
+  model and skip/fail locally — flagged, not fixed here.
+- Verification: `tsc --noEmit` clean; `vitest` 2761/2761 (+5 workbench logic);
+  `next build` ✓; `npm run build:embed` ✓; the workbench render spec green locally.
+  Ships to console.hanzo.ai via the next cloud release embedding `console@main`.
