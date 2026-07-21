@@ -52,6 +52,62 @@
   },
   "models": [
     {
+      "model": "enso-ultra",
+      "vendor": "Hanzo",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 92.9,
+          "source": "hanzo-measured"
+        },
+        "charxiv_reasoning": {
+          "value": 85.5,
+          "source": "hanzo-measured"
+        },
+        "humanitys_last_exam": {
+          "value": 34.6,
+          "source": "hanzo-measured"
+        }
+      },
+      "price": 75,
+      "intelligence": 92.9
+    },
+    {
+      "model": "enso",
+      "vendor": "Hanzo",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 87.9,
+          "source": "hanzo-measured"
+        },
+        "livecodebench": {
+          "value": 92,
+          "source": "hanzo-measured"
+        },
+        "charxiv_reasoning": {
+          "value": 78,
+          "source": "hanzo-measured"
+        },
+        "humanitys_last_exam": {
+          "value": 29.4,
+          "source": "hanzo-measured"
+        }
+      },
+      "price": 75,
+      "intelligence": 87.9
+    },
+    {
+      "model": "enso-flash",
+      "vendor": "Hanzo",
+      "scores": {
+        "gpqa_diamond": {
+          "value": 75.8,
+          "source": "hanzo-measured"
+        }
+      },
+      "price": 6,
+      "intelligence": 75.8
+    },
+    {
       "model": "gpt-5.6-sol",
       "vendor": "OpenAI",
       "scores": {
@@ -185,7 +241,7 @@
         },
         "livecodebench": {
           "value": 92.9,
-          "source": "fugu-report"
+          "source": "provider-reported"
         }
       },
       "price": 42,
@@ -693,15 +749,15 @@
       "scores": {
         "gpqa_diamond": {
           "value": 94.3,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "swe_bench_pro": {
           "value": 54.2,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "livecodebench": {
           "value": 88.5,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "livecodebench_pro": {
           "value": 2887,
@@ -885,15 +941,15 @@
       "scores": {
         "gpqa_diamond": {
           "value": 93.6,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "swe_bench_pro": {
           "value": 58.6,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "livecodebench": {
           "value": 85.3,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "terminal_bench": {
           "value": 84.3,
@@ -937,11 +993,11 @@
         },
         "swe_bench_pro": {
           "value": 69.2,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "livecodebench": {
           "value": 87.8,
-          "source": "fugu-report"
+          "source": "provider-reported"
         },
         "terminal_bench": {
           "value": 84.6,
@@ -2488,6 +2544,50 @@
     [
       "openai/gpt-5.6-sol",
       "gpt-5.6-sol@openrouter"
+    ],
+    [
+      "google/gemini-3.1-pro-preview",
+      "gemini-3.1-pro@openrouter"
+    ],
+    [
+      "x-ai/grok-4.5",
+      "grok-4.5@openrouter"
+    ],
+    [
+      "moonshotai/kimi-k3",
+      "kimi-k3@openrouter"
+    ],
+    [
+      "anthropic/claude-fable-5",
+      "fable-5@openrouter"
+    ],
+    [
+      "openai/gpt-5.5",
+      "gpt-5.5@openrouter"
+    ],
+    [
+      "deepseek/deepseek-v4-flash",
+      "deepseek-v4-flash@openrouter"
+    ],
+    [
+      "openai/gpt-5.6-luna",
+      "gpt-5.6-luna@openrouter"
+    ],
+    [
+      "xiaomi/mimo-v2.5-pro",
+      "mimo-v2.5-pro@openrouter"
+    ],
+    [
+      "minimax/minimax-m3",
+      "minimax-m3@openrouter"
+    ],
+    [
+      "tencent/hy3",
+      "hy3@openrouter"
+    ],
+    [
+      "sakana/fugu-ultra",
+      "fugu-ultra@openrouter"
     ]
   ]
 }
