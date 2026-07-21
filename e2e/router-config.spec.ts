@@ -3,7 +3,7 @@
  *
  * Mocked-network render proof against a LOCAL server (same pattern as
  * budgets-responsive / models-surfaces): `/auth/session` → an admin so the shell
- * mounts, `GET /v1/get-router-policy` → a real-shaped policy (allowlist + dial +
+ * mounts, `GET /v1/router/policy` → a real-shaped policy (allowlist + dial +
  * prefer + ceiling + the org's servable `available` set), everything else → an
  * empty-ok envelope.
  *
@@ -12,8 +12,8 @@
  * quality. A mocked unit suite can stay green while the page doesn't render, so this
  * asserts what only a browser can — that the allowlist chips + the savings↔quality
  * dial actually paint, that Select-all/Clear re-count live, and — the load-bearing
- * contract check — that Save POSTs `enabledModels` + `qualityBias` to
- * `/v1/update-router-policy`.
+ * contract check — that Save PUTs `enabledModels` + `qualityBias` to
+ * `/v1/router/policy`.
  *
  * Run: BASE_URL=http://localhost:4010 npx playwright test router-config
  */
@@ -47,7 +47,7 @@ const CLAIMS = {
   isAdmin: true,
 }
 
-/** A real-shaped router policy per the GET /v1/get-router-policy contract. */
+/** A real-shaped router policy per the GET /v1/router/policy contract. */
 const POLICY = {
   prefer: { default: ['zen5'], code: ['zen5-coder'] },
   costCeiling: 0.003,
@@ -67,7 +67,7 @@ const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paa
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 
-/** Captured POST body for /v1/update-router-policy — the contract proof for the save path. */
+/** Captured PUT body for /v1/router/policy — the contract proof for the save path. */
 let lastSaveBody: Record<string, unknown> = {}
 let saved = false
 
@@ -96,17 +96,20 @@ async function mock(route: Route) {
   if (path.endsWith('/v1/iam/oauth/userinfo')) return json(route, CLAIMS)
   if (path.startsWith('/auth/')) return json(route, { ok: true })
 
-  // The page under test — the real router-policy contract (casibase envelope).
-  if (path.endsWith('/v1/get-router-policy')) return json(route, { status: 'ok', msg: '', data: POLICY })
-  if (path.endsWith('/v1/update-router-policy')) {
-    try {
-      lastSaveBody = JSON.parse(req.postData() ?? '{}')
-    } catch {
-      lastSaveBody = {}
+  // The page under test — the real router-policy contract (casibase envelope). ONE noun,
+  // method-dispatched: GET /v1/router/policy reads the effective policy; PUT upserts it.
+  if (path.endsWith('/v1/router/policy')) {
+    if (req.method() === 'PUT') {
+      try {
+        lastSaveBody = JSON.parse(req.postData() ?? '{}')
+      } catch {
+        lastSaveBody = {}
+      }
+      saved = true
+      // Echo the submitted policy back (merged with the read-only available set).
+      return json(route, { status: 'ok', msg: '', data: { ...POLICY, ...lastSaveBody } })
     }
-    saved = true
-    // Echo the submitted policy back (merged with the read-only available set).
-    return json(route, { status: 'ok', msg: '', data: { ...POLICY, ...lastSaveBody } })
+    return json(route, { status: 'ok', msg: '', data: POLICY })
   }
 
   const sameOrigin = url.origin === new URL(BASE_URL).origin
@@ -197,7 +200,7 @@ test('Select-all / Clear re-count live, and Save POSTs enabledModels + qualityBi
   // Save round-trips the FULL body — the load-bearing contract check.
   await page.getByRole('button', { name: 'Save', exact: true }).first().click()
   await page.waitForTimeout(800)
-  expect(saved, 'Save POSTed a body to /v1/update-router-policy').toBe(true)
+  expect(saved, 'Save PUT a body to /v1/router/policy').toBe(true)
   expect(Array.isArray(lastSaveBody.enabledModels), 'enabledModels is an array').toBe(true)
   expect((lastSaveBody.enabledModels as string[]).slice().sort()).toEqual(
     ['claude-haiku', 'enso', 'gpt-4o-mini', 'zen5-coder'].sort(),

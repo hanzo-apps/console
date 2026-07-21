@@ -1,7 +1,7 @@
 /**
  * Org Settings (auto-routing) admin client — the config-as-Base surface over the
- * hanzoai/ai OrgSettings CRUD (`/v1/{get-org-settings-list,get-org-settings,
- * update-org-settings,delete-org-settings}`, all RequireSuperAdmin upstream).
+ * hanzoai/ai OrgSettings CRUD (`GET/PUT/DELETE /v1/org/settings` + `GET
+ * /v1/org/settings/list`, all RequireSuperAdmin upstream).
  *
  * OrgSettings is ONE Base/SQLite row per org keyed on `owner`, plus a reserved
  * `GlobalDefaultOwner` ("*") row that is the platform-wide default. Runtime policy
@@ -9,20 +9,20 @@
  * session-gated code toggle. This client edits the ONE field this surface owns —
  * `autoRouting` (three-state: "" inherit / "enabled" / "disabled").
  *
- * READ-MODIFY-WRITE is mandatory: the backend `update-org-settings` replaces the
- * WHOLE row from the POST body (the router-policy controller re-copies AutoRouting/
- * CreatedTime for the same reason), so a naive patch would clobber the sibling
- * routing-policy fields (routerPrefer, routerCostCeiling, defaultSessionRouting,
- * trainingContribution) that OTHER endpoints own. Every write carries the raw row
- * through unchanged and overrides only `autoRouting`; a revert to inherit deletes
- * the row only when nothing else is set on it, else it just clears the field.
+ * READ-MODIFY-WRITE is the convention: the write reads the current row, overrides
+ * only `autoRouting`, and PUTs the whole row back. The backend `PUT /v1/org/settings`
+ * PATCH-merges (a field ABSENT from the body keeps its value), so carrying the full raw
+ * row through can never clobber the sibling routing-policy fields (routerPrefer,
+ * routerCostCeiling, defaultSessionRouting, trainingContribution) that OTHER endpoints
+ * own. A revert to inherit DELETEs the row only when nothing else is set on it, else it
+ * just clears the field (an explicit `autoRouting: ''` in the merged body).
  *
- * Reads/writes ride originGet/originPost — the console's OWN origin, dispatched by
+ * Reads/writes ride originGet/originPut/originDelete — the console's OWN origin, dispatched by
  * next.config to the /ai user-bearer proxy (session cookie → short-lived minted
  * bearer → the hanzoai/ai gateway). The super-admin gate is enforced UPSTREAM; a
  * non-admin gets a real 403 the module renders honestly (OperatorAccessRequired).
  */
-import { originGet, originPost } from './client'
+import { originGet, originPut, originDelete } from './client'
 
 /** The reserved owner of the platform-wide default row (read as the fallback
  *  between a real org's row and the gateway conf). No real request resolves its
@@ -67,7 +67,7 @@ export function normalizeOrgSettings(raw: unknown): OrgSettings {
   }
 }
 
-/** Parse the `get-org-settings-list` payload (an array) into rows, dropping any
+/** Parse the `org/settings/list` payload (an array) into rows, dropping any
  *  row with no owner. Honest-empty on a null/garbage payload. */
 export function settingsFrom(payload: unknown): OrgSettings[] {
   const list = Array.isArray(payload) ? payload : []
@@ -129,13 +129,13 @@ export const OrgSettingsApi = {
    *  0-or-1 row per owner (owner is the PK) — the console composes these with the
    *  global "*" row and admin-added orgs. */
   list: async (owner?: string): Promise<OrgSettings[]> => {
-    const data = await originGet<unknown>('get-org-settings-list', owner ? { owner } : undefined)
+    const data = await originGet<unknown>('org/settings/list', owner ? { owner } : undefined)
     return settingsFrom(data)
   },
 
   /** One org's settings row, or `null` when the org has no override yet. */
   get: async (owner: string): Promise<OrgSettings | null> => {
-    const data = await originGet<unknown>('get-org-settings', { owner })
+    const data = await originGet<unknown>('org/settings', { owner })
     return data ? normalizeOrgSettings(data) : null
   },
 
@@ -150,12 +150,12 @@ export const OrgSettingsApi = {
     const current = await OrgSettingsApi.get(owner)
     if (state === 'inherit') {
       const plan = planRevert(current)
-      if (plan.op === 'delete') await originPost('delete-org-settings', { owner: plan.owner })
-      else if (plan.op === 'update') await originPost('update-org-settings', plan.row, { owner })
+      if (plan.op === 'delete') await originDelete('org/settings', { owner: plan.owner })
+      else if (plan.op === 'update') await originPut('org/settings', plan.row, { owner })
       return null
     }
     const row = planSave(current, owner, state)
-    await originPost('update-org-settings', row, { owner })
+    await originPut('org/settings', row, { owner })
     return normalizeOrgSettings(row)
   },
 }

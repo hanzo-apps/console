@@ -915,7 +915,7 @@ export const catalog: CatalogEntry[] = [
     //     imported connected-provider usage, via the shared `<AiUsagePanels>` that
     //     the `ai-metrics` module also renders (one usage implementation, DRY).
     //   Policy   — the org's own task→model-pool prefer table + cost ceiling over
-    //     `/v1/get-router-policy` + `/v1/update-router-policy`.
+    //     `/v1/router/policy` (GET read + PUT write).
     // All org-admin gated + self-scoped server-side (org > "*" > conf per task key).
     // DISTINCT from the two routing surfaces beside it: `models`' admin "Routing" tab
     // flips PLATFORM ModelRoute config, and `ai-accounts`' Routing tab is the user's
