@@ -66,6 +66,20 @@ describe('white-label cloud tenants (7stars / yotoda)', () => {
     expect(brandFromHost('cloud.yotoda.tech')).toBe('yotoda')
   })
 
+  it('resolves the brand under a padded / ported / trailing-dot host (admin-gate boundary)', () => {
+    // A mis-resolve here would swap the admin-gate adminDomain onto the default
+    // brand. Normalization must strip a trailing port even when whitespace-padded
+    // (trim-before-port) and a trailing FQDN root dot.
+    expect(brandFromHost('  lux.network:8443  ')).toBe('lux')
+    expect(brandFromHost('\tcloud.7stars.dev:443\n')).toBe('7stars')
+    expect(brandFromHost('lux.network.')).toBe('lux')
+    expect(brandFromHost('cloud.7stars.dev.')).toBe('7stars')
+    expect(brandFromHost('LUX.NETWORK.:443')).toBe('lux')
+    // A lookalike must still fall to the default even with a trailing dot / port.
+    expect(brandFromHost('evil7stars.dev.')).toBe('hanzo')
+    expect(brandFromHost('lux.network.evil.com:443')).toBe('hanzo')
+  })
+
   it('authenticates against the hanzo.id issuer (no own .id) with the per-brand org + app', () => {
     const s = resolveConfig('cloud.7stars.dev')
     expect(s.brand).toBe('7stars')
