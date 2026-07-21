@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, isSocialHost, isSentryHost, shellFromHost, brandFromHost, cloudAudience, type ShellId } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, isSocialHost, isSentryHost, shellFromHost, brandFromHost, cloudAudience, studioUrl, type ShellId } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -383,5 +383,23 @@ describe('config: unified product shell (five faces)', () => {
     // …and the brand's IAM is unchanged by the face (still the brand's own issuer/app).
     expect(resolveConfig('sentry.lux.cloud').iamOrgName).toBe(resolveConfig('cloud.lux.cloud').iamOrgName)
     expect(resolveConfig('marketing.zoo.ngo').iamAppName).toBe(resolveConfig('cloud.zoo.ngo').iamAppName)
+  })
+})
+
+/**
+ * studioUrl — the ONE gate the Studio embed reads. WHITE-LABEL LAW: only a brand
+ * with its OWN Studio instance gets a URL; every other brand gets null (the honest
+ * not-provisioned card) — NEVER another brand's instance leaking cross-brand.
+ */
+describe('studioUrl — brand-scoped Studio embed origin', () => {
+  it('resolves hanzo hosts to the hanzo Studio', () => {
+    expect(studioUrl('cloud.hanzo.ai')).toBe('https://studio.hanzo.ai')
+    expect(studioUrl('console.hanzo.ai')).toBe('https://studio.hanzo.ai')
+  })
+
+  it('NEVER hands another brand the hanzo Studio — null → honest card', () => {
+    for (const host of ['cloud.lux.network', 'console.zoo.cloud', 'cloud.pars.network', 'console.7stars.dev']) {
+      expect(studioUrl(host)).toBeNull()
+    }
   })
 })
