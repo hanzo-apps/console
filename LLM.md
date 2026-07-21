@@ -3172,6 +3172,6 @@ Desktop-only (lg+); open state persists via the ONE preferences store
   `hz_onboarding_done:<owner>` or every click hangs on actionability. The older
   `/auth/session`-mock specs (e.g. budgets-responsive) are stale against this auth
   model and skip/fail locally — flagged, not fixed here.
-- Verification: `tsc --noEmit` clean; `vitest` 2761/2761 (+5 workbench logic);
+- Verification: `tsc --noEmit` clean; `vitest` 2756 passed (+5 workbench logic; 8 skipped);
   `next build` ✓; `npm run build:embed` ✓; the workbench render spec green locally.
   Ships to console.hanzo.ai via the next cloud release embedding `console@main`.
