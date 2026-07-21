@@ -19,22 +19,33 @@
  * only its own org — never another tenant's.
  *
  * The policy is the org's router prefer table (task tag → ordered model ids,
- * "default" is the catch-all) + a per-1k cost ceiling. An empty prefer + 0
- * ceiling clears the org override (reverts to "*" then conf).
+ * "default" is the catch-all) + a per-1k cost ceiling + an enabled-models
+ * allowlist (empty = all allowed) + a savings↔quality dial (0..1). An empty
+ * prefer + 0 ceiling clears the org override (reverts to "*" then conf).
  */
 import { originGet, originPost } from './client'
+
+/** One servable model the org may allow the router to pick from (rows the allowlist multi-select). */
+export type RouterModel = { id: string; name: string }
 
 /** The effective router policy for the caller's org, plus whether the org has its own override. */
 export type RouterPolicy = {
   prefer: Record<string, string[]>
   costCeiling: number
+  /** The org's allowlist of model ids the router may pick from. Empty/absent = ALL models allowed. */
+  enabledModels?: string[]
+  /** Savings↔quality dial: 0 = cheapest, 1 = best model, 0.5 = balanced. `null`/absent = unset (→ balanced). */
+  qualityBias?: number | null
+  /** ALL servable models for the org — the source for the allowlist multi-select. Read-only (GET only). */
+  available?: RouterModel[]
   hasOverride?: boolean
 }
 
 export const RouterPolicyApi = {
   /** The effective policy resolved for the caller's own org (org > "*" > conf). */
   get: (): Promise<RouterPolicy> => originGet('get-router-policy'),
-  /** Upsert the caller's OWN org policy. Empty prefer + 0 ceiling clears the override. */
+  /** Upsert the caller's OWN org policy (prefer + costCeiling + enabledModels + qualityBias).
+   *  Empty prefer + 0 ceiling + empty allowlist clears the override. */
   save: (body: RouterPolicy): Promise<RouterPolicy> => originPost('update-router-policy', body),
 }
 
