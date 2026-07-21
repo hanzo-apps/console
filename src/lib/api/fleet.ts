@@ -16,7 +16,7 @@
  * the CLI's 30s beat), so the console renders that verdict rather than recomputing it;
  * every field the backend omits degrades to "—", nothing is fabricated.
  */
-import { restGet, cloudProxyV1Url } from './client'
+import { restGet, restPost, cloudProxyV1Url } from './client'
 import { gbOf } from './compute'
 
 /** One accelerator a worker advertises (nvidia-smi name + total memory). */
@@ -59,6 +59,8 @@ export type FleetWorker = {
   version?: string
   /** Advertised capabilities, e.g. `["studio.render","engine.serve"]`. */
   capabilities: string[]
+  /** The tasks namespace this worker claims jobs from (`gpu-jobs` by default). */
+  jobQueue?: string
   /** Present when the box also serves models (hanzo-engine). */
   engine?: FleetEngine
 }
@@ -68,6 +70,12 @@ export type FleetWorker = {
 const rec = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 const strArr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+const numOpt = (v: unknown): number | undefined =>
+  typeof v === 'number' && Number.isFinite(v)
+    ? v
+    : typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))
+      ? Number(v)
+      : undefined
 
 function normalizeFleetGpu(raw: unknown): FleetGpu {
   const r = rec(raw)
@@ -98,6 +106,7 @@ export function normalizeWorker(raw: unknown, i = 0): FleetWorker {
     os: str(r.os) ?? str(r.operatingSystem),
     version: str(r.version),
     capabilities: strArr(r.capabilities),
+    jobQueue: str(r.jobQueue) ?? str(r.job_queue),
     engine: normalizeEngine(r.engine),
   }
 }
@@ -151,6 +160,228 @@ export function fmtHeartbeat(iso?: string, now: number = Date.now()): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
+// ── Jobs (the gpu-jobs queue) ─────────────────────────────────────────────────
+//
+// The connect fleet CLAIMS work from the org's `gpu-jobs` tasks namespace (presence
+// is a SEPARATE `fleet` namespace). `GET /v1/fleet/jobs` lists that queue + history:
+// one row per activity, carrying the target GPU (`gpu`, ''=shared pool), the claiming
+// GPU (`worker`, set once running), status, timings and any failure. This is what makes
+// the per-GPU queue VISIBLE (depth + running workflow + history) and MANAGEABLE (cancel).
+
+export type FleetJobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'canceled'
+
+/** One gpu-jobs activity as `GET /v1/fleet/jobs` reports it. Missing fields render `—`. */
+export type FleetJob = {
+  /** Workflow id — the job's stable identity (the cancel target). */
+  id: string
+  runId?: string
+  /** Job/workflow type, e.g. `studio.render`, `echo`. */
+  type?: string
+  /** `queued | running | completed | failed | canceled` (raw engine states tolerated). */
+  status: FleetJobStatus
+  /** Target node the job was dispatched to; `''` = shared pool (any eligible GPU). */
+  gpu?: string
+  /** The GPU/worker id that CLAIMED it (set once running); joins to `FleetWorker.id`. */
+  worker?: string
+  attempt?: number
+  startTime?: string
+  closeTime?: string
+  lastHeartbeat?: string
+  leaseExpiry?: string
+  failureCause?: string
+}
+
+const JOB_STATES = new Set<FleetJobStatus>(['queued', 'running', 'completed', 'failed', 'canceled'])
+
+/** Coerce any backend status (canonical OR raw `ACTIVITY_TASK_STATE_*`) to a FleetJobStatus. PURE. */
+export function normalizeJobStatus(v: unknown): FleetJobStatus {
+  const s = (str(v) ?? '').toLowerCase().replace(/^activity_task_state_/, '')
+  if (JOB_STATES.has(s as FleetJobStatus)) return s as FleetJobStatus
+  if (s === 'scheduled' || s === 'pending') return 'queued'
+  if (s === 'started') return 'running'
+  return 'queued'
+}
+
+export function normalizeJob(raw: unknown, i = 0): FleetJob {
+  const r = rec(raw)
+  return {
+    id: str(r.id) ?? str(r.workflowId) ?? str(r.workflow_id) ?? `job-${i}`,
+    runId: str(r.runId) ?? str(r.run_id),
+    type: str(r.type) ?? str(r.activityType) ?? str(r.jobType),
+    status: normalizeJobStatus(r.status ?? r.state),
+    gpu: str(r.gpu) ?? str(r.target) ?? '',
+    worker: str(r.worker) ?? str(r.identity) ?? str(r.claimedBy),
+    attempt: numOpt(r.attempt),
+    startTime: str(r.startTime) ?? str(r.start_time) ?? str(r.startedAt),
+    closeTime: str(r.closeTime) ?? str(r.close_time) ?? str(r.endedAt),
+    lastHeartbeat: str(r.lastHeartbeat) ?? str(r.last_heartbeat),
+    leaseExpiry: str(r.leaseExpiry) ?? str(r.lease_expiry),
+    failureCause: str(r.failureCause) ?? str(r.failure_cause) ?? str(r.error),
+  }
+}
+
+// ── Board + samples (live utilization; already served, previously unread) ─────
+
+/** One compute unit on the `GET /v1/fleet` board — its live util + running/sessions. */
+export type FleetBoardUnit = {
+  source: string
+  unit: string
+  kind?: string
+  label?: string
+  host?: string
+  status?: string
+  /** Live GPU utilization as a PERCENT 0..100 (backend 0..1 fraction OR 0..100 tolerated). */
+  gpuUtil?: number
+  running: number
+  sessions: number
+  gpus?: number
+  gpuModel?: string
+}
+
+/** One row of the `GET /v1/fleet/samples` util+cost time series. */
+export type FleetSample = {
+  unit?: string
+  source?: string
+  at?: string
+  /** GPU utilization as a PERCENT 0..100. */
+  gpuUtil?: number
+  costCents?: number
+}
+
+/** Normalize a utilization value to a 0..100 percent, tolerating a 0..1 fraction. PURE. */
+export function utilToPct(v: unknown): number | undefined {
+  const n = numOpt(v)
+  if (n === undefined) return undefined
+  const p = n <= 1 ? n * 100 : n
+  return Math.max(0, Math.min(100, Math.round(p)))
+}
+
+export function normalizeUnit(raw: unknown): FleetBoardUnit {
+  const r = rec(raw)
+  const metrics = rec(r.metrics)
+  const spec = rec(r.spec)
+  return {
+    source: str(r.source) ?? '',
+    unit: str(r.unit) ?? str(r.id) ?? '',
+    kind: str(r.kind),
+    label: str(r.label),
+    host: str(r.host),
+    status: str(r.status),
+    gpuUtil: utilToPct(metrics.gpuUtil ?? metrics.gpu_util ?? r.gpuUtil),
+    running: numOpt(r.running) ?? 0,
+    sessions: numOpt(r.sessions) ?? 0,
+    gpus: numOpt(spec.gpus),
+    gpuModel: str(spec.gpuModel) ?? str(spec.gpu_model),
+  }
+}
+
+export function normalizeSample(raw: unknown): FleetSample {
+  const r = rec(raw)
+  return {
+    unit: str(r.unit),
+    source: str(r.source),
+    at: str(r.at) ?? str(r.timestamp),
+    gpuUtil: utilToPct(r.gpuUtil ?? r.gpu_util),
+    costCents: numOpt(r.costCents) ?? numOpt(r.cost_cents),
+  }
+}
+
+// ── Pure view helpers for jobs/board (testable; sections stay presentational) ──
+
+/** A job in a terminal state (its work is done — history, not queue). PURE. */
+export const isTerminal = (s: string): boolean => s === 'completed' || s === 'failed' || s === 'canceled'
+/** A job still in flight (queued or running). PURE. */
+export const jobActive = (j: FleetJob): boolean => j.status === 'queued' || j.status === 'running'
+
+/** Jobs that belong to a worker: it CLAIMED them (`worker`) OR they target it (`gpu`). PURE. */
+export const jobsForWorker = (jobs: FleetJob[], workerId: string): FleetJob[] =>
+  jobs.filter((j) => j.worker === workerId || (!!j.gpu && j.gpu === workerId))
+
+/** Queued jobs, optionally only those TARGETED at one worker (shared-pool jobs excluded). PURE. */
+export const queuedJobs = (jobs: FleetJob[], workerId?: string): FleetJob[] =>
+  jobs.filter((j) => j.status === 'queued' && (workerId === undefined || j.gpu === workerId))
+
+/** The job currently RUNNING on a worker (claimed by it, or targeting it), or undefined. PURE. */
+export const runningJob = (jobs: FleetJob[], workerId: string): FleetJob | undefined =>
+  jobs.find((j) => j.status === 'running' && (j.worker === workerId || j.gpu === workerId))
+
+/** Queue depth = number of queued jobs (optionally targeted at one worker). PURE. */
+export const queueDepth = (jobs: FleetJob[], workerId?: string): number => queuedJobs(jobs, workerId).length
+
+/** Count of running jobs (optionally for one worker). PURE. */
+export const runningCount = (jobs: FleetJob[], workerId?: string): number =>
+  jobs.filter(
+    (j) => j.status === 'running' && (workerId === undefined || j.worker === workerId || j.gpu === workerId),
+  ).length
+
+/** A compact queue summary for a worker: `1 running · 2 queued`, or `idle`. PURE. */
+export function queueSummary(jobs: FleetJob[], workerId: string): string {
+  const r = runningCount(jobs, workerId)
+  const q = queueDepth(jobs, workerId)
+  if (!r && !q) return 'idle'
+  return [r ? `${r} running` : '', q ? `${q} queued` : ''].filter(Boolean).join(' · ')
+}
+
+/** Status → pill tone: running=blue, completed=green, failed=red, queued/canceled=neutral. PURE. */
+export type JobTone = 'run' | 'ok' | 'down' | 'idle'
+export function jobTone(status: string): JobTone {
+  switch (status) {
+    case 'running':
+      return 'run'
+    case 'completed':
+      return 'ok'
+    case 'failed':
+      return 'down'
+    default:
+      return 'idle' // queued | canceled | unknown
+  }
+}
+
+/** Live GPU utilization % for a worker from the board units (prefers its BYO row), or undefined. PURE. */
+export function utilForWorker(units: FleetBoardUnit[], workerId: string): number | undefined {
+  const matches = units.filter((u) => u.unit === workerId && u.gpuUtil !== undefined)
+  if (!matches.length) return undefined
+  return (matches.find((u) => u.source === 'byo') ?? matches[0]).gpuUtil
+}
+
+/** Mean GPU utilization % across the units that report it, or undefined (no telemetry). PURE. */
+export function avgGpuUtil(units: FleetBoardUnit[]): number | undefined {
+  const vals = units.map((u) => u.gpuUtil).filter((n): n is number => typeof n === 'number')
+  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : undefined
+}
+
+/** GPU-util series (percent points, oldest→newest) for the overview sparkline. PURE. */
+export function utilSeries(samples: FleetSample[]): number[] {
+  return [...samples]
+    .filter((s) => s.gpuUtil !== undefined)
+    .sort((a, b) => (a.at ?? '').localeCompare(b.at ?? ''))
+    .map((s) => s.gpuUtil as number)
+}
+
+/** Total metered cost (USD) across the samples window, or undefined. PURE. */
+export function totalCostUsd(samples: FleetSample[]): number | undefined {
+  const cents = samples.map((s) => s.costCents).filter((n): n is number => typeof n === 'number')
+  return cents.length ? cents.reduce((a, b) => a + b, 0) / 100 : undefined
+}
+
+/** Compact elapsed time from `start` to `end` (or now, if still running), or `—`. PURE. */
+export function fmtDuration(start?: string, end?: string, now: number = Date.now()): string {
+  if (!start) return '—'
+  const t0 = Date.parse(start)
+  if (!Number.isFinite(t0)) return '—'
+  const t1 = end ? Date.parse(end) : now
+  const s = Math.max(0, Math.floor(((Number.isFinite(t1) ? t1 : now) - t0) / 1000))
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ${s % 60}s`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ${m % 60}m`
+  return `${Math.floor(h / 24)}d ${h % 24}h`
+}
+
+/** Title-case a job status for a cell (`running` → `Running`), or `—`. PURE. */
+export const fmtJobStatus = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '—')
+
 // ── API ──────────────────────────────────────────────────────────────────────
 
 export const FleetApi = {
@@ -160,4 +391,33 @@ export const FleetApi = {
     const arr = Array.isArray(r) ? r : rec(r).workers
     return (Array.isArray(arr) ? arr : []).map((w, i) => normalizeWorker(w, i))
   },
+
+  /** The org's gpu-jobs queue + history (`GET /v1/fleet/jobs?gpu=&status=`). */
+  jobs: async (opts: { gpu?: string; status?: string } = {}): Promise<FleetJob[]> => {
+    const q = new URLSearchParams()
+    if (opts.gpu) q.set('gpu', opts.gpu)
+    if (opts.status) q.set('status', opts.status)
+    const qs = q.toString()
+    const r = await restGet<unknown>(cloudProxyV1Url(`fleet/jobs${qs ? `?${qs}` : ''}`))
+    const arr = Array.isArray(r) ? r : rec(r).jobs
+    return (Array.isArray(arr) ? arr : []).map((j, i) => normalizeJob(j, i))
+  },
+
+  /** The unified compute board (`GET /v1/fleet`) — per-unit live util + running/sessions. */
+  board: async (): Promise<FleetBoardUnit[]> => {
+    const r = await restGet<unknown>(cloudProxyV1Url('fleet'))
+    const arr = Array.isArray(r) ? r : rec(r).units
+    return (Array.isArray(arr) ? arr : []).map(normalizeUnit)
+  },
+
+  /** The org's util+cost time series (`GET /v1/fleet/samples?range=…`). */
+  samples: async (query = 'range=24h'): Promise<FleetSample[]> => {
+    const r = await restGet<unknown>(cloudProxyV1Url(`fleet/samples${query ? `?${query}` : ''}`))
+    const arr = Array.isArray(r) ? r : rec(r).samples
+    return (Array.isArray(arr) ? arr : []).map(normalizeSample)
+  },
+
+  /** Cancel a queued/running job (`POST /v1/fleet/jobs/:id/cancel`). */
+  cancel: (id: string, run?: string, reason?: string): Promise<unknown> =>
+    restPost(cloudProxyV1Url(`fleet/jobs/${encodeURIComponent(id)}/cancel`), { run, reason }),
 }
