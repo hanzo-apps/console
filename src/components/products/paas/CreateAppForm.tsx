@@ -14,8 +14,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Rocket } from '@hanzogui/lucide-icons-2'
-import { useAnalytics } from '@hanzo/capture/react'
-import { EVENTS } from '@hanzo/capture'
+import { useAnalytics } from '@hanzo/event/react'
+import { EVENTS } from '@hanzo/event'
 
 import { PaasApi, type PaasProject } from '~/lib/api/paas'
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'

@@ -8,7 +8,7 @@ import { useMemo, type ReactNode } from 'react'
 import { GuiProvider } from '@hanzo/gui'
 import { NextThemeProvider, useRootTheme } from '@hanzogui/next-theme'
 import { registerDefaultFields, registerField } from '@hanzo/data'
-import { AnalyticsProvider } from '@hanzo/capture/react'
+import { AnalyticsProvider } from '@hanzo/event/react'
 import { IamProvider } from '@hanzo/iam/react'
 
 import config from '../../gui.config'
