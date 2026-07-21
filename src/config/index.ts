@@ -263,6 +263,17 @@ export function cloudAudience(host?: string | null): string {
 }
 
 /**
+ * The brand's own Hanzo Studio origin (the visual AI engine), or null when this
+ * cloud has no provisioned Studio. WHITE-LABEL LAW: a brand without its own
+ * instance gets null (an honest not-provisioned state) — NEVER another brand's
+ * Studio. This is the ONE gate the Studio embed reads.
+ */
+const STUDIO_URLS: Partial<Record<BrandId, string>> = { hanzo: 'https://studio.hanzo.ai' }
+export function studioUrl(host?: string | null): string | null {
+  return STUDIO_URLS[brandFromHost(host)] ?? null
+}
+
+/**
  * True on a brand's dedicated billing host (billing.<brand>, e.g. billing.hanzo.ai
  * / billing.lux.cloud / billing.zoo.cloud). Such a host runs the SAME console image
  * but in billing-only shell mode (nav filtered to the Billing Center, default route
