@@ -128,6 +128,7 @@ import { SaasModule } from '~/components/products/SaasModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { SearchModule } from '~/components/products/SearchModule'
 import { TemplatesModule } from '~/components/products/TemplatesModule'
+import { StudioModule } from '~/components/products/StudioModule'
 import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
 import { AIAccountsModule } from '~/components/products/AIAccountsModule'
@@ -3059,7 +3060,9 @@ export const catalog: CatalogEntry[] = [
     upstream: { name: 'ComfyUI', url: 'https://www.comfy.org', license: 'GPL-3.0' },
     docs: `${DOCS}/ai-studio`,
     kind: 'module',
-    routes: overviewRoutes('studio'),
+    // The FULL Studio app, embedded (same-site iframe) — every capability
+    // usable in-console; a brand with no instance gets the honest card.
+    routes: [{ path: '', component: StudioModule }],
   },
   {
     id: 'templates',
