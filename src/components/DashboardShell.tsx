@@ -107,6 +107,7 @@ import { OrgSwitcher } from '~/components/OrgSwitcher'
 import { leaveOrg } from '~/lib/org-scope'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
+import { WorkbenchDock } from '~/components/workbench/Workbench'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
@@ -1189,6 +1190,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </YStack>
           </XStack>
         </ScrollView>
+
+        {/* Developers workbench — the persistent bottom dock (Overview · Logs ·
+            Shell), available on every page without leaving it. Desktop-only. */}
+        <WorkbenchDock />
       </YStack>
 
       {/* Docked assistant — a PERMANENT right column (lg+ only). Reserves its own
