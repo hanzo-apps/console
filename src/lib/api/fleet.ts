@@ -16,7 +16,7 @@
  * the CLI's 30s beat), so the console renders that verdict rather than recomputing it;
  * every field the backend omits degrades to "—", nothing is fabricated.
  */
-import { restGet, restPost, cloudProxyV1Url } from './client'
+import { restGet, restPost, cloudProxyV1Url, ApiError } from './client'
 import { gbOf } from './compute'
 
 /** One accelerator a worker advertises (nvidia-smi name + total memory). */
@@ -193,13 +193,17 @@ export type FleetJob = {
 
 const JOB_STATES = new Set<FleetJobStatus>(['queued', 'running', 'completed', 'failed', 'canceled'])
 
-/** Coerce any backend status (canonical OR raw `ACTIVITY_TASK_STATE_*`) to a FleetJobStatus. PURE. */
+/** Coerce any backend status (canonical OR raw `ACTIVITY_TASK_STATE_*`) to a FleetJobStatus.
+ *  An UNRECOGNIZED status defaults to a TERMINAL bucket (`completed`), never `queued`: a
+ *  future upstream state we don't yet map is far more likely a finished job than a live one,
+ *  and misrendering a done job as an active/cancelable queue entry is the dangerous failure.
+ *  PURE. */
 export function normalizeJobStatus(v: unknown): FleetJobStatus {
   const s = (str(v) ?? '').toLowerCase().replace(/^activity_task_state_/, '')
   if (JOB_STATES.has(s as FleetJobStatus)) return s as FleetJobStatus
   if (s === 'scheduled' || s === 'pending') return 'queued'
   if (s === 'started') return 'running'
-  return 'queued'
+  return 'completed'
 }
 
 export function normalizeJob(raw: unknown, i = 0): FleetJob {
@@ -293,6 +297,9 @@ export const isTerminal = (s: string): boolean => s === 'completed' || s === 'fa
 /** A job still in flight (queued or running). PURE. */
 export const jobActive = (j: FleetJob): boolean => j.status === 'queued' || j.status === 'running'
 
+/** A job's stable key (workflow + run) — the identity for row keys + the pending-cancel set. PURE. */
+export const jobKey = (j: FleetJob): string => `${j.id}/${j.runId ?? ''}`
+
 /** Jobs that belong to a worker: it CLAIMED them (`worker`) OR they target it (`gpu`). PURE. */
 export const jobsForWorker = (jobs: FleetJob[], workerId: string): FleetJob[] =>
   jobs.filter((j) => j.worker === workerId || (!!j.gpu && j.gpu === workerId))
@@ -301,9 +308,14 @@ export const jobsForWorker = (jobs: FleetJob[], workerId: string): FleetJob[] =>
 export const queuedJobs = (jobs: FleetJob[], workerId?: string): FleetJob[] =>
   jobs.filter((j) => j.status === 'queued' && (workerId === undefined || j.gpu === workerId))
 
-/** The job currently RUNNING on a worker (claimed by it, or targeting it), or undefined. PURE. */
-export const runningJob = (jobs: FleetJob[], workerId: string): FleetJob | undefined =>
-  jobs.find((j) => j.status === 'running' && (j.worker === workerId || j.gpu === workerId))
+/** ALL jobs currently RUNNING on a worker (claimed by it, or targeting it). A multi-GPU
+ *  box runs concurrent renders, so this is a LIST — the panel must show every one, not a
+ *  single job that would contradict the row's own "N running" count. PURE. */
+export const runningJobs = (jobs: FleetJob[], workerId: string): FleetJob[] =>
+  jobs.filter((j) => j.status === 'running' && (j.worker === workerId || j.gpu === workerId))
+
+/** The FIRST job running on a worker, or undefined (thin wrapper over `runningJobs`). PURE. */
+export const runningJob = (jobs: FleetJob[], workerId: string): FleetJob | undefined => runningJobs(jobs, workerId)[0]
 
 /** Queue depth = number of queued jobs (optionally targeted at one worker). PURE. */
 export const queueDepth = (jobs: FleetJob[], workerId?: string): number => queuedJobs(jobs, workerId).length
@@ -337,16 +349,51 @@ export function jobTone(status: string): JobTone {
   }
 }
 
-/** Live GPU utilization % for a worker from the board units (prefers its BYO row), or undefined. PURE. */
-export function utilForWorker(units: FleetBoardUnit[], workerId: string): number | undefined {
-  const matches = units.filter((u) => u.unit === workerId && u.gpuUtil !== undefined)
-  if (!matches.length) return undefined
-  return (matches.find((u) => u.source === 'byo') ?? matches[0]).gpuUtil
+/** Statuses that mean a board unit is up and doing work-capable duty. */
+const UNIT_ONLINE = new Set(['online', 'ready', 'active', 'running', 'up', 'available', 'ok'])
+/** True when a unit reports an online/ready status. PURE. */
+export const unitOnline = (u: FleetBoardUnit): boolean => UNIT_ONLINE.has((u.status ?? '').toLowerCase())
+
+/**
+ * A unit's utilization for averaging/display: the reported `gpuUtil`, OR `0` when the unit
+ * is ONLINE but reported no util — an idle online GPU is genuinely at 0%, and the backend
+ * omits `gpuUtil` (omitempty) for a 0 value, so treating "missing on an online unit" as `0`
+ * both shows the honest 0% AND keeps that unit IN the mean (omitting it would bias the
+ * average upward). An OFFLINE unit with no util is truly unknown → `undefined` (excluded). PURE.
+ */
+export const unitUtil = (u: FleetBoardUnit): number | undefined => (u.gpuUtil ?? (unitOnline(u) ? 0 : undefined))
+
+/** De-duplicate board units by (source, unit), preferring a row that actually reports util,
+ *  so a doubled row can't double-count in the mean. PURE. */
+export function dedupeUnits(units: FleetBoardUnit[]): FleetBoardUnit[] {
+  const by = new Map<string, FleetBoardUnit>()
+  for (const u of units) {
+    const k = `${u.source}/${u.unit}`
+    const prev = by.get(k)
+    if (!prev || (prev.gpuUtil === undefined && u.gpuUtil !== undefined)) by.set(k, u)
+  }
+  return [...by.values()]
 }
 
-/** Mean GPU utilization % across the units that report it, or undefined (no telemetry). PURE. */
+/**
+ * Live GPU utilization % for a worker from the board units. Prefers a matching unit that
+ * actually reports util; else, for its representative (BYO) row, an ONLINE unit reads `0`
+ * (idle) and an offline one reads `undefined` (unknown). PURE.
+ */
+export function utilForWorker(units: FleetBoardUnit[], workerId: string): number | undefined {
+  const matches = units.filter((u) => u.unit === workerId)
+  if (!matches.length) return undefined
+  const withUtil = matches.find((u) => u.gpuUtil !== undefined)
+  if (withUtil) return withUtil.gpuUtil
+  return unitUtil(matches.find((u) => u.source === 'byo') ?? matches[0])
+}
+
+/** Mean GPU utilization % across the DISTINCT units that report (or, if online, imply 0)
+ *  util, or undefined when none do (no telemetry at all). PURE. */
 export function avgGpuUtil(units: FleetBoardUnit[]): number | undefined {
-  const vals = units.map((u) => u.gpuUtil).filter((n): n is number => typeof n === 'number')
+  const vals = dedupeUnits(units)
+    .map(unitUtil)
+    .filter((n): n is number => typeof n === 'number')
   return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : undefined
 }
 
@@ -382,6 +429,31 @@ export function fmtDuration(start?: string, end?: string, now: number = Date.now
 /** Title-case a job status for a cell (`running` → `Running`), or `—`. PURE. */
 export const fmtJobStatus = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '—')
 
+/**
+ * A human, actionable message for a FAILED cancel — the specific races the review named:
+ * 404 the job is already gone, 409 it finished between polls, 503 the engine is down. Any
+ * other error echoes its own message (or a safe fallback). Never swallowed. PURE.
+ */
+export function cancelErrorMessage(e: unknown): string {
+  const status = e instanceof ApiError ? e.status : undefined
+  if (status === 404) return 'That job no longer exists — it may have already finished.'
+  if (status === 409) return 'That job already finished — there was nothing to cancel.'
+  if (status === 503) return 'The GPU engine isn’t ready right now — try again in a moment.'
+  const msg = e instanceof Error ? e.message : ''
+  return msg || 'Could not cancel the job — please try again.'
+}
+
+/**
+ * Reconcile the optimistic pending-cancel set against a fresh jobs poll: a key stays
+ * pending only while its job is STILL active (queued/running) — once the poll shows it
+ * terminal or gone, the cancel has landed and the key is dropped. PURE (returns the kept
+ * keys); the caller swaps its Set for these.
+ */
+export function reconcilePending(pending: string[], freshJobs: FleetJob[]): string[] {
+  const active = new Set(freshJobs.filter(jobActive).map(jobKey))
+  return pending.filter((k) => active.has(k))
+}
+
 // ── API ──────────────────────────────────────────────────────────────────────
 
 export const FleetApi = {
@@ -392,11 +464,15 @@ export const FleetApi = {
     return (Array.isArray(arr) ? arr : []).map((w, i) => normalizeWorker(w, i))
   },
 
-  /** The org's gpu-jobs queue + history (`GET /v1/fleet/jobs?gpu=&status=`). */
-  jobs: async (opts: { gpu?: string; status?: string } = {}): Promise<FleetJob[]> => {
+  /** The org's gpu-jobs queue + history (`GET /v1/fleet/jobs?gpu=&status=&limit=`). `limit`
+   *  bounds the poll to the backend's recency read so a long-lived org never streams an
+   *  unbounded history every few seconds; the response is rendered as-returned (the backend
+   *  owns the recency/pagination bound). */
+  jobs: async (opts: { gpu?: string; status?: string; limit?: number } = {}): Promise<FleetJob[]> => {
     const q = new URLSearchParams()
     if (opts.gpu) q.set('gpu', opts.gpu)
     if (opts.status) q.set('status', opts.status)
+    if (opts.limit) q.set('limit', String(opts.limit))
     const qs = q.toString()
     const r = await restGet<unknown>(cloudProxyV1Url(`fleet/jobs${qs ? `?${qs}` : ''}`))
     const arr = Array.isArray(r) ? r : rec(r).jobs

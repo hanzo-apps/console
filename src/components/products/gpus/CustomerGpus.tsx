@@ -35,7 +35,7 @@ import {
 } from '~/lib/api/visor'
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { gpuClustersOf } from '~/lib/api/compute'
-import { onlineCount, avgGpuUtil, queueDepth, runningCount, utilSeries, type FleetJob } from '~/lib/api/fleet'
+import { onlineCount, avgGpuUtil, queueDepth, runningCount, utilSeries } from '~/lib/api/fleet'
 import { useFleetLive } from './useFleetLive'
 import { QueueTab } from './QueueTab'
 import { Sparkline } from './charts'
@@ -203,7 +203,9 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
   const tab = gpuTabId(params?.tab)
   const detail = useDetailPane()
   const { catalog, machines, clusters, loading, reload } = useCustomerGpuData()
-  const live = useFleetLive()
+  // Only poll the live fleet on the tabs that actually show it (Overview cards, the GPUs
+  // tab's connected-machines table, and the Queue) — never on Clusters/Pools/Pricing/etc.
+  const live = useFleetLive(tab === '' || tab === 'gpus' || tab === 'queue')
 
   const workerList = live.workers.phase === 'ready' ? live.workers.data : []
   const jobList = live.jobs.phase === 'ready' ? live.jobs.data : []
@@ -213,9 +215,6 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
   const queuedNow = queueDepth(jobList)
   const avgUtil = avgGpuUtil(live.units)
   const utilPoints = utilSeries(live.samples)
-  const handleCancel = useCallback((job: FleetJob) => {
-    live.cancel(job).catch(() => undefined)
-  }, [live.cancel])
   const reloadAll = useCallback(() => {
     reload()
     live.reload()
@@ -314,7 +313,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
 
       {tab === '' ? catalogGate(renderOverview()) : null}
       {tab === 'gpus' ? catalogGate(renderGpus()) : null}
-      {tab === 'queue' ? <QueueTab jobs={live.jobs} workers={workerList} onCancel={handleCancel} reload={live.reload} /> : null}
+      {tab === 'queue' ? <QueueTab jobs={live.jobs} workers={workerList} onCancel={live.cancel} isCanceling={live.isCanceling} updatedAt={live.updatedAt} stale={live.stale} reload={live.reload} /> : null}
       {tab === 'clusters' ? <ClustersTab data={computeData} /> : null}
       {tab === 'pools' ? <CustomerPoolsTab clusters={clusters} /> : null}
       {tab === 'pricing' ? catalogGate(<CustomerPricingTab catalog={catalog} onLaunch={launchGpu} />) : null}
@@ -355,7 +354,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
         </XStack>
 
         {/* The BYO connect fleet — your own hardware, with live heartbeat. */}
-        <ConnectedMachines workers={live.workers} jobs={live.jobs} units={live.units} reload={live.reload} onConnect={connect} onCancel={handleCancel} />
+        <ConnectedMachines workers={live.workers} jobs={live.jobs} units={live.units} reload={live.reload} onConnect={connect} onCancel={live.cancel} isCanceling={live.isCanceling} updatedAt={live.updatedAt} stale={live.stale} />
 
         {/* Cloud-provisioned GPU VMs (shown when any; the deploy path is the header +
             the live catalog below, so no redundant empty card here). */}
@@ -387,7 +386,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
   function renderGpus() {
     return (
       <YStack gap="$4">
-        <ConnectedMachines workers={live.workers} jobs={live.jobs} units={live.units} reload={live.reload} onConnect={connect} onCancel={handleCancel} />
+        <ConnectedMachines workers={live.workers} jobs={live.jobs} units={live.units} reload={live.reload} onConnect={connect} onCancel={live.cancel} isCanceling={live.isCanceling} updatedAt={live.updatedAt} stale={live.stale} />
 
         {machines.length ? (
           <YStack gap="$2">

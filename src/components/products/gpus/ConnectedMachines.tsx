@@ -25,17 +25,18 @@ import {
   fleetMemGb,
   fmtDuration,
   fmtHeartbeat,
+  jobKey,
   onlineCount,
   queueSummary,
   queuedJobs,
-  runningJob,
+  runningJobs,
   utilForWorker,
   workerOnline,
 } from '~/lib/api/fleet'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { UtilBar } from './charts'
-import { JobStatusPill, CancelJobButton } from './job-ui'
+import { JobStatusPill, CancelJobButton, FreshnessNote } from './job-ui'
 import { PlatformStateCard } from '../platform/state'
 import type { Async } from './state'
 
@@ -65,13 +66,25 @@ function UtilCell({ pct }: { pct?: number }) {
   )
 }
 
-/** The per-GPU queue panel shown when a row is expanded: the running job + everything
- *  queued at this GPU, each cancelable; an honest "idle" when it has no work. */
-function WorkerQueuePanel({ worker, jobs, onCancel }: { worker: FleetWorker; jobs: FleetJob[]; onCancel: (job: FleetJob) => void }) {
-  const running = runningJob(jobs, worker.id)
+/** The per-GPU queue panel shown when a row is expanded: EVERY running job (a multi-GPU
+ *  box runs concurrent renders) + everything queued at this GPU, each cancelable; an honest
+ *  "idle" when it has no work. */
+function WorkerQueuePanel({
+  worker,
+  jobs,
+  onCancel,
+  isCanceling,
+}: {
+  worker: FleetWorker
+  jobs: FleetJob[]
+  onCancel: (job: FleetJob) => Promise<void>
+  isCanceling: (job: FleetJob) => boolean
+}) {
+  const running = runningJobs(jobs, worker.id)
   const queued = queuedJobs(jobs, worker.id)
+  const gpuName = worker.hostname || worker.id
 
-  if (!running && queued.length === 0) {
+  if (running.length === 0 && queued.length === 0) {
     return (
       <YStack p="$3.5">
         <Text fontSize="$2" color="$color10">Idle — no job running or queued on this GPU. It claims work from the org’s gpu-jobs queue as it arrives.</Text>
@@ -89,18 +102,20 @@ function WorkerQueuePanel({ worker, jobs, onCancel }: { worker: FleetWorker; job
         </YStack>
       </XStack>
       <XStack items="center" gap="$3">
-        <JobStatusPill status={job.status} />
+        <JobStatusPill status={job.status} canceling={isCanceling(job)} />
         <Text fontSize="$2" color="$color11" className="hz-mono" width={72} numberOfLines={1}>{fmtDuration(job.startTime, job.closeTime)}</Text>
-        <CancelJobButton job={job} onCancel={onCancel} />
+        <CancelJobButton job={job} onCancel={onCancel} gpuName={gpuName} pending={isCanceling(job)} />
       </XStack>
     </XStack>
   )
 
   return (
     <YStack>
-      {running ? <JobRow job={running} tag="Running" /> : null}
+      {running.map((j, i) => (
+        <JobRow key={jobKey(j)} job={j} tag={i === 0 ? 'Running' : ''} />
+      ))}
       {queued.map((j, i) => (
-        <JobRow key={`${j.id}/${j.runId ?? ''}`} job={j} tag={i === 0 ? 'Queued' : ''} />
+        <JobRow key={jobKey(j)} job={j} tag={i === 0 ? 'Queued' : ''} />
       ))}
     </YStack>
   )
@@ -119,13 +134,19 @@ export function ConnectedMachines({
   reload,
   onConnect,
   onCancel,
+  isCanceling,
+  updatedAt,
+  stale,
 }: {
   workers: Async<FleetWorker[]>
   jobs: Async<FleetJob[]>
   units: FleetBoardUnit[]
   reload: () => void
   onConnect: () => void
-  onCancel: (job: FleetJob) => void
+  onCancel: (job: FleetJob) => Promise<void>
+  isCanceling: (job: FleetJob) => boolean
+  updatedAt: number | null
+  stale: boolean
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -191,7 +212,10 @@ export function ConnectedMachines({
     <YStack gap="$2" aria-label="Connected machines">
       <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
         <Text fontSize="$4" fontWeight="800" color="$color12">Connected machines</Text>
-        <Text fontSize="$1" color="$color10">{tally}</Text>
+        <XStack items="center" gap="$3" flexWrap="wrap">
+          <FreshnessNote updatedAt={updatedAt} stale={stale} />
+          <Text fontSize="$1" color="$color10">{tally}</Text>
+        </XStack>
       </XStack>
 
       {workers.phase === 'error' ? (
@@ -215,7 +239,7 @@ export function ConnectedMachines({
           rowKey={(w) => w.id}
           onRowPress={(w) => setExpandedId((cur) => (cur === w.id ? null : w.id))}
           isRowExpanded={(w) => expandedId === w.id}
-          renderExpanded={(w) => <WorkerQueuePanel worker={w} jobs={jobList} onCancel={onCancel} />}
+          renderExpanded={(w) => <WorkerQueuePanel worker={w} jobs={jobList} onCancel={onCancel} isCanceling={isCanceling} />}
           empty="No machines connected — run hanzo gpu connect."
         />
       )}

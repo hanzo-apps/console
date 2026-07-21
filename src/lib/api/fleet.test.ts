@@ -16,23 +16,30 @@ import {
   jobsForWorker,
   queuedJobs,
   runningJob,
+  runningJobs,
   queueDepth,
   runningCount,
   queueSummary,
   jobTone,
+  jobKey,
   utilForWorker,
   avgGpuUtil,
+  dedupeUnits,
+  unitUtil,
+  unitOnline,
   utilSeries,
   totalCostUsd,
   fmtDuration,
   fmtJobStatus,
   isTerminal,
   jobActive,
+  cancelErrorMessage,
+  reconcilePending,
   type FleetWorker,
   type FleetJob,
   type FleetBoardUnit,
 } from './fleet'
-import { cloudProxyV1Url } from './client'
+import { cloudProxyV1Url, ApiError } from './client'
 
 const job = (over: Partial<FleetJob>): FleetJob => ({ id: 'j', status: 'queued', ...over })
 const unit = (over: Partial<FleetBoardUnit>): FleetBoardUnit => ({ source: 'byo', unit: 'u', running: 0, sessions: 0, ...over })
@@ -158,9 +165,10 @@ describe('normalizeJobStatus — canonical + raw engine states', () => {
     expect(normalizeJobStatus('started')).toBe('running')
     expect(normalizeJobStatus('pending')).toBe('queued')
   })
-  it('degrades unknown/empty to queued (never throws)', () => {
-    expect(normalizeJobStatus(undefined)).toBe('queued')
-    expect(normalizeJobStatus('weird')).toBe('queued')
+  it('defaults an UNKNOWN/empty status to a TERMINAL bucket, never queued (M4 — a future upstream state must not misrender a finished job as an active/cancelable one)', () => {
+    expect(isTerminal(normalizeJobStatus(undefined))).toBe(true)
+    expect(isTerminal(normalizeJobStatus('weird'))).toBe(true)
+    expect(jobActive({ id: 'x', status: normalizeJobStatus('some_future_terminal_state') })).toBe(false)
   })
 })
 
@@ -286,6 +294,86 @@ describe('formatters', () => {
   })
 })
 
+describe('runningJobs — ALL running jobs on a worker (M5, multi-GPU box)', () => {
+  const jobs = [
+    job({ id: 'a', status: 'running', worker: 'spark' }),
+    job({ id: 'b', status: 'running', gpu: 'spark' }), // second concurrent render on the same box
+    job({ id: 'c', status: 'running', worker: 'dbc' }),
+    job({ id: 'd', status: 'queued', gpu: 'spark' }),
+  ]
+  it('returns every concurrent running job, not just the first', () => {
+    expect(runningJobs(jobs, 'spark').map((j) => j.id).sort()).toEqual(['a', 'b'])
+    expect(runningJob(jobs, 'spark')?.id).toBe('a') // singular wrapper = first
+    expect(runningJobs(jobs, 'nobody')).toEqual([])
+  })
+})
+
+describe('jobKey', () => {
+  it('combines workflow + run into a stable identity', () => {
+    expect(jobKey(job({ id: 'wf', runId: 'r1' }))).toBe('wf/r1')
+    expect(jobKey(job({ id: 'wf' }))).toBe('wf/')
+  })
+})
+
+describe('board util — idle-online 0% + de-dupe (m11)', () => {
+  it('treats a missing util on an ONLINE unit as 0% (idle) and keeps it in the mean', () => {
+    const units = [
+      unit({ unit: 'spark', source: 'byo', gpuUtil: 100, status: 'online' }),
+      unit({ unit: 'idle', source: 'byo', status: 'online' }), // online, no util → 0
+    ]
+    expect(unitUtil(units[1])).toBe(0)
+    expect(utilForWorker(units, 'idle')).toBe(0)
+    expect(avgGpuUtil(units)).toBe(50) // (100 + 0)/2, NOT 100 (idle unit not omitted)
+  })
+  it('excludes an OFFLINE unit with no util as unknown (not 0)', () => {
+    const off = unit({ unit: 'off', source: 'byo', status: 'offline' })
+    expect(unitOnline(off)).toBe(false)
+    expect(unitUtil(off)).toBeUndefined()
+    expect(utilForWorker([off], 'off')).toBeUndefined()
+    expect(avgGpuUtil([off])).toBeUndefined()
+  })
+  it('de-dupes duplicate (source,unit) rows so a doubled row cannot skew the mean', () => {
+    const dup = [
+      unit({ unit: 'spark', source: 'byo', gpuUtil: 80, status: 'online' }),
+      unit({ unit: 'spark', source: 'byo', gpuUtil: 80, status: 'online' }), // duplicate
+      unit({ unit: 'other', source: 'byo', gpuUtil: 20, status: 'online' }),
+    ]
+    expect(dedupeUnits(dup)).toHaveLength(2)
+    expect(avgGpuUtil(dup)).toBe(50) // (80 + 20)/2 — dup counted once, not (80+80+20)/3
+  })
+  it('de-dupe prefers the row that actually reports util', () => {
+    const dup = [
+      unit({ unit: 's', source: 'byo', status: 'online' }), // no util
+      unit({ unit: 's', source: 'byo', gpuUtil: 66, status: 'online' }),
+    ]
+    expect(dedupeUnits(dup)[0].gpuUtil).toBe(66)
+  })
+})
+
+describe('cancelErrorMessage — the cancel races are named, never swallowed (M2)', () => {
+  it('maps 404/409/503 to actionable copy', () => {
+    expect(cancelErrorMessage(new ApiError('x', 404))).toMatch(/no longer exists/i)
+    expect(cancelErrorMessage(new ApiError('x', 409))).toMatch(/already finished/i)
+    expect(cancelErrorMessage(new ApiError('x', 503))).toMatch(/engine isn/i)
+  })
+  it('echoes another error message, else a safe fallback', () => {
+    expect(cancelErrorMessage(new Error('boom'))).toBe('boom')
+    expect(cancelErrorMessage({})).toMatch(/could not cancel/i)
+  })
+})
+
+describe('reconcilePending — optimistic cancel reconciles on the next poll (M2)', () => {
+  it('keeps a pending key while its job is STILL active, drops it once terminal/gone', () => {
+    const fresh = [
+      job({ id: 'a', runId: 'r', status: 'running' }), // still active → keep pending
+      job({ id: 'b', runId: 'r', status: 'canceled' }), // cancel landed → drop
+    ]
+    const pending = ['a/r', 'b/r', 'c/r'] // c is gone from the fresh poll entirely
+    expect(reconcilePending(pending, fresh)).toEqual(['a/r'])
+    expect(reconcilePending([], fresh)).toEqual([])
+  })
+})
+
 describe('FleetApi.jobs / board / samples / cancel', () => {
   afterEach(() => vi.unstubAllGlobals())
 
@@ -305,6 +393,13 @@ describe('FleetApi.jobs / board / samples / cancel', () => {
     expect(seen[0]).toContain('gpu=spark')
     expect(seen[0]).toContain('status=running')
     expect(jobs[0]).toMatchObject({ id: 'wf1', status: 'running', worker: 'spark' })
+  })
+
+  it('jobs() forwards a bounded limit (m7 — never an unbounded poll)', async () => {
+    const seen = stub({ jobs: [] })
+    await FleetApi.jobs({ limit: 200 })
+    expect(seen[0]).toContain('/v1/fleet/jobs?')
+    expect(seen[0]).toContain('limit=200')
   })
 
   it('board() reads /v1/fleet and unwraps { units }', async () => {
