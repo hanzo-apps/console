@@ -24,6 +24,7 @@
     "@hanzo/gui": "7.3.0",
     "@hanzo/iam": "^0.13.6",
     "@hanzo/iam-js-sdk": "0.19.1",
+    "@hanzo/brand": "^1.4.0",
     "@hanzo/logo": "^1.0.13",
     "@hanzo/ui": "^8.0.5",
     "@hanzo/usage": "^0.1.6",
