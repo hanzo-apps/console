@@ -95,6 +95,29 @@ export function normalizeModelKey(rawKey: string): string {
   return s
 }
 
+// ── Source provenance (the honest measured-vs-reported binary) ────────────────
+
+/**
+ * The two kinds of number in the corpus. `measured` is our own harness through
+ * api.hanzo.ai — one common effort setting, complete runs, the figure the router
+ * actually gets. `reported` is a vendor's or a third party's leaderboard, measured
+ * on someone else's harness at someone else's effort. The corpus carries a fine
+ * `source` string on every score; this folds it to the one distinction a reader
+ * filters on. Only the literal `hanzo-measured` is ours — everything else, however
+ * reputable (Vals AI, Artificial Analysis, a model card), is reported.
+ */
+export type SourceClass = 'measured' | 'reported'
+export const sourceClass = (source: string): SourceClass =>
+  source === 'hanzo-measured' ? 'measured' : 'reported'
+
+/**
+ * The Enso family — our own orchestrated tiers (enso-flash / enso / enso-ultra),
+ * measured on our harness. Badged apart from other measured models because they
+ * are the product this surface exists to place honestly among its peers.
+ */
+export const isEnsoModel = (modelIdOrName: string): boolean =>
+  /^enso(-|$)/.test(normalizeModelKey(modelIdOrName))
+
 /** Corpus alias pairs: a gateway model id → its canonical corpus name. */
 const ALIASES: Record<string, string> = (() => {
   const m: Record<string, string> = {}
