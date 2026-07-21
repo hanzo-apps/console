@@ -30,6 +30,8 @@ import { classifyBackend, type BackendState } from '~/components/ui/BackendState
 import { interpretPlatformError } from './platform/state'
 import { livingOverviewModule } from './overview/living/LivingOverviewModule'
 import { CustomerGpus } from './gpus/CustomerGpus'
+import { QueueTab } from './gpus/QueueTab'
+import { useFleetLive } from './gpus/useFleetLive'
 import { GpuTabBar, gpuTabId } from './gpus/tabs'
 import { HintButton } from './gpus/charts'
 import { OverviewTab } from './gpus/OverviewTab'
@@ -102,6 +104,8 @@ function AdminGpus({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const data = useComputeData()
   const tab = gpuTabId(params.tab)
+  // The org's live gpu-jobs queue — only polled while the Queue tab is open.
+  const live = useFleetLive(tab === 'queue')
 
   // Navigate to a GPU subtab (bare id) or an absolute console path (leading '/').
   const onNav = useCallback(
@@ -132,6 +136,8 @@ function AdminGpus({ params }: { params: Record<string, string> }) {
         <OverviewTab data={data} onNav={onNav} />
       ) : tab === 'gpus' ? (
         <GpusTab data={data} onNav={onNav} />
+      ) : tab === 'queue' ? (
+        <QueueTab jobs={live.jobs} workers={live.workers.phase === 'ready' ? live.workers.data : []} onCancel={live.cancel} isCanceling={live.isCanceling} updatedAt={live.updatedAt} stale={live.stale} reload={live.reload} />
       ) : tab === 'clusters' ? (
         <ClustersTab data={data} />
       ) : tab === 'pools' ? (
