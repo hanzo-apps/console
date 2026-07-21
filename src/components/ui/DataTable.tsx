@@ -54,6 +54,8 @@ export function DataTable<T>({
   empty = 'Nothing here yet.',
   rowKey,
   onRowPress,
+  isRowExpanded,
+  renderExpanded,
 }: {
   columns: Column<T>[]
   rows: T[]
@@ -61,6 +63,10 @@ export function DataTable<T>({
   empty?: string
   rowKey: (row: T) => string
   onRowPress?: (row: T) => void
+  /** When set + true for a row, its `renderExpanded` panel is shown below it. */
+  isRowExpanded?: (row: T) => boolean
+  /** Full-width detail panel rendered under an expanded row (master-detail accordion). */
+  renderExpanded?: (row: T) => ReactNode
 }) {
   // Natural min-width of the table: the sum of the declared column widths, with a
   // sensible floor for flex columns, plus row padding + inter-column gaps. On a
@@ -98,9 +104,11 @@ export function DataTable<T>({
             <SkeletonRows columns={columns} />
           ) : rows.length > 0 ? (
             <YStack>
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const expanded = (isRowExpanded?.(row) ?? false) && !!renderExpanded
+                return (
+                <YStack key={rowKey(row)}>
                 <XStack
-                  key={rowKey(row)}
                   className="hz-row"
                   py="$2.5"
                   px="$3"
@@ -108,6 +116,7 @@ export function DataTable<T>({
                   borderTopWidth={1}
                   borderColor="$borderColor"
                   items="center"
+                  bg={expanded ? '$color2' : undefined}
                   hoverStyle={onRowPress ? { bg: '$color2' } : undefined}
                   cursor={onRowPress ? 'pointer' : undefined}
                   onPress={onRowPress ? () => onRowPress(row) : undefined}
@@ -148,7 +157,14 @@ export function DataTable<T>({
                     )
                   })}
                 </XStack>
-              ))}
+                {expanded && renderExpanded ? (
+                  <YStack borderTopWidth={1} borderColor="$borderColor" bg="$color1">
+                    {renderExpanded(row)}
+                  </YStack>
+                ) : null}
+                </YStack>
+                )
+              })}
             </YStack>
           ) : null}
         </YStack>

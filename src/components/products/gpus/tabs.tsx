@@ -20,6 +20,7 @@ import { useAccent } from '~/lib/theme/accent'
 export const GPU_TABS = [
   { id: '', label: 'Overview', path: '/gpus' },
   { id: 'gpus', label: 'GPUs', path: '/gpus/gpus' },
+  { id: 'queue', label: 'Queue', path: '/gpus/queue' },
   { id: 'clusters', label: 'Clusters', path: '/gpus/clusters' },
   { id: 'pools', label: 'Pools', path: '/gpus/pools' },
   { id: 'pricing', label: 'Pricing', path: '/gpus/pricing' },
