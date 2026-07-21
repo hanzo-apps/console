@@ -7,8 +7,8 @@
  */
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { MessageSquare, Sparkles, KeyRound, Rocket, PartyPopper, ArrowLeft } from '@hanzogui/lucide-icons-2'
-import { useAnalytics } from '@hanzo/capture/react'
-import { EVENTS } from '@hanzo/capture'
+import { useAnalytics } from '@hanzo/event/react'
+import { EVENTS } from '@hanzo/event'
 
 import { config } from '~/config'
 import { StepShell, ChoiceCard } from '~/components/onboarding/parts'
