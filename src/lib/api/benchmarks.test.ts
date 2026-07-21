@@ -10,10 +10,12 @@ import {
   BENCHMARK_IDS,
   benchmarkLabel,
   coverage,
+  isEnsoModel,
   leaderboard,
   normalizeModelKey,
   priorFor,
   scoreFor,
+  sourceClass,
   vendors,
 } from './benchmarks'
 
@@ -105,6 +107,66 @@ describe('priorFor / scoreFor', () => {
         expect(s.source).toBe('hanzo-measured')
       }
     }
+  })
+})
+
+describe('sourceClass — the measured-vs-reported binary', () => {
+  it('classes only the literal `hanzo-measured` as our own harness', () => {
+    expect(sourceClass('hanzo-measured')).toBe('measured')
+  })
+
+  it('classes every vendor/third-party source as reported, however reputable', () => {
+    for (const s of [
+      'provider-reported',
+      'Vals AI',
+      'Vals AI — GPQA Diamond leaderboard',
+      'Artificial Analysis',
+      'do-catalog',
+      'OpenAI — Introducing GPT-5',
+    ]) {
+      expect(sourceClass(s), s).toBe('reported')
+    }
+  })
+
+  it('every corpus score classes into exactly one of the two', () => {
+    for (const m of allPriors()) {
+      for (const s of Object.values(m.scores)) {
+        expect(['measured', 'reported']).toContain(sourceClass(s.source))
+      }
+    }
+  })
+})
+
+describe('the Enso family — synced in, honest numbers, differentiated', () => {
+  it('recognizes the three tiers and nothing else', () => {
+    expect(isEnsoModel('enso')).toBe(true)
+    expect(isEnsoModel('enso-flash')).toBe(true)
+    expect(isEnsoModel('enso-ultra')).toBe(true)
+    expect(isEnsoModel('ensoteric')).toBe(false) // not a tier — must not false-match
+    expect(isEnsoModel('zen5-flash')).toBe(false)
+    expect(isEnsoModel('gpt-5.6-sol')).toBe(false)
+  })
+
+  it('carries the measured GPQA-Diamond numbers, monotonic Ultra > Pro > Flash', () => {
+    const ultra = priorFor('enso-ultra')?.scores.gpqa_diamond
+    const pro = priorFor('enso')?.scores.gpqa_diamond
+    const flash = priorFor('enso-flash')?.scores.gpqa_diamond
+    expect(ultra?.value).toBe(92.9)
+    expect(pro?.value).toBe(87.9)
+    expect(flash?.value).toBe(75.8)
+    // Every tier is our own harness, and the family is strictly monotonic in quality.
+    for (const s of [ultra, pro, flash]) expect(s?.source).toBe('hanzo-measured')
+    expect(ultra!.value).toBeGreaterThan(pro!.value)
+    expect(pro!.value).toBeGreaterThan(flash!.value)
+  })
+
+  it('ranks on merit in the GPQA board — present, but never floated to #1', () => {
+    const board = leaderboard('gpqa_diamond')
+    const ultra = board.find((r) => r.model === 'enso-ultra')
+    expect(ultra).toBeDefined()
+    // Honest placement: strong but not the top of the corpus (reported frontier
+    // models score higher). We never fabricate a #1.
+    expect(ultra!.rank).toBeGreaterThan(1)
   })
 })
 
