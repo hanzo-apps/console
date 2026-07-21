@@ -85,12 +85,13 @@ function guiPackages() {
 // `/ai` bearer proxy like the rest; it is NOT a cloud-api head (never shadows a cloud surface).
 // `training` is the interactive (Tinker-style) engine head (`/v1/training/clients[/*]`) — the
 // live LoRA client plane, allow-listed in the `/ai` proxy, likewise never a cloud-api head.
-// `router` is the routing-observability head (`/v1/router/stats`); `get-/update-training-contribution`
-// are the org's opt-in flag; `get-org-settings-list`/`get-org-settings`/`update-org-settings`/
-// `delete-org-settings` are the super-admin config-as-Base OrgSettings CRUD (the Routing admin editor) —
-// all AI-gateway-served (hanzoai/ai) like the router policy, so they route to the `/ai` bearer proxy and
-// are in its ALLOWED set (app/ai/[...path]).
-const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans', 'ai', 'training', 'get-router-policy', 'update-router-policy', 'router', 'get-training-contribution', 'update-training-contribution', 'get-org-settings-list', 'get-org-settings', 'update-org-settings', 'delete-org-settings']
+// `router` is the router-config head — `/v1/router/policy` (GET read + PUT write),
+// `/v1/router/stats`, and `/v1/router/{defaults,ledger,rewards,artifact-meta}` — all served
+// by hanzoai/ai; `get-/update-training-contribution` are the org's opt-in flag. The super-admin
+// OrgSettings noun `/v1/org/settings` (GET/PUT/DELETE + `/v1/org/settings/list`) is routed by the
+// TARGETED rewrites below rather than an `org` head, because a broad `org` head would hijack the
+// platform `/v1/org/{org}/cluster` surface. All are in the `/ai` proxy ALLOWED set (app/ai/[...path]).
+const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans', 'ai', 'training', 'router', 'get-training-contribution', 'update-training-contribution']
 // The admin aggregate heads rewritten to the GLOBAL-ADMIN-GATED proxy. `providers`
 // is the AI-provider control board — its GET (the list) AND its POST mutations
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
@@ -129,6 +130,12 @@ const aiSurfaceRewrites = () => ({
     // (`isAllowedAiPath`/the gateway see `v1/<aihead>`), so no nested version leaks anywhere.
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/ai/${h}` })),
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/${h}/:path*` })),
+    // Super-admin OrgSettings noun → the `/ai` bearer proxy (hanzoai/ai). TARGETED (not an
+    // `org` head) so it never shadows the platform `/v1/org/{org}/cluster|domain|…` surface,
+    // which keeps falling through to the `/v1` cloud BFF. Covers `/v1/org/settings` and
+    // `/v1/org/settings/list` (allow-listed in app/ai/[...path]).
+    { source: `/v1/org/settings`, destination: `/ai/org/settings` },
+    { source: `/v1/org/settings/:path*`, destination: `/ai/org/settings/:path*` },
     // The SaaS-operations god-view is served by COMMERCE (the money SOT), NOT the
     // cloud aggregate: route /v1/admin/saas to its OWN global-admin-gated commerce
     // proxy (`app/admin/saas`). Placed before the aggregate map so it wins; `saas` is
