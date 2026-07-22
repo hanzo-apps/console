@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.4.146",
+  "version": "8.4.147",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
@@ -17,17 +17,17 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@hanzo/brand": "^1.4.0",
     "@hanzo/canvas": "^0.1.0",
-    "@hanzo/event": "^0.2.0",
     "@hanzo/dash": "0.3.0",
     "@hanzo/data": "^1.2.0",
+    "@hanzo/event": "^0.2.0",
     "@hanzo/finance-ui": "0.1.1",
     "@hanzo/gui": "7.3.0",
     "@hanzo/iam": "^0.13.6",
     "@hanzo/iam-js-sdk": "0.19.1",
-    "@hanzo/brand": "^1.4.0",
     "@hanzo/logo": "^1.0.13",
-    "@hanzo/ui": "^8.0.5",
+    "@hanzo/ui": "^8.0.6",
     "@hanzo/usage": "^0.1.6",
     "@hanzogui/config": "7.3.0",
     "@hanzogui/core": "7.3.0",
