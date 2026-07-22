@@ -56,6 +56,19 @@ function accountFromClaims(claims: Record<string, unknown>): Account | null {
   }
 }
 
+/** Decode a JWT payload's claims (base64url), or null if the token isn't a JWT. */
+function decodeJwtClaims(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return null
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'))
+    const c = JSON.parse(json)
+    return c && typeof c === 'object' ? (c as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
 export const AccountApi = {
   /**
    * Resolve the current session from IAM: a valid access token (refreshed if
@@ -66,7 +79,10 @@ export const AccountApi = {
   session: async (): Promise<SessionResult> => {
     const token = await iamValidAccessToken()
     if (!token) return { account: null, expiresIn: null }
-    const claims = await iamUserInfo()
+    // Resolve identity from the access-token JWT claims directly — self-contained
+    // and immune to the SDK's getUserInfo() returning null on a 200 (which dead-ended
+    // the session and looped /signin). Fall back to userinfo only if not a JWT.
+    const claims = decodeJwtClaims(token) ?? (await iamUserInfo())
     if (!claims) return { account: null, expiresIn: null }
     return { account: accountFromClaims(claims), expiresIn: iamExpiresInSeconds() }
   },
