@@ -135,6 +135,7 @@ import { BillingModule } from '~/components/products/BillingModule'
 import { AIAccountsModule } from '~/components/products/AIAccountsModule'
 import { FinanceModule } from '~/components/products/FinanceModule'
 import { CatalogModule } from '~/components/products/CatalogModule'
+import { PlansCatalogModule } from '~/components/products/PlansCatalogModule'
 import { UsageModule } from '~/components/products/UsageModule'
 import { AiUsageModule } from '~/components/products/AiUsageModule'
 import { ConnectionsModule } from '~/components/products/ConnectionsModule'
@@ -625,6 +626,26 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/commerce',
     kind: 'module',
     routes: [{ path: '', component: CatalogModule }],
+  },
+  {
+    // admin.hanzo.ai SUBSCRIPTION PLANS — the CMS editor for the platform plan authority
+    // (commerce `models/plan`, the SoT for subscription/DNS pricing that GET
+    // /v1/billing/plans and the internal-ledger renewal charge read). A filterable table
+    // + create/edit form over the SuperAdmin CRUD (/v1/plans/entries). LIVE BILLING
+    // CONTROL: a plan's monthly price is the real renewal charge — the sibling of the
+    // Catalog editor. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer;
+    // commerce's requireSuperAdmin (owner=="admin") is the authoritative server-side gate).
+    id: 'plan-catalog',
+    label: 'Subscription Plans',
+    icon: CreditCard,
+    description: 'Edit the platform subscription and DNS plan authority — prices, tiers, and features.',
+    gcp: 'Cloud Billing plans',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/commerce',
+    kind: 'module',
+    routes: [{ path: '', component: PlansCatalogModule }],
   },
   {
     // admin.hanzo.ai LAUNCH CONTROL — the access-governance cockpit: a Services
