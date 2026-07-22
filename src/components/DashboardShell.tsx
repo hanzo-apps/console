@@ -93,6 +93,11 @@ import { AddProductPanel } from '~/components/AddProductPanel'
 import { SidebarWallet } from '~/components/SidebarWallet'
 import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
 import { useAppLauncher } from '~/components/AppLauncher'
+// Shared cross-app switcher (the 9-dot Hanzo launcher) — same component on every
+// Hanzo app. This is the CROSS-app switch (Chat/World/Admin/…); the in-console
+// product launcher (`useAppLauncher`, the "Apps" button) stays as-is. ⌘K is
+// Console's command palette, so the launcher's own global hotkey is disabled here.
+import { HanzoAppLauncher } from '@hanzogui/shell'
 import { useDetailPane } from '~/components/DetailPane'
 import { ProductCustomize, ManagePins } from '~/components/SidebarCustomize'
 import { SlideOver } from '~/components/ui/SlideOver'
@@ -1109,6 +1114,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           borderBottomWidth={1}
           borderColor="$borderColor"
         >
+          {/* Cross-app switcher — the shared Hanzo 9-dot launcher, leftmost on every
+              Hanzo surface. One-click jump to Chat/World/Admin/Cloud/… + Zach. */}
+          <HanzoAppLauncher currentApp="console" quickSwitchKey={false} />
+
           {/* Collapse the sidebar to an icon rail — the ONE collapse control (desktop). */}
           <Button
             size="$3"
