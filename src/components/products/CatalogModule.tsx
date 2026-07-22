@@ -34,6 +34,7 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
+import { MetadataEditor } from './pricing/MetadataEditor'
 import {
   centsToInput,
   distinctCategories,
@@ -501,36 +502,3 @@ function CatalogForm({
   )
 }
 
-// ── The type-preserving key/value metadata editor ────────────────────────────
-
-function MetadataEditor({ rows, onChange }: { rows: MetadataRow[]; onChange: (rows: MetadataRow[]) => void }) {
-  const setRow = (i: number, patch: Partial<MetadataRow>) =>
-    onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
-  const removeRow = (i: number) => onChange(rows.filter((_, idx) => idx !== i))
-  const addRow = () => onChange([...rows, { key: '', value: '' }])
-
-  return (
-    <YStack gap="$2">
-      {rows.map((row, i) => (
-        <XStack key={i} gap="$2" items="flex-start" flexWrap="wrap">
-          <YStack width="100%" $md={{ width: 160 }}>
-            <FieldText value={row.key} onChange={(v) => setRow(i, { key: v })} placeholder="key" />
-          </YStack>
-          <YStack flex={1} minW={0} $md={{ minW: 200 }}>
-            <FieldText value={row.value} onChange={(v) => setRow(i, { value: v })} placeholder="value" />
-          </YStack>
-          <Button
-            size="$2"
-            chromeless
-            icon={<Trash2 size={14} />}
-            onPress={() => removeRow(i)}
-            aria-label={`Remove ${row.key || 'field'}`}
-          />
-        </XStack>
-      ))}
-      <Button size="$2" chromeless icon={<Plus size={14} />} onPress={addRow} self="flex-start">
-        Add field
-      </Button>
-    </YStack>
-  )
-}
