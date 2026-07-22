@@ -75,7 +75,6 @@ import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { useEntitlements } from '~/lib/entitlements-context'
 import { useAppLauncher } from '~/components/AppLauncher'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
@@ -300,7 +299,6 @@ function PaletteDialog({
   const launcher = useAppLauncher()
   const { signOut } = useSession()
   const showAdmin = useIsSuperAdmin()
-  const { enabled } = useEntitlements()
   const { colorOf } = useProductColors()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
   const isDark = (resolvedTheme ?? current ?? 'dark') !== 'light'
@@ -359,11 +357,13 @@ function PaletteDialog({
     return [...verbs, ...orgVerbs]
   }, [isDark, orgs, router, launcher, signOut, setTheme, onOpenChange])
 
-  // Every jump target — products AND deep sub-pages ("queues" → Tasks › Queues) —
-  // gated so a customer never sees an admin-only surface.
+  // Every jump target — products AND deep sub-pages ("queues" → Tasks › Queues).
+  // ⌘K is a DISCOVERY surface: it jumps to the WHOLE catalog (admin-gated only), NOT
+  // the org's entitled scope — entitlement governs the sidebar + product use, never
+  // what you can find/jump to. Admin-only operator surfaces stay gated by `showAdmin`.
   const destResults = useMemo(
-    () => (mode === 'catalog' ? searchDestinations(query, showAdmin, enabled).slice(0, 50) : []),
-    [mode, query, showAdmin, enabled],
+    () => (mode === 'catalog' ? searchDestinations(query, showAdmin, null).slice(0, 50) : []),
+    [mode, query, showAdmin],
   )
 
   const matchedActions = useMemo(
