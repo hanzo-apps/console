@@ -23,6 +23,7 @@
  */
 import { test, expect, type Route } from '@playwright/test'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -113,6 +114,7 @@ test.describe(`blank audit [mode=${MODE} role=${ROLE}]`, () => {
       }
     }, ACCOUNT.owner)
     await page.route('**/*', mock)
+  await primeSession(page, ACCOUNT)
   })
 
   test.afterAll(async () => {
