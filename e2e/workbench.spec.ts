@@ -2,7 +2,7 @@
  * e2e: Developers workbench dock — mocked-network render proof.
  *
  * Same pattern as budgets-responsive: a LOCAL server with the network mocked
- * (`/auth/session` → an admin so the shell mounts, `/v1/billing/usage` → three
+ * (primeSession seeds the IAM-PKCE identity; `/v1/billing/usage` → three
  * real-shaped ledger rows, `/v1/models` → a small catalog for the shell). Proves
  * the persistent Developers bar renders on every page, the drawer opens with real
  * Overview numbers + Logs rows, and the read-only shell runs a /v1 GET (and
@@ -12,6 +12,7 @@
  */
 import { test, expect, type Route, type Page } from '@playwright/test'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -20,22 +21,6 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
-/** OIDC userinfo claims — identity is the @hanzo/iam PKCE token now, so the spec
- *  seeds a forged (unsigned) access token in sessionStorage and serves these
- *  claims from the mocked userinfo endpoint. */
-const CLAIMS = {
-  sub: 'hanzo/z',
-  owner: 'hanzo',
-  name: 'z',
-  email: 'z@hanzo.ai',
-  displayName: 'Z Admin',
-  isAdmin: true,
-}
-
-/** An unsigned JWT whose payload carries a far-future `exp` (the client only
- *  base64-decodes the payload — no signature check in the browser). */
-const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64')
-const TOKEN = `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ ...CLAIMS, exp: Math.floor(Date.now() / 1000) + 3600 })}.x`
 
 /** Real-shaped commerce ledger rows (the `/v1/billing/usage` contract). */
 const now = Date.now()
@@ -75,11 +60,6 @@ async function mock(route: Route) {
   const url = new URL(req.url())
   const path = url.pathname
 
-  // IAM: let discovery fail (the SDK synthesizes endpoints) and serve userinfo.
-  if (path.includes('.well-known')) return route.fulfill({ status: 404, body: '' })
-  if (path.endsWith('/userinfo')) {
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CLAIMS) })
-  }
   if (path === '/v1/billing/usage') {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(USAGE) })
   }
@@ -93,23 +73,8 @@ async function mock(route: Route) {
 }
 
 async function openHome(page: Page) {
-  await page.addInitScript(
-    ({ org, token }) => {
-      try {
-        sessionStorage.setItem('hanzo_iam_access_token', token)
-        sessionStorage.setItem('hanzo_iam_expires_at', String(Date.now() + 3600_000))
-        localStorage.setItem('hanzo.console.org', org)
-        localStorage.setItem('hanzo.console.org.selected', '1')
-        localStorage.setItem(`hz_onboarding_done:${org}`, '1')
-        localStorage.setItem(`hz_tour_seen:v1:${org}`, '1')
-        localStorage.setItem('hz_admin_banner_dismissed', '1')
-      } catch {
-        /* private mode */
-      }
-    },
-    { org: CLAIMS.owner, token: TOKEN },
-  )
   await page.route('**/*', mock)
+  await primeSession(page)
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('button', { name: 'Open the workbench' }).first()).toBeVisible({ timeout: 20_000 })
 }

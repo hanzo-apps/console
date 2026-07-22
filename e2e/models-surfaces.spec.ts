@@ -22,6 +22,7 @@ import { test, expect, type Route, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 
@@ -112,6 +113,7 @@ async function open(page: Page, path: string, marker: string) {
     }
   }, ACCOUNT.owner)
   await page.route('**/*', mock)
+  await primeSession(page, ACCOUNT)
   await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' })
   await page.locator('[data-testid="product-content"]').first().waitFor({ state: 'attached', timeout: 20_000 })
   await expect(page.locator(`text=${marker}`).first()).toBeVisible({ timeout: 20_000 })

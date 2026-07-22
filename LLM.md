@@ -3195,3 +3195,23 @@ Verification: tsc clean; vitest 2758 (+2); next build ✓; build:embed ✓; loca
 render proof (seeded-auth recipe) shows toggle + Full screen + the live iframe
 src. Reaches cloud.hanzo.ai/console.hanzo.ai on the next cloud release embedding
 console@main.
+
+## e2e auth migration — primeSession (IAM-PKCE) replaces the retired /auth/session mocks (v8.4.146)
+
+The 11 fixture render specs authenticated via a mocked `/auth/session` — an endpoint
+the IAM-PKCE auth move retired — so every one of them landed on /signin locally. ONE
+helper now owns the recipe: `e2e/_session.ts` `primeSession(page, claims?)` seeds the
+forged sessionStorage token (`hanzo_iam_access_token` + `hanzo_iam_expires_at`),
+mocks `**/userinfo` (discovery left to 404 — the SDK synthesizes endpoints), and
+seeds the interaction gates (tour/onboarding/org). Registered AFTER a spec's own
+catch-all it wins for the IAM endpoints (Playwright matches routes newest-first), so
+the legacy `/auth/session` branches are dead code, not conflicts. All 12 specs
+(incl. workbench) ride it; per-spec ACCOUNT objects pass through as claims (owner is
+what makes a super-admin — owner==='admin'). Also re-pinned auth-adjacent mock drift:
+budgets `/billing/v1/spend-alerts`→`/v1/billing/spend-alerts`, gpus-connect
+machines/gpus regexes admit the `/v1/vm/*` forms, entitlement-sidebar's
+"Add product"→"All products". Two tests are `test.fixme` with the drift named
+(gpus-connect machines contract; entitlement All-products pane flow) — their
+feature lanes own the re-pin. Sample run: workbench/budgets/provider-billing/
+models-surfaces/router-config/gpus-responsive/ai-economics/cd-canvas-map/
+blank-audit/interactive-training → 151+ passed locally.
