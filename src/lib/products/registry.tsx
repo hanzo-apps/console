@@ -58,6 +58,7 @@ import { Users,
   ScrollText,
   Terminal,
   Package,
+  Tags,
   Code2,
   Play,
   Code,
@@ -133,6 +134,7 @@ import { PlansModule } from '~/components/products/PlansModule'
 import { BillingModule } from '~/components/products/BillingModule'
 import { AIAccountsModule } from '~/components/products/AIAccountsModule'
 import { FinanceModule } from '~/components/products/FinanceModule'
+import { CatalogModule } from '~/components/products/CatalogModule'
 import { UsageModule } from '~/components/products/UsageModule'
 import { AiUsageModule } from '~/components/products/AiUsageModule'
 import { ConnectionsModule } from '~/components/products/ConnectionsModule'
@@ -602,6 +604,27 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FinanceDashboard }],
+  },
+  {
+    // admin.hanzo.ai CATALOG & PRICING — the CMS editor for the platform product +
+    // pricing catalog (commerce `catalog-entry`, the SoT: the 17 infra tiers +
+    // every product surface docs/pricing/the console read from). A filterable table
+    // + create/edit form over the SuperAdmin CRUD (/v1/catalog/entries); an edit
+    // here flows to the live pricing pages (the pricing service reads the same rows
+    // via GET /v1/commerce/catalog). GLOBAL-ADMIN ONLY (`admin: true` hides it from
+    // every customer; commerce's requireSuperAdmin (owner=="admin") is the
+    // authoritative server-side gate, so catalog cost/margin never reach a customer).
+    id: 'catalog',
+    label: 'Catalog & Pricing',
+    icon: Tags,
+    description: 'Edit the platform product and pricing catalog — infra tiers, plans, and every product surface.',
+    gcp: 'Cloud Catalog',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/commerce',
+    kind: 'module',
+    routes: [{ path: '', component: CatalogModule }],
   },
   {
     // admin.hanzo.ai LAUNCH CONTROL — the access-governance cockpit: a Services
