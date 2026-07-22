@@ -24,9 +24,10 @@ import { useRouter } from 'next/navigation'
 import { Loader } from '~/components/ui/Loader'
 import { SignIn } from '~/components/SignIn'
 import { AuthCallback } from '~/components/AuthCallback'
+import { PublicLanding } from '~/components/PublicLanding'
 import { useSession } from '~/lib/auth/session'
 
-type Surface = 'signin' | 'callback' | 'guarded'
+type Surface = 'signin' | 'callback' | 'landing' | 'guarded'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { account, loading } = useSession()
@@ -37,7 +38,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     const path = window.location.pathname
     setSurface(
-      path === '/signin' ? 'signin' : path.startsWith('/auth/callback') ? 'callback' : 'guarded',
+      path === '/signin'
+        ? 'signin'
+        : path.startsWith('/auth/callback')
+          ? 'callback'
+          : path === '/'
+            ? 'landing' // root is the public marketing landing for anon (console for authed)
+            : 'guarded',
     )
   }, [])
 
@@ -54,6 +61,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
   // At /signin, the ONE sign-in experience owns the surface (form on a tenant host,
   // silent SSO on an admin host, redirect-to-/ when already signed in).
   if (surface === 'signin') return <SignIn />
+
+  // Root: the marketing landing for an anon visitor (gather interest + explain the
+  // product); the signed-in console once there's an account. Never redirects.
+  if (surface === 'landing') {
+    if (loading) return <Loader />
+    if (!account) return <PublicLanding />
+    return <>{children}</>
+  }
 
   if (surface === null || loading || !account) return <Loader />
   return <>{children}</>
