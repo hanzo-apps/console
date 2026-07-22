@@ -80,6 +80,7 @@ import {
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired } from '~/lib/products/match'
 import { ProductUpstreamNote } from '~/components/products/ProductUpstreamNote'
+import { ConsoleFooter } from '~/components/ConsoleFooter'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
@@ -1187,6 +1188,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
               {children}
               <ProductUpstreamNote pathname={pathname} />
+              <ConsoleFooter />
             </YStack>
           </XStack>
         </ScrollView>
