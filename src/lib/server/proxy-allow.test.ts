@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   allowBaseSurface,
   allowCatalogSurface,
+  allowPlansSurface,
   allowCloudSurface,
   allowVisorSurface,
   allowCommerceSurface,
@@ -29,6 +30,25 @@ describe('allowCatalogSurface', () => {
     expect(allowCatalogSurface('v1/product')).toBe(false) // merchant store model
     expect(allowCatalogSurface('_/commerce/tenants')).toBe(false)
     expect(allowCatalogSurface('v1/commerce/catalog')).toBe(false) // public projection is a different mount
+  })
+})
+
+describe('allowPlansSurface', () => {
+  it('admits exactly the plan CRUD + seed paths', () => {
+    expect(allowPlansSurface('v1/plans/entries')).toBe(true) // list + create
+    expect(allowPlansSurface('v1/plans/entries/pro')).toBe(true) // update/delete by slug
+    expect(allowPlansSurface('v1/plans/entries/dns-basic')).toBe(true)
+    expect(allowPlansSurface('v1/plans/seed')).toBe(true)
+    expect(allowPlansSurface('/v1/plans/entries/')).toBe(true) // tolerant of edge slashes
+  })
+  it('refuses anything outside the plan admin surface (no tunnel)', () => {
+    expect(allowPlansSurface('v1/plans')).toBe(false) // bare head
+    expect(allowPlansSurface('v1/plans/entries/a/b')).toBe(false) // too deep
+    expect(allowPlansSurface('v1/billing/plans')).toBe(false) // the public read is a different mount
+    expect(allowPlansSurface('v1/billing/balance')).toBe(false)
+    expect(allowPlansSurface('v1/checkout/sessions')).toBe(false)
+    expect(allowPlansSurface('v1/product')).toBe(false)
+    expect(allowPlansSurface('_/commerce/tenants')).toBe(false)
   })
 })
 
