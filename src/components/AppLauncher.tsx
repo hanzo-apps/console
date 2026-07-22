@@ -19,8 +19,8 @@ import {
 } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Dialog, Input, ScrollView, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
-import { CreditCard, Lock, Search, Users } from '@hanzogui/lucide-icons-2'
-import { SURFACES, type Surface } from '@hanzo/ui/product'
+import { AppWindow, Bot, CreditCard, LayoutGrid, Lock, MessageCircle, Search, Sparkles, Users } from '@hanzogui/lucide-icons-2'
+import { otherSurfaces, type Surface, type SurfaceId } from '@hanzo/ui/product'
 
 import { getBrand } from '~/lib/branding/brands'
 import { findEntry, visibleCatalogByCategory, type CatalogEntry } from '~/lib/products/registry'
@@ -34,13 +34,21 @@ import { useEntitlements } from '~/lib/entitlements-context'
 import { filterEntitled } from '~/lib/entitlements'
 
 /**
- * Cross-surface tiles — the shared five-surface app switcher's entries that live
- * OUTSIDE this console: hanzo.team (from `SURFACES`) + billing.hanzo.ai. Hanzo
- * brand only (white-label law: a lux/zoo/pars host never shows a Hanzo surface).
+ * Cross-surface tiles — the shared app switcher's entries that live OUTSIDE this
+ * console: every Hanzo surface but the console itself (this IS the console), from
+ * the ONE canonical `SURFACES` list. Hanzo brand only (white-label law: a lux/zoo/
+ * pars host never shows a Hanzo surface — gated by `getBrand().id` at render).
  */
-const BILLING_SURFACE: Surface = { id: 'billing', label: 'Billing', href: 'https://billing.hanzo.ai', hint: 'billing.hanzo.ai' }
-const CROSS_SURFACES: Surface[] = [...SURFACES.filter((s) => s.id === 'team'), BILLING_SURFACE]
-const SURFACE_ICONS = { team: Users, billing: CreditCard } as const
+const CROSS_SURFACES: Surface[] = otherSurfaces('console')
+const SURFACE_ICONS = {
+  ai: Sparkles,
+  console: LayoutGrid,
+  app: AppWindow,
+  chat: MessageCircle,
+  bot: Bot,
+  team: Users,
+  billing: CreditCard,
+} as const satisfies Record<SurfaceId, unknown>
 
 type LauncherApi = { isOpen: boolean; open: () => void; close: () => void }
 
@@ -95,7 +103,7 @@ function Tile({ entry, color, active, onPress }: { entry: CatalogEntry; color: s
 
 /** A launcher tile for a cross-surface entry (opens in a new tab). */
 function SurfaceTile({ surface, onPress }: { surface: Surface; onPress: () => void }) {
-  const Icon = SURFACE_ICONS[surface.id as keyof typeof SURFACE_ICONS] ?? Users
+  const Icon = SURFACE_ICONS[surface.id]
   return (
     <YStack
       onPress={onPress}
