@@ -10,4 +10,9 @@ on:
 jobs:
   cicd:
     uses: hanzoai/ci/.github/workflows/build.yml@v1
+    with:
+      # hanzo-build-linux-amd64 arc pool wedged (empty-image drift + dup listener,
+      # runners churn Pending w/o consuming jobs). Route to the healthy deploy pool
+      # so the console-embed artifact rebuilds. Revert once hanzo-build is repaired.
+      runner: '["hanzo-deploy-linux-amd64"]'
     secrets: inherit
