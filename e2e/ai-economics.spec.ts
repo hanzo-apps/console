@@ -17,6 +17,7 @@
  */
 import { test, expect, type Route, type Page } from '@playwright/test'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -129,6 +130,7 @@ async function openBoard(page: Page) {
     }
   }, ACCOUNT.owner)
   await page.route('**/*', mock)
+  await primeSession(page, ACCOUNT)
   await page.goto(`${BASE_URL}/ai-economics`, { waitUntil: 'domcontentloaded' })
   const content = page.locator('[data-testid="product-content"]').first()
   await content.waitFor({ state: 'attached', timeout: 20_000 })

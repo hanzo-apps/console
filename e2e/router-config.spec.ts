@@ -22,6 +22,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4010'
 
@@ -146,6 +147,7 @@ async function openPolicy(page: Page, marker = 'Enabled models') {
     }
   }, ORG)
   await page.route('**/*', mock)
+  await primeSession(page)
   await page.goto(`${BASE_URL}/router/policy`, { waitUntil: 'domcontentloaded' })
   await page.locator('[data-testid="product-content"]').first().waitFor({ state: 'attached', timeout: 20_000 })
   await expect(page.locator(`text=${marker}`).first()).toBeVisible({ timeout: 20_000 })
