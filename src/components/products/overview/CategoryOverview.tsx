@@ -25,6 +25,7 @@ import {
   Brain,
   Code2,
   Cpu,
+  CreditCard,
   Database,
   Lock,
   Network,
@@ -69,6 +70,7 @@ const CATEGORY_ICON: Record<ProductCategory, ProductIcon> = {
   Web3: Blocks,
   Apps: Store,
   Commerce: ShoppingBag,
+  Billing: CreditCard,
   Settings: SlidersHorizontal,
 }
 
