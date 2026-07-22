@@ -23,6 +23,7 @@ export type ProductCategory =
   | 'Web3'
   | 'Apps'
   | 'Commerce'
+  | 'Billing'
   | 'Settings'
 
 export const categoryOrder: ProductCategory[] = [
@@ -38,6 +39,7 @@ export const categoryOrder: ProductCategory[] = [
   'Web3',
   'Apps',
   'Commerce',
+  'Billing',
   'Settings',
 ]
 
@@ -106,12 +108,13 @@ export const CATEGORY_SUMMARY: Record<ProductCategory, string> = {
   Data: 'Vector, SQL, key-value, object, document, and memory stores — managed data primitives for your apps.',
   Network: 'Gateway, DNS, CDN, load balancing, VPC, and service mesh — connect, route, and expose your services.',
   Security: 'IAM, authorization, KMS, HSM, secrets, MPC, and audit — identity and secrets for your organization.',
-  Observe: 'Usage, spend, traces, metrics, logs, dashboards, and alerts — see and evaluate what your workloads do.',
+  Observe: 'Traces, metrics, logs, dashboards, alerts, evals, and LLM research — observe and evaluate what your models and workloads do.',
   Platform: 'Projects, environments, builds, registry, releases, and pipelines — ship and run your applications.',
   Dev: 'API, SDKs, CLI, IDE, desktop, and keys — the developer tools to build against the cloud.',
   Web3: 'Networks, tokens, wallets, oracles, indexer, and settlement — the on-chain surface.',
   Apps: 'Chat, bot, search, marketplace, and studio — end-user AI applications.',
   Commerce: 'Products, orders, customers, inventory, and promotions — run your store on Hanzo Commerce (payments via Square in Billing).',
+  Billing: 'Balance, credits, usage-based spend, invoices, payment methods, revenue, and grants — your account\'s money, metering, and the Square-backed billing console.',
   Settings: 'Team, organization, and profile — administer your account and members.',
 }
 
