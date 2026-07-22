@@ -4,8 +4,10 @@
  * Sign-in experience — the ONE way the console presents sign-in, wherever the user
  * lands on it.
  *
- * @hanzo/iam ONLY: a single "Log in with Hanzo" button that starts the IAM redirect +
- * PKCE flow (`useIam().login()`). IAM (hanzo.id) owns every credential step — password,
+ * @hanzo/iam ONLY: a single "Log in with <brand>" button that starts the IAM redirect +
+ * PKCE flow (`useIam().login()`). The button names the ACTIVE brand's IAM (Hanzo on
+ * hanzo.id, Lux on lux.id, Zoo on zoolabs.id, …), resolved from the host via getBrand —
+ * a Lux/Zoo console must never say "Hanzo" (white-label leak). IAM owns every credential step — password,
  * social providers, email-code, MFA and wallet all live on its hosted login, so the
  * console never renders an inline password form or reconstructs an IdP URL. On an admin
  * host `config`/`iamConfig` already target the reserved `admin-console` app in the
@@ -30,6 +32,10 @@ export function SignIn() {
   const { account, loading } = useSession()
   const { login } = useIam()
   const router = useRouter()
+  // The active brand's wordmark (Hanzo / Lux / Zoo / Pars / …), resolved from the
+  // host. config.brandName is "<Brand> Cloud" (already white-label per host), so the
+  // sign-in button names just the brand — a Lux/Zoo/Pars console never leaks "Hanzo".
+  const brandName = config.brandName.replace(/\s+Cloud$/i, '')
 
   useEffect(() => {
     // Already authenticated -> the cockpit.
@@ -47,7 +53,7 @@ export function SignIn() {
         <Text color="$color11">Sign in to your account</Text>
       </YStack>
       <PrimaryButton size="$5" onPress={() => void login()}>
-        Log in with Hanzo
+        Log in with {brandName}
       </PrimaryButton>
     </YStack>
   )
