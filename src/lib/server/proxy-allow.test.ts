@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   allowBaseSurface,
+  allowCatalogSurface,
   allowCloudSurface,
   allowVisorSurface,
   allowCommerceSurface,
@@ -11,6 +12,25 @@ import {
   CLOUD_HEADS,
   COMMERCE_HEADS,
 } from './proxy-allow'
+
+describe('allowCatalogSurface', () => {
+  it('admits exactly the catalog CRUD + seed paths', () => {
+    expect(allowCatalogSurface('v1/catalog/entries')).toBe(true) // list + create
+    expect(allowCatalogSurface('v1/catalog/entries/cloud-dev')).toBe(true) // update/delete by slug
+    expect(allowCatalogSurface('v1/catalog/entries/gpu-standard')).toBe(true)
+    expect(allowCatalogSurface('v1/catalog/seed')).toBe(true)
+    expect(allowCatalogSurface('/v1/catalog/entries/')).toBe(true) // tolerant of edge slashes
+  })
+  it('refuses anything outside the catalog admin surface (no tunnel)', () => {
+    expect(allowCatalogSurface('v1/catalog')).toBe(false) // bare head
+    expect(allowCatalogSurface('v1/catalog/entries/a/b')).toBe(false) // too deep
+    expect(allowCatalogSurface('v1/billing/balance')).toBe(false)
+    expect(allowCatalogSurface('v1/checkout/sessions')).toBe(false)
+    expect(allowCatalogSurface('v1/product')).toBe(false) // merchant store model
+    expect(allowCatalogSurface('_/commerce/tenants')).toBe(false)
+    expect(allowCatalogSurface('v1/commerce/catalog')).toBe(false) // public projection is a different mount
+  })
+})
 
 describe('v1Head', () => {
   it('extracts the head of a v1 path', () => {
