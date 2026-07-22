@@ -378,6 +378,25 @@ export function allowCommerceSurface(path: string): boolean {
 }
 
 /**
+ * Commerce PLATFORM-CATALOG admin surface reachable through `/v1/catalog` as the
+ * signed-in SuperAdmin. Commerce serves the catalog CMS under `/v1/catalog/*` on
+ * its `/v1` bundle: `entries` (GET list incl. cost/margin, POST create),
+ * `entries/:slug` (PUT update, DELETE remove), and `seed` (POST upsert). This list
+ * is the least-privilege boundary — it admits ONLY those catalog paths, so the
+ * `/v1/catalog` proxy can never tunnel commerce's money/tenant surfaces
+ * (`billing`, `checkout`, `_/commerce/tenants`, the merchant store models) that
+ * share the binary. Commerce's own `requireSuperAdmin` (owner=="admin") is the
+ * authoritative auth gate on top of this; this only bounds the reachable PATHS.
+ */
+export function allowCatalogSurface(path: string): boolean {
+  const rel = path.replace(/^\/+/, '').replace(/\/+$/, '')
+  if (rel === 'v1/catalog/entries') return true // list (GET) + create (POST)
+  if (/^v1\/catalog\/entries\/[^/]+$/.test(rel)) return true // update (PUT) + delete (DELETE) by slug
+  if (rel === 'v1/catalog/seed') return true // upsert the embedded seed (POST)
+  return false
+}
+
+/**
  * Payload CMS (`cms.<brand>`) READ surfaces reachable through `/cms` as the signed-in
  * user. The console forwards the caller's own IAM Bearer; Payload's `hanzoIAMStrategy`
  * verifies it (JWKS, issuer hanzo.id) and its multi-tenant plugin scopes `pages`/`media`
