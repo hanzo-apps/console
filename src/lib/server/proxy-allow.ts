@@ -397,6 +397,26 @@ export function allowCatalogSurface(path: string): boolean {
 }
 
 /**
+ * Commerce PLATFORM-PLAN admin surface reachable through `/v1/plans` as the signed-in
+ * SuperAdmin. Commerce serves the subscription/DNS plan authority CMS under
+ * `/v1/plans/*` on its `/v1` bundle: `entries` (GET list, POST create), `entries/:slug`
+ * (PUT update, DELETE remove), and `seed` (POST upsert). The sibling of
+ * `allowCatalogSurface` — the same least-privilege boundary, admitting ONLY those plan
+ * paths, so the `/v1/plans` proxy can never tunnel commerce's money/tenant surfaces
+ * (`billing`, `checkout`, `_/commerce/tenants`, the merchant store models). Commerce's
+ * own `requireSuperAdmin` (owner=="admin") is the authoritative auth gate on top of
+ * this — money-adjacent, since a plan's price is the real renewal charge; this only
+ * bounds the reachable PATHS.
+ */
+export function allowPlansSurface(path: string): boolean {
+  const rel = path.replace(/^\/+/, '').replace(/\/+$/, '')
+  if (rel === 'v1/plans/entries') return true // list (GET) + create (POST)
+  if (/^v1\/plans\/entries\/[^/]+$/.test(rel)) return true // update (PUT) + delete (DELETE) by slug
+  if (rel === 'v1/plans/seed') return true // upsert the embedded seed (POST)
+  return false
+}
+
+/**
  * Payload CMS (`cms.<brand>`) READ surfaces reachable through `/cms` as the signed-in
  * user. The console forwards the caller's own IAM Bearer; Payload's `hanzoIAMStrategy`
  * verifies it (JWKS, issuer hanzo.id) and its multi-tenant plugin scopes `pages`/`media`
