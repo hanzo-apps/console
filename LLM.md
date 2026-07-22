@@ -3215,3 +3215,49 @@ machines/gpus regexes admit the `/v1/vm/*` forms, entitlement-sidebar's
 feature lanes own the re-pin. Sample run: workbench/budgets/provider-billing/
 models-surfaces/router-config/gpus-responsive/ai-economics/cd-canvas-map/
 blank-audit/interactive-training → 151+ passed locally.
+
+## go:embed org-switcher + Observe→Status fix — IAM-admin & PaaS address cloud-native /v1/* (v8.4.149)
+
+LIVE production fix (console.hanzo.ai + cloud.hanzo.ai): the org/user switcher was
+MISSING from the shell and Observe→Status showed "Could not reach the platform /
+Invalid response from server (HTTP 200)". ONE root cause, confirmed end-to-end (live
+curl + deployed-bundle disassembly + the cloud router + both client call-sites):
+
+- console.hanzo.ai / cloud.hanzo.ai serve the **go:embed** static console INSIDE the
+  cloud binary (`ghcr.io/hanzoai/cloud`), whose `webui.go` treats ONLY
+  `apiPrefixes = {/v1/, /zap, /healthz, /readyz}` as API — every OTHER path falls through
+  to `serveIndex` → **HTTP 200 + index.html**. `build-embed.mjs` STASHES every Next
+  `app/**/route.ts` (the BFF reverse-proxies), so any client still addressing a NON-`/v1/`
+  BFF prefix hits the SPA shell and the JSON parse throws.
+- Two client transports were never migrated off the BFF prefixes (unlike `telemetry.ts`,
+  already on `/v1/o11y/vm`): `admin.ts` `makeIamClient('/admin/iam')` (OrgSwitcher +
+  OrgPicker + AdminModule + TenantsModule) and `platform.ts` `/paas/*` (Observe→Status
+  apps inventory). In the embed both → 200 SPA HTML → OrgSwitcher/OrgPicker swallow the
+  error (empty list → switcher gone) and Status → `interpretPlatformError` → "Could not
+  reach the platform / Invalid response from server (HTTP 200)".
+- The genuine `/v1/*` API is HEALTHY (o11y/health 200, o11y/metrics 403-JSON, get-account
+  200, `/v1/iam/get-organizations` 401-JSON, `/v1/paas/apps` 403-JSON). Cloud already
+  serves the correct equivalents natively.
+
+Fix (minimal, `IS_EMBED`-gated — the standalone console2/admin.hanzo.ai `/v1` BFF
+deliberately EXCLUDES `iam/*` and `paas/*`, proxy-allow.ts:7, so it CANNOT be
+unconditional): in the go:embed only, the IAM-admin client uses cloud-native
+`/v1/iam/<segment>` via the existing bearer-scoped `client.ts` `iamList`/`iamOne`/
+`iamMutate`, and the PaaS inventory addresses `/v1/paas/<path>` via `cloudProxyV1Url`.
+Standalone/admin.hanzo.ai are UNCHANGED (keep their gated `/admin/iam` + `/paas`
+proxies). Scoping is unchanged: OrgSwitcher still lists cross-tenant only for a super
+admin (`account.owner === 'admin'`), and cloud/IAM enforces the per-principal org scope.
+z@hanzo.ai IAM verified independently: `admin/z` (global superadmin, owner=admin) +
+`hanzo/z` (admin/owner of hanzo) both exist, un-forbidden, authenticate live — no seed
+needed. (Separate flag: the `admin-console` IAM app's clientId is `Iv23li3SYLoq40ExR6EN`,
+not `admin-console` — a distinct admin.hanzo.ai SSO risk, not this bug.)
+
+Verification: `tsc --noEmit` clean for the two files (0 errors; the 4 remaining are
+pre-existing local `@hanzo/ui`/`@hanzo/brand` node_modules drift); `vitest` baseline
+109/109 (admin/platform/canonical-paths — no standalone regression) + new
+`iam-paas-embed.test.ts` 3/3 pinning the embed URLs (`/v1/iam/get-organizations?owner=admin`,
+`/v1/paas/apps`, `/v1/iam/approve-user`; never `/admin/iam/` or `/paas/`). Ships to
+console.hanzo.ai/cloud.hanzo.ai on the next `hanzoai/cloud` release embedding
+`console@main` (CONSOLE_REF=main) — a standalone console image bump does NOT reach those
+hosts (the standalone CR is unrouted). Authenticated live re-verify (z logged in →
+switcher populates + Status renders) is the post-deploy gate.

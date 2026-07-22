@@ -23,6 +23,7 @@
  *   - POST /v1/org/{org}/cluster   → provision a fresh dedicated cluster (`/paas`).
  */
 import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
+import { IS_EMBED } from '~/lib/embed'
 
 /** Where a cluster lives: shared multi-tenant Hanzo Cloud, or a BYO/managed DOKS. */
 export type ClusterKind = 'shared' | 'byo' | (string & {})
@@ -165,8 +166,23 @@ export type AppsQuery = {
   drift?: boolean
 }
 
-/** Same-origin PaaS proxy path. The proxy prefixes `/v1/` and attaches the token. */
-const url = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
+/**
+ * Same-origin PaaS inventory path, split by DEPLOYMENT topology:
+ *  - STANDALONE console (console2/admin.hanzo.ai): the `/paas/*` server proxy, which
+ *    injects the platform SERVICE token (KMS) and is brand-admin gated.
+ *  - go:embed console (IS_EMBED, console.hanzo.ai / cloud.hanzo.ai): the static export
+ *    has NO server routes — `/paas/*` is pruned and cloud's catch-all serves the SPA
+ *    index (HTTP 200 HTML) for any non-`/v1/` path, so the old `/paas` client parsed the
+ *    SPA and errored "Invalid response from server (HTTP 200)" → "Could not reach the
+ *    platform" (the broken Observe→Status). Cloud serves the SAME fleet inventory
+ *    natively at `/v1/paas/<path>` (bearer-scoped from the validated principal), so in
+ *    the embed we address it directly. The `/v1` BFF deliberately EXCLUDES `paas/*`
+ *    (proxy-allow.ts), which is why this is embed-gated rather than unconditional.
+ */
+const url = (path: string) =>
+  IS_EMBED
+    ? cloudProxyV1Url(`paas/${path.replace(/^\/+/, '')}`)
+    : `/paas/${path.replace(/^\/+/, '')}`
 const enc = encodeURIComponent
 
 const qs = (q: AppsQuery): string => {
