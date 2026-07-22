@@ -26,6 +26,7 @@ import { SignIn } from '~/components/SignIn'
 import { AuthCallback } from '~/components/AuthCallback'
 import { PublicLanding } from '~/components/PublicLanding'
 import { useSession } from '~/lib/auth/session'
+import { isAdminHost } from '~/config'
 
 type Surface = 'signin' | 'callback' | 'landing' | 'guarded'
 
@@ -37,12 +38,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [surface, setSurface] = useState<Surface | null>(null)
   useEffect(() => {
     const path = window.location.pathname
+    // The public marketing landing is a CONSUMER-host surface (cloud.hanzo.ai /
+    // console.hanzo.ai / tenant hosts). The operator cockpit (admin.hanzo.ai) keeps
+    // its silent-SSO bounce — anon there → /signin, never marketing.
+    const admin = isAdminHost(window.location.host)
     setSurface(
       path === '/signin'
         ? 'signin'
         : path.startsWith('/auth/callback')
           ? 'callback'
-          : path === '/'
+          : path === '/' && !admin
             ? 'landing' // root is the public marketing landing for anon (console for authed)
             : 'guarded',
     )
