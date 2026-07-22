@@ -30,8 +30,6 @@ import { useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
 import { openProduct } from '~/lib/products/open'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { useEntitlements } from '~/lib/entitlements-context'
-import { filterEntitled } from '~/lib/entitlements'
 
 /**
  * Cross-surface tiles — the shared app switcher's entries that live OUTSIDE this
@@ -136,7 +134,6 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   const router = useRouter()
   const pathname = usePathname() ?? ''
   const showAdmin = useIsSuperAdmin()
-  const { enabled } = useEntitlements()
   const { colorOf } = useProductColors()
   const [query, setQuery] = useState('')
 
@@ -149,19 +146,25 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
 
   // Browse (no query): each category's apps are CONTINUOUS ALPHABETICAL with the
   // selected app pinned first — the SAME `orderEntries` rule the sidebar uses (DRY).
+  // The launcher is the "browse ALL apps" surface — DISCOVERY, decoupled from
+  // entitlement. It shows the WHOLE catalog (admin-gated only), NOT the org's enabled
+  // scope: entitlement governs the SIDEBAR (your workspace nav = what you use) and is
+  // enforced when you OPEN a product (its page shows the honest "enable for your org"
+  // state), never by hiding a product from the directory. So a user always sees every
+  // product Hanzo offers here — `enabled` is deliberately NOT passed.
   const groups = useMemo(
     () =>
-      visibleCatalogByCategory(showAdmin, enabled).map((g) => ({
+      visibleCatalogByCategory(showAdmin, null).map((g) => ({
         category: g.category,
         entries: orderEntries(g.entries, activeId),
       })),
-    [showAdmin, enabled, activeId],
+    [showAdmin, activeId],
   )
   // While filtering, keep the relevance ranking (a search is not alphabetical). Gate
-  // the results by admin AND entitlement (the launcher mirrors the sidebar's scope).
+  // by admin ONLY — the full catalog is searchable (discovery, not entitlement scope).
   const filtered = useMemo(
-    () => (query.trim() ? filterEntitled(searchCatalog(query).filter((e) => showAdmin || !e.admin), enabled, showAdmin) : null),
-    [query, showAdmin, enabled],
+    () => (query.trim() ? searchCatalog(query).filter((e) => showAdmin || !e.admin) : null),
+    [query, showAdmin],
   )
 
   const activate = useCallback(
