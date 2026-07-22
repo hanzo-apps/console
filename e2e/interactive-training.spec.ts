@@ -15,6 +15,7 @@
  */
 import { test, expect, type Route, type Page } from '@playwright/test'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -91,6 +92,7 @@ async function openInteractive(page: Page) {
     }
   }, ORG)
   await page.route('**/*', mock)
+  await primeSession(page, ACCOUNT)
   await page.goto(`${BASE_URL}/finetuning/interactive`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
 }

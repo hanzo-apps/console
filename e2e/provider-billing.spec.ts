@@ -21,6 +21,7 @@ import { test, expect, type Route, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 const SHOTS = join(process.cwd(), 'e2e-shots')
@@ -98,6 +99,7 @@ async function openBoard(page: Page) {
     }
   }, ACCOUNT.owner)
   await page.route('**/*', mock)
+  await primeSession(page, ACCOUNT)
   await page.goto(`${BASE_URL}/provider-billing`, { waitUntil: 'domcontentloaded' })
   const content = page.locator('[data-testid="product-content"]').first()
   await content.waitFor({ state: 'attached', timeout: 20_000 })

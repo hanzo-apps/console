@@ -3,7 +3,7 @@
  *
  * Runs against a LOCAL server (BASE_URL=http://localhost:4000) with the whole network
  * mocked (same pattern as blank-audit): `/auth/session` → a global admin so the shell
- * mounts, `/billing/v1/spend-alerts` → real-shaped budget rows (org default + project
+ * mounts, `/v1/billing/spend-alerts` → real-shaped budget rows (org default + project
  * warn + service over + unlimited/rate-limit-only), everything else → an empty-ok
  * envelope.
  *
@@ -15,6 +15,7 @@
  */
 import { test, expect, type Route, type Page } from '@playwright/test'
 import { requireFixtureServer } from './_fixture'
+import { primeSession } from './_session'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -61,7 +62,7 @@ async function mock(route: Route) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
   }
   // The page under test — the real spend-alerts contract.
-  if (path === '/billing/v1/spend-alerts') {
+  if (path === '/v1/billing/spend-alerts') {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(BUDGETS) })
   }
 
@@ -81,6 +82,7 @@ async function openBudgets(page: Page) {
     }
   }, ACCOUNT.owner)
   await page.route('**/*', mock)
+  await primeSession(page, ACCOUNT)
   await page.goto(`${BASE_URL}/billing/budgets`, { waitUntil: 'domcontentloaded' })
   const content = page.locator('[data-testid="product-content"]').first()
   await content.waitFor({ state: 'attached', timeout: 20_000 })
