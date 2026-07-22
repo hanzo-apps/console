@@ -150,6 +150,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Web3: 'amber',
   Apps: 'pink',
   Commerce: 'orange',
+  Billing: 'lime',
   Settings: 'slate',
 }
 
