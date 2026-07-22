@@ -97,7 +97,15 @@ export function iamAccessToken(): string | null {
 export async function iamValidAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null
   try {
-    return await iamSdk().getValidAccessToken()
+    const token = await iamSdk().getValidAccessToken()
+    if (token) return token
+    // The SDK marks a freshly-minted token "expired" when the token-exchange response
+    // carried no `expires_in` (an IAM app with no configured token lifetime) and no
+    // refresh token was issued — yet IAM still accepts the token (userinfo 200). Fall
+    // back to the raw stored token so a valid session is not discarded, which dead-ended
+    // AccountApi.session() -> account=null and looped /signin. The proactive-refresh
+    // lifetime is derived independently from the token's own `exp` (iamExpiresInSeconds).
+    return iamAccessToken()
   } catch {
     return null
   }
