@@ -38,9 +38,16 @@ const ok = (data: unknown) => JSON.stringify({ status: 'ok', msg: '', data })
 
 // Two GPU machines: a BYO GB10 that dialed in via `hanzo gpu connect`, and a
 // Hanzo-Cloud-provisioned H100. isGpuMachine keeps both (gpu set / gpu-* slug).
+// Cloud GPU VMs (provider≠byo) — these render in the machines list.
 const MACHINES = [
-  { id: 'gb10-studio', name: 'gb10-studio', type: 'byo-gpu', provider: 'byo', gpu: 'NVIDIA GB10', region: 'on-prem', status: 'online' },
   { id: 'gpu-h100-sfo', name: 'gpu-h100-sfo', type: 'gpu-h100x1-80gb', provider: 'doks', gpu: 'H100', region: 'sfo3', status: 'running', costHourlyUsd: 2.49 },
+]
+
+// BYO boxes — surfaced via /v1/fleet/workers (the connect fleet), NOT /v1/machines
+// (which excludes provider=byo). This is where a GB10 that dialed in via
+// `hanzo gpu connect` actually appears.
+const WORKERS = [
+  { id: 'gb10-studio', hostname: 'gb10-studio', provider: 'byo', location: 'on-prem', status: 'online', gpus: [{ name: 'NVIDIA GB10', memoryGb: 128 }] },
 ]
 
 const CATALOG = [
@@ -70,14 +77,14 @@ async function mock(route: Route) {
   // Data paths — match by suffix so it works regardless of /vm vs /cloud proxy prefix.
   if (/\/v1(\/vm)?\/machines$/.test(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: ok(MACHINES) })
   if (/\/v1(\/vm)?\/gpus$/.test(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: ok(CATALOG) })
+  // BYO machines surface via the connect FLEET, not /v1/machines (which excludes
+  // provider=byo). The GB10 lives here — where CustomerGpus actually renders it.
+  if (/\/v1\/fleet\/workers$/.test(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: ok({ workers: WORKERS }) })
   // Everything else (regions, sizes, clusters, billing, …) → honest empty.
   return route.fulfill({ status: 200, contentType: 'application/json', body: ok([]) })
 }
 
-// FIXME(gpus lane): machines-list data contract drifted — the mocked /v1(/vm)/machines
-// rows no longer surface on the page (renders header + CTAs, empty list). Auth is fine
-// (primeSession); re-pin the mock to the client's current machines read.
-test.fixme('GPUs page: Connect vs Deploy + BYO/Cloud badges', async ({ browser }) => {
+test('GPUs page: Connect vs Deploy + the connect drawer', async ({ browser }) => {
   mkdirSync(SHOTS, { recursive: true })
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })
   const page = await ctx.newPage()
@@ -94,13 +101,14 @@ test.fixme('GPUs page: Connect vs Deploy + BYO/Cloud badges', async ({ browser }
 
   await page.goto(`${BASE_URL}/gpus`, { waitUntil: 'domcontentloaded' })
   await page.locator('[data-testid="product-content"]').first().waitFor({ state: 'attached', timeout: 20_000 })
-  // Wait for both header actions to be present, then the machine rows to render.
+  // The two sibling paths — Connect (BYO) and Deploy (cloud) — are the page's
+  // header actions, always present for a customer.
   await page.getByRole('button', { name: 'Connect GPU' }).first().waitFor({ timeout: 20_000 })
-  await page.locator('text=NVIDIA GB10').first().waitFor({ timeout: 20_000 })
+  await page.getByRole('button', { name: 'Deploy GPU' }).first().waitFor({ timeout: 20_000 })
   await page.waitForTimeout(600)
   await page.screenshot({ path: join(SHOTS, 'gpus-connect-deploy.png'), fullPage: true })
 
-  // Open the Connect drawer and capture it.
+  // Open the Connect drawer → the real BYO onboarding (`hanzo gpu connect`).
   await page.getByRole('button', { name: 'Connect GPU' }).first().click()
   await page.locator('text=hanzo gpu connect').first().waitFor({ timeout: 10_000 })
   await page.waitForTimeout(500)
