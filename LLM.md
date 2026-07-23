@@ -3261,3 +3261,35 @@ console.hanzo.ai/cloud.hanzo.ai on the next `hanzoai/cloud` release embedding
 `console@main` (CONSOLE_REF=main) — a standalone console image bump does NOT reach those
 hosts (the standalone CR is unrouted). Authenticated live re-verify (z logged in →
 switcher populates + Status renders) is the post-deploy gate.
+
+## admin.hanzo.ai Block Storage — realtime DO fleet + datastore fill (v8.4.151)
+
+A GLOBAL-ADMIN board (Observe, beside Bots/Machines + Provider Billing) that answers
+"how full is the analytics datastore, and how much DO block storage do we have" — so we
+can scale DO storage BEFORE it runs out. One read: `StorageFleetApi.snapshot()` →
+`GET /v1/admin/storage` (the same global-admin-gated aggregate as every other admin
+board; `storage` added to `ADMIN_AGGREGATE_HEADS` + `next.config.mjs` `ADMIN_V1_HEADS`,
+so it rides the `app/admin/aggregate` BFF standalone and cloud-native in the go:embed).
+
+- **`StorageFleetModule`** (`components/products/admin/`, registry `block-storage`,
+  `admin:true`) — a fleet KPI band (Volumes count · Provisioned capacity · Used · Monthly
+  $), the analytics DATASTORE highlighted with a green/amber/red fill bar + near-full
+  badge (the one number the operator scales on), near-full alerts, and the full volume
+  list (fullest-first). Re-polls every 30s (realtime-ish). `lib/api/storage-fleet.ts` is
+  the ONE reader (tolerant envelope unwrap + defensive normalizers).
+- **Honest by construction:** DO's API gives capacity + attachment but NOT fill %, so a
+  volume's used/pct render an em-dash "—" (`usedGiB`/`pct` are nullable, filled only where
+  a filesystem source reported), NEVER a fabricated number; the datastore card shows only
+  when `system.disks` actually answered.
+- **Backend (paired, hanzoai/cloud `e0466a63b`):** `GET /v1/admin/storage`
+  (`clients/admin/storage.go`, SuperAdmin `s.guard`) — the DO block-storage inventory
+  (count · total · monthly cost · per-volume region + attachment) from a new paginated
+  `Volumes()` on the existing `DO_API_TOKEN` client, PLUS the datastore's own fill from
+  ClickHouse `system.disks` (the 200Gi PVC) over the SAME shared `aiobject.DatastoreQuery`
+  the analytics/compute lenses use. Each source degrades independently; near-full raises
+  an alert (warn ≥ 80%, critical ≥ 90%). Pure `buildStorageSnapshot`/`alertLevel`/
+  `datastoreFillFromRow` unit-tested (4 Go tests green).
+- Verification: `tsc --noEmit` clean (0 errors); e2e `storage-fleet.spec.ts` renders the
+  datastore (200 GiB), fleet KPIs (295 volumes / $1,309), a 91% near-full alert, and the
+  honest "—" — PASSES against the local fixture (primeSession owner:'admin'). Ships to
+  admin.hanzo.ai via the next `hanzoai/cloud` release embedding `console@main`.
