@@ -112,6 +112,7 @@ import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
 import { StorageFleetModule } from '~/components/products/admin/StorageFleetModule'
+import { GrowthModule } from '~/components/products/admin/GrowthModule'
 import { UsageCapsPromoModule } from '~/components/products/admin/UsageCapsPromoModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
 import { RoutingModule } from '~/components/products/admin/RoutingModule'
@@ -1084,6 +1085,28 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: StorageFleetModule }],
+  },
+  {
+    // admin.hanzo.ai GROWTH cockpit — the SuperAdmin operator view of the Zen-of-Hanzo
+    // Guide engine (cloud clients/guide, /v1/guide/*): the authored blueprint (64 archetype
+    // principles + the launch journey), the strategy corpus (the ~888 modern + 114 heritage
+    // tactics), and the org's OWN live growth read (stage · signals · key metrics · ranked
+    // next-best moves). Every blueprint item carries a live enable/disable lever (PATCH) +
+    // inline edit, and "Publish version" snapshots the whole blueprint (versioned).
+    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/launcher/palette;
+    // the module also gates on useIsSuperAdmin, and the /v1/guide blueprint routes are
+    // SuperAdmin-gated server-side). Reads ride the `guide` head on the /v1 user-bearer BFF
+    // (allow-listed in proxy-allow.ts). This is the "see and modify the guide backend" surface.
+    id: 'growth',
+    label: 'Growth',
+    icon: Target,
+    description: 'Observe and operate the Zen-of-Hanzo Guide engine — the authored blueprint, the ~888-tactic corpus, and the live growth read (stage · signals · next-best moves).',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: GrowthModule }],
   },
   {
     // admin.hanzo.ai AI ECONOMICS board — the STRATEGIC lens beside the Provider Billing
