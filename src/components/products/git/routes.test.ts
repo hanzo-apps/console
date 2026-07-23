@@ -3,38 +3,51 @@ import { describe, expect, it } from 'vitest'
 import { resolveRoute } from '~/lib/products/match-core'
 import type { ProductModule } from '~/lib/products/registry'
 
-// The exact route shape the git entry registers (list + repo browser). `component`
-// is irrelevant to routing (erased) — a stub keeps this test free of the icon-ESM
-// registry runtime, per the repo convention. This pins the contract GitModule reads:
-// `/git` → index (no name), `/git/:name` → the browser with params.name.
-// Cast via `unknown`: routing reads only `id` + `routes`; `icon`/`description`
-// (required by ProductModule but ESM-icon-bound) are intentionally omitted so the
-// test stays free of the registry runtime, per the repo convention.
-const gitModule: ProductModule = {
-  id: 'git',
-  label: 'Git',
+// The exact route shape the unified Code hub registers (hub · tab · repo browser).
+// `component` is irrelevant to routing (erased) — a stub keeps this test free of the
+// icon-ESM registry runtime, per the repo convention. This pins the contract CodeModule
+// reads: `/code` → hub (default tab), `/code/:tab` → the face, `/code/repos/:name` → the
+// browser with params.name (the reused git/ RepoBrowser). The three are unambiguous by
+// exact segment count.
+// Cast via `unknown`: routing reads only `id` + `routes`; `icon`/`description` (required
+// by ProductModule but ESM-icon-bound) are intentionally omitted so the test stays free
+// of the registry runtime.
+const codeModule: ProductModule = {
+  id: 'code',
+  label: 'Code',
   routes: [
     { path: '', component: (() => null) as never },
-    { path: ':name', component: (() => null) as never },
+    { path: ':tab', component: (() => null) as never },
+    { path: 'repos/:name', component: (() => null) as never },
   ],
 } as unknown as ProductModule
 
-describe('git routing contract', () => {
-  it('/git resolves the index route (no name)', () => {
-    const m = resolveRoute([gitModule], ['git'])
+describe('code hub routing contract', () => {
+  it('/code resolves the hub index (no tab, no name)', () => {
+    const m = resolveRoute([codeModule], ['code'])
     expect(m?.route.path).toBe('')
+    expect(m?.params.tab).toBeUndefined()
     expect(m?.params.name).toBeUndefined()
   })
 
-  it('/git/:name resolves the browser with the repo name', () => {
-    const m = resolveRoute([gitModule], ['git', 'my-repo'])
-    expect(m?.route.path).toBe(':name')
+  it('/code/:tab resolves a face (repos | search | ask)', () => {
+    for (const tab of ['repos', 'search', 'ask']) {
+      const m = resolveRoute([codeModule], ['code', tab])
+      expect(m?.route.path).toBe(':tab')
+      expect(m?.params.tab).toBe(tab)
+      expect(m?.params.name).toBeUndefined()
+    }
+  })
+
+  it('/code/repos/:name resolves the repo browser with the repo name', () => {
+    const m = resolveRoute([codeModule], ['code', 'repos', 'my-repo'])
+    expect(m?.route.path).toBe('repos/:name')
     expect(m?.params.name).toBe('my-repo')
   })
 
   it('a repo name is one segment — deeper file paths ride the URL query, not a route', () => {
-    // /git/:name matches exactly 2 segments; anything deeper is NOT a route match
+    // repos/:name matches exactly 3 segments; anything deeper is NOT a route match
     // (the browser holds ref/path/view in ?query, so a nested file never 404s here).
-    expect(resolveRoute([gitModule], ['git', 'my-repo', 'tree'])).toBeNull()
+    expect(resolveRoute([codeModule], ['code', 'repos', 'my-repo', 'tree'])).toBeNull()
   })
 })

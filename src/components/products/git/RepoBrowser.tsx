@@ -6,7 +6,8 @@
  * Code/Commits/Issues/PRs/Actions tab strip, and the tree/blob/commits body. The
  * ref, path, view, and tab are held in the URL query so every location is a
  * shareable deep link; navigation just patches the query. Self-contained by name so
- * it renders identically from a row press or a `/git/:name` deep link.
+ * it renders identically from a Repos-face row press or a `/code/repos/:name` deep link.
+ * The header carries the agentic handoffs (Ask AI · Edit in hanzo.app · Chat).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -27,6 +28,11 @@ import {
 import { breadcrumbSegments, cleanPath } from './logic'
 import { CodeView } from './CodeView'
 import { CommitsView } from './CommitsView'
+import { AgentActions } from '../code/AgentActions'
+import { askRepoPrompt, CODE_BASE } from '../code/hub-logic'
+
+/** The Repositories face of the Code hub — where the back link + repo rows live. */
+const REPOS_BASE = `${CODE_BASE}/repos`
 
 const EM = '—'
 
@@ -65,7 +71,7 @@ export function RepoBrowser({ name }: { name: string }) {
         else sp.set(k, v)
       }
       const qs = sp.toString()
-      router.push(`/git/${encodeURIComponent(name)}${qs ? `?${qs}` : ''}`)
+      router.push(`${REPOS_BASE}/${encodeURIComponent(name)}${qs ? `?${qs}` : ''}`)
     },
     [router, searchParams, name],
   )
@@ -121,7 +127,7 @@ export function RepoBrowser({ name }: { name: string }) {
   if (state.phase === 'error') {
     return (
       <YStack gap="$4">
-        <BackButton onPress={() => router.push('/git')} />
+        <BackButton onPress={() => router.push(REPOS_BASE)} />
         <BackendStateCard state={state.error} onRetry={loadRepo} hint={`endpoint · GET /v1/git/repos/${name}`} />
       </YStack>
     )
@@ -129,7 +135,7 @@ export function RepoBrowser({ name }: { name: string }) {
   if (state.phase === 'missing') {
     return (
       <YStack gap="$4">
-        <BackButton onPress={() => router.push('/git')} />
+        <BackButton onPress={() => router.push(REPOS_BASE)} />
         <Card borderWidth={1} borderColor="$borderColor" p="$5">
           <Text fontSize="$3" color="$color10">
             This repository doesn’t exist or you don’t have access to it.
@@ -143,7 +149,7 @@ export function RepoBrowser({ name }: { name: string }) {
 
   return (
     <YStack gap="$4">
-      <BackButton onPress={() => router.push('/git')} />
+      <BackButton onPress={() => router.push(REPOS_BASE)} />
 
       {/* Header — identity + facts on the left, clone + deploy on the right. */}
       <XStack justify="space-between" items="flex-start" gap="$4" flexWrap="wrap">
@@ -163,6 +169,11 @@ export function RepoBrowser({ name }: { name: string }) {
             <Fact label="Default branch" value={r.defaultBranch || EM} mono />
             <Fact label="Size" value={fmtBytes(r.sizeBytes)} mono />
             {r.project ? <Fact label="Project" value={r.project} /> : null}
+          </XStack>
+          {/* Agentic handoffs — Ask the built-in assistant about the repo, or open it in
+              the hanzo.app builder / hanzo.chat (the shared ?project= key). */}
+          <XStack pt="$1">
+            <AgentActions repo={r.name} seedPrompt={askRepoPrompt(r)} />
           </XStack>
         </YStack>
 
