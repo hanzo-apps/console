@@ -10,9 +10,9 @@
  * On failure we surface the error and offer a retry.
  *
  * This lives in its OWN component (not inline in the `/auth/callback` route) because the
- * deploy serves the SPA shell — the `/` route tree, guarded by `<AuthGate/>` — for EVERY
- * path (see AuthGate's SPA-fallback note). A hard nav to `/auth/callback` therefore mounts
- * AuthGate, not this route's file; AuthGate renders THIS component for `/auth/callback`
+ * deploy serves the SPA shell — the `/` route tree, guarded by `<Auth/>` — for EVERY
+ * path (see Auth's SPA-fallback note). A hard nav to `/auth/callback` therefore mounts
+ * Auth, not this route's file; Auth renders THIS component for `/auth/callback`
  * exactly as it renders `<SignIn/>` for `/signin`, so the exchange runs BEFORE the guard
  * can bounce the still-unauthenticated visitor to `/signin` (which would discard `?code`).
  */

@@ -3,8 +3,8 @@
  *
  * Runs against a LOCAL `next dev` (BASE_URL=http://localhost:4000) with the whole
  * network mocked, so it needs NO real backend and NO password:
- *   - `/auth/session` → a global-admin account (sees every product), so the AuthGate
- *     and OrgGate pass and the full console shell mounts.
+ *   - `/auth/session` → a global-admin account (sees every product), so the Auth
+ *     and Scope pass and the full console shell mounts.
  *   - every data endpoint (`/v1`, `/v1`, `/ai`, `/billing`, `/commerce`,
  *     `/telemetry`, `/vm`, `/superbase`, `/admin`, cross-origin platform) → a chosen
  *     failure mode (AUDIT_MODE): `notrouted` (404, the "backend not wired on this
@@ -102,7 +102,7 @@ test.describe(`blank audit [mode=${MODE} role=${ROLE}]`, () => {
   test.beforeAll(async ({ browser }) => {
     ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
     page = await ctx.newPage()
-    // Seed the active org to the account's own org so OrgGate doesn't hard-pin +
+    // Seed the active org to the account's own org so Scope doesn't hard-pin +
     // reload a customer (currentOrg !== owner) mid-audit, and dismiss the admin
     // banner so the shell is stable. Runs before every navigation (survives reloads).
     await page.addInitScript((org) => {

@@ -1,7 +1,7 @@
 /**
  * e2e: Hanzo Cloud Console — login → API key → AI inference
  *
- * z@hanzo.ai is in the `hanzo` org (isGlobalAdmin), so the OrgGate now shows
+ * z@hanzo.ai is in the `hanzo` org (isGlobalAdmin), so the Scope now shows
  * a dismissible admin banner and renders the full console on console.hanzo.ai.
  * Admin ops still live at admin.hanzo.ai.
  *
@@ -118,7 +118,7 @@ test.describe('Hanzo Cloud Console e2e', () => {
   test('admin banner visible (z is isAdmin on console.hanzo.ai)', async ({ page }) => {
     await signIn(page)
     await waitForDashboard(page)
-    // OrgGate shows the admin banner for admins on the non-admin console host.
+    // Scope shows the admin banner for admins on the non-admin console host.
     // The banner may have been dismissed in a prior run (localStorage). Skip softly.
     const banner = page.locator('text=/Admin ops|admin\\.hanzo\\.ai/i').first()
     const visible = await banner.isVisible({ timeout: 5_000 }).catch(() => false)
