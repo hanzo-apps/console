@@ -184,6 +184,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // Bearer owner), so routing it through /v1 gives correct per-org scoping —
   // the same reason it must NOT be a cookie-only same-origin call (that 403s).
   'evals',
+  // Research evidence plane (cloud clients/research, HIP-0512): /v1/research/
+  // {experiments,totals,projects}. The R&D corpus every product self-logs — falsifiable
+  // experiments (kernel-perf/benchmark/training/ablation/policy-eval) with proofs +
+  // refutations. The handler resolves the org from the Bearer owner (principal.Org) and
+  // 403s a cookie-only call, so it routes through /v1 exactly like evals — one `research`
+  // head admits every sub-path (the ledger list, the headline totals, the projects roll-up).
+  'research',
   // Read-only starter-kit gallery (cloud clients/templates): /v1/templates[/:slug].
   // Public reference content (no org scoping) but routed through /v1 like the
   // rest of the surface so dev + prod share ONE path.
