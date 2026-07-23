@@ -90,7 +90,7 @@ const pick = (o: Record<string, unknown>, ...keys: string[]): unknown => {
 const VERDICTS: readonly string[] = ['proven', 'refuted', 'inconclusive']
 /** Clamp a free-form verdict to the closed set; anything else is honestly unconcluded. */
 const verdict = (v: unknown): Verdict => {
-  const s = str(v).toLowerCase()
+  const s = str(v).trim().toLowerCase()
   return (VERDICTS.includes(s) ? s : '') as Verdict
 }
 

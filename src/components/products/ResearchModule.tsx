@@ -26,22 +26,13 @@ import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { fmtValue, fmtDate, rowKeyOf } from './research-fmt'
 
 type State = { loading: boolean; error: unknown; totals: Totals | null; experiments: Experiment[] }
 
 // ── formatters (compact + honest; a non-finite value is an em-dash, never faked) ──
 const fmtCount = (n: number): string => (Number.isFinite(n) ? n.toLocaleString() : '—')
 const fmtUsd = (n: number): string => (!Number.isFinite(n) ? '—' : n >= 100 ? `$${Math.round(n).toLocaleString()}` : `$${n.toFixed(2)}`)
-/** A headline value at compact precision — integers stay integer, ratios/rates keep ~3
- *  significant places (so `1.022` never rounds to `1.02`), with trailing zeros trimmed. */
-const fmtValue = (v: number): string => {
-  if (!Number.isFinite(v)) return '—'
-  if (Number.isInteger(v)) return v.toLocaleString()
-  const abs = Math.abs(v)
-  const digits = abs >= 100 ? 0 : abs >= 10 ? 1 : 3
-  return v.toFixed(digits).replace(/\.?0+$/, '')
-}
-const fmtDate = (ts: number): string => (ts > 0 ? new Date(ts * 1000).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) : '')
 
 // ── verdict pill — the console's tinted-chip grammar, verdict-aware tones ──
 // A refutation is DELIBERATELY not error-red: indigo reads as ruled-out knowledge, the
@@ -196,9 +187,9 @@ export function ResearchModule() {
               columns={COLS}
               rows={shown}
               loading={st.loading}
-              rowKey={(e) => e.id}
-              onRowPress={(e) => setOpenId((id) => (id === e.id ? null : e.id))}
-              isRowExpanded={(e) => e.id === openId}
+              rowKey={rowKeyOf}
+              onRowPress={(e) => setOpenId((id) => (id === rowKeyOf(e) ? null : rowKeyOf(e)))}
+              isRowExpanded={(e) => rowKeyOf(e) === openId}
               renderExpanded={(e) => <Detail e={e} />}
               empty={kind ? `No ${kind} experiments yet.` : 'No experiments recorded yet.'}
             />
