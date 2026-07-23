@@ -41,7 +41,7 @@ export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars' | '7stars' | 'yotoda'
  * identity (which IAM you log into, the wordmark) is resolved separately by
  * `brandFromHost`, so a face NEVER crosses brands (sentry.lux.cloud is the lux brand).
  */
-export type ShellId = 'console' | 'billing' | 'marketing' | 'ads' | 'social' | 'sentry' | 'dns' | 'platform'
+export type ShellId = 'console' | 'billing' | 'marketing' | 'ads' | 'social' | 'sentry' | 'dns' | 'platform' | 'tracker'
 
 export type ConsoleConfig = {
   /** Resolved brand id (from hostname). */
@@ -406,17 +406,31 @@ export function isPlatformHost(host?: string | null): boolean {
 }
 
 /**
+ * True on the dedicated Tracker host (tracker.<brand>, e.g. tracker.hanzo.ai) — the
+ * SAME console image wearing the standalone Linear-grade issue-tracker face (the
+ * TrackerModule: unified issues board across every team + every mirrored GitHub repo,
+ * teams, cycles, roadmap, agent-actionable work). Strict `tracker.` prefix — no false
+ * positives. tracker.hanzo.ai boots straight into the tracker with the catalog chrome
+ * stripped, while console.hanzo.ai keeps Tracker as one product among many — one shared
+ * surface (cloud `/v1/tracker`), two entry points.
+ */
+export function isTrackerHost(host?: string | null): boolean {
+  return normHost(host).startsWith('tracker.')
+}
+
+/**
  * The product shell a host wears, resolved at runtime — the ONE resolver for EVERY
  * console FACE. `NEXT_PUBLIC_PRODUCT_SHELL` overrides for dev/preview (any host → a
  * chosen face); otherwise each dedicated host (or its legacy `NEXT_PUBLIC_*_ONLY=1`
- * env) selects its face — billing / marketing / ads / social / sentry / dns / platform —
+ * env) selects its face — billing / marketing / ads / social / sentry / dns / platform /
+ * tracker —
  * and everything else is the full `console`. Brand is resolved separately
  * (`brandFromHost`), so the shell is orthogonal — a face NEVER crosses a brand
  * (sentry.lux.cloud is the lux brand).
  */
 export function shellFromHost(host?: string | null): ShellId {
   const env = process.env.NEXT_PUBLIC_PRODUCT_SHELL
-  if (env === 'billing' || env === 'marketing' || env === 'ads' || env === 'social' || env === 'sentry' || env === 'dns' || env === 'platform' || env === 'console') return env
+  if (env === 'billing' || env === 'marketing' || env === 'ads' || env === 'social' || env === 'sentry' || env === 'dns' || env === 'platform' || env === 'tracker' || env === 'console') return env
   if (isBillingOnly(host)) return 'billing'
   if (isMarketing(host)) return 'marketing'
   if (isAds(host)) return 'ads'
@@ -424,6 +438,7 @@ export function shellFromHost(host?: string | null): ShellId {
   if (isSentryHost(host)) return 'sentry'
   if (isDnsHost(host)) return 'dns'
   if (isPlatformHost(host)) return 'platform'
+  if (isTrackerHost(host)) return 'tracker'
   return 'console'
 }
 

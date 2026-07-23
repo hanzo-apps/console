@@ -2136,19 +2136,35 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: ProjectsModule }],
   },
   {
-    // Native @hanzo/gui issue tracker over the real cloud `/v1/tracker` surface —
-    // projects + issues, rows GROUPED BY STATUS (grouped List + Board). Replaces
-    // the old Huly/Svelte hanzo.team tracker, which could not render grouped rows.
+    // Native, Linear-grade @hanzo/gui issue tracker over the real cloud `/v1/tracker`
+    // surface (cloud clients/tracker — native Go, per-(org,team) SQLite). The durable
+    // replacement for the retired Huly/Svelte hanzo.team tracker: a unified board across
+    // every team AND every mirrored GitHub repo (the App-webhook seam), a grouped List +
+    // Board + Cycles + Roadmap, a keyboard-first command palette, and agent-actionable
+    // work (assign → the coding seam opens a linked PR). tracker.hanzo.ai wears this as a
+    // standalone shell (see lib/products/shell.ts); here it is one product among many.
+    // The `:view` route serves My Issues / Teams / Cycles / Roadmap; `:view/:sub` a team
+    // board (teams/ENG). Issue detail is a pane, not a route.
     id: 'tracker',
     label: 'Tracker',
     icon: ClipboardList,
-    description: 'Track work as issues grouped by status — projects, a grouped List, and a Board.',
+    description: 'Every issue across every team and GitHub repo — one board, keyboard-first, agent-actionable.',
     gcp: 'Cloud Issue Tracker',
     category: 'Platform',
     status: 'enabled',
-    repo: 'hanzoai/tracker',
+    repo: 'hanzoai/cloud',
     kind: 'module',
-    routes: [{ path: '', component: TrackerModule }],
+    routes: [
+      { path: '', component: TrackerModule },
+      { path: ':view', component: TrackerModule },
+      { path: ':view/:sub', component: TrackerModule },
+    ],
+    subpages: [
+      { slug: 'my', label: 'My Issues' },
+      { slug: 'teams', label: 'Teams' },
+      { slug: 'cycles', label: 'Cycles' },
+      { slug: 'roadmap', label: 'Roadmap' },
+    ],
   },
   {
     // White-label TENANTS board — the operator surface for launching, branding,
