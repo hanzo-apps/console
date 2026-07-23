@@ -1,8 +1,3 @@
-/* Canonical Hanzo faces — Geist Sans (UI/body/headings) + Geist Mono (code/data),
-   loaded from the same CDN package so both faces resolve one way. Geist ships a full
-   real weight range, so headings render a true heavier cut, never a synthesized face. */
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css');
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css');
 
 html,
 body,
