@@ -9,7 +9,7 @@
  *   - credit (CPU) → a GREEN strip with a wallet icon ("Launches on your Hanzo
  *     credit · $X available · charged to credits · no card required").
  *   - card (GPU)   → a YELLOW strip with a card icon ("Prepay only · charged to your
- *     card · 24-hour minimum").
+ *     card · first hour upfront").
  * When the funding source is empty it surfaces the right add-funds CTA (add credits /
  * add a card). Nothing is fabricated — the credit figure is the real balance when
  * known, and the copy matches what the server enforces on launch.
