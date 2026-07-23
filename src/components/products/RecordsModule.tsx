@@ -33,7 +33,10 @@ import { baseCollectionToFields, type BaseCollection } from '~/lib/base-data/fie
 /** Product base path — must match the registry entry id (`records`). */
 const RECORDS_PATH = '/records'
 /** Same-origin Base proxy prefix (the proxy injects the user bearer server-side). */
-const BASE_PROXY = '/v1/superbase'
+// The org's Base is served natively, same-origin, by the ONE cloud binary's
+// embedded engine at /v1/base (per-org, org resolved from the validated IAM
+// principal — CLOUD_BASE_EMBED). No /superbase proxy, no orchestrator hop.
+const BASE_PROXY = '/v1/base'
 
 export function RecordsModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
