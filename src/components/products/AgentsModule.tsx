@@ -21,6 +21,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import { useAnalytics } from '@hanzo/event/react'
+import { EVENTS } from '@hanzo/event'
 import {
   Activity,
   Bot,
@@ -225,6 +227,8 @@ export function AgentsModule(props: { params: Record<string, string> }) {
     [detail, agentColor, live, setAgents],
   )
 
+  const analytics = useAnalytics()
+
   const openNew = useCallback(
     () =>
       detail.open({
@@ -236,13 +240,14 @@ export function AgentsModule(props: { params: Record<string, string> }) {
           <NewAgentForm
             onCancel={detail.close}
             onCreated={() => {
+              analytics.capture(EVENTS.AGENT_CREATED)
               detail.close()
               void reload()
             }}
           />
         ),
       }),
-    [detail, agentColor, reload],
+    [detail, agentColor, reload, analytics],
   )
 
   const header = (

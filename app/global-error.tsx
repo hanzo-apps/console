@@ -22,6 +22,7 @@
  */
 import { useEffect } from 'react'
 
+import { reportError } from '~/lib/event'
 import { isChunkLoadError, shouldReloadForChunk, CHUNK_RELOAD_AT_KEY } from '~/components/errors/boundary-logic'
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -29,7 +30,14 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   useEffect(() => {
     console.error('[console] global error:', error)
-    if (!chunk || typeof window === 'undefined') return
+    // The root layout (and its AnalyticsProvider) is torn down here, so this boundary
+    // reports through the module-singleton `eventClient` — the reason it is shared. A
+    // chunk skew self-heals below and is not reported; only a genuine crash is.
+    if (!chunk) {
+      reportError(error, { digest: error.digest, boundary: 'global' })
+      return
+    }
+    if (typeof window === 'undefined') return
     try {
       const raw = window.sessionStorage.getItem(CHUNK_RELOAD_AT_KEY)
       const last = raw ? Number(raw) : null
