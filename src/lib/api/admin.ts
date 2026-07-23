@@ -12,7 +12,8 @@
  * uses `TeamApi` (the `/org/iam` proxy) instead. Both share the ONE envelope
  * client (`makeIamClient`), differing only in the gated base path.
  */
-import { ApiError } from './client'
+import { ApiError, iamList as cloudIamList, iamOne as cloudIamOne, iamMutate as cloudIamMutate } from './client'
+import { IS_EMBED } from '~/lib/embed'
 import { listQuery, type ListParams } from './types'
 import { makeIamClient, DEFAULT_PAGE_SIZE, qs, type Query, type Paged } from './iam-envelope'
 
@@ -123,7 +124,30 @@ export type AuditRecord = {
 
 // ── IAM admin (global; IAM envelope over /admin/iam/*) ────────────────────────
 
-const admin = makeIamClient('/admin/iam')
+/**
+ * The IAM-admin transport, split by DEPLOYMENT topology (one gate, two transports):
+ *  - STANDALONE console (console2/admin.hanzo.ai): the cross-tenant `/admin/iam/*`
+ *    server proxy — global-admin gated, cookie-authenticated, mints the IAM bearer
+ *    server-side. The generic `/v1` bearer proxy deliberately EXCLUDES `iam/*`
+ *    (proxy-allow.ts:7), so IAM keeps its own gated proxy here — unchanged.
+ *  - go:embed console (IS_EMBED, console.hanzo.ai / cloud.hanzo.ai): the static export
+ *    has NO server routes — `/admin/iam/*` is pruned and cloud's catch-all serves the
+ *    SPA index (HTTP 200 HTML) for any non-`/v1/` path, so the cookie-only `/admin/iam`
+ *    client parsed the SPA and threw — the missing-org-switcher bug (OrgSwitcher/
+ *    OrgPicker swallow the error → empty list). Cloud serves the SAME IAM reads/writes
+ *    natively at `/v1/iam/<segment>` (bearer-scoped, org from the validated principal),
+ *    so in the embed we use the cloud-native IAM client (client.ts iamList/iamOne/
+ *    iamMutate). Scoping is unchanged: the OrgSwitcher still only lists cross-tenant
+ *    for a super admin, and cloud/IAM enforces the per-principal org scope.
+ */
+type IamClient = {
+  iamList: <T>(segment: string, query: Query) => Promise<Paged<T>>
+  iamOne: <T>(segment: string, query: Query) => Promise<T>
+  iamMutate: (segment: string, body: unknown, query?: Query) => Promise<void>
+}
+const admin: IamClient = IS_EMBED
+  ? { iamList: cloudIamList, iamOne: cloudIamOne, iamMutate: cloudIamMutate }
+  : makeIamClient('/admin/iam')
 
 export const IamAdminApi = {
   /** Organizations are owned by the built-in `admin`; IAM scopes to the caller. */
