@@ -16,7 +16,7 @@
  * exactly as it renders `<SignIn/>` for `/signin`, so the exchange runs BEFORE the guard
  * can bounce the still-unauthenticated visitor to `/signin` (which would discard `?code`).
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useIam } from '@hanzo/iam/react'
 import { Button, Text, YStack } from '@hanzo/gui'
@@ -28,8 +28,17 @@ export function AuthCallback() {
   const router = useRouter()
   const { handleCallback } = useIam()
   const [error, setError] = useState<string | null>(null)
+  // The OAuth `code` is SINGLE-USE and the SDK removes the PKCE verifier BEFORE the
+  // token fetch, so the exchange must fire EXACTLY ONCE. Without this guard, React
+  // StrictMode's double-invoke (or any `handleCallback` identity change re-running the
+  // effect) triggers a second exchange that finds the code consumed / verifier gone and
+  // throws — surfacing "Sign-in failed." even though the first exchange succeeded. The
+  // ref persists across the double-invoke, so the exchange runs once per page load.
+  const exchanged = useRef(false)
 
   useEffect(() => {
+    if (exchanged.current) return
+    exchanged.current = true
     let cancelled = false
     handleCallback()
       .then(() => {
