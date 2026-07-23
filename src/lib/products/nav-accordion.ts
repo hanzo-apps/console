@@ -2,7 +2,7 @@
  * Sidebar category accordion — the pure open/collapse model for the level-1
  * product nav. Each CATEGORY is an INDEPENDENTLY collapsible section; this module
  * holds the tiny decision logic (what renders open, how a toggle mutates it) with
- * NO React, so it is unit-testable in isolation and the shell (`DashboardShell`)
+ * NO React, so it is unit-testable in isolation and the shell (`Dashboard`)
  * stays a thin binding over it.
  *
  * EXPAND-BY-DEFAULT: every category renders EXPANDED by default — nothing

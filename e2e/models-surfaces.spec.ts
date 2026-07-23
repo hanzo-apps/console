@@ -100,7 +100,7 @@ async function open(page: Page, path: string, marker: string) {
   await page.addInitScript((org) => {
     try {
       localStorage.setItem('hanzo.console.org', org)
-      // OrgGate shows the org PICKER until an org has been explicitly entered — the
+      // Scope shows the org PICKER until an org has been explicitly entered — the
       // scope VALUE alone is not enough (see lib/org-scope.ts hasSelectedOrg).
       localStorage.setItem('hanzo.console.org.selected', '1')
       localStorage.setItem('hz_admin_banner_dismissed', '1')

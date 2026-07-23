@@ -5,7 +5,7 @@
  * signed-in user is a SUPER admin (platform / Hanzo-managed, cross-tenant).
  *
  * This mirrors the authoritative server gate (`lib/server/admin-policy.gateAllows`)
- * and the `OrgGate` host redirect: membership in the reserved `admin` org IS super
+ * and the `Scope` host redirect: membership in the reserved `admin` org IS super
  * admin (its whole purpose is the seeded superuser), or an explicit super-admin
  * claim on the account. A tenant org owner — a customer like `maxpower`, even one
  * who is `isAdmin` of their OWN org — is NEVER a super admin.
