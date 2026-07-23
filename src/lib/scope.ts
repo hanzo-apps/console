@@ -12,7 +12,7 @@
  *
  * Held in module state (not React state) so the non-React `request()` in
  * lib/api/client.ts can read it synchronously when stamping headers. The
- * ScopeProvider keeps this module state in sync with the user's selection and
+ * Scope keeps this module state in sync with the user's selection and
  * localStorage.
  *
  * - **project** is user-selected; `undefined` means org-level (no project scope).

@@ -10,7 +10,7 @@
  * THE FIX (this module). On login the console ALSO obtains its OWN OAuth token set
  * for the signed-in user — a first-party confidential-client (`hanzo-console`) grant
  * WITH `offline_access`, so IAM returns an access token AND a rotating, revocable
- * refresh token. This is the PREFERRED identity source for the AuthGate (via
+ * refresh token. This is the PREFERRED identity source for the Auth (via
  * /auth/session) and the /v1 bearer-proxy (via resolveUser), silently refreshed
  * (proactively before expiry + reactively on a 401) via `grant_type=refresh_token`.
  * The casibase cookie stays exactly as-is underneath as the graceful FALLBACK.

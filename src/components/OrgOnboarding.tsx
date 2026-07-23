@@ -3,7 +3,7 @@
 /**
  * Org onboarding — the first-run screen for a user who isn't in an organization.
  *
- * Shown by {@link OrgGate} when the session has no org. Two predictable paths:
+ * Shown by {@link Scope} when the session has no org. Two predictable paths:
  *   - "Create your organization": type a name; we show the exact slug it becomes,
  *     then create the org and make you its admin.
  *   - "Skip — use a personal organization": one click creates a `<username>` org

@@ -135,7 +135,7 @@ async function openPolicy(page: Page, marker = 'Enabled models') {
       sessionStorage.setItem('hanzo_iam_expires_at', String(Date.now() + 3600000))
 
       localStorage.setItem('hanzo.console.org', org)
-      // OrgGate shows the org PICKER until an org is explicitly entered — the scope
+      // Scope shows the org PICKER until an org is explicitly entered — the scope
       // VALUE alone is not enough (lib/org-scope.ts hasSelectedOrg).
       localStorage.setItem('hanzo.console.org.selected', '1')
       localStorage.setItem('hz_admin_banner_dismissed', '1')

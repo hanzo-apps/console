@@ -27,7 +27,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
 // A SuperAdmin via the isGlobalAdmin/isSuperAdmin CLAIM (what the admin:true module
-// gates on — `useIsSuperAdmin`). owner is a normal org so the OrgGate resolves the
+// gates on — `useIsSuperAdmin`). owner is a normal org so the Scope resolves the
 // current org locally instead of demanding a pick from the (mocked-empty) org list;
 // the real reserved-`admin`-org SuperAdmin is exercised by the LIVE (B) test.
 const ACCOUNT = {
@@ -91,7 +91,7 @@ async function openBoard(page: Page) {
   await page.addInitScript((org) => {
     try {
       localStorage.setItem('hanzo.console.org', org)
-      localStorage.setItem('hanzo.console.org.selected', '1') // ENTERED flag — OrgGate → scoped console
+      localStorage.setItem('hanzo.console.org.selected', '1') // ENTERED flag — Scope → scoped console
       localStorage.setItem('hz_onboarding_done:' + org, '1') // skip the first-run wizard (auto-skipped on admin.* + embed)
       localStorage.setItem('hz_admin_banner_dismissed', '1')
     } catch {

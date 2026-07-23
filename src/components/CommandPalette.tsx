@@ -114,7 +114,7 @@ const Ctx = createContext<PaletteApi | null>(null)
 
 export function useCommandPalette(): PaletteApi {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useCommandPalette must be used within <CommandPaletteProvider>')
+  if (!ctx) throw new Error('useCommandPalette must be used within <Palette>')
   return ctx
 }
 
@@ -643,7 +643,7 @@ function Legend({ keys, label }: { keys: string; label: string }) {
   )
 }
 
-export function CommandPaletteProvider({ children }: { children: ReactNode }) {
+export function Palette({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [seed, setSeed] = useState('')
 

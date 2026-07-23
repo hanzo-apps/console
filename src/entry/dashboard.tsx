@@ -1021,7 +1021,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   )
 }
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+export function Dashboard({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? ''
   const router = useRouter()
   const { signOut } = useSession()

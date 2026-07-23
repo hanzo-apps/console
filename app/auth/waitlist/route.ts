@@ -1,7 +1,7 @@
 /**
  * GET /auth/waitlist — the signed-in user's WAITLIST ACCESS + position (BFF).
  *
- * THE shared product-access check. The console shell (WaitlistGate) reads this to
+ * THE shared product-access check. The console shell (Waitlist) reads this to
  * decide whether to render the product or the waitlist status page; hanzo.chat and
  * hanzo.app gate on the SAME underlying `/v1/waitlist/status` for the same user, so
  * a user's access + position are identical across every surface.

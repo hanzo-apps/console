@@ -6,7 +6,7 @@
  * dashboard layout is free.
  *
  * Deferral to onboarding (they must never overlap): the first-run wizard
- * (`OnboardingGate`) takes over the whole surface until it is complete or dismissed on
+ * (`Onboard`) takes over the whole surface until it is complete or dismissed on
  * this browser (`~/lib/onboarding/guard`). So the tour auto-opens only once that guard
  * says onboarding is done/dismissed — a brand-new user finishes onboarding first, then
  * sees the tour on their next visit to the home. Per-account + versioned via the tour
