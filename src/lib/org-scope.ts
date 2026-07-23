@@ -16,7 +16,7 @@
  *
  * Two-level model — the org VALUE (which org) and the SELECTION (has one been
  * chosen yet) are orthogonal. Every login lands org-LESS on the picker: the
- * selection flag is false, so `OrgGate` shows the org list even for a one-org
+ * selection flag is false, so `Scope` shows the org list even for a one-org
  * user (they click in). Entering an org (`enterOrg`) sets the value AND the flag
  * and drops into the scoped console; the sidebar "Home" affordance (`leaveOrg`)
  * clears the flag to de-scope back to the picker. `currentOrg()` stays the pure
@@ -70,7 +70,7 @@ export function isScopedAway(): boolean {
 
 /**
  * True once the user has EXPLICITLY entered an org (picker → scoped console).
- * False on a fresh login — so `OrgGate` shows the org picker instead of
+ * False on a fresh login — so `Scope` shows the org picker instead of
  * auto-scoping, even for a one-org user. Orthogonal to the org VALUE.
  */
 export function hasSelectedOrg(): boolean {
@@ -97,7 +97,7 @@ export function enterOrg(org: string): void {
 
 /**
  * Leave the current org (the sidebar "Home"/back affordance): clear the selection
- * so `OrgGate` returns to the picker, and reset the scope to the brand default so
+ * so `Scope` returns to the picker, and reset the scope to the brand default so
  * no stale `X-Org-Id` lingers. Re-enter picks a fresh org.
  */
 export function leaveOrg(): void {

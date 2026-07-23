@@ -6,7 +6,7 @@
  * holds the queue and renders the viewport (portalled top-right); there is no
  * per-call markup. Built from GUI primitives only.
  *
- * Mount `<ToastProvider>` once (the dashboard layout does). Call:
+ * Mount `<Toast>` once (the console entry does). Call:
  *   const toast = useToast()
  *   toast.success('Created my-db')
  *   toast.error(err instanceof ApiError ? err.message : 'Failed to create')
@@ -26,7 +26,7 @@ export type ToastInput = {
   durationMs?: number
 }
 
-type Toast = Required<Omit<ToastInput, 'description'>> & { id: number; description?: string }
+type ToastItem = Required<Omit<ToastInput, 'description'>> & { id: number; description?: string }
 
 type ToastApi = {
   toast: (t: ToastInput) => void
@@ -51,7 +51,7 @@ const ICON: Record<ToastKind, typeof Info> = {
   info: Info,
 }
 
-function ToastCard({ t, onClose }: { t: Toast; onClose: () => void }) {
+function ToastCard({ t, onClose }: { t: ToastItem; onClose: () => void }) {
   const Icon = ICON[t.kind]
   const accent = ACCENT[t.kind]
   return (
@@ -89,7 +89,7 @@ function ToastCard({ t, onClose }: { t: Toast; onClose: () => void }) {
 }
 
 /** Portalled, fixed top-right stack. Rendered only after mount (SSR-safe). */
-function ToastViewport({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number) => void }) {
+function ToastViewport({ toasts, dismiss }: { toasts: ToastItem[]; dismiss: (id: number) => void }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   if (!mounted || typeof document === 'undefined') return null
@@ -107,8 +107,8 @@ function ToastViewport({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: num
   )
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([])
+export function Toast({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<ToastItem[]>([])
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
   const seq = useRef(0)
 
@@ -161,6 +161,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export function useToast(): ToastApi {
   const ctx = useContext(ToastContext)
-  if (!ctx) throw new Error('useToast must be used within <ToastProvider>')
+  if (!ctx) throw new Error('useToast must be used within <Toast>')
   return ctx
 }

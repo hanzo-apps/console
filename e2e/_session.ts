@@ -13,7 +13,7 @@
  *
  * Also seeds the first-run gates that otherwise block interaction: the guided
  * TOUR overlays the whole page at z=100000 (clicks hang on actionability), the
- * onboarding wizard is a takeover, and OrgGate parks on the picker.
+ * onboarding wizard is a takeover, and Scope parks on the picker.
  *
  * Usage (after the spec registers its own catch-all page.route):
  *   await primeSession(page)                       // hanzo/z admin (default)

@@ -28,7 +28,7 @@ requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
 // A SuperAdmin via the isGlobalAdmin/isSuperAdmin CLAIM (what the `admin: true` module
-// gates on). owner is a normal org so OrgGate resolves locally instead of demanding a
+// gates on). owner is a normal org so Scope resolves locally instead of demanding a
 // pick from the (mocked-empty) org list.
 // owner === the reserved `admin` org IS the SuperAdmin signal the client gate reads
 // (`isSuperAdminOwner` / IAM `User.IsSuperAdmin` — the isGlobalAdmin/isSuperAdmin claim
@@ -122,7 +122,7 @@ async function openBoard(page: Page) {
   await page.addInitScript((org) => {
     try {
       localStorage.setItem('hanzo.console.org', org)
-      localStorage.setItem('hanzo.console.org.selected', '1') // ENTERED flag — OrgGate → scoped console
+      localStorage.setItem('hanzo.console.org.selected', '1') // ENTERED flag — Scope → scoped console
       localStorage.setItem('hz_onboarding_done:' + org, '1') // skip the first-run wizard
       localStorage.setItem('hz_admin_banner_dismissed', '1')
     } catch {

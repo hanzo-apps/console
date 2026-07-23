@@ -11,9 +11,9 @@
  * host `config`/`iamConfig` already target the reserved `admin-console` app in the
  * `admin` org, so the SAME one button authenticates the operator into the cockpit.
  *
- * Rendered by BOTH the `/signin` route (`app/signin/page.tsx`) AND `AuthGate`: the
+ * Rendered by BOTH the `/signin` route (`app/signin/page.tsx`) AND `Auth`: the
  * deploy serves the SPA shell for every path, so a direct load of `/signin` mounts the
- * dashboard tree (AuthGate), not the `/signin` route — AuthGate defers to this
+ * dashboard tree (Auth), not the `/signin` route — Auth defers to this
  * component so `/signin` resolves without depending on a navigation.
  */
 import { useEffect } from 'react'

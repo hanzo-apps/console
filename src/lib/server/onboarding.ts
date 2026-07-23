@@ -9,7 +9,7 @@
  *   - RESERVED: refuse the names that must never become a customer org — the
  *     brand/staff orgs (hanzo/lux/zoo/pars) and IAM's system owners
  *     (admin/built-in/app). Creating one of these would either collide with the
- *     staff tenant (the OrgGate block) or a system principal.
+ *     staff tenant (the Scope block) or a system principal.
  */
 
 /** Brand/staff orgs + IAM system owners — never a customer org. */
@@ -18,7 +18,7 @@ export const RESERVED_ORGS: ReadonlySet<string> = new Set([
   'admin',
   'built-in',
   'app',
-  // brand/staff orgs (the OrgGate sends these to the admin host)
+  // brand/staff orgs (the Scope sends these to the admin host)
   'hanzo',
   'lux',
   'zoo',
