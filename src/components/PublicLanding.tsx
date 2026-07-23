@@ -46,7 +46,7 @@ export function PublicLanding() {
       {/* Hero */}
       <YStack items="center" gap="$4" px="$4" py="$10" $md={{ py: '$12' }}>
         <YStack items="center" gap="$3" maxW={760}>
-          <Text fontSize="$11" $md={{ fontSize: '$13' }} fontWeight="800" color="$color12" style={{ textAlign: 'center', lineHeight: 1.1 }}>
+          <Text fontSize="$11" $md={{ fontSize: '$13' }} fontWeight="800" color="$color12" style={{ textAlign: 'center' }}>
             The AI cloud, one platform
           </Text>
           <Text fontSize="$5" color="$color10" style={{ textAlign: 'center' }}>
