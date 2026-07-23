@@ -19,6 +19,8 @@ import { StoreApi } from './stores'
 import { EmbeddingsApi } from './embeddings'
 import { FunctionsApi } from './functions'
 import { PaasApi } from './paas'
+import { CompanyApi } from './company'
+import { CapTableApi } from './captable'
 
 const ORIGIN = 'https://console.hanzo.ai'
 
@@ -115,6 +117,21 @@ describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /clo
     stub({ machines: [] })
     await VisorApi.machines()
     expect(lastUrl).toBe(`${ORIGIN}/v1/machines`)
+  })
+  it('CompanyApi.get -> /v1/company (formation state machine)', async () => {
+    stub({ formation: { org: 'acme', stage: 'structure' }, nextStages: [] })
+    await CompanyApi.get()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/company`)
+  })
+  it('CapTableApi.summary -> /v1/captable/summary (computed cap table)', async () => {
+    stub({ company: { id: 'acme', name: 'Acme' }, totals: {}, byStakeholder: [], byShareClass: [] })
+    await CapTableApi.summary()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/captable/summary`)
+  })
+  it('CapTableApi.stakeholders.list -> /v1/captable/stakeholders', async () => {
+    stub([])
+    await CapTableApi.stakeholders.list()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/captable/stakeholders`)
   })
   it('none of the cloud heads emits a /<svc>/v1/ prefix', async () => {
     const bad = /\/(cloud|vm|ai|billing|org|commerce)\/v1\//
