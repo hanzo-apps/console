@@ -40,6 +40,15 @@ type FloatingChatApi = {
   /** True when the assistant is docked as a permanent right column (persisted). */
   docked: boolean
   setDocked: (v: boolean) => void
+  /**
+   * Open the assistant with a PRE-FILLED prompt (e.g. "Ask AI about this code" from the
+   * Code hub). The composer is seeded and focused; the user reviews and sends (never an
+   * auto-send — no surprise billing), matching the suggested-prompt UX. Opens the floating
+   * sheet when floating; when docked, the permanent column receives the seed.
+   */
+  ask: (prompt: string) => void
+  /** The current pending seed for the composer (consumed once by the active conversation). */
+  seed: string | null
 }
 
 const Ctx = createContext<FloatingChatApi | null>(null)
@@ -97,6 +106,7 @@ function ChatSheet({
   onHistory,
   onDock,
   docked,
+  seed,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
@@ -105,6 +115,8 @@ function ChatSheet({
   /** When docked (desktop), the permanent column is the surface — so the floating
    *  sheet is suppressed at lg+ (it still serves phones, which have no column). */
   docked: boolean
+  /** Pre-fill seed for the composer (from `useFloatingChat().ask`). */
+  seed?: string | null
 }) {
   // Size is CSS-driven (media props), not a JS branch: base = mobile full-bleed
   // sheet; `$lg` = a compact popover pinned bottom-right. The scrim dims the page
@@ -171,7 +183,7 @@ function ChatSheet({
 
             {/* The ONE working conversation, given a flex container to fill. */}
             <YStack flex={1} minH={0} p="$3">
-              <ChatConversation compact onShowHistory={onHistory} />
+              <ChatConversation compact seed={seed ?? undefined} onShowHistory={onHistory} />
             </YStack>
           </YStack>
         </Dialog.Content>
@@ -187,13 +199,13 @@ function ChatSheet({
  */
 export function DockedChatPanel() {
   const router = useRouter()
-  const { setDocked } = useFloatingChat()
+  const { setDocked, seed } = useFloatingChat()
   const onHistory = useCallback(() => router.push('/chat'), [router])
   return (
     <YStack flex={1} minH={0} bg="$color1">
       <AssistantHeader docked onDockToggle={() => setDocked(false)} />
       <YStack flex={1} minH={0} p="$3">
-        <ChatConversation compact onShowHistory={onHistory} />
+        <ChatConversation compact seed={seed ?? undefined} onShowHistory={onHistory} />
       </YStack>
     </YStack>
   )
@@ -219,6 +231,18 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
   const close = useCallback(() => setIsOpen(false), [])
   const toggle = useCallback(() => setIsOpen((v) => !v), [])
 
+  // Seed the composer from anywhere (e.g. the Code hub's "Ask AI about this code").
+  // Open the floating sheet when floating; when docked, the permanent column is already
+  // on screen and receives the seed, so opening the (hidden) sheet is skipped.
+  const [seed, setSeed] = useState<string | null>(null)
+  const ask = useCallback(
+    (prompt: string) => {
+      setSeed(prompt)
+      if (!docked) setIsOpen(true)
+    },
+    [docked],
+  )
+
   const onHistory = useCallback(() => {
     setIsOpen(false)
     router.push('/chat')
@@ -231,7 +255,7 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
   }, [setDocked])
 
   return (
-    <Ctx.Provider value={{ isOpen, open, close, toggle, docked, setDocked }}>
+    <Ctx.Provider value={{ isOpen, open, close, toggle, docked, setDocked, ask, seed }}>
       {children}
 
       {/* The bubble — fixed bottom-right over every page. Hidden while open (the
@@ -259,7 +283,7 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
 
       {/* The floating sheet. On desktop it's hidden while docked (the column is the
           surface); on phones it's the assistant even when docked. */}
-      <ChatSheet open={isOpen} onOpenChange={setIsOpen} onHistory={onHistory} onDock={dock} docked={docked} />
+      <ChatSheet open={isOpen} onOpenChange={setIsOpen} onHistory={onHistory} onDock={dock} docked={docked} seed={seed} />
     </Ctx.Provider>
   )
 }
