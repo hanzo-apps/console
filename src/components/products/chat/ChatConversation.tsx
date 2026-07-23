@@ -158,11 +158,13 @@ function PromptChip({ label, onPress }: { label: string; onPress: () => void }) 
 
 // Seeded to the assistant's real domain — each is answerable from the grounded
 // Hanzo knowledge (the product catalog + docs), so the first tap shows real expertise.
-const SUGGESTED_PROMPTS = [
-  'How do I launch a GPU?',
-  'What is Hanzo Base, and how is it different from Vector?',
-  'How does pricing work?',
-  'What AI models are available?',
+type Suggestion = { label: string; fill?: string; href?: string }
+const SUGGESTED_PROMPTS: Suggestion[] = [
+  { label: 'Build an app →', href: `${config.appUrl}/dev` },
+  { label: 'Launch a GPU', fill: 'How do I launch a GPU on Hanzo, and what does it cost?' },
+  { label: 'Deploy an agent with tools', fill: 'Walk me through building and deploying an agent with tools on Hanzo.' },
+  { label: 'Which model should I use?', fill: 'Which AI model is best for coding, writing, and vision — and how do I call it?' },
+  { label: 'How does pricing work?', fill: 'How does Hanzo pricing and billing work?' },
 ]
 
 export function ChatConversation({
@@ -387,7 +389,7 @@ export function ChatConversation({
               <YStack items="center" gap="$3" maxW={460}>
                 <SparkleAvatar size={56} />
                 <Text fontSize={compact ? '$6' : '$8'} fontWeight="800" color="$color12" text="center">
-                  How can I help?
+                  What do you want to build?
                 </Text>
                 <Text fontSize="$3" color="$color11" text="center" lineHeight={22}>
                   Ask about {config.brandName} — models, GPUs, data, deploys, billing — or anything
@@ -397,7 +399,15 @@ export function ChatConversation({
               </YStack>
               <YStack gap="$2.5" items="center" self="stretch" maxW={620} mx="auto" width="100%">
                 {SUGGESTED_PROMPTS.map((s) => (
-                  <PromptChip key={s} label={s} onPress={() => useSuggestion(s)} />
+                  <PromptChip
+                    key={s.label}
+                    label={s.label}
+                    onPress={() =>
+                      s.href
+                        ? typeof window !== 'undefined' && window.open(s.href, '_blank', 'noopener')
+                        : useSuggestion(s.fill ?? s.label)
+                    }
+                  />
                 ))}
               </YStack>
             </YStack>
