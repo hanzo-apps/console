@@ -28,7 +28,7 @@
  *    POST creates; PATCH/DELETE `spend-caps/:id` edit/remove — all `?org=<slug>`-scoped).
  *    `allowAdminSurface` admits `v1/admin/spend-caps[/...]`, so the `:id` sub-path passes.
  */
-export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'spend-caps'] as const
+export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'spend-caps', 'storage'] as const
 
 const ALLOWED = new Set<string>(ADMIN_AGGREGATE_HEADS)
 

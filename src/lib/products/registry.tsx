@@ -110,6 +110,7 @@ import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
+import { StorageFleetModule } from '~/components/products/admin/StorageFleetModule'
 import { UsageCapsPromoModule } from '~/components/products/admin/UsageCapsPromoModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
 import { RoutingModule } from '~/components/products/admin/RoutingModule'
@@ -1048,6 +1049,19 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: ProvidersBillingModule }],
+  },
+  {
+    id: 'block-storage',
+    label: 'Block Storage',
+    icon: HardDrive,
+    description: 'Realtime DO block-storage fleet — the analytics datastore + every volume, fill % and near-full alerts, so we scale DO storage before it runs out.',
+    gcp: 'Persistent Disk',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: StorageFleetModule }],
   },
   {
     // admin.hanzo.ai AI ECONOMICS board — the STRATEGIC lens beside the Provider Billing
