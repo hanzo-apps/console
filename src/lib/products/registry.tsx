@@ -1122,7 +1122,20 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/agent',
     docs: `${DOCS}/agents`,
     kind: 'module',
-    routes: [{ path: '', component: AgentsModule }],
+    // Agents OWNS Status/Logs/Metrics — they render the agent registry's OWN runs
+    // (health board, invocation activity, invocation/latency metrics from /v1/agents),
+    // NOT the generic o11y/usage-ledger subpage (which is empty for agents until the
+    // service emits OTel / the ledger tags spend product:agents). Same pattern as
+    // Inference owning Status/Logs. Settings stays the shared subpage.
+    routes: [
+      { path: '', component: AgentsModule },
+      { path: ':tab', component: AgentsModule },
+    ],
+    subpages: [
+      { slug: 'status', label: 'Status' },
+      { slug: 'logs', label: 'Logs' },
+      { slug: 'metrics', label: 'Metrics' },
+    ],
   },
   {
     // Mission Control — the mobile-first swipeable terminal-per-agent cockpit over the
