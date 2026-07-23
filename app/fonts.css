@@ -1,0 +1,7 @@
+/* Canonical Hanzo faces — Geist Sans (UI/body/headings) + Geist Mono (code/data).
+   Imported FIRST (before the reset + globals) so these @import rules land at the very
+   top of the compiled CSS bundle, where the spec requires @import to appear. When they
+   live in globals.css they are emitted AFTER the reset rules and dropped as invalid, so
+   Geist never loads and the app falls back to system-ui. */
+@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css');
+@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css');
