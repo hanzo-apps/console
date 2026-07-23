@@ -3334,3 +3334,29 @@ and completes it.
   embedding `console@main`.
 - Verification: `tsc --noEmit` clean; `vitest` 2933/2933 (233 files); `next build` ✓;
   `npm run build:embed` ✓ (go:embed gate; restored 30 route handlers). → v8.4.152.
+
+## Block Storage — endpoint renamed; the REAL admin surface is the operator SPA (v8.4.153)
+
+Correction to the v8.4.151 note above (which wrongly said "ships to admin.hanzo.ai via
+console@main"). **admin.hanzo.ai is NOT this console** — it is `hanzoai/admin`
+`apps/operator` (a Vite/React/hanzogui SPA, image `ghcr.io/hanzoai/admin`), the Operator
+console, SEPARATE from console2. The docs elsewhere in this file claiming "admin.hanzo.ai
+= standalone console2" are STALE. This console (embedded in the slim cloud binary) serves
+**console.hanzo.ai / cloud.hanzo.ai** — the customer self-service surface; its `admin:true`
+boards (Block Storage included) are the SUPER-ADMIN TWIN a global admin sees there.
+
+- **Endpoint renamed** `/v1/admin/storage` → **`/v1/admin/block-storage`** (cloud
+  9a51bffbc): DO block-volumes + datastore fill is a DIFFERENT concern from the operator's
+  S3 object-buckets view, which keeps `/v1/admin/storage`. The console client
+  (`storage-fleet.ts`) + the `ADMIN_AGGREGATE_HEADS` / `ADMIN_V1_HEADS` allow-lists + the
+  e2e mock all moved to the `block-storage` head; the registry entry id was already
+  `block-storage`.
+- **The REAL admin.hanzo.ai page** is `hanzoai/admin` `apps/operator/src/pages/
+  BlockStorage.tsx` (commit 30822a0) — same shape over the same `/v1/admin/block-storage`,
+  built on `hanzogui` + `@hanzogui/admin` (SummaryCard/DataTable/Badge), route
+  `/infra/block-storage`, Operations nav. Ships on the next `ghcr.io/hanzoai/admin` build
+  (unblocked — separate repo). The cloud endpoint (the shared data source) ships on the
+  next `hanzoai/cloud` release; this console twin rides the same release embedding
+  `console@main`.
+- Verification: `tsc --noEmit` clean; the block-storage e2e passes (renders datastore /
+  fleet KPIs / near-full alert / honest "—"). → v8.4.153.
