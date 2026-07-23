@@ -223,7 +223,6 @@ import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { MissionControlModule } from '~/components/products/MissionControlModule'
 import { CodeModule } from '~/components/products/CodeModule'
-import { GitModule } from '~/components/products/GitModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
 import { GuideModule } from '~/components/products/GuideModule'
@@ -1123,7 +1122,20 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/agent',
     docs: `${DOCS}/agents`,
     kind: 'module',
-    routes: [{ path: '', component: AgentsModule }],
+    // Agents OWNS Status/Logs/Metrics — they render the agent registry's OWN runs
+    // (health board, invocation activity, invocation/latency metrics from /v1/agents),
+    // NOT the generic o11y/usage-ledger subpage (which is empty for agents until the
+    // service emits OTel / the ledger tags spend product:agents). Same pattern as
+    // Inference owning Status/Logs. Settings stays the shared subpage.
+    routes: [
+      { path: '', component: AgentsModule },
+      { path: ':tab', component: AgentsModule },
+    ],
+    subpages: [
+      { slug: 'status', label: 'Status' },
+      { slug: 'logs', label: 'Logs' },
+      { slug: 'metrics', label: 'Metrics' },
+    ],
   },
   {
     // Mission Control — the mobile-first swipeable terminal-per-agent cockpit over the
@@ -1844,29 +1856,6 @@ export const catalog: CatalogEntry[] = [
     routes: overviewRoutes('api'),
   },
   {
-    // Hanzo Git — the org's hosted code repositories, NATIVE in-console over the real
-    // per-org `/v1/git` subsystem (cloud clients/git). A gitea-parity READ surface:
-    // `''` = the repos list (name · description · default branch · size · clone),
-    // `:name` = the repo browser (tree/blob with line numbers + image preview, README
-    // auto-render, branch/tag selector, commit history, clone URLs). Org-scoped
-    // SERVER-SIDE (no org param leaves the browser), so it is brand-agnostic — every
-    // brand's console shows ITS OWN org's repos with no cross-brand URL leak. git.hanzo.ai
-    // stays the `git clone`/`git push` smart-HTTP host; THIS is the dashboard it links to.
-    id: 'git',
-    label: 'Git',
-    icon: GitBranch,
-    description: 'Your organization’s hosted Git repositories — browse code, commits, and branches, and clone or push over native git.',
-    gcp: 'Cloud Source Repositories',
-    category: 'Dev',
-    status: 'enabled',
-    repo: 'hanzoai/cloud',
-    kind: 'module',
-    routes: [
-      { path: '', component: GitModule },
-      { path: ':name', component: GitModule },
-    ],
-  },
-  {
     // The customer-facing "connect your tools" page. A logged-in org connects
     // Slack / GitHub (and any provider the cloud connector framework registers) via
     // a Connect button that runs the ORG-AUTHED OAuth flow through the canonical /v1
@@ -1899,20 +1888,34 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: PlaygroundModule }],
   },
   {
-    // Hanzo Code — the native per-org code-intelligence engine (hanzoai/cloud
-    // clients/code, /v1/code; HIP-0302). Hybrid retrieval (lexical + symbolic +
-    // semantic, RRF-fused) over an org's indexed repos, powering AI coding agents.
-    // Rendered NATIVELY in-console (search + cited ask) over the /v1 user-bearer
-    // proxy — org-scoped server-side (a PHYSICAL per-org SQLite file), NO link-out.
+    // Code — the unified Code hub (Dev): ALL our code in ONE place. Folds the former Git
+    // (the org's hosted repos over /v1/git) and Code (the code-intelligence engine over
+    // /v1/code, HIP-0302 — hybrid lexical+symbolic+semantic retrieval) into ONE product:
+    //   ''            → the hub, default tab Repositories
+    //   :tab          → Repositories · Search · Ask
+    //   repos/:name   → the repo browser (tree · blob · commits, agentically editable)
+    // Org-scoped SERVER-SIDE (no org param leaves the browser), so it is brand-agnostic —
+    // every brand's console shows ITS OWN org's repos, no cross-brand leak. git.hanzo.ai
+    // stays the `git clone`/`git push` smart-HTTP host; THIS is the dashboard it links to.
     id: 'code',
     label: 'Code',
     icon: Code2,
-    description: 'Search your code and get cited answers — hybrid code intelligence for your agents.',
+    description: 'Browse every repo, search across your code, and get cited answers — the unified hub over native git.',
+    gcp: 'Cloud Source Repositories',
     category: 'Dev',
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
-    routes: [{ path: '', component: CodeModule }],
+    subpages: [
+      { slug: 'repos', label: 'Repositories', icon: FolderGit2 },
+      { slug: 'search', label: 'Search', icon: Search },
+      { slug: 'ask', label: 'Ask', icon: Sparkles },
+    ],
+    routes: [
+      { path: '', component: CodeModule },
+      { path: ':tab', component: CodeModule },
+      { path: 'repos/:name', component: CodeModule },
+    ],
   },
   {
     id: 'ide',

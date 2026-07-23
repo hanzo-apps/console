@@ -164,7 +164,8 @@ const luxExplorer = mod('lux-explorer', {
 // through at runtime — this fixture proves the guard holds.
 const nonModule = mod('bogus', { kind: 'other', routes: undefined } as never)
 // The canonical targets of the human-slug aliases (traces→o11y, deploy→app-platform,
-// plans-pricing→plans, wallets→wallet, fine-tuning→finetuning, web-search→websearch).
+// plans-pricing→plans, wallets→wallet, fine-tuning→finetuning, web-search→websearch,
+// git→code — the former standalone Git product folded into the unified Code hub).
 // Present so the alias table's "every target is a real id" invariant is provable and
 // a direct alias URL resolves to the real module (never a 404). `models` already exists.
 const o11y = mod('o11y', { label: 'Traces', category: 'Observe' })
@@ -173,8 +174,9 @@ const plans = mod('plans', { label: 'Plans', category: 'Settings' })
 const wallet = mod('wallet', { label: 'Wallet', category: 'Web3' })
 const finetuning = mod('finetuning', { label: 'Fine-tuning', category: 'Training' })
 const websearch = mod('websearch', { label: 'Web Search', category: 'AI' })
+const code = mod('code', { label: 'Code', category: 'Dev' })
 
-const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, automations, luxExplorer, o11y, appPlatform, plans, wallet, finetuning, websearch, nonModule]
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, automations, luxExplorer, o11y, appPlatform, plans, wallet, finetuning, websearch, code, nonModule]
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {
