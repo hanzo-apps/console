@@ -87,6 +87,21 @@ export const CLOUD_HEADS: readonly string[] = [
   // call, so it routes through /v1 exactly like prompts/agents — the single `crm`
   // head admits every sub-path (summary, the three collections, their :id detail).
   'crm',
+  // Company formation (cloud clients/company): /v1/company + /v1/company/{structure,
+  // founders,kyc,payment,documents,esign,genesis,advance,skip,import/*,fundraise/*}.
+  // The per-org incorporation state machine on Base/SQLite (structure → founders →
+  // payment → documents → esign → genesis → company). The handler resolves the org
+  // from the Bearer owner (principal.Org) and 403s a cookie-only call, so it routes
+  // through /v1 exactly like crm — the single `company` head admits the formation
+  // read + every stage-action + transition sub-path.
+  'company',
+  // Cap table (cloud clients/captable): /v1/captable/{company,stakeholders,share-classes,
+  // equity-plans,shares,options,safes,convertibles,rounds,investments,summary}[/:id].
+  // The per-org capitalization ledger on Base/SQLite (HIP-0106); every route resolves
+  // the org from the Bearer owner (principal.Org) and 403s a cookie-only call, so it
+  // routes through /v1 exactly like crm — the single `captable` head admits every
+  // sub-path (the computed summary, the collections, their :id detail + share transfer).
+  'captable',
   // Marketing (cloud clients/marketing): /v1/marketing/{summary,campaigns[/:id]}.
   // Native-Go per-org campaign store on Base/SQLite (the in-process fold of
   // github.com/hanzoai/marketing, twin of crm). The handler resolves the org from

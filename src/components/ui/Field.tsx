@@ -172,6 +172,48 @@ export function FieldSelect({
   )
 }
 
+/**
+ * A labeled dropdown whose option VALUE differs from its display LABEL — an entity
+ * reference picker (pick a stakeholder / share class by name, commit its id). The
+ * value/label twin of `FieldSelect` (which is the special case where value === label);
+ * both render the SAME themed native `<select>` (one way to render a labeled dropdown).
+ */
+export function FieldOptionSelect({
+  value,
+  options,
+  onChange,
+  disabled,
+  placeholder = 'Select…',
+}: {
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (v: string) => void
+  disabled?: boolean
+  placeholder?: string
+}) {
+  const showPlaceholder = value === '' || !options.some((o) => o.value === value)
+  return (
+    <select
+      value={showPlaceholder ? '' : value}
+      onChange={(e) => onChange(e.currentTarget.value)}
+      disabled={disabled}
+      aria-label={placeholder}
+      style={selectStyle(disabled)}
+    >
+      {showPlaceholder ? (
+        <option value="" disabled style={OPTION_STYLE}>
+          {placeholder}
+        </option>
+      ) : null}
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value} style={OPTION_STYLE}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 export function FieldSlider({
   value,
   min,
