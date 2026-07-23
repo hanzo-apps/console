@@ -6,12 +6,13 @@
  * A Base is a full realtime backend (hanzoai/base): content types + records +
  * auth, on its own `<slug>.base.hanzo.ai`. This module is the instance manager —
  * SEE all your Bases, CREATE a new one, and CONFIGURE one (name, size, status,
- * delete). Each Base is a row in the SuperBase orchestrator's `tenants` collection;
- * we drive its real `/v1/collections/tenants/records` API through console2's OWN
- * `/superbase` proxy, which mints the user's IAM bearer and stamps `X-Org-Id` from
- * the JWT owner — so the list/create/configure are scoped to THIS org. We do not
- * re-implement Base; a Base is a tenants record. (Browsing a Base's data — its
- * collections + records — is the sibling `Records` product.)
+ * delete). Each Base is a row in the managed Base's `tenants` collection; we drive
+ * its real `/v1/collections/tenants/records` API same-origin at `/v1` → cloud's
+ * `/v1/collections/*` Base data-plane forward (clients/base/collections.go), which
+ * validates the caller's Bearer and forwards it to the managed Base — so the
+ * list/create/configure are scoped to THIS org/user. We do not re-implement Base; a
+ * Base is a tenants record. (Browsing a Base's data — its collections + records — is
+ * the sibling `Records` product.)
  *
  * Routes (declared in the registry, resolved by segment):
  *   /base            — your Bases (+ New Base)
@@ -45,8 +46,9 @@ import {
 
 /** Product base path — must match the registry entry id (`base`). */
 const BASE_PATH = '/base'
-/** Same-origin Base proxy prefix (injects the user bearer + org server-side). */
-const BASE_PROXY = '/v1/superbase'
+/** Same-origin Base data-plane root: `/v1` → cloud's `/v1/collections/*` forward
+ *  (the client attaches the PKCE Bearer + X-Org-Id; cloud forwards to the Base). */
+const BASE_PROXY = '/v1'
 
 const SIZE_LABELS = SIZE_PRESETS.map((p) => p.label)
 const labelToSize = (label: string): string => SIZE_PRESETS.find((p) => p.label === label)?.id ?? DEFAULT_SIZE

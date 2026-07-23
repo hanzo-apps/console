@@ -8,10 +8,11 @@
  * IS reading and writing `tenants` records — so this reuses the ONE Base client
  * (`BaseDataApi`) against that collection; it does not re-implement Base.
  *
- * Transport is console2's OWN `/superbase` proxy, which mints the user's IAM
- * bearer and stamps `X-Org-Id` from the JWT owner, so every call is scoped to the
- * caller's org (the derive-once model — the org is the trusted owner, never a
- * browser-supplied value).
+ * Transport is same-origin `/v1` → cloud's `/v1/collections/*` Base data-plane
+ * forward (clients/base/collections.go): the client attaches the caller's PKCE
+ * Bearer, cloud validates it and forwards it to the managed Base, which scopes every
+ * `tenants` read/write to the token subject (its ListRule `owner_iam_user =
+ * @request.auth.id`) — the derive-once model, never a browser-supplied org.
  */
 import { BaseDataApi, type BaseRecord } from './api'
 

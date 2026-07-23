@@ -95,6 +95,9 @@ export const SLUG_ALIASES: Record<string, string> = {
   'model-catalog': 'models',
   'fine-tuning': 'finetuning',
   'web-search': 'websearch',
+  // The former standalone Git product folded into the unified Code hub — a bookmarked
+  // `/git` lands on the hub (never a 404); the canonical repo path is `/code/repos/:name`.
+  git: 'code',
 }
 
 /** Canonicalize the FIRST slug segment through `SLUG_ALIASES` (identity if none). */

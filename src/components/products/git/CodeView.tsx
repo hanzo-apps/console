@@ -17,6 +17,8 @@ import { fmtBytes } from '~/lib/api/agents'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { MarkdownView } from '~/components/products/playground/MarkdownView'
 import { CopyButton, EntryIcon } from './parts'
+import { AgentActions } from '../code/AgentActions'
+import { askFilePrompt } from '../code/hub-logic'
 import {
   MAX_RENDER_BYTES,
   decodeBlobText,
@@ -279,6 +281,16 @@ function BlobPane({ name, refName, path }: { name: string; refName: string; path
             </Button>
           ) : null}
           {text != null ? <CopyButton value={text} label="Copy" ariaLabel="Copy file contents" /> : null}
+          {/* File-level agentic handoff — Ask the built-in assistant about THIS file,
+              seeded with its (bounded) content. Edit/Chat are repo-level (shown once in
+              the repo header), so this is Ask-only. */}
+          {text != null ? (
+            <AgentActions
+              repo={name}
+              seedPrompt={askFilePrompt(name, blob.path, languageForPath(blob.path), text)}
+              askOnly
+            />
+          ) : null}
         </XStack>
       </XStack>
 
