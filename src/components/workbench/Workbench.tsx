@@ -191,37 +191,58 @@ export function WorkbenchDock() {
         </YStack>
       ) : null}
 
-      {/* The always-there Developers bar — the dock's collapsed face. */}
-      <XStack items="center" gap="$2" px="$2" height={38}>
+      {/* The always-there Developers bar — the dock's collapsed face. A DISTINCT
+          footer strip (tinted bg, taller, clear label) so it reads as a real dock,
+          not a hairline. */}
+      <XStack items="center" gap="$2" px="$3" height={44} bg="$color2">
         <Button
           size="$2"
-          chromeless
-          icon={<SquareTerminal size={15} />}
+          bg="$color4"
+          borderWidth={1}
+          borderColor="$borderColor"
+          icon={<SquareTerminal size={16} />}
           onPress={() => set('workbenchOpen', !open)}
           aria-label={open ? 'Collapse the workbench' : 'Open the workbench'}
         >
-          <Text fontSize="$2" fontWeight="600" color="$color11">
+          <Text fontSize="$2" fontWeight="700" color="$color12">
             Developers
           </Text>
         </Button>
         {!open ? (
-          <XStack flex={1} items="center" px="$2" cursor="pointer" onPress={() => openTo('shell')}>
-            <Text fontSize="$1" color="$color9" className="hz-mono" numberOfLines={1}>
-              $ Run a /v1 command…
+          <XStack
+            flex={1}
+            items="center"
+            gap="$2"
+            px="$3"
+            height={30}
+            rounded="$3"
+            borderWidth={1}
+            borderColor="$borderColor"
+            bg="$color1"
+            cursor="pointer"
+            hoverStyle={{ borderColor: '$color8' }}
+            onPress={() => openTo('shell')}
+          >
+            <Text fontSize="$2" color="$color11" className="hz-mono">
+              $
+            </Text>
+            <Text flex={1} fontSize="$2" color="$color10" className="hz-mono" numberOfLines={1}>
+              Run a /v1 command — models, agents, logs…
             </Text>
           </XStack>
         ) : (
           <XStack flex={1} />
         )}
-        <Button size="$2" chromeless icon={<Activity size={15} />} onPress={() => openTo('overview')} aria-label="API activity" />
-        <Button size="$2" chromeless icon={<ScrollText size={15} />} onPress={() => openTo('logs')} aria-label="Recent API logs" />
+        <Button size="$2" chromeless icon={<Activity size={16} />} onPress={() => openTo('overview')} aria-label="API activity" />
+        <Button size="$2" chromeless icon={<ScrollText size={16} />} onPress={() => openTo('logs')} aria-label="Recent API logs" />
         <Button
           size="$2"
-          chromeless
-          icon={open ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+          icon={open ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
           onPress={() => set('workbenchOpen', !open)}
           aria-label={open ? 'Collapse the workbench' : 'Open the workbench'}
-        />
+        >
+          {open ? 'Hide' : 'Open'}
+        </Button>
       </XStack>
     </YStack>
   )
