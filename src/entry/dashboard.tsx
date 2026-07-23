@@ -465,16 +465,30 @@ function MenuItem({ icon: Icon, label, onPress }: { icon: ComponentType<{ size?:
 }
 
 /**
- * Sidebar identity — the BOTTOM-LEFT cluster (org switcher above the user/account
- * row), matching the unified app/chat shell. The org row is the working `OrgSwitcher`
- * (switch / create org / "All organizations" all live IN its dropdown now — the
- * former redundant app-grid button beside it is gone). The user row opens an account
- * menu (profile · theme · sign out). Because it sits at the FOOT of the sidebar, the
- * account menu opens UPWARD (`top-start`). Collapsed → just the account avatar,
- * opening the same menu to the right. Reused by the desktop sidebar, the flyout, AND
- * the mobile drawer (DRY).
+ * Sidebar workspace switcher — the TOP-of-sidebar tenancy control (beneath the brand).
+ * Switching the workspace changes everything beneath it, so it leads the sidebar
+ * (Account → Workspace → Project → Environment). The working `OrgSwitcher` owns switch /
+ * create / "All organizations" in its own dropdown. Collapsed rail → hidden (workspace
+ * switching happens in the expanded flyout). Reused across every sidebar layout (DRY).
  */
-function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
+function SidebarWorkspace({ collapsed }: { collapsed: boolean }) {
+  if (collapsed) return null
+  return (
+    <XStack px="$1" pb="$1" mb="$1" items="center" borderBottomWidth={1} borderColor="$borderColor">
+      <OrgSwitcher />
+    </XStack>
+  )
+}
+
+/**
+ * Sidebar account — the BOTTOM-LEFT user/account row. Opens an account menu
+ * (profile · theme · sign out) UPWARD (`top-start`, foot-anchored, never clips).
+ * Collapsed → just the account avatar, opening the same menu to the right. The org/
+ * workspace switcher is NO LONGER here — it moved to the top (`SidebarWorkspace`), so a
+ * user never confuses "who I am" (bottom) with "which workspace I'm acting in" (top).
+ * Reused by the desktop sidebar, the flyout, AND the mobile drawer (DRY).
+ */
+function SidebarAccount({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
   const router = useRouter()
   const { account, signOut } = useSession()
   const [open, setOpen] = useState(false)
@@ -533,12 +547,8 @@ function SidebarIdentity({ collapsed, onNavigate }: { collapsed: boolean; onNavi
 
   return (
     <YStack gap="$1.5" pt="$2" mt="$1" borderTopWidth={1} borderColor="$borderColor">
-      {/* The current org — the working switch/create control (org avatar + name +
-          "All organizations" all inside its dropdown). Top of the cluster. */}
-      <XStack px="$1" items="center">
-        <OrgSwitcher />
-      </XStack>
-      {/* The user/account — opens UPWARD (foot-anchored), so the menu never clips. */}
+      {/* The user/account — opens UPWARD (foot-anchored), so the menu never clips.
+          The workspace switcher lives at the TOP now (SidebarWorkspace). */}
       <Popover open={open} onOpenChange={setOpen} placement="top-start">
         <Popover.Trigger asChild>
           <Button chromeless height={44} px="$2" justify="flex-start" aria-label={`${name} · account menu`}>
@@ -719,6 +729,7 @@ function SidebarNav({
         ) : (
           <SidebarBrand collapsed={collapsed} onNavigate={onNavigate} />
         )}
+        <SidebarWorkspace collapsed={collapsed} />
         <ScrollView flex={1}>
           <YStack gap="$1">
             {subs.map((sp) => {
@@ -742,7 +753,7 @@ function SidebarNav({
             })}
           </YStack>
         </ScrollView>
-        <SidebarIdentity collapsed={collapsed} onNavigate={onNavigate} />
+        <SidebarAccount collapsed={collapsed} onNavigate={onNavigate} />
         <SidebarWallet collapsed={collapsed} />
       </>
     )
@@ -790,7 +801,7 @@ function SidebarNav({
             <FixedRow icon={LayoutGrid} label="All products" collapsed onPress={allProducts} />
           </YStack>
         </ScrollView>
-        <SidebarIdentity collapsed onNavigate={onNavigate} />
+        <SidebarAccount collapsed onNavigate={onNavigate} />
         <SidebarWallet collapsed />
       </>
     )
@@ -801,6 +812,7 @@ function SidebarNav({
     return (
       <>
         <SidebarBrand collapsed={false} onNavigate={onNavigate} />
+        <SidebarWorkspace collapsed={false} />
         <DrillNav
           entry={activeEntry}
           subs={activeSubs}
@@ -809,7 +821,7 @@ function SidebarNav({
           onBack={() => setManualList(true)}
           onGo={go}
         />
-        <SidebarIdentity collapsed={false} onNavigate={onNavigate} />
+        <SidebarAccount collapsed={false} onNavigate={onNavigate} />
         <SidebarWallet collapsed={false} />
       </>
     )
@@ -820,6 +832,7 @@ function SidebarNav({
   return (
     <>
       <SidebarBrand collapsed={false} onNavigate={onNavigate} />
+        <SidebarWorkspace collapsed={false} />
 
       {/* Product filter — narrows the whole list; a match from any category jumps
           straight there. Typing hides the section chrome so the list stays scannable. */}
@@ -950,7 +963,7 @@ function SidebarNav({
       </ScrollView>
 
       {/* Bottom-left cluster: the org switcher + account menu, then the wallet. */}
-      <SidebarIdentity collapsed={false} onNavigate={onNavigate} />
+      <SidebarAccount collapsed={false} onNavigate={onNavigate} />
       <SidebarWallet collapsed={false} />
     </>
   )
