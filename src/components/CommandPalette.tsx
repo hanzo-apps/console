@@ -471,7 +471,7 @@ function PaletteDialog({
   }, [open, mode, items, sel, run, submit, activate, activateDest, onOpenChange])
 
   // Keep the ↑/↓-selected row visible: as selection moves past the fold, scroll
-  // the active row into view (the list can hold 50 results — well beyond 420px).
+  // the active row into view (the list can hold 50 results — well beyond 560px).
   useEffect(() => {
     if (!open || mode !== 'catalog' || typeof document === 'undefined') return
     document.getElementById('cmdk-active')?.scrollIntoView({ block: 'nearest' })
@@ -533,8 +533,10 @@ function PaletteDialog({
             </XStack>
           </XStack>
 
-          {/* Body — fills the viewport on mobile, capped at lg+. */}
-          <YStack flex={1} minH={0} overflow="hidden" $lg={{ flex: 0, minH: 120, maxH: 420 }}>
+          {/* Body — fills the viewport on mobile; a stable, tall box at lg+ so
+              the palette reads as a real command surface (Raycast/Linear-style)
+              instead of collapsing to a two-row sliver when few results match. */}
+          <YStack flex={1} minH={0} overflow="hidden" $lg={{ flex: 0, minH: 340, maxH: 560 }}>
             {mode === 'catalog' ? (
               items.length === 0 ? (
                 <YStack p="$5" items="center">
