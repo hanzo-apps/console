@@ -345,6 +345,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // forged call is refused, so it routes through /v1 exactly like the rest. cloud's own
   // allow-list keeps it a collections proxy, never a general Base tunnel.
   'collections',
+  // Telemetry ingest (cloud clients/analytics event.go): POST /v1/event — the ONE
+  // canonical front door for the @hanzo/event client (pageviews · product events ·
+  // identify · errors) as one batched stream, lensed server-side into web analytics,
+  // product insights, and error tracking. cloud stamps the tenant from the validated
+  // session/bearer (the client NEVER sends an org), so on the standalone BFF the minted
+  // user bearer forwards it as the signed-in user. The primary go:embed console hits
+  // cloud's /v1/event natively (the BFF is pruned there).
+  'event',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */

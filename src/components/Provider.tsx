@@ -15,6 +15,7 @@ import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
 import { iamConfig } from '~/lib/auth/iam'
 import { EntitlementsProvider } from '~/lib/entitlements-context'
+import { eventClient } from '~/lib/event'
 import { AnalyticsBridge } from './Analytics'
 import { OrgAccentProvider } from './OrgAccentProvider'
 import { RichTextDisplay, RichTextInput } from './fields/RichTextField'
@@ -64,10 +65,12 @@ export function Provider({ children }: { children: ReactNode }) {
             active org scope) so the sidebar/launcher/palette gate from ONE fetch. */}
         <EntitlementsProvider>
           {/* Analytics lives INSIDE the session so `identify` binds the signed-in
-              actor; cookie/same-origin mode (the tenant is stamped server-side), so
-              only the product is configured. `AnalyticsBridge` wires pageviews +
-              identity. */}
-          <AnalyticsProvider config={{ product: 'console' }}>
+              actor. The ONE shared `eventClient` (same-origin /v1/event; the tenant is
+              stamped server-side, so the client never sends an org) is also referenced
+              by the error boundaries, so every signal rides one stream. The provider
+              fires the first pageview (autoPageview); `AnalyticsBridge` wires the
+              per-navigation pageviews + identity. */}
+          <AnalyticsProvider client={eventClient}>
             <AnalyticsBridge />
             {children}
           </AnalyticsProvider>
