@@ -15,10 +15,11 @@
  * Decisions live in the pure, unit-tested `boundary-logic`; this class only wires
  * them to React lifecycle + the browser (reload/sessionStorage).
  */
-import { Component, type ReactNode } from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
+import { reportError } from '~/lib/event'
 import { isChunkLoadError, isNextControlFlowError, shouldReloadForChunk, CHUNK_RELOAD_AT_KEY } from './boundary-logic'
 
 function reloadPage(): void {
@@ -39,12 +40,20 @@ export class ProductErrorBoundary extends Component<Props, State> {
     return { error }
   }
 
-  componentDidCatch(error: Error): void {
+  componentDidCatch(error: Error, info: ErrorInfo): void {
     // Control flow (notFound/redirect) is re-thrown in render — never a "crash".
     if (isNextControlFlowError(error)) return
     // Surface for triage; never swallowed.
     console.error('[console] product route crashed:', error)
-    if (isChunkLoadError(error)) this.recoverFromChunkSkew()
+    // A chunk skew is a stale-deploy artifact that self-heals with a reload — not an
+    // app bug, so recover and don't report it as an error.
+    if (isChunkLoadError(error)) {
+      this.recoverFromChunkSkew()
+      return
+    }
+    // React swallows render errors before window.onerror, so a boundary is the ONLY
+    // place they reach the ONE error stream.
+    reportError(error, { componentStack: info.componentStack, boundary: 'product' })
   }
 
   componentDidUpdate(prev: Props): void {

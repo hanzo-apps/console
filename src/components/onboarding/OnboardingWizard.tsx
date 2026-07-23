@@ -15,6 +15,8 @@
 import { useReducer, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { useAnalytics } from '@hanzo/event/react'
+import { EVENTS } from '@hanzo/event'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
@@ -60,6 +62,7 @@ export function OnboardingWizard({
   onDismiss: () => void
 }) {
   const router = useRouter()
+  const analytics = useAnalytics()
   const { account } = useSession()
   const { set } = usePreferences()
   const stateRef = useRef<OnboardingState>(initial)
@@ -92,6 +95,8 @@ export function OnboardingWizard({
     back: () => goTo(index - 1),
     isFirst: index === 0,
     finish: (destination?: string) => {
+      // The signup funnel's terminal conversion — fired once when onboarding completes.
+      analytics.capture(EVENTS.SIGNUP_COMPLETED)
       const done = markComplete(withStatus(stateRef.current, 'launch', 'done'), new Date().toISOString())
       commit(done)
       markLocallyComplete(owner || account?.owner || '')

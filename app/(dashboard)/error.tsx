@@ -14,6 +14,7 @@ import { useEffect } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
+import { reportError } from '~/lib/event'
 import { isChunkLoadError, shouldReloadForChunk, CHUNK_RELOAD_AT_KEY } from '~/components/errors/boundary-logic'
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -24,7 +25,12 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
     // A chunk skew self-heals: reload ONCE per window to pull the fresh HTML +
     // current chunks (same recovery the product boundary does), so a stale-deploy
     // crash at the segment level auto-recovers instead of stranding a manual card.
-    if (!chunk || typeof window === 'undefined') return
+    // A chunk skew is not an app bug, so report only a genuine crash to the ONE stream.
+    if (!chunk) {
+      reportError(error, { digest: error.digest, boundary: 'dashboard' })
+      return
+    }
+    if (typeof window === 'undefined') return
     try {
       const raw = window.sessionStorage.getItem(CHUNK_RELOAD_AT_KEY)
       const last = raw ? Number(raw) : null
