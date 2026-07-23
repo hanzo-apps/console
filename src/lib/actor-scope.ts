@@ -11,7 +11,7 @@
  * session is resolved — absent pre-sign-in / SSR). The value is the casibase
  * principal `<owner>/<name>` (globally unique). `SessionProvider` is the ONE writer,
  * keeping it in lockstep with the resolved account (set on sign-in, cleared on
- * sign-out) — the auth twin of how `OrgGate` keeps org-scope in sync.
+ * sign-out) — the auth twin of how `Scope` keeps org-scope in sync.
  */
 const KEY = 'hanzo.console.actor'
 

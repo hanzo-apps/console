@@ -3,7 +3,7 @@
 /**
  * The first-run onboarding wizard shell — owns the persisted state + navigation and
  * renders the current step beside the progress rail. Full-takeover (rendered by
- * {@link OnboardingGate} instead of the console shell) so the flow has the user's
+ * {@link Onboard} instead of the console shell) so the flow has the user's
  * full attention, Vercel-style.
  *
  * Persistence: the whole onboarding object is written to the account preference

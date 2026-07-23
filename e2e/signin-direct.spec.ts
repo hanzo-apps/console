@@ -4,11 +4,11 @@
  * ROOT CAUSE this guards: the deploy (the go:embed'd static console in hanzoai/cloud)
  * serves the SPA shell (the `/` route's index.html) for EVERY path — verified live:
  * GET / and GET /signin return byte-identical HTML. So a direct /signin load mounts the
- * dashboard tree (AuthGate), NOT the /signin route. Before the fix, AuthGate saw no
+ * dashboard tree (Auth), NOT the /signin route. Before the fix, Auth saw no
  * account and called `router.replace('/signin')`, a NO-OP at /signin, and spun on the
  * loader forever (inputs=0, buttons=0). Reaching /signin as a REDIRECT target (from
  * `/`, `/projects`, …) worked because the URL changed. This asserts the direct entry
- * now resolves to the form. The fix: AuthGate + the /signin route both render the ONE
+ * now resolves to the form. The fix: Auth + the /signin route both render the ONE
  * `<SignIn/>` component, so /signin resolves to the form without depending on a nav.
  *
  * Runs LOGGED OUT (a fresh context): the live get-account is anonymous → not signed in.

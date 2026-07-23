@@ -55,7 +55,7 @@ function parsePrefs(raw: string | undefined | null): Preferences {
   }
 }
 
-export function PreferencesProvider({ children }: { children: ReactNode }) {
+export function Preferences({ children }: { children: ReactNode }) {
   const { account } = useSession()
   const name = account?.name
   const [prefs, setPrefs] = useState<Preferences>({})
@@ -106,6 +106,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
 export function usePreferences(): PreferencesState {
   const ctx = useContext(PreferencesContext)
-  if (!ctx) throw new Error('usePreferences must be used within <PreferencesProvider>')
+  if (!ctx) throw new Error('usePreferences must be used within <Preferences>')
   return ctx
 }

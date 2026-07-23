@@ -4,7 +4,7 @@
  *   POST   establish the console session for the SIGNED-IN user (first-party
  *          confidential-client password grant WITH offline_access → access +
  *          rotating refresh token, sealed into the httpOnly cookies).
- *   GET    the current account resolved from that session (what the AuthGate reads
+ *   GET    the current account resolved from that session (what the Auth reads
  *          FIRST — durable + silently refreshed, so it survives the casibase
  *          session's own lifetime and never bounces the user mid-task).
  *   DELETE sign out — best-effort revoke the refresh token + clear the cookies.

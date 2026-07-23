@@ -54,7 +54,7 @@ const Ctx = createContext<LauncherApi | null>(null)
 
 export function useAppLauncher(): LauncherApi {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useAppLauncher must be used within <AppLauncherProvider>')
+  if (!ctx) throw new Error('useAppLauncher must be used within <Launcher>')
   return ctx
 }
 
@@ -279,7 +279,7 @@ function LauncherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
   )
 }
 
-export function AppLauncherProvider({ children }: { children: ReactNode }) {
+export function Launcher({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const open = useCallback(() => setIsOpen(true), [])
   const close = useCallback(() => setIsOpen(false), [])

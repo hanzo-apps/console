@@ -70,7 +70,7 @@ type ScopeContextValue = {
 
 const ScopeContext = createContext<ScopeContextValue | null>(null)
 
-export function ScopeProvider({ children }: { children: ReactNode }) {
+export function Scope({ children }: { children: ReactNode }) {
   // Mirror the module scope into React state so consumers re-render on change.
   const [scope, setScopeState] = useState<Scope>(() => getScope())
   const [customNetworks, setCustomNetworks] = useState<Network[]>([])
@@ -205,9 +205,9 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>
 }
 
-/** Read the active scope + project list + network registry + selectors. Must be under <ScopeProvider>. */
+/** Read the active scope + project list + network registry + selectors. Must be under <Scope>. */
 export function useScope(): ScopeContextValue {
   const ctx = useContext(ScopeContext)
-  if (!ctx) throw new Error('useScope must be used within <ScopeProvider>')
+  if (!ctx) throw new Error('useScope must be used within <Scope>')
   return ctx
 }
