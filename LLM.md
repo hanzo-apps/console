@@ -3293,3 +3293,44 @@ so it rides the `app/admin/aggregate` BFF standalone and cloud-native in the go:
   datastore (200 GiB), fleet KPIs (295 volumes / $1,309), a 91% near-full alert, and the
   honest "—" — PASSES against the local fixture (primeSession owner:'admin'). Ships to
   admin.hanzo.ai via the next `hanzoai/cloud` release embedding `console@main`.
+
+## Telemetry on the canonical @hanzo/event 0.3.1 — one /v1/event stream (v8.4.152)
+
+Upgraded `@hanzo/event` `^0.2.0` → `^0.3.1`, the ONE telemetry client. Every signal
+(pageview · product event · identify · error) rides one batched stream to the ONE Hanzo
+Cloud front door `POST /v1/event`, lensed server-side into web analytics, product
+insights, and error tracking — subsuming @sentry. The old 0.2.0 client posted the
+deprecated `/v1/analytics` + `/v1/tracker`. The console was ALREADY wired at 0.2.0
+(provider + a pageview/identify bridge + 5 product captures); this makes it canonical
+and completes it.
+
+- **ONE shared client** (`src/lib/event.ts`): `createAnalytics({ product:'console',
+  host:'' (same-origin), ingestKey })`. `host:''` posts to the console's OWN `/v1/event`
+  so the first-party session cookie rides along — the go:embed cloud binary serves it
+  natively; the standalone BFF forwards it as the signed-in user (`event` added to
+  `proxy-allow.ts` CLOUD_HEADS). The client NEVER sends an org — Cloud stamps the tenant
+  from the validated session (fail-closed).
+- **Error capture unified across the existing boundaries.** `captureErrors` is on by
+  default (`window.onerror` + `unhandledrejection`) + beacon-on-unload. The three
+  home-grown boundaries (`ProductErrorBoundary`, dashboard `error.tsx`, root
+  `global-error.tsx`) now report React render errors — which React swallows before
+  `window.onerror` — via `reportError()` to the SAME stream. The client is a module
+  singleton precisely so the provider-less `global-error` (root layout torn down) reports
+  too. A chunk-skew reload self-heals and is NOT reported (stale-deploy infra, not a bug).
+- **Consent + PII.** PII-free by construction (anon id + the stable `owner/name` actor id,
+  never an email; org never sent) and honors an explicit GPC / Do-Not-Track opt-out — the
+  consent layer for logged-out/public views. Logged-out pageviews + errors ingest with an
+  optional publishable key `NEXT_PUBLIC_EVENT_INGEST_KEY` (mint per org via
+  `POST /v1/ingest/keys`); unset → logged-in via cookie, logged-out best-effort anonymous.
+  The signin/public surface loads the client (it sits under the root `<Provider>`).
+- **Product moments** (+3, atop PROJECT_CREATED · API_KEY_CREATED · PRICING_VIEWED/
+  PLAN_CLICKED/CHECKOUT_STARTED · APP_CREATED/DEPLOY_STARTED · FIRST_ACTION):
+  `AGENT_CREATED` (agent builder `onCreated` — the decoupled builder stays uncoupled),
+  `CHAT_STARTED` + `CHAT_MESSAGE_SENT` (ChatConversation `send`; first turn starts, every
+  turn sends), `SIGNUP_COMPLETED` (OnboardingWizard `finish`).
+- **CTO gate (deploy, not code):** provision `NEXT_PUBLIC_EVENT_INGEST_KEY` for LOGGED-OUT
+  ingestion; cloud must serve `/v1/event` (`clients/analytics/event.go`) — logged-in cookie
+  flows already ride it. Reaches console.hanzo.ai on the next `hanzoai/cloud` release
+  embedding `console@main`.
+- Verification: `tsc --noEmit` clean; `vitest` 2933/2933 (233 files); `next build` ✓;
+  `npm run build:embed` ✓ (go:embed gate; restored 30 route handlers). → v8.4.152.
