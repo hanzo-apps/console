@@ -166,11 +166,15 @@ const SUGGESTED_PROMPTS = [
 export function ChatConversation({
   onShowHistory,
   compact = false,
+  seed,
 }: {
   onShowHistory: () => void
   /** Embedded mode (the floating bubble): drop the page header + fixed min-height
    * so the conversation fills its container instead of a full page. */
   compact?: boolean
+  /** A one-shot composer seed (from `useFloatingChat().ask`, e.g. the Code hub's
+   * "Ask AI about this code"): pre-fills + focuses the composer, never auto-sends. */
+  seed?: string
 }) {
   const [model, setModel] = useState('')
   const [messages, setMessages] = useState<(ChatMessage & { time?: string })[]>([])
@@ -216,6 +220,19 @@ export function ChatConversation({
       document.getElementById('chat-bottom')?.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
   }, [messages, sending])
+
+  // Consume a one-shot seed from `useFloatingChat().ask` — pre-fill + focus the composer
+  // (the user reviews then sends; never an auto-send). A ref guards so a given seed value
+  // fires exactly once, even though two conversation instances (sheet + docked column)
+  // observe the same context seed.
+  const lastSeed = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (seed && seed !== lastSeed.current) {
+      lastSeed.current = seed
+      setInput(seed)
+      inputRef.current?.focus?.()
+    }
+  }, [seed])
 
   /**
    * Stream one assistant reply for `q` over the given prior `history`. An empty
