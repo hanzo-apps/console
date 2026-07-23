@@ -322,6 +322,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // The `/v1/git/:org/:repo/*` smart-HTTP protocol routes are NOT reached here (the git
   // CLI hits git.hanzo.ai directly); this is the console's repo-browser read surface.
   'git',
+  // Base data plane (cloud clients/base collections.go): /v1/collections[/<name>[/records
+  // [/<id>]]] + /v1/collections/meta/scaffolds. cloud reverse-proxies these to the managed
+  // Base (base.hanzo.ai), principal-gated, forwarding the caller's Bearer (which the Base
+  // validates against IAM JWKS and scopes per-user/per-collection). The console's Base
+  // product (Bases manager `tenants` registry + Records) reaches it here; a cookie-only /
+  // forged call is refused, so it routes through /v1 exactly like the rest. cloud's own
+  // allow-list keeps it a collections proxy, never a general Base tunnel.
+  'collections',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
