@@ -73,7 +73,7 @@ export function CodeSamples({ samples, run, title = 'Quick start' }: { samples: 
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
             whiteSpace: 'pre',
             fontSize: 12,
-            lineHeight: 1.6,
+            lineHeight: '1.6em',
           }}
         >
           {sample.code}
