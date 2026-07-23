@@ -313,8 +313,8 @@ export const fmtUsd = (n: number): string =>
 // launch (cloud-api launch + commerce charge):
 //   - A CPU / non-GPU machine is metered to the org's granted **credit** balance —
 //     NO card required. It launches on credits.
-//   - A GPU is **prepay-only**, charged to the org's payment **card** with a 24-hour
-//     minimum upfront; granted credits can NOT fund a GPU, and no card ⇒ blocked.
+//   - A GPU is **prepay-only**, charged to the org's payment **card** with the first
+//     hour upfront; granted credits can NOT fund a GPU, and no card ⇒ blocked.
 // So the console shows the RIGHT funding source + the RIGHT add-funds CTA per kind,
 // making it obvious that a non-GPU droplet IS credit-eligible.
 
@@ -326,7 +326,7 @@ export type FundingModel = {
   source: FundingSource
   /** Headline, e.g. "Launches on your Hanzo credit" / "Prepay only · charged to your card". */
   headline: string
-  /** One-line detail (available balance / 24h minimum / no-card note). */
+  /** One-line detail (available balance / first-hour prepay / no-card note). */
   detail: string
   /** True when the funding source is empty and must be topped up first (add credits / add a card). */
   needsFunds: boolean
@@ -355,7 +355,7 @@ export function fundingModel(
       source: 'card',
       headline: 'Prepay only · charged to your card',
       detail:
-        '24-hour minimum charged upfront to your payment card, then the per-hour rate. Granted credits can’t be used for GPUs.',
+        'First hour charged upfront to your payment card, then the per-hour rate. Granted credits can’t be used for GPUs.',
       needsFunds,
       cta: { label: 'Add a payment card & prepay', href: '/billing/credits' },
     }
