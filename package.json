@@ -1,10 +1,10 @@
 {
   "name": "@hanzo/console",
-  "version": "8.4.150",
+  "version": "8.4.151",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
-  "description": "Hanzo Cloud Console — unified admin console for Hanzo Cloud and all cloud products.",
+  "description": "Hanzo Cloud Console \u2014 unified admin console for Hanzo Cloud and all cloud products.",
   "scripts": {
     "dev": "next dev -p 4000",
     "build": "next build",

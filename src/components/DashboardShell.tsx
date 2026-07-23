@@ -79,7 +79,7 @@ import {
   type ProductSubpage,
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired } from '~/lib/products/match'
-import { ProductUpstreamNote } from '~/components/products/ProductUpstreamNote'
+import { ProductGuidePanel } from '~/components/guide/ProductGuidePanel'
 import { ConsoleFooter } from '~/components/ConsoleFooter'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
@@ -1186,8 +1186,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <ScrollView flex={1}>
           <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
             <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
+              <ProductGuidePanel pathname={pathname} />
               {children}
-              <ProductUpstreamNote pathname={pathname} />
               <ConsoleFooter />
             </YStack>
           </XStack>
