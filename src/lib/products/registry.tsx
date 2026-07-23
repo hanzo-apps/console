@@ -2835,7 +2835,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/chat',
-    upstream: { name: 'LibreChat', url: 'https://librechat.ai', license: 'MIT' },
     docs: `${DOCS}/chat`,
     kind: 'module',
     routes: [
