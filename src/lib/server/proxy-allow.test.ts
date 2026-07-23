@@ -89,6 +89,14 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/evals')).toBe(true)
   })
 
+  it('admits the research evidence plane (experiments/totals/projects), one head', () => {
+    expect(CLOUD_HEADS).toContain('research')
+    for (const sub of ['experiments', 'totals', 'projects']) {
+      expect(allowCloudSurface(`v1/research/${sub}`)).toBe(true)
+    }
+    expect(allowCloudSurface('v1/research')).toBe(true)
+  })
+
   it('admits the prompts metrics + detail sub-paths (the AI surface heads)', () => {
     expect(allowCloudSurface('v1/prompts/metrics')).toBe(true)
     expect(allowCloudSurface('v1/prompts/support-triage')).toBe(true)
