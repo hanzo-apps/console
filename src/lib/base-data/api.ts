@@ -10,11 +10,17 @@
  * the same honest-state UI (`classifyBackend` / `BackendStateCard`). Transport
  * stays its own concern; only the error value type is shared.
  *
- * Auth: an optional Base bearer token (`Authorization: Bearer <token>` — Base
- * strips the case-insensitive prefix). `credentials: 'include'` so the same-origin
- * proxy form (cookie session injecting the token server-side) also works.
+ * Auth: the caller's PKCE access token is attached as `Authorization: Bearer` (the
+ * ONE credential, same as the cloud client) plus the active `X-Org-Id`. The
+ * same-origin base URL is `/v1`, so calls hit cloud's `/v1/collections/*` Base
+ * data-plane forward (clients/base/collections.go) directly — the go:embed console
+ * has no BFF to inject a token server-side, so the client carries it. cloud
+ * validates the Bearer and forwards it to the managed Base, which authorizes each
+ * read/write per-user + per-collection. An explicit `token` (a BYO Base) still wins.
  */
 import { ApiError } from '~/lib/api/client'
+import { iamAccessToken } from '~/lib/auth/iam'
+import { currentOrg } from '~/lib/org-scope'
 import type { BaseCollection } from './fields'
 
 /** A Base record — a flat map of field name → value (`id` always present). */
@@ -72,14 +78,15 @@ export interface CollectionInput {
 }
 
 export interface BaseDataApiOptions {
-  /** Base API-version root: the same-origin proxy prefix `/v1/superbase` (whose handler
-   *  re-roots to Base's `/v1/<path>`), or a direct versioned origin `https://x.base.hanzo.ai/v1`. */
+  /** Base API-version root. Same-origin `/v1` (→ cloud's `/v1/collections/*` Base
+   *  data-plane forward), or a direct versioned origin `https://x.base.hanzo.ai/v1`. */
   baseUrl: string
-  /** Optional Base auth token; sent as `Authorization: Bearer <token>`. */
+  /** Optional Base auth token; sent as `Authorization: Bearer <token>` (else the
+   *  caller's own PKCE access token is attached). */
   token?: string
 }
 
-/** Resolve same-origin proxy prefixes (`/v1/superbase`) against the page origin. */
+/** Resolve a same-origin base URL (`/v1`) against the page origin. */
 const pageOrigin = (): string => (typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
 
 /** Pull a list out of `{ items }` (paginated) or a bare array. */
@@ -197,8 +204,8 @@ export class BaseDataApi {
     path: string,
     opts?: { query?: ListRecordsParams; body?: Record<string, unknown> },
   ): Promise<unknown> {
-    // `baseUrl` carries the API-version root (the `/v1/superbase` proxy prefix, whose
-    // handler forwards to Base's `/v1/<path>`; or a direct `https://x.base.hanzo.ai/v1`).
+    // `baseUrl` carries the API-version root: same-origin `/v1` (→ cloud's
+    // `/v1/collections/*` forward) or a direct `https://x.base.hanzo.ai/v1`.
     const url = new URL(`${this.baseUrl}/${path}`, pageOrigin())
     if (opts?.query) {
       for (const [k, v] of Object.entries(opts.query)) {
@@ -207,7 +214,15 @@ export class BaseDataApi {
     }
 
     const headers: Record<string, string> = { Accept: 'application/json' }
-    if (this.token) headers.Authorization = `Bearer ${this.token}`
+    // The ONE credential: the caller's PKCE access token as a Bearer (identical to the
+    // cloud client). cloud validates it, then FORWARDS it to the managed Base, which
+    // authorizes per-user + per-collection itself — so the go:embed console (no BFF)
+    // reaches Base natively. An explicit `token` (BYO Base instance) still wins.
+    const bearer = this.token ?? iamAccessToken()
+    if (bearer) headers.Authorization = `Bearer ${bearer}`
+    // Active org scope (org-switch aware), like every cloud call. cloud re-derives the
+    // TRUSTED org from the Bearer owner and may override this, so it is only a hint.
+    headers['X-Org-Id'] = currentOrg()
     const init: RequestInit = { method, credentials: 'include', headers }
     if (opts?.body !== undefined) {
       headers['Content-Type'] = 'application/json'
