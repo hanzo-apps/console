@@ -43,11 +43,11 @@ const usd = (n?: number) => (n == null ? DASH : `$${n.toFixed(2)}`)
  *  - PREPAY ONLY: a GPU draws against the org's card-funded PREPAID balance, never
  *    the granted/promo CREDIT balance (which stays for non-GPU DO compute).
  *  - CARD REQUIRED: no payment card on file ⇒ launch is BLOCKED with an add-card CTA.
- *  - 24-HOUR MINIMUM: launching commits to ≥24h — the first 24h (hourly × 24) is
+ *  - FIRST-HOUR PREPAY: launching charges the first hour (hourly × 1) upfront; it is
  *    charged upfront. Anti-abuse; the Quote shows this floor as the "charged now".
  * CPU machines are unaffected — they stay metered to the Hanzo credit balance.
  */
-const GPU_MIN_HOURS = 24
+const GPU_MIN_HOURS = 1
 /** Navigate to a same-origin console route (add-card/prepay, add-credits). */
 const goTo = (p: string) => { if (typeof window !== 'undefined') window.location.assign(p) }
 
@@ -132,7 +132,7 @@ export function LaunchDrawer({
   const selected = useMemo(() => items.find((it) => it.slug === sel) ?? null, [items, sel])
   const regionOptions = regions.length ? regions.map((r) => r.slug) : ['nyc1']
   const isGpu = kind === 'gpu'
-  // The upfront 24-hour-minimum charge for a GPU (hourly × 24), shown in the Quote and
+  // The upfront first-hour charge for a GPU (hourly × GPU_MIN_HOURS), shown in the Quote and
   // on the Launch button as "charged now". Undefined until a priced GPU is selected.
   const upfront24h = useMemo(
     () => (isGpu && selected?.priceHourly != null ? selected.priceHourly * GPU_MIN_HOURS : undefined),
@@ -165,7 +165,7 @@ export function LaunchDrawer({
       const friendly = !needsPay
         ? msg
         : isGpu
-          ? 'GPUs are prepay-only — add a payment card and prepay the 24-hour minimum to launch.'
+          ? 'GPUs are prepay-only — add a payment card and prepay the first hour to launch.'
           : 'Insufficient balance — add credits to launch this machine.'
       setError({ msg: friendly, needsPay })
       setPhase('idle')
@@ -190,7 +190,7 @@ export function LaunchDrawer({
 
       {/* Funding source — the CLEAR CPU-credit vs GPU-prepay-card distinction. A CPU
           machine launches on the credit balance (no card); a GPU is prepay-only,
-          charged to the card with a 24-hour minimum (and surfaces the add-card CTA
+          charged to the card with a first-hour prepay (and surfaces the add-card CTA
           when none is on file — the honest first gate; the server also enforces it). */}
       <FundingNote kind={kind} creditCents={creditCents} hasCard={hasCard} compact />
 
@@ -255,12 +255,12 @@ export function LaunchDrawer({
       </YStack>
 
       {/* Quote — OUR market price (== catalog == launch charge). For a GPU the headline
-          figure is the 24-hour-minimum charged upfront to the card (prepay), NOT a
+          figure is the first hour charged upfront to the card (prepay), NOT a
           monthly estimate; for CPU it stays the per-org metered monthly/hourly. */}
       <Card borderWidth={1} borderColor="$borderColor" p="$3" gap="$1.5" bg="$color1">
         <XStack items="center" justify="space-between">
           <Text fontSize="$2" color="$color11">Quote</Text>
-          <Text fontSize="$1" color="$color10">{isGpu ? 'Prepay only · 24-hour minimum' : 'per-org metered'}</Text>
+          <Text fontSize="$1" color="$color10">{isGpu ? 'Prepay only · first hour upfront' : 'per-org metered'}</Text>
         </XStack>
         {selected ? (
           isGpu ? (
@@ -271,7 +271,7 @@ export function LaunchDrawer({
               </XStack>
               <Text fontSize="$1" color="$color10" numberOfLines={2}>{spec(selected)}{region ? ` · ${region}` : ''}</Text>
               <Text fontSize="$1" color="$color10">
-                24-hour minimum ({hr(selected.priceHourly)} × 24) is charged upfront to your card. After 24h you pay the hourly rate until you destroy it. Credits can’t be used for GPUs.
+                first hour ({hr(selected.priceHourly)}) is charged upfront to your card, then you pay the hourly rate until you destroy it. Credits can’t be used for GPUs.
               </Text>
             </>
           ) : (
