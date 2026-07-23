@@ -137,7 +137,7 @@ export function ProductInterstitial({ id }: { id: string }) {
           <LinkCard
             icon={<Github size={20} />}
             title="Open source"
-            body={`${entry.label} is open source at ${entry.repo}.${entry.upstream ? ` Forked from ${entry.upstream.name} (${entry.upstream.license}).` : ''} Read the code, file issues, or contribute.`}
+            body={`${entry.label} is open source at ${entry.repo}. Read the code, file issues, or contribute.`}
             cta="View on GitHub"
             onPress={() => open(githubUrl(entry.repo!))}
           />
