@@ -49,6 +49,10 @@ export const PRODUCT_SHELLS: Record<ShellId, ProductShell> = {
   sentry: { id: 'sentry', rootId: 'sentry', indexLabel: 'Issues', wordmark: 'Sentry', home: 'sentry' },
   dns: { id: 'dns', rootId: 'dns', indexLabel: 'Zones', wordmark: 'DNS', home: 'dns' },
   platform: { id: 'platform', rootId: 'platform', indexLabel: 'Overview', wordmark: 'Platform', home: 'platform' },
+  // The standalone Linear-grade issue tracker (tracker.<brand>) — the TrackerModule's
+  // own views (All Issues · My Issues · Teams · Cycles · Roadmap) ARE the shell nav, so
+  // tracker.hanzo.ai is a focused, keyboard-first tracker with the catalog chrome gone.
+  tracker: { id: 'tracker', rootId: 'tracker', indexLabel: 'Issues', wordmark: 'Tracker', home: 'tracker' },
 }
 
 /** The descriptor for a shell id. */

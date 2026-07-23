@@ -344,7 +344,7 @@ describe('cloudAudience — the cloud API resource for the forwarded bearer', ()
  * FIVE faces (billing/marketing/ads/social/sentry) resolve at the config level and stay
  * orthogonal to the brand (a face host keeps its own brand). Called with explicit hosts.
  */
-describe('config: unified product shell (five faces)', () => {
+describe('config: unified product shell (product faces)', () => {
   const FACE_HOST: Record<Exclude<ShellId, 'console'>, string> = {
     billing: 'billing.hanzo.ai',
     marketing: 'marketing.hanzo.ai',
@@ -353,6 +353,7 @@ describe('config: unified product shell (five faces)', () => {
     sentry: 'sentry.hanzo.ai',
     dns: 'dns.hanzo.ai',
     platform: 'platform.hanzo.ai',
+    tracker: 'tracker.hanzo.ai',
   }
 
   it('resolveConfig(host).shell is the host face; a full-console host is "console"', () => {
