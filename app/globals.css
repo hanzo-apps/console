@@ -124,32 +124,34 @@ html:root.t_dark {
   --hz-paper-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Light theme — the calm parallel: a warm off-white base (not stark #fff), soft
-   ink text (not pure black), and quiet hairlines. Lighter touch than dark, since
-   the console defaults to dark, but kept consistent for the theme toggle. */
+/* Light theme — the calm parallel: a neutral off-white base (not stark #fff), soft
+   ink text (not pure black), and quiet hairlines. MONOCHROME by construction — every
+   token is a zero-saturation gray (hue-agnostic), the light twin of the dark ladder,
+   so no surface ever reads a blue/cool tint. Lighter touch than dark, since the
+   console defaults to dark, but kept consistent for the theme toggle. */
 html:root.t_light {
-  --background: hsl(220 20% 99%);
-  --color1: hsl(220 24% 100%);
-  --color2: hsl(220 20% 98%);
-  --color3: hsl(220 18% 95.5%);
-  --color4: hsl(220 16% 92.5%);
-  --color5: hsl(220 15% 89%);
-  --color9: hsl(220 9% 46%);
-  --color10: hsl(220 10% 38%);
-  --color11: hsl(220 14% 22%);
-  --color12: hsl(220 22% 12%);
-  --color: hsl(220 22% 12%);
-  --borderColor: hsl(220 16% 90%);
-  --borderColorHover: hsl(220 14% 82%);
+  --background: hsl(0 0% 99%);
+  --color1: hsl(0 0% 100%);
+  --color2: hsl(0 0% 98%);
+  --color3: hsl(0 0% 95.5%);
+  --color4: hsl(0 0% 92.5%);
+  --color5: hsl(0 0% 89%);
+  --color9: hsl(0 0% 46%);
+  --color10: hsl(0 0% 38%);
+  --color11: hsl(0 0% 22%);
+  --color12: hsl(0 0% 12%);
+  --color: hsl(0 0% 12%);
+  --borderColor: hsl(0 0% 90%);
+  --borderColorHover: hsl(0 0% 82%);
 
-  /* Elevation ladder — light theme: soft, cool-grey Material shadows on the warm
-     off-white base (the calm parallel of the dark ladder above). */
-  --hz-elevation-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
-  --hz-elevation-2: 0 3px 8px rgba(16, 24, 40, 0.08), 0 1px 3px rgba(16, 24, 40, 0.06);
-  --hz-elevation-3: 0 10px 24px rgba(16, 24, 40, 0.1), 0 3px 8px rgba(16, 24, 40, 0.07);
-  --hz-elevation-4: 0 18px 40px rgba(16, 24, 40, 0.13), 0 6px 14px rgba(16, 24, 40, 0.08);
-  --hz-elevation-5: 0 28px 60px rgba(16, 24, 40, 0.16), 0 12px 24px rgba(16, 24, 40, 0.1);
-  --hz-ring: 0 0 0 1px rgba(16, 24, 40, 0.05);
+  /* Elevation ladder — light theme: soft NEUTRAL-grey Material shadows (pure black
+     alpha, zero hue) on the off-white base — the calm parallel of the dark ladder. */
+  --hz-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --hz-elevation-2: 0 3px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --hz-elevation-3: 0 10px 24px rgba(0, 0, 0, 0.1), 0 3px 8px rgba(0, 0, 0, 0.07);
+  --hz-elevation-4: 0 18px 40px rgba(0, 0, 0, 0.13), 0 6px 14px rgba(0, 0, 0, 0.08);
+  --hz-elevation-5: 0 28px 60px rgba(0, 0, 0, 0.16), 0 12px 24px rgba(0, 0, 0, 0.1);
+  --hz-ring: 0 0 0 1px rgba(0, 0, 0, 0.05);
   --hz-paper-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
 }
 
