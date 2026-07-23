@@ -20,6 +20,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@hanzo/gui'
 import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
+import { useAnalytics } from '@hanzo/event/react'
+import { EVENTS } from '@hanzo/event'
 
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { DEFAULT_MODEL } from '~/lib/api/families'
@@ -176,6 +178,7 @@ export function ChatConversation({
    * "Ask AI about this code"): pre-fills + focuses the composer, never auto-sends. */
   seed?: string
 }) {
+  const analytics = useAnalytics()
   const [model, setModel] = useState('')
   const [messages, setMessages] = useState<(ChatMessage & { time?: string })[]>([])
   const [input, setInput] = useState('')
@@ -286,6 +289,9 @@ export function ChatConversation({
     const q = input.trim()
     if (!q || sending) return
     const history = messages.map(({ role, content }) => ({ role, content }))
+    // First turn of a conversation starts a chat; every turn is a message sent.
+    if (history.length === 0) analytics.capture(EVENTS.CHAT_STARTED)
+    analytics.capture(EVENTS.CHAT_MESSAGE_SENT)
     setMessages((m) => [...m, { role: 'user', content: q, time: turnTime() }])
     setInput('')
     await streamReply(q, history)
