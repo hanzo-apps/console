@@ -101,6 +101,7 @@ import { Users,
   Droplet,
   AlertTriangle,
   Cloud,
+  FlaskConical,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId, type ShellId } from '~/config'
@@ -126,6 +127,7 @@ import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { BotsConsole } from '~/components/products/BotsConsole'
 import { AdminO11yModule } from '~/components/products/AdminO11yModule'
+import { ResearchModule } from '~/components/products/ResearchModule'
 import { SaasModule } from '~/components/products/SaasModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { SearchModule } from '~/components/products/SearchModule'
@@ -689,6 +691,26 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminO11yModule }],
+  },
+  {
+    // Research — the R&D EVIDENCE board (HIP-0512 §"Hanzo Research"): the falsifiable-
+    // experiment corpus every product self-logs to /v1/research (kernel-perf, benchmark,
+    // training, ablation, policy-eval) with first-class proofs AND refutations — a totals
+    // band, a per-kind facet, the verdict ledger, and the "don't re-chase" refutation
+    // highlight. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/
+    // launcher/palette); the `research` head is org-scoped by the Bearer owner, so a
+    // customer only ever reaches their OWN corpus, never Hanzo's platform R&D.
+    id: 'research',
+    label: 'Research',
+    icon: FlaskConical,
+    description: 'Falsifiable R&D experiments across the platform — every proof and every refutation, first-class.',
+    gcp: 'Vertex AI Experiments',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: ResearchModule }],
   },
   {
     // admin.hanzo.ai SAAS METRICS board — the whole-business money god view: MRR/ARR,
