@@ -225,6 +225,8 @@ import { MissionControlModule } from '~/components/products/MissionControlModule
 import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
 import { CrmModule } from '~/components/products/CrmModule'
+import { CompanyModule } from '~/components/products/CompanyModule'
+import { CapTableModule } from '~/components/products/CapTableModule'
 import { GuideModule } from '~/components/products/GuideModule'
 import { MarketingModule } from '~/components/products/MarketingModule'
 import { AdsModule } from '~/components/products/AdsModule'
@@ -2867,6 +2869,50 @@ export const catalog: CatalogEntry[] = [
       { slug: 'companies', label: 'Companies' },
       { slug: 'contacts', label: 'Contacts' },
       { slug: 'opportunities', label: 'Opportunities' },
+    ],
+  },
+  {
+    // Company — self-service incorporation over the REAL cloud `/v1/company` surface
+    // (native-Go `clients/company`: an 8-stage formation state machine on Base/SQLite).
+    // The wizard renders the panel for the formation's CURRENT stage (the backend is the
+    // source of truth) and advances through the guarded transition door; KYC/e-sign/filing
+    // report honest "pending — manual review" while those providers are stubs. The company
+    // SIDE only (formation + the org's own cap table) — a securities raise runs elsewhere.
+    id: 'company',
+    label: 'Company',
+    icon: Landmark,
+    description: 'Incorporate your company — an 8-step formation wizard, from entity to equity genesis.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: CompanyModule }],
+  },
+  {
+    // Cap Table — the per-org capitalization ledger over the REAL cloud `/v1/captable`
+    // surface (native-Go `clients/captable`, HIP-0106: the Captable,Inc logic on a goja
+    // bundle over per-tenant Base/SQLite). Tabs: the computed ownership Summary,
+    // Stakeholders, Shares (issued certificates), Classes, and Fundraising (SAFEs + rounds);
+    // the cap-table math is computed SERVER-SIDE (the `summary` route), never in the client.
+    id: 'captable',
+    label: 'Cap Table',
+    icon: Coins,
+    description: 'Your capitalization ledger — stakeholders, share classes, issued equity, SAFEs, and rounds.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    // Summary ('') is the computed cap table; the five lenses render via the `:tab` route
+    // the module targets (`/captable/{stakeholders,shares,classes,fundraising}`).
+    routes: [
+      { path: '', component: CapTableModule },
+      { path: ':tab', component: CapTableModule },
+    ],
+    subpages: [
+      { slug: 'stakeholders', label: 'Stakeholders' },
+      { slug: 'shares', label: 'Shares' },
+      { slug: 'classes', label: 'Classes' },
+      { slug: 'fundraising', label: 'Fundraising' },
     ],
   },
   {

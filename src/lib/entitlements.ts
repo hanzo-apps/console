@@ -44,6 +44,8 @@ export const ALWAYS_ON_PRODUCTS: readonly string[] = [
   'platform', // the project HUB — create/deploy/ship a project (first-class, every org)
   'tracker', // native @hanzo/gui issue tracker — first-class work surface, every org (peer of the HUB; replaces the retired Huly/hanzo.team)
   'guide', // the Business AI launch checklist — foundational onboarding, every org (like 'platform')
+  'company', // self-service incorporation — the formation wizard, foundational for every org (peer of 'platform')
+  'captable', // the org's capitalization ledger — foundational company surface, every org (peer of 'company')
 ]
 
 /** True when a product is always-on (implicit, never stored in `enabled`). */
