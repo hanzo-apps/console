@@ -2,7 +2,7 @@
 
 /**
  * IAM OAuth callback route. The exchange logic lives in <AuthCallback/> — the SPA fallback
- * also routes `/auth/callback` through <AuthGate/> (which renders the same component), so
+ * also routes `/auth/callback` through <Auth/> (which renders the same component), so
  * both entry points share the ONE handler rather than duplicating the code→token flow.
  */
 import { Suspense } from 'react'

@@ -8,7 +8,7 @@
  *    assistant is one tap away from any view.
  *  - DOCKED-RIGHT: a PERMANENT right-hand column (desktop/laptop) that reserves its
  *    own space beside the content — a classic docked panel. Toggle floating ⇄ docked
- *    from either header. The docked column is rendered by `DashboardShell`
+ *    from either header. The docked column is rendered by `Dashboard`
  *    (`DockedChatPanel`), which reserves the layout width; this module owns the
  *    dock STATE (persisted per-user via `usePreferences` under `chatDocked`) + the
  *    floating bubble/sheet.
@@ -47,7 +47,7 @@ const Ctx = createContext<FloatingChatApi | null>(null)
 /** Open/close/dock the assistant from anywhere (e.g. an empty-state CTA). */
 export function useFloatingChat(): FloatingChatApi {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useFloatingChat must be used within <FloatingChatProvider>')
+  if (!ctx) throw new Error('useFloatingChat must be used within <Chat>')
   return ctx
 }
 
@@ -181,7 +181,7 @@ function ChatSheet({
 }
 
 /**
- * The DOCKED assistant — a permanent right column. Rendered by `DashboardShell`
+ * The DOCKED assistant — a permanent right column. Rendered by `Dashboard`
  * inside the layout's reserved right rail (lg+ only), so it reserves space beside
  * the content instead of floating over it. Undock returns to the floating bubble.
  */
@@ -199,7 +199,7 @@ export function DockedChatPanel() {
   )
 }
 
-export function FloatingChatProvider({ children }: { children: ReactNode }) {
+export function Chat({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname() ?? ''
   const { get, set } = usePreferences()

@@ -1,30 +1,27 @@
 'use client'
 
 /**
- * WaitlistGate — WAITLISTED PRODUCT ACCESS.
- *
- * Signup is open (anyone has an account); reaching the PRODUCT is gated on a
- * waitlist position. This wraps the authenticated shell: while the access check
- * loads it shows a spinner, grants the product when the user is at the front (or the
- * gate is off / open), and otherwise renders the waitlist panel — position + the two
- * ways to MOVE UP:
+ * Waitlist — the `waitlist` stage view. Signup is open (anyone has an account); reaching
+ * the PRODUCT is gated on a waitlist position. The entry resolves the access verdict
+ * (fail-OPEN — a blip never traps a signed-in user) and hands this view the status +
+ * reload; while the check is in flight it shows a loader, otherwise the waitlist panel —
+ * the user's position + the two ways to MOVE UP:
  *   1. Run a hanzod node (contribute compute → jump the line / instant access).
  *   2. Invite friends (each referred signup raises your position).
  *
- * The access verdict comes from the server (`/auth/waitlist` → the waitlist plugin),
- * the ONE source shared by console, chat and app. FAIL-OPEN by construction (the
- * hook returns hasAccess on any error), so a blip never traps a signed-in user.
+ * The verdict comes from the server (`/auth/waitlist` → the waitlist plugin), the ONE
+ * source shared by console, chat and app. Operators (an admin host / a SuperAdmin) never
+ * reach this stage — the resolver bypasses the consumer waitlist for them.
  */
 import { useCallback, useState, type ReactNode } from 'react'
 import { Anchor, Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUp, Check, Copy, RefreshCw, Share2, Terminal, Users } from '@hanzogui/lucide-icons-2'
 
-import { branding, isAdminHost } from '~/config'
+import { branding } from '~/config'
 import { HanzoMark, Loader } from '~/components/ui/Loader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { isSuperAdminAccount } from '~/lib/auth/admin'
 import { useSession } from '~/lib/auth/session'
-import { useWaitlist, type WaitlistStatus } from '~/lib/auth/waitlist'
+import { type WaitlistStatus } from '~/lib/auth/waitlist'
 
 /** The node one-liner + docs — env-overridable, honest defaults to hanzo.network. */
 const NODE_CMD = process.env.NEXT_PUBLIC_HANZOD_INSTALL ?? 'curl -fsSL https://hanzo.network/up | sh'
@@ -197,19 +194,15 @@ function WaitlistPanel({ status, onRefresh }: { status: WaitlistStatus | null; o
   )
 }
 
-export function WaitlistGate({ children }: { children: ReactNode }) {
-  const { account } = useSession()
-  // The admin operator surface (admin.<brand>) and any super (platform) admin are
-  // NEVER behind the consumer product waitlist — the operator cockpit is a distinct
-  // concern from consumer product rollout. Mirrors the server authority
-  // (`waitlistAccess` short-circuits an admin host); gating here too avoids even a
-  // panel flash and covers a super admin on any host. Real access to admin.<brand>
-  // stays enforced by admin-guard + the cloud global-admin gate.
-  const operator =
-    (typeof window !== 'undefined' && isAdminHost(window.location.hostname)) ||
-    isSuperAdminAccount(account)
-  const { view, loading, reload } = useWaitlist(!operator)
-  if (loading || !view) return <Loader />
-  if (view.hasAccess) return <>{children}</>
-  return <WaitlistPanel status={view.status} onRefresh={reload} />
+export function Waitlist({
+  status,
+  loading,
+  onReload,
+}: {
+  status: WaitlistStatus | null
+  loading: boolean
+  onReload: () => void
+}) {
+  if (loading) return <Loader />
+  return <WaitlistPanel status={status} onRefresh={onReload} />
 }

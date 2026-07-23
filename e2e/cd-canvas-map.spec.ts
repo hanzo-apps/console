@@ -101,7 +101,7 @@ async function openMap(page: Page) {
   await page.addInitScript((org) => {
     try {
       localStorage.setItem('hanzo.console.org', org)
-      localStorage.setItem('hanzo.console.org.selected', '1') // ENTERED flag — OrgGate → scoped console
+      localStorage.setItem('hanzo.console.org.selected', '1') // ENTERED flag — Scope → scoped console
       localStorage.setItem('hz_onboarding_done:' + org, '1') // skip the first-run wizard
       localStorage.setItem('hz_admin_banner_dismissed', '1')
     } catch {

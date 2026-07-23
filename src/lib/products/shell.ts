@@ -6,7 +6,7 @@
 // A product shell scopes the SAME console image to one product: `billing` is the
 // Billing-Center-only portal (billing.<brand>), `sentry` is the Sentry error/log/
 // trace face (sentry.<brand>). Both are ONE module whose declared sub-pages ARE the
-// shell's nav — so the shell chrome (DashboardShell) renders them through the SAME
+// shell's nav — so the shell chrome (Dashboard) renders them through the SAME
 // nav branch, driven by this descriptor. `console` is the full catalog (no scope).
 import type { ShellId } from '~/config'
 

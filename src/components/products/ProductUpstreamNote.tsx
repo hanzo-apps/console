@@ -8,7 +8,7 @@ import { findEntry } from '~/lib/products/registry'
 /**
  * Universal per-product OSS upstream credit.
  *
- * Rendered ONCE at the bottom of the product content column (DashboardShell), so
+ * Rendered ONCE at the bottom of the product content column (Dashboard), so
  * EVERY product module — native overview, resource card, or bespoke admin surface —
  * surfaces the open-source project it is forked from, from the ONE source of truth
  * (the catalog `upstream` field on the matched entry). Renders nothing for original

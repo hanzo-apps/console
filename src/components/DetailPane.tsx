@@ -8,7 +8,7 @@
  * (full-screen on mobile) via the shared `SlideOver`, so every "open item detail"
  * looks and behaves identically (DRY).
  *
- * Rendered ONCE at the shell root (via `DetailPaneProvider`), so any module — a
+ * Rendered ONCE at the shell root (via `DetailPane`), so any module — a
  * machine row, a provider, a pinned product's customize form — opens the same
  * pane. Interactive content closes itself with `useDetailPane().close()`.
  *
@@ -56,11 +56,11 @@ const Ctx = createContext<DetailPaneApi | null>(null)
 
 export function useDetailPane(): DetailPaneApi {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useDetailPane must be used within <DetailPaneProvider>')
+  if (!ctx) throw new Error('useDetailPane must be used within <DetailPane>')
   return ctx
 }
 
-export function DetailPaneProvider({ children }: { children: ReactNode }) {
+export function DetailPane({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [desc, setDesc] = useState<DetailDescriptor | null>(null)
 

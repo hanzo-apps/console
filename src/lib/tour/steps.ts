@@ -25,7 +25,7 @@ export type TourStep = {
 /**
  * The console first-run tour — honest to what the console actually is (a cloud
  * console for AI products), no fabricated features. Anchors: `nav` (sidebar,
- * DashboardShell), `api-key` + `metrics` (home, page.tsx). Missing anchors center.
+ * Dashboard), `api-key` + `metrics` (home, page.tsx). Missing anchors center.
  */
 export const CONSOLE_TOUR: TourStep[] = [
   {
