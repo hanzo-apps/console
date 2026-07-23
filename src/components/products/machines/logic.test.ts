@@ -235,13 +235,13 @@ describe('fundingModel', () => {
     expect(f.cta.href).toBe('/wallet')
   })
 
-  it('GPU is prepay-card only (never credits) with a 24-hour minimum', () => {
+  it('GPU is prepay-card only (never credits) with the first hour upfront', () => {
     const f = fundingModel('gpu', { hasCard: true })
     expect(f.source).toBe('card')
     expect(f.needsFunds).toBe(false)
     expect(f.headline).toMatch(/prepay/i)
     expect(f.headline).toMatch(/card/i)
-    expect(f.detail).toMatch(/24-hour minimum/i)
+    expect(f.detail).toMatch(/first hour charged upfront/i)
     expect(f.detail).toMatch(/credits can’t be used/i)
   })
 
