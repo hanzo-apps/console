@@ -134,7 +134,7 @@ function useAgents() {
   return { agents, loading, error, live, activity, reload, setAgents }
 }
 
-export function AgentsModule(_props: { params: Record<string, string> }) {
+export function AgentsModule(props: { params: Record<string, string> }) {
   const detail = useDetailPane()
   const { agents, loading, error, live, activity, reload, setAgents } = useAgents()
 
@@ -395,11 +395,21 @@ export function AgentsModule(_props: { params: Record<string, string> }) {
   const tabs: StatusTab[] = ['all', ...AGENT_STATUSES]
   const tabCount = (t: StatusTab): number => (t === 'all' ? agents.length : health[t])
 
+  // Owned sub-pages: Status/Logs/Metrics render focused slices of the agents' OWN
+  // runs (from /v1/agents), so they are never the empty generic o11y/ledger subpage.
+  // Overview ('') shows everything. Metrics = counts + invocation trend + resource;
+  // Status = health donut + agents table; Logs = the invocation activity feed.
+  const routeTab = props.params?.tab ?? ''
+  const showMetrics = routeTab === '' || routeTab === 'metrics'
+  const showStatus = routeTab === '' || routeTab === 'status'
+  const showLogs = routeTab === '' || routeTab === 'logs'
+
   return (
     <>
       {header}
 
       {/* Row 1 — five headline stat cards (real / derived; spark+delta from series) */}
+      {showMetrics && (
       <XStack flexWrap="wrap" gap="$3" items="stretch">
         <MetricCard icon={Bot} label="Total agents" value={fmtInt(stats.total)} sub="registered" />
         <MetricCard icon={Activity} label="Active" value={fmtInt(stats.active)} sub={`${stats.idle} idle · ${stats.error} error`} />
@@ -414,9 +424,12 @@ export function AgentsModule(_props: { params: Record<string, string> }) {
         />
         <MetricCard icon={Timer} label="Avg latency" value={fmtDuration(stats.avgLatencyMs)} sub="per invocation" />
       </XStack>
+      )}
 
       {/* Row 2 — invocations over time + agent health donut */}
+      {(showMetrics || showStatus) && (
       <XStack flexWrap="wrap" gap="$3" items="stretch">
+        {showMetrics && (
         <Panel
           title="Invocations over time"
           flex={2}
@@ -453,13 +466,18 @@ export function AgentsModule(_props: { params: Record<string, string> }) {
             </YStack>
           )}
         </Panel>
+        )}
 
+        {showStatus && (
         <Panel title="Agent health" flex={1} minW={240}>
           <HealthDonut breakdown={health} />
         </Panel>
+        )}
       </XStack>
+      )}
 
       {/* Row 3 — agents table (status tabs + pagination) */}
+      {showStatus && (
       <Panel title="Agents" minW={320}>
         <XStack gap="$1" flexWrap="wrap">
           {tabs.map((t) => (
@@ -503,22 +521,31 @@ export function AgentsModule(_props: { params: Record<string, string> }) {
           </XStack>
         ) : null}
       </Panel>
+      )}
 
-      {/* Row 4 — recent activity · top agents · resource usage */}
+      {/* Row 4 — recent activity (logs) · top agents · resource usage (metrics) */}
+      {(showLogs || showMetrics) && (
       <XStack flexWrap="wrap" gap="$3" items="stretch">
+        {showLogs && (
         <Panel title="Recent activity" flex={1} minW={280}>
           <ActivityFeed events={activity} now={now} />
         </Panel>
+        )}
+        {showMetrics && (
         <Panel title="Top agents by invocations" flex={1} minW={280}>
           <TopAgents agents={top} />
         </Panel>
+        )}
+        {showMetrics && (
         <Panel title="Resource usage · 30d" flex={1} minW={260}>
           <ResourceUsagePanel
             usage={metrics?.resource ?? { cpuVcpuHours: null, memGbHours: null, storageIoBytes: null, costCents: null }}
             connected={metricsConnected}
           />
         </Panel>
+        )}
       </XStack>
+      )}
     </>
   )
 }
