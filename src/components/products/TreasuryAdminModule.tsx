@@ -52,7 +52,7 @@ const usd = (cents: number | null | undefined): string => {
 /** Signed USD cents → "+$10.00" / "-$10.00" (for a journal posting leg). */
 const signedUsd = (cents: number): string => (cents < 0 ? `-${usd(-cents)}` : `+${usd(cents)}`)
 
-/** Basis points → a human percent ("500" → "5%", "1550" → "15.5%"). */
+/** Basis points → a human percent ("2000" → "20%", "1550" → "15.5%"). */
 const pctFromBps = (bps: number): string => {
   if (!Number.isFinite(bps)) return '—'
   const pct = bps / 100
@@ -207,7 +207,7 @@ function PolicyForm({ currentBps, updatedAt, onChanged }: { currentBps: number; 
   const save = useCallback(() => {
     const bps = bpsFromPct(pct)
     if (bps == null) {
-      setErr('Enter a non-negative percent (e.g. 5 for 5%).')
+      setErr('Enter a non-negative percent (e.g. 20 for 20%).')
       return
     }
     setBusy(true)
@@ -238,7 +238,7 @@ function PolicyForm({ currentBps, updatedAt, onChanged }: { currentBps: number; 
           <Text fontSize="$2" color="$color11">
             New share (%)
           </Text>
-          <FieldText value={pct} onChange={setPct} disabled={busy} placeholder="e.g. 5" />
+          <FieldText value={pct} onChange={setPct} disabled={busy} placeholder="e.g. 20" />
         </YStack>
         <PrimaryButton size="$3" onPress={save} disabled={busy}>
           {busy ? 'Saving…' : 'Update policy'}
