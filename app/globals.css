@@ -324,6 +324,31 @@ html:root.t_light {
   }
 }
 
+/* Content-swap progress — an indeterminate bar that slides while a router transition is
+   pending. The persistent shell never blanks on a nav click; only the content pane (and
+   this bar) change. Reduced-motion → a static tint, no motion. */
+@keyframes hz-nav-progress {
+  0% {
+    transform: translateX(-100%) scaleX(0.4);
+  }
+  50% {
+    transform: translateX(0%) scaleX(0.6);
+  }
+  100% {
+    transform: translateX(100%) scaleX(0.4);
+  }
+}
+.hz-nav-progress {
+  transform-origin: left center;
+  animation: hz-nav-progress 1.05s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hz-nav-progress {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
 
 /* RailwayDeploy — the deployment pipeline. A smooth flowing gradient marches along the
    active leg of the track (stroke-dashoffset), a soft halo pulses out from the current

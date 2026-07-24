@@ -29,7 +29,6 @@ import { Button, Dialog, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui
 import { PanelRight, PanelRightClose, Sparkles, X } from '@hanzogui/lucide-icons-2'
 
 import { ChatConversation } from '~/components/products/chat/ChatConversation'
-import { BrandMark } from '~/components/ui/BrandLogo'
 import { usePreferences } from '~/lib/products/preferences'
 
 type FloatingChatApi = {
@@ -254,36 +253,19 @@ export function Chat({ children }: { children: ReactNode }) {
     setIsOpen(false)
   }, [setDocked])
 
+  // The floating bubble that used to cover page content bottom-right is GONE — the
+  // assistant is opened from the ONE header "Assistant" control (DashboardShell topbar
+  // → useFloatingChat().toggle). On the chat/playground surfaces the sheet is
+  // suppressed (the page IS the composer); everywhere else the header opens it.
+  const sheetOpen = isOpen && !onChatSurface
   return (
     <Ctx.Provider value={{ isOpen, open, close, toggle, docked, setDocked, ask, seed }}>
       {children}
 
-      {/* The bubble — fixed bottom-right over every page. Hidden while open (the
-          sheet's own close is the single dismiss). Hidden on the chat/playground
-          surfaces (would overlap the page composer). At lg+ it is ALSO hidden when
-          docked (the permanent column is the surface); on phones it always shows,
-          since docking has no room there. */}
-      {!isOpen && !onChatSurface ? (
-        <YStack position="fixed" b={24} r={24} $lg={{ display: docked ? 'none' : 'flex' }}>
-          {/* The support/AI bubble = the brand 'H' mark (white-labeled per brand),
-              on Material paper elevation with a gentle hover lift. */}
-          <Button
-            circular
-            size="$6"
-            bg="$color5"
-            className="hz-lift hz-elevation-3"
-            hoverStyle={{ bg: '$color6' }}
-            pressStyle={{ bg: '$color7' }}
-            icon={<BrandMark size={22} />}
-            onPress={open}
-            aria-label="Open AI assistant"
-          />
-        </YStack>
-      ) : null}
-
-      {/* The floating sheet. On desktop it's hidden while docked (the column is the
-          surface); on phones it's the assistant even when docked. */}
-      <ChatSheet open={isOpen} onOpenChange={setIsOpen} onHistory={onHistory} onDock={dock} docked={docked} seed={seed} />
+      {/* The floating sheet — opened from the header control. On desktop it's hidden
+          while docked (the permanent column is the surface); on phones it's the
+          assistant even when docked. Never an overlay bubble over content. */}
+      <ChatSheet open={sheetOpen} onOpenChange={setIsOpen} onHistory={onHistory} onDock={dock} docked={docked} seed={seed} />
     </Ctx.Provider>
   )
 }
