@@ -1,5 +1,8 @@
 import './fonts.css'
 import '@hanzogui/core/reset.css'
+// Monochrome brand tokens consumed by the unified Hanzo shell (HanzoHeader /
+// HanzoPreFooterCTA / HanzoFooter) on the public marketing surface.
+import '@hanzo/brand/styles/variables.css'
 import './globals.css'
 
 import type { Metadata, Viewport } from 'next'
