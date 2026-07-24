@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Star, Lock, ArrowRight, BookOpen, KeyRound } from '@hanzogui/lucide-icons-2'
+import { Star, Lock, ArrowRight, BookOpen, KeyRound, Boxes, HandCoins, ExternalLink } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { shellFor } from '~/lib/products/shell'
@@ -23,6 +23,9 @@ import { useFavorites } from '~/lib/products/favorites'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { ProductIcon } from '~/components/ui/ProductIcon'
+import type { IconLike } from '~/components/ui/color'
+import { useProductColors } from '~/lib/products/pins'
 import { FadeIn } from '~/components/ui/FadeIn'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 import { ResourceOverview } from '~/components/products/overview/ResourceOverview'
@@ -105,30 +108,52 @@ function ProductCard({
 }
 
 /**
- * Prominent, always-visible "Get API key" call-to-action at the top of the home.
- * A cold customer must reach "New key" in one obvious click from landing — the
- * api-keys page is otherwise buried in the collapsed Dev nav group. Routes to the
- * real ApiKeysModule (`/api-keys`), where the `hk-` key is created/copied/rotated.
+ * Primary action tile — the ONE presentational card for a top-of-home "first action"
+ * (get an API key, deploy an OSS project, earn from your OSS). Prop-driven and pure: a
+ * ProductIcon tile (the shared product-color system; omit `color` for the neutral chip),
+ * a title, a one-line blurb, and a single CTA. Reused for EVERY primary action so the row
+ * stays DRY — add an action by rendering one more tile, never a new card. `external` swaps
+ * the CTA's trailing glyph to the new-tab mark; `dataTour` anchors the first-run tour (the
+ * API-key tile keeps its `api-key` anchor). No data fetch — a tile is cheap on first paint;
+ * anything heavy (e.g. the OSS catalog) lives behind the CTA, loaded only on press.
  */
-function GetApiKeyCta({ onOpen }: { onOpen: () => void }) {
+function PrimaryActionTile({
+  icon,
+  color,
+  title,
+  description,
+  ctaLabel,
+  external,
+  dataTour,
+  onPress,
+}: {
+  icon: IconLike
+  color?: string
+  title: string
+  description: string
+  ctaLabel: string
+  external?: boolean
+  dataTour?: string
+  onPress: () => void
+}) {
   return (
-    <Card borderWidth={1} borderColor="$borderColor" bg="$color2" p="$4" data-tour="api-key">
-      <XStack items="center" justify="space-between" gap="$4" flexWrap="wrap">
-        <XStack items="center" gap="$3" flex={1} minW={240}>
-          <YStack bg="$color5" rounded="$4" p="$2.5" items="center" justify="center">
-            <KeyRound size={20} />
-          </YStack>
-          <YStack flex={1} minW={180}>
-            <Text fontSize="$5" fontWeight="800">
-              Get your API key
-            </Text>
-            <Text fontSize="$3" color="$color11">
-              Call {config.brandName} models from your apps, SDKs, and CLI with a personal key.
-            </Text>
-          </YStack>
-        </XStack>
-        <PrimaryButton size="$4" iconAfter={<ArrowRight size={16} />} onPress={onOpen}>
-          Get API key
+    <Card flex={1} minW={280} borderWidth={1} borderColor="$borderColor" bg="$color2" p="$4" gap="$3" data-tour={dataTour}>
+      <XStack items="center" gap="$3">
+        <ProductIcon icon={icon} color={color} size={40} />
+        <Text fontSize="$5" fontWeight="800" flex={1} numberOfLines={1}>
+          {title}
+        </Text>
+      </XStack>
+      <Text fontSize="$3" color="$color11" minH={40}>
+        {description}
+      </Text>
+      <XStack>
+        <PrimaryButton
+          size="$3"
+          iconAfter={external ? <ExternalLink size={15} /> : <ArrowRight size={15} />}
+          onPress={onPress}
+        >
+          {ctaLabel}
         </PrimaryButton>
       </XStack>
     </Card>
@@ -140,8 +165,14 @@ export default function DashboardHome() {
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const { toggle, isPinned } = useFavorites()
+  const { colorOf } = useProductColors()
   const showAdmin = useIsSuperAdmin()
   const push = (path: string) => router.push(path)
+  // Deploy OSS opens the external one-click template catalog in a new tab — the heavy
+  // 1000+-app catalog is never fetched or rendered on the dashboard's first paint.
+  const openTemplates = () => {
+    if (typeof window !== 'undefined') window.open(config.templatesUrl, '_blank', 'noopener,noreferrer')
+  }
   const groups = visibleCatalogByCategory(showAdmin)
 
   useEffect(() => setMounted(true), [])
@@ -182,7 +213,38 @@ export default function DashboardHome() {
 
   return (
     <YStack gap="$7">
-      <GetApiKeyCta onOpen={() => push('/api-keys')} />
+      {/* Primary actions — the first, most prominent things a signed-in user can do:
+          get an API key, deploy an open-source project (the platform template catalog),
+          and earn from their own OSS (the Authors revenue-share). ONE tile primitive,
+          three uses; wraps to stack on narrow viewports. The Deploy tile opens the
+          external OSS catalog on press — no eager fetch, so first paint stays cheap. */}
+      <XStack flexWrap="wrap" gap="$3">
+        <PrimaryActionTile
+          icon={KeyRound}
+          title="Get your API key"
+          description={`Call ${config.brandName} models from your apps, SDKs, and CLI with a personal key.`}
+          ctaLabel="Get API key"
+          dataTour="api-key"
+          onPress={() => push('/api-keys')}
+        />
+        <PrimaryActionTile
+          icon={Boxes}
+          color={colorOf('templates')}
+          title="Deploy OSS"
+          description="Deploy Postgres, n8n, Grafana, Supabase and more — one-click open-source apps on Hanzo Cloud."
+          ctaLabel="Browse templates"
+          external
+          onPress={openTemplates}
+        />
+        <PrimaryActionTile
+          icon={HandCoins}
+          color={colorOf('authors')}
+          title="Earn from your OSS"
+          description="Earn 20% of the compute margin your open-source project drives when teams run it on Hanzo Cloud — paid to your Hanzo wallet."
+          ctaLabel="Start earning"
+          onPress={() => push('/authors')}
+        />
+      </XStack>
       <OverviewDashboard params={{}} />
 
       {/* Observability, front-and-center — the platform's live LLM signals (RED
