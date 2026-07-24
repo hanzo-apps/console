@@ -9,17 +9,16 @@
  * honest not-configured / unavailable card renders instead of an empty grid —
  * matching every other infra module.
  */
-import { useCallback, useEffect, useState } from 'react'
 import { Button, Spinner, Text, XStack } from '@hanzo/gui'
 import { RefreshCw, Radio } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { restGet, originV1Url } from '~/lib/api/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { StatusTag } from '~/components/ui/StatusTag'
-import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { PlatformStateCard } from './platform/state'
+import { useResourceList } from './useResourceList'
 
 type EdgeNode = {
   id: string
@@ -31,27 +30,8 @@ type EdgeNode = {
 }
 
 export function EdgeModule(_props: { params: Record<string, string> }) {
-  const [rows, setRows] = useState<EdgeNode[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<PlatformError | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await restGet<{ nodes?: EdgeNode[] }>(originV1Url('edge/nodes'))
-      setRows(r.nodes ?? [])
-      setLoadError(null)
-    } catch (e) {
-      setLoadError(interpretPlatformError(e))
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const { rows, loading, error: loadError, reload: load } =
+    useResourceList<EdgeNode>('edge/nodes', 'nodes')
 
   const columns: Column<EdgeNode>[] = [
     {
