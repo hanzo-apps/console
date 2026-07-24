@@ -158,7 +158,9 @@ export function normalizeDeploy(v: unknown): AuthorDeploy {
 export function normalizeOverview(v: unknown): AuthorOverview {
   const r = asRecord(v)
   // The default share is what a connect would grant (backend sends it in BOTH shapes).
-  const defaultShareBps = int(r.defaultShareBps) || 500
+  // Fallback is the ONE canonical creator share, 20% (2000 bps) — matches cloud's
+  // authors.defaultShareBps, so a missing field never shows the wrong rate.
+  const defaultShareBps = int(r.defaultShareBps) || 2000
   return {
     isAuthor: r.isAuthor === true,
     defaultShareBps,
