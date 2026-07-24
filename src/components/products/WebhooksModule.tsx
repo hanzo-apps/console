@@ -43,11 +43,12 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { VerifyCard } from './webhooks/VerifyCard'
+import { SIGNATURE_SCHEME } from './webhooks/verify'
 
 const enc = encodeURIComponent
 
 /** The delivery signature scheme, shown inline so a dev knows how to verify a payload. */
-const SIGNATURE_SCHEME = 'X-Webhook-Signature: t=<unix>,v1=HMAC-SHA256(t + "." + body)'
 
 type Webhook = {
   id: string
@@ -628,6 +629,11 @@ export function WebhooksModule({ params }: { params: Record<string, string> }) {
                   Comma-separated. Use <Text className="hz-mono">*</Text> for every event, or a prefix pattern like{' '}
                   <Text className="hz-mono">commerce.&gt;</Text> / <Text className="hz-mono">agent.run.*</Text> to match a family.
                 </Text>
+                <Text fontSize="$1" color="$color10">
+                  Live subjects: <Text className="hz-mono">commerce.order.*</Text> ·{' '}
+                  <Text className="hz-mono">commerce.checkout.*</Text> · <Text className="hz-mono">commerce.&gt;</Text> — more event
+                  streams coming.
+                </Text>
               </YStack>
             </FieldRow>
             <FieldRow label="Description">
@@ -652,6 +658,9 @@ export function WebhooksModule({ params }: { params: Record<string, string> }) {
               </Text>
             </XStack>
           </Card>
+
+          {/* Verify a delivery — signature scheme + copy-paste Node/Go verifiers. */}
+          <VerifyCard />
         </>
       )}
     </>
