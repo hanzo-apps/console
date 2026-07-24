@@ -11,7 +11,7 @@ export function usd(cents: number | null | undefined): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-/** Basis points → a human percent ("500" → "5%", "1550" → "15.5%"). */
+/** Basis points → a human percent ("2000" → "20%", "1550" → "15.5%"). */
 export function sharePct(shareBps: number | null | undefined): string {
   if (shareBps == null || !Number.isFinite(shareBps)) return '—'
   const pct = shareBps / 100
