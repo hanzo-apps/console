@@ -102,6 +102,7 @@ import { Users,
   AlertTriangle,
   Cloud,
   FlaskConical,
+  Webhook,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId, type ShellId } from '~/config'
@@ -216,6 +217,7 @@ import { ErrorsModule } from '~/components/products/ErrorsModule'
 import { SentryModule, SENTRY_TABS } from '~/components/products/SentryModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
 import { VpcModule } from '~/components/products/VpcModule'
+import { WebhooksModule } from '~/components/products/WebhooksModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
 import { FunctionsModule } from '~/components/products/FunctionsModule'
 import { ContainersModule } from '~/components/products/ContainersModule'
@@ -1915,6 +1917,25 @@ export const catalog: CatalogEntry[] = [
     docs: ext.api,
     kind: 'module',
     routes: overviewRoutes('api'),
+  },
+  {
+    // Webhooks — the org's outbound event destinations over the real cloud
+    // /v1/webhooks surface (config · enable/disable · rotate secret · test-send ·
+    // delivery logs). A full CRUD module like VPC/LoadBalancer; the newer
+    // sub-features (test/deliveries/rotate) degrade gracefully if not yet routed.
+    // The `:view` route is the deliveries deep-link (auto-expands that endpoint).
+    id: 'webhooks',
+    label: 'Webhooks',
+    icon: Webhook,
+    description: 'Deliver platform events to your endpoints — signed, retried, logged.',
+    category: 'Dev',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [
+      { path: '', component: WebhooksModule },
+      { path: ':view', component: WebhooksModule },
+    ],
   },
   {
     // The customer-facing "connect your tools" page. A logged-in org connects
