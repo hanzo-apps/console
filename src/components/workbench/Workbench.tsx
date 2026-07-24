@@ -15,8 +15,8 @@
  *    links (docs · reference · SDKs · CLI).
  *  - Logs      — the recent charged API calls, filterable, row → JSON detail.
  *  - Events    — the platform-event stream projected from the same real ledger.
- *  - Webhooks  — event destinations (real rows when the endpoint API is live, else
- *    the honest create-first-destination state).
+ *  - Webhooks  — a read-only live glance at the org's endpoints that deep-links into
+ *    the full Webhooks product (which owns config/security/test/logs CRUD).
  *  - Health    — Alerts · Errors · Insights from the o11y runtime.
  *  - Inspector — fetch any object by id (agent_… / fn_… / a resource path) → JSON.
  *  - Traces    — the existing TracesModule (LLM/agent traces), embedded.
@@ -139,7 +139,7 @@ export function WorkbenchDock() {
     ) : tab === 'traces' ? (
       <TracesTab />
     ) : tab === 'webhooks' ? (
-      <WebhooksTab />
+      <WebhooksTab onGo={go} />
     ) : tab === 'health' ? (
       <HealthTab />
     ) : tab === 'inspector' ? (
