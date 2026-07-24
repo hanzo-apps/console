@@ -12,6 +12,7 @@
  */
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
+import { HanzoHeader, HANZO_PRODUCT_CATEGORIES } from '@hanzogui/shell'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
@@ -23,25 +24,42 @@ export function PublicLanding() {
   const brand = getBrand()
   const categories = categoriesForBrand(brand.id).filter((c) => c !== 'Settings')
 
+  const signIn = (
+    <Button size="$3" onPress={() => router.push('/signin')}>
+      Sign in
+    </Button>
+  )
+
   return (
     <YStack minH="100vh" bg="$color1">
-      {/* Top bar — brand + sign in */}
-      <XStack
-        items="center"
-        justify="space-between"
-        px="$4"
-        py="$3"
-        borderBottomWidth={1}
-        borderColor="$borderColor"
-        $md={{ px: '$6' }}
-      >
-        <Text fontSize="$6" fontWeight="700" color="$color12">
-          {config.brandName}
-        </Text>
-        <Button size="$3" onPress={() => router.push('/signin')}>
-          Sign in
-        </Button>
-      </XStack>
+      {/*
+        Top bar. On the Hanzo brand this is the UNIFIED @hanzogui/shell HanzoHeader
+        (Meet Hanzo + the rich ten-category Products mega-menu + brand tokens) — the
+        SAME header every Hanzo surface wears. White-label brands (lux/zoo/…) keep the
+        brand-neutral bar so no Hanzo ecosystem URL leaks onto their console.
+      */}
+      {brand.id === 'hanzo' ? (
+        <HanzoHeader
+          surface="cloud.hanzo.ai"
+          productsTaxonomy={HANZO_PRODUCT_CATEGORIES}
+          account={signIn}
+        />
+      ) : (
+        <XStack
+          items="center"
+          justify="space-between"
+          px="$4"
+          py="$3"
+          borderBottomWidth={1}
+          borderColor="$borderColor"
+          $md={{ px: '$6' }}
+        >
+          <Text fontSize="$6" fontWeight="700" color="$color12">
+            {config.brandName}
+          </Text>
+          {signIn}
+        </XStack>
+      )}
 
       {/* Hero */}
       <YStack items="center" gap="$4" px="$4" py="$10" $md={{ py: '$12' }}>

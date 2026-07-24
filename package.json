@@ -1,10 +1,10 @@
 {
   "name": "@hanzo/console",
-  "version": "8.4.154",
+  "version": "8.4.155",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
-  "description": "Hanzo Cloud Console \u2014 unified admin console for Hanzo Cloud and all cloud products.",
+  "description": "Hanzo Cloud Console — unified admin console for Hanzo Cloud and all cloud products.",
   "scripts": {
     "dev": "next dev -p 4000",
     "build": "next build",
@@ -52,7 +52,8 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-native-web": "0.21.2",
-    "superjson": "2.2.2"
+    "superjson": "2.2.2",
+    "@hanzogui/shell": "^7.5.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
