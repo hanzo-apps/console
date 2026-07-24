@@ -53,6 +53,12 @@ export type ConsoleConfig = {
   /** PaaS base URL (DOKS cluster control plane) — shared. */
   platformUrl: string
   /**
+   * OSS one-click template catalog URL — where the home "Deploy OSS" tile opens the
+   * open-source app catalog (Postgres/n8n/Grafana/Supabase/…). Shared; defaults to the
+   * PaaS templates surface, env-overridable via NEXT_PUBLIC_TEMPLATES_URL.
+   */
+  templatesUrl: string
+  /**
    * hanzo.app builder base URL — where the Templates gallery's "Open in builder"
    * deep-links (fork a starter → customize by prompt in the builder). Shared,
    * env-overridable via NEXT_PUBLIC_APP_URL; default https://hanzo.app.
@@ -116,8 +122,13 @@ export type ConsoleConfig = {
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
+const PLATFORM_URL = trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai')
 const SHARED = {
-  platformUrl: trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai'),
+  platformUrl: PLATFORM_URL,
+  // The OSS one-click template catalog the "Deploy OSS" home tile opens. Defaults to the
+  // PaaS deploy flow's templates surface; repoint NEXT_PUBLIC_TEMPLATES_URL at
+  // templates.<brand> once that standalone catalog UI is stood up.
+  templatesUrl: trimSlash(process.env.NEXT_PUBLIC_TEMPLATES_URL ?? `${PLATFORM_URL}/templates`),
   appUrl: trimSlash(process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanzo.app'),
   chatUrl: trimSlash(process.env.NEXT_PUBLIC_CHAT_URL ?? 'https://hanzo.chat'),
 }
