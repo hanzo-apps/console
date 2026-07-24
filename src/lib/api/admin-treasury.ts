@@ -12,7 +12,7 @@
  *
  * OPTIONAL-SAFE: every field degrades to a real `0`/`''`/`[]`/`false`, so an
  * un-routed deployment renders honest empties, NEVER a fabricated ledger or a faked
- * "anchored" state. Money is USD cents; `revenueShareBps` is basis points (500 = 5%).
+ * "anchored" state. Money is USD cents; `revenueShareBps` is basis points (2000 = 20%).
  */
 import { originGet, originPost } from './client'
 
