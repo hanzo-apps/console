@@ -9,9 +9,19 @@
  * CATEGORY_SUMMARY), brand-scoped via getBrand — so it is honest (every tile is a
  * real category the platform ships) and white-labels for free. The primary CTA is
  * the ONE sign-in surface (/signin); "Learn more" goes to the brand's own site.
+ *
+ * On the HANZO brand the page wears the UNIFIED Hanzo shell — <HanzoHeader> (the
+ * Meet-Hanzo menu + local nav + CTAs, surface `cloud.hanzo.ai`), the
+ * <HanzoPreFooterCTA> band and the ecosystem <HanzoFooter> — so cloud.hanzo.ai
+ * matches every other Hanzo property. That shell is Hanzo-branded by construction
+ * (hanzo.ai links, "Meet Hanzo"), so every OTHER brand (Lux/Zoo/Pars/…) keeps the
+ * brand-scoped bespoke chrome — never leak Hanzo onto a non-Hanzo surface
+ * (white-label law). The marketing BODY (hero + live product-category tiles) is
+ * identical for both.
  */
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
+import { HanzoHeader, HanzoPreFooterCTA, HanzoFooter } from '@hanzogui/shell'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
@@ -22,27 +32,15 @@ export function PublicLanding() {
   const router = useRouter()
   const brand = getBrand()
   const categories = categoriesForBrand(brand.id).filter((c) => c !== 'Settings')
+  // The unified Hanzo shell is Hanzo-branded by construction (Meet-Hanzo menu +
+  // hanzo.ai footer), so it renders ONLY on the Hanzo brand; every other brand keeps
+  // its own bespoke chrome — never leak Hanzo onto a Lux/Zoo/Pars surface.
+  const unified = brand.id === 'hanzo'
 
-  return (
-    <YStack minH="100vh" bg="$color1">
-      {/* Top bar — brand + sign in */}
-      <XStack
-        items="center"
-        justify="space-between"
-        px="$4"
-        py="$3"
-        borderBottomWidth={1}
-        borderColor="$borderColor"
-        $md={{ px: '$6' }}
-      >
-        <Text fontSize="$6" fontWeight="700" color="$color12">
-          {config.brandName}
-        </Text>
-        <Button size="$3" onPress={() => router.push('/signin')}>
-          Sign in
-        </Button>
-      </XStack>
-
+  // Shared marketing body — hero + live product-category tiles, identical on every
+  // brand and inside either chrome (DRY).
+  const body = (
+    <>
       {/* Hero */}
       <YStack items="center" gap="$4" px="$4" py="$10" $md={{ py: '$12' }}>
         <YStack items="center" gap="$3" maxW={760}>
@@ -74,15 +72,7 @@ export function PublicLanding() {
             }}
           >
             {categories.map((c) => (
-              <YStack
-                key={c}
-                gap="$1.5"
-                p="$4"
-                rounded="$4"
-                borderWidth={1}
-                borderColor="$borderColor"
-                bg="$color2"
-              >
+              <YStack key={c} gap="$1.5" p="$4" rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color2">
                 <Text fontSize="$5" fontWeight="700" color="$color12">
                   {c}
                 </Text>
@@ -94,6 +84,42 @@ export function PublicLanding() {
           </div>
         </YStack>
       </XStack>
+    </>
+  )
+
+  // Hanzo brand — the unified shell (header · body · pre-footer CTA · ecosystem footer).
+  if (unified) {
+    return (
+      <YStack minH="100vh" bg="$color1">
+        <HanzoHeader
+          surface="cloud.hanzo.ai"
+          account={
+            <Button size="$3" onPress={() => router.push('/signin')}>
+              Sign in
+            </Button>
+          }
+        />
+        {body}
+        <HanzoPreFooterCTA surface="cloud.hanzo.ai" />
+        <HanzoFooter currentProductId="cloud" />
+      </YStack>
+    )
+  }
+
+  // Every other brand — the brand-scoped bespoke chrome (no Hanzo leak).
+  return (
+    <YStack minH="100vh" bg="$color1">
+      {/* Top bar — brand + sign in */}
+      <XStack items="center" justify="space-between" px="$4" py="$3" borderBottomWidth={1} borderColor="$borderColor" $md={{ px: '$6' }}>
+        <Text fontSize="$6" fontWeight="700" color="$color12">
+          {config.brandName}
+        </Text>
+        <Button size="$3" onPress={() => router.push('/signin')}>
+          Sign in
+        </Button>
+      </XStack>
+
+      {body}
 
       <XStack justify="center" px="$4" $md={{ px: '$6' }}>
         <YStack width="100%" maxW={1080}>
