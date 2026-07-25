@@ -92,8 +92,8 @@ export function ProjectsModule() {
           hoverStyle={{ opacity: 0.8 }}
           onPress={() => { if (typeof window !== 'undefined') window.open(r.url, '_blank', 'noopener,noreferrer') }}
         >
-          <Text fontSize="$1" color="$blue11" numberOfLines={1}>{r.url.replace(/^https?:\/\//, '')}</Text>
-          <ExternalLink size={12} color="$blue11" />
+          <Text fontSize="$1" color="$color12" numberOfLines={1}>{r.url.replace(/^https?:\/\//, '')}</Text>
+          <ExternalLink size={12} color="$color12" />
         </XStack>
       ) : <Text fontSize="$1" color="$color9">—</Text>
     ) },

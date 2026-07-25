@@ -153,7 +153,7 @@ function ChannelCard({ channel }: { channel: Channel }) {
           {body}
         </Text>
         {cta ? (
-          <Text fontSize="$3" color="$blue10" mt="$1">
+          <Text fontSize="$3" color="$color11" mt="$1">
             {cta}
           </Text>
         ) : null}

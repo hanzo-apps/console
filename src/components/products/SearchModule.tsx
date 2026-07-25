@@ -200,7 +200,7 @@ function TrySearchTab({ onProbe }: { onProbe: (r: { ok: boolean; results: number
           {shown.map((r) => (
             <Card key={r.url} borderWidth={1} borderColor="$borderColor" p="$3" gap="$1" hoverStyle={{ bg: '$color2' }}>
               <XStack items="center" gap="$2" justify="space-between">
-                <Text fontSize="$3" fontWeight="600" color="$blue10" numberOfLines={1} flex={1}>
+                <Text fontSize="$3" fontWeight="600" color="$color11" numberOfLines={1} flex={1}>
                   {r.title}
                 </Text>
                 <Button size="$1" chromeless icon={<ExternalLink size={13} />} onPress={() => openExternal(r.url)} aria-label="Open result">
