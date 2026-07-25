@@ -247,6 +247,24 @@ export {
   type RangeWindow,
 } from './telemetry'
 export {
+  LuxInfraApi,
+  LUX_QUERIES,
+  LUX_SERVICES,
+  livenessOf,
+  networkLabel,
+  toNetworks,
+  toNodeMemory,
+  toTopPods,
+  toServices,
+  type LuxInfra,
+  type Liveness,
+  type ValidatorRow,
+  type NetworkSummary,
+  type NodeMem,
+  type PodMem,
+  type ServiceStatus,
+} from './lux-infra'
+export {
   ApmApi,
   apmWindow,
   normalizeService,
