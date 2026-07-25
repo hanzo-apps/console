@@ -20,6 +20,7 @@ import { fetchCatalog, modelId, isZen, type CatalogEntry } from '~/lib/api/aicat
 import { saveConfig } from '~/lib/training-configs'
 import { usd } from '~/lib/api/compute'
 import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
+import { toneColor } from '~/components/ui/tone'
 
 /** Realistic base models to train from: available + text, our own Zen first. */
 function baseModelOptions(cat: CatalogEntry[]): string[] {
@@ -181,7 +182,7 @@ export function NewTrainingPanel({
 
       {error ? (
         <YStack gap="$1" p="$3" rounded="$3" bg="$color3">
-          <Text fontSize="$3" fontWeight="700" color={billing ? '#f0a868' : '#e5534b'}>
+          <Text fontSize="$3" fontWeight="700" color={toneColor(billing ? 'warning' : 'critical')}>
             {billing ? 'Add credits to start training' : 'Could not start the job'}
           </Text>
           <Text fontSize="$2" color="$color11">{error}</Text>

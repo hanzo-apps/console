@@ -20,6 +20,7 @@
  */
 import type { Resource, ResourceKind } from '~/lib/api'
 import type { Slice } from '~/components/ui/Charts'
+import { toneVar } from '~/components/ui/tone-var'
 
 // ── Lifecycle classification (mirrors ui/StatusTag toneOf, one truth) ─────────
 
@@ -68,12 +69,12 @@ export function fleetStats(rows: Resource[]): FleetStats {
   return { total: rows.length, ready, provisioning, error, since }
 }
 
-/** Semantic colours for the status donut (SVG needs concrete hex, not tokens). */
+/** Status-donut weights — the ONE console tone map, as CSS values (SVG can't read tokens). */
 const STATUS_COLORS: Record<Exclude<Lifecycle, 'other'> | 'other', string> = {
-  ready: '#23c562',
-  provisioning: '#f4c245',
-  error: '#ef4444',
-  other: '#64748b',
+  ready: toneVar('positive'),
+  provisioning: toneVar('warning'),
+  error: toneVar('critical'),
+  other: toneVar('muted'),
 }
 
 /** The status breakdown as donut slices (only the non-zero buckets). */

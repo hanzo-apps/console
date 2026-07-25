@@ -4,6 +4,7 @@
  * (registry/React never imported here).
  */
 import type { AffiliateStatus } from '~/lib/api/affiliates'
+import { toneColor, type Tone } from '~/components/ui/tone'
 
 /** USD cents → "$10.00" (em-dash for a non-finite value — honest, never NaN). */
 export function usd(cents: number | null | undefined): string {
@@ -33,19 +34,25 @@ export function statusLabel(status: AffiliateStatus): string {
   }
 }
 
-/** Tone color for a status pill. A literal union so it is assignable to the
- *  @hanzo/gui `color` prop (a widened `string` is not). */
-export function statusTone(status: AffiliateStatus): '#3fb950' | '#d29922' | '#f85149' | '#8b949e' {
+/** The tone an affiliate status carries. Domain knowledge lives here (an
+ *  *applied* affiliate is awaiting review, not healthy); the appearance comes
+ *  from the one console-wide map in `~/components/ui/tone`. */
+export function statusTone(status: AffiliateStatus): Tone {
   switch (status) {
     case 'approved':
-      return '#3fb950' // active — green
+      return 'positive'
     case 'applied':
-      return '#d29922' // awaiting review — amber
+      return 'warning'
     case 'suspended':
-      return '#f85149' // suspended — red
+      return 'critical'
     default:
-      return '#8b949e'
+      return 'muted'
   }
+}
+
+/** Greyscale token for a status pill — `toneColor ∘ statusTone`. */
+export function statusColor(status: AffiliateStatus) {
+  return toneColor(statusTone(status))
 }
 
 /** A "YYYY-MM" accrual period → a short month label ("2026-07" → "Jul 2026"). */

@@ -36,7 +36,8 @@ import { MetricCard } from '~/components/ui/Metric'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { payoutMethodLabel, sharePct, shortDate, statusLabel, statusTone, usd, verifyMethodLabel } from './authors/logic'
+import { payoutMethodLabel, sharePct, shortDate, statusLabel, statusColor, usd, verifyMethodLabel } from './authors/logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -137,7 +138,7 @@ function AuthorConnect({ onConnected }: { onConnected: () => void }) {
           </Text>
         </YStack>
         {error ? (
-          <Text fontSize="$2" color="#f85149">
+          <Text fontSize="$2" color={toneColor('critical')}>
             {error}
           </Text>
         ) : null}
@@ -200,20 +201,20 @@ function AuthorDashboard({
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2" justify="space-between" flexWrap="wrap">
           <XStack items="center" gap="$2">
-            <Github size={18} color={statusTone(data.status)} />
+            <Github size={18} color={statusColor(data.status)} />
             <Text fontSize="$5" fontWeight="700">
               Author
             </Text>
             {data.verified ? (
               <XStack items="center" gap="$1">
-                <BadgeCheck size={16} color="#3fb950" />
-                <Text fontSize="$2" color="#3fb950">
+                <BadgeCheck size={16} color={toneColor('positive')} />
+                <Text fontSize="$2" color={toneColor('positive')}>
                   verified identity
                 </Text>
               </XStack>
             ) : null}
           </XStack>
-          <Text fontSize="$2" fontWeight="700" color={statusTone(data.status)}>
+          <Text fontSize="$2" fontWeight="700" color={statusColor(data.status)}>
             {statusLabel(data.status)}
           </Text>
         </XStack>
@@ -249,10 +250,10 @@ function AuthorDashboard({
 
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Github size={16} color="#8b949e" />} label="Repos" value={String(verifiedRepos)} caption="verified repositories" />
+        <MetricCard icon={<Github size={16} color={toneColor('muted')} />} label="Repos" value={String(verifiedRepos)} caption="verified repositories" />
         <MetricCard icon={<HandCoins size={16} color="#D4D4D4" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime royalties" />
-        <MetricCard icon={<Coins size={16} color="#d29922" />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
-        <MetricCard icon={<Wallet size={16} color="#3fb950" />} label="Paid out" value={usd(data.paidCents)} caption="royalties paid" />
+        <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
+        <MetricCard icon={<Wallet size={16} color={toneColor('positive')} />} label="Paid out" value={usd(data.paidCents)} caption="royalties paid" />
       </XStack>
 
       {/* Repositories */}
@@ -297,7 +298,7 @@ function AuthorDashboard({
         </XStack>
         {data.deploys.length === 0 ? (
           <YStack p="$5" items="center" gap="$2">
-            <Rocket size={22} color="#6e7681" />
+            <Rocket size={22} color={toneColor('muted')} />
             <Text fontSize="$3" color="$color11">
               No deploys yet
             </Text>
@@ -346,7 +347,7 @@ function AuthorDashboard({
         </XStack>
         {data.payouts.length === 0 ? (
           <YStack p="$5" items="center" gap="$2">
-            <Wallet size={22} color="#6e7681" />
+            <Wallet size={22} color={toneColor('muted')} />
             <Text fontSize="$3" color="$color11">
               No payouts yet
             </Text>
@@ -448,7 +449,7 @@ function RepositoriesCard({
         </PrimaryButton>
       </XStack>
       {error ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {error}
         </Text>
       ) : null}
@@ -484,13 +485,13 @@ function RepositoriesCard({
                 </Text>
                 {r.verified ? (
                   <XStack items="center" gap="$1">
-                    <BadgeCheck size={13} color="#3fb950" />
-                    <Text fontSize="$2" color="#3fb950">
+                    <BadgeCheck size={13} color={toneColor('positive')} />
+                    <Text fontSize="$2" color={toneColor('positive')}>
                       {verifyMethodLabel(r.method)}
                     </Text>
                   </XStack>
                 ) : (
-                  <Text fontSize="$2" color="#d29922">
+                  <Text fontSize="$2" color={toneColor('warning')}>
                     Unverified
                   </Text>
                 )}

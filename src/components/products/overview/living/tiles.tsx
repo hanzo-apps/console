@@ -54,9 +54,10 @@ import type {
   OverviewData,
   TimeseriesTile,
 } from './config'
+import { toneVar } from '~/components/ui/tone-var'
 
-const UP = '#23c562'
-const DOWN = '#ef4444'
+const UP = toneVar('positive')
+const DOWN = toneVar('critical')
 
 /** Format an axis label for a series interval. */
 const fmtAxis = (iso: string, interval: string): string => {
@@ -153,7 +154,7 @@ function DeltaPill({ delta, loading, kpi }: { delta: { pct: number; up: boolean 
   const color = delta.up ? UP : DOWN
   return (
     <XStack items="center" gap="$1">
-      <Icon size={12} color={color} />
+      <Icon size={12} color={color as never} />
       <Text fontSize="$1" fontWeight="700" style={{ color }}>
         {`${delta.up ? '+' : ''}${delta.pct}%`}
       </Text>
@@ -367,7 +368,7 @@ export function HealthTileView({ tile, data, loading }: { tile: HealthTile; data
   const rows = data?.health ?? []
   const worst = worstHealth(rows)
   const { healthy, total } = healthTally(rows)
-  const headColor = worst === 'red' ? DOWN : worst === 'yellow' ? '#f0a868' : worst === 'green' ? OK : MUTED
+  const headColor = worst === 'red' ? DOWN : worst === 'yellow' ? toneVar('warning') : worst === 'green' ? OK : MUTED
 
   return (
     <Panel

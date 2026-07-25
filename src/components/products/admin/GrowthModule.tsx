@@ -68,17 +68,19 @@ import { BackendStateCard, classifyRead } from '~/components/ui/BackendState'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 // ── semantic palette (deliberately separate from the brand accent) ──────────
-const ON = '#23c562' // enabled / on-track
-const OFF = '#e5534b' // disabled
+const ON = toneVar('positive') // enabled / on-track
+const OFF = toneVar('critical') // disabled
 const AUTO = '#A3A3A3' // automatable
-/** Growth-stage semantic colors + copy — a stage is a state, so it gets its own hue. */
+/** Growth-stage semantic weights + copy — a stage is a state, carried by emphasis + label. */
 const STAGE_META: Record<string, { label: string; color: string; blurb: string }> = {
-  formed: { label: 'Formed', color: '#94a3b8', blurb: 'Set up — org created, first config in place.' },
+  formed: { label: 'Formed', color: toneVar('muted'), blurb: 'Set up — org created, first config in place.' },
   launched: { label: 'Launched', color: '#A3A3A3', blurb: 'Live — a site or app is shipped.' },
   activated: { label: 'Activated', color: '#737373', blurb: 'Traction — real usage and signups.' },
-  scaling: { label: 'Scaling', color: '#23c562', blurb: 'Growing — revenue is compounding.' },
+  scaling: { label: 'Scaling', color: toneVar('positive'), blurb: 'Growing — revenue is compounding.' },
 }
 
 const SINGULAR: Record<BlueprintCollection, string> = {
@@ -108,8 +110,8 @@ function EnableToggle({ enabled, busy, onToggle }: { enabled: boolean; busy: boo
       onPress={() => !busy && onToggle(!enabled)}
       style={{ background: enabled ? 'rgba(35,197,98,0.12)' : 'rgba(148,163,184,0.10)' }}
     >
-      <YStack width={8} height={8} rounded="$10" style={{ backgroundColor: enabled ? ON : '#64748b' }} />
-      <Text fontSize="$1" fontWeight="600" style={{ color: enabled ? ON : '#94a3b8' }}>
+      <YStack width={8} height={8} rounded="$10" style={{ backgroundColor: enabled ? ON : toneVar('muted') }} />
+      <Text fontSize="$1" fontWeight="600" style={{ color: enabled ? ON : toneVar('muted') }}>
         {enabled ? 'Enabled' : 'Disabled'}
       </Text>
     </XStack>
@@ -410,7 +412,7 @@ function BlueprintPanel({
             <Text fontSize="$1" color="$color10" fontWeight="600">{tactics.length} tactic{tactics.length === 1 ? '' : 's'}</Text>
             {tactics.slice(0, 8).map((t) => (
               <XStack key={t.id} gap="$2" items="center">
-                <YStack width={5} height={5} rounded="$10" style={{ backgroundColor: t.enabled ? ON : '#64748b' }} />
+                <YStack width={5} height={5} rounded="$10" style={{ backgroundColor: t.enabled ? ON : toneVar('muted') }} />
                 <Text fontSize="$1" color="$color11" flex={1} numberOfLines={1}>{t.action}</Text>
               </XStack>
             ))}
@@ -616,7 +618,7 @@ function CorpusPanel({ nonce }: { nonce: number }) {
     const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])
     const top = sorted.slice(0, 7).map(([label, value], i) => ({ label, value, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
     const rest = sorted.slice(7).reduce((n, [, v]) => n + v, 0)
-    return rest > 0 ? [...top, { label: 'other', value: rest, color: '#64748b' }] : top
+    return rest > 0 ? [...top, { label: 'other', value: rest, color: toneVar('muted') }] : top
   }, [all])
 
   const shown = useMemo(() => {
@@ -744,8 +746,8 @@ function StageStepper({ stage }: { stage: string }) {
             borderColor="$borderColor"
             style={{ borderColor: active ? meta.color : undefined, background: reached ? `${meta.color}1f` : undefined, opacity: reached ? 1 : 0.55 }}>
             <XStack items="center" gap="$1.5">
-              <YStack width={9} height={9} rounded="$10" style={{ backgroundColor: reached ? meta.color : '#64748b' }} />
-              <Text fontSize="$2" fontWeight="700" style={{ color: reached ? meta.color : '#94a3b8' }}>{meta.label}</Text>
+              <YStack width={9} height={9} rounded="$10" style={{ backgroundColor: reached ? meta.color : toneVar('muted') }} />
+              <Text fontSize="$2" fontWeight="700" style={{ color: reached ? meta.color : toneVar('muted') }}>{meta.label}</Text>
               {active ? <Text fontSize="$1" color="$color9">· now</Text> : null}
             </XStack>
             <Text fontSize="$1" color="$color10">{meta.blurb}</Text>
@@ -816,7 +818,7 @@ function LivePanel({ nonce }: { nonce: number }) {
               {km ? <UtilBar value={Math.min(100, km.launchProgress)} width={240} color={ON} /> : null}
               <LegendDot color="#A3A3A3" label="Pageviews" value={funnel.pageviews.toLocaleString()} />
               <LegendDot color="#737373" label="Visitors" value={funnel.visitors.toLocaleString()} />
-              <LegendDot color="#f0a868" label="Signups" value={funnel.signups.toLocaleString()} />
+              <LegendDot color={toneVar('warning')} label="Signups" value={funnel.signups.toLocaleString()} />
               <LegendDot color={ON} label="Orders" value={funnel.orders.toLocaleString()} />
             </YStack>
           ) : (
@@ -833,8 +835,8 @@ function LivePanel({ nonce }: { nonce: number }) {
               {signals.map(([name, on]) => (
                 <XStack key={name} items="center" gap="$1.5" px="$2.5" py="$1.5" rounded="$10" borderWidth={1} borderColor="$borderColor"
                   style={{ background: on ? 'rgba(35,197,98,0.12)' : 'rgba(148,163,184,0.08)' }}>
-                  {on ? <CircleCheck size={13} color={ON} /> : <Circle size={13} color="#64748b" />}
-                  <Text fontSize="$1" style={{ color: on ? ON : '#94a3b8' }}>{name}</Text>
+                  {on ? <CircleCheck size={13} color={toneColor('positive')} /> : <Circle size={13} color={toneColor('muted')} />}
+                  <Text fontSize="$1" style={{ color: on ? ON : toneVar('muted') }}>{name}</Text>
                 </XStack>
               ))}
             </XStack>

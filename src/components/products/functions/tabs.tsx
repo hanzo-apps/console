@@ -25,6 +25,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { DetailRow, Badge } from '~/components/products/observability/parts'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -78,7 +79,7 @@ export function TriggersTab({ hint }: { hint: string }) {
     { key: 'type', header: 'Type', width: 130, render: (t) => <Badge label={t.type} /> },
     { key: 'target', header: 'Target', render: (t) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{t.target ?? '—'}</Text> },
     { key: 'functionName', header: 'Function', width: 160, render: (t) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{t.functionName ?? '—'}</Text> },
-    { key: 'enabled', header: 'State', width: 100, render: (t) => <Text fontSize="$1" color={t.enabled ? '#3fb950' : '$color10'}>{t.enabled ? 'enabled' : 'disabled'}</Text> },
+    { key: 'enabled', header: 'State', width: 100, render: (t) => <Text fontSize="$1" color={t.enabled ? toneColor('positive') : '$color10'}>{t.enabled ? 'enabled' : 'disabled'}</Text> },
   ]
   if (state.phase === 'error') return <BackendStateCard state={state.error} onRetry={reload} hint={hint} />
   return (

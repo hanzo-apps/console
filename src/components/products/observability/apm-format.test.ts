@@ -95,14 +95,14 @@ describe('fmtAgo', () => {
 })
 
 describe('errorTone', () => {
-  it('escalates green → amber → orange → red by rate', () => {
-    expect(errorTone(0)).toBe('#30a46c')
-    expect(errorTone(0.005)).toBe('#d6c15a') // 0.5%
-    expect(errorTone(0.03)).toBe('#f0a868') // 3%
-    expect(errorTone(0.2)).toBe('#e5484d') // 20%
+  it('escalates by WEIGHT, never hue — calm → warn → hot', () => {
+    expect(errorTone(0)).toBe('var(--color11)') // positive
+    expect(errorTone(0.03)).toBe('var(--color11)') // 3% — warning
+    expect(errorTone(0.2)).toBe('var(--color12)') // 20% — critical
+    for (const r of [0, 0.005, 0.03, 0.2, 10, null]) expect(errorTone(r)).toMatch(/^var\(--color(9|10|11|12)\)$/)
   })
   it('accepts already-percent values and defaults calm', () => {
-    expect(errorTone(10)).toBe('#e5484d')
-    expect(errorTone(null)).toBe('#30a46c')
+    expect(errorTone(10)).toBe('var(--color12)')
+    expect(errorTone(null)).toBe('var(--color11)')
   })
 })

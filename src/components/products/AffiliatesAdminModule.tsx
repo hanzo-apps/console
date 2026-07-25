@@ -22,7 +22,8 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
-import { dollarsToCents, percentToBps, ratePct, shortDate, statusLabel, statusTone, usd } from './affiliates/logic'
+import { dollarsToCents, percentToBps, ratePct, shortDate, statusLabel, statusColor, usd } from './affiliates/logic'
+import { toneColor } from '~/components/ui/tone'
 
 /** The backend caps the DIRECT (L1) rate at 9300 bps so the L1+L2+L3 schedule ≤ 100% of margin. */
 const MAX_RATE_BPS = 9300
@@ -226,9 +227,9 @@ function ActionEditor({
     <Card p="$4" gap="$3" borderWidth={1} borderColor="#D4D4D4">
       <XStack items="center" gap="$2">
         {action.kind === 'approve' ? (
-          <BadgeCheck size={16} color="#3fb950" />
+          <BadgeCheck size={16} color={toneColor('positive')} />
         ) : action.kind === 'rate' ? (
-          <Percent size={16} color="#d29922" />
+          <Percent size={16} color={toneColor('warning')} />
         ) : (
           <HandCoins size={16} color="#D4D4D4" />
         )}
@@ -297,7 +298,7 @@ function ActionEditor({
       )}
 
       {error ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {error}
         </Text>
       ) : null}
@@ -330,10 +331,10 @@ function AffiliatesAdminReady({
   return (
     <YStack gap="$4">
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Users size={16} color="#8b949e" />} label="Affiliates" value={String(s.total)} caption={`${s.approved} approved · ${s.applied} pending`} />
+        <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Affiliates" value={String(s.total)} caption={`${s.approved} approved · ${s.applied} pending`} />
         <MetricCard icon={<HandCoins size={16} color="#D4D4D4" />} label="Accrued" value={usd(s.accruedCents)} caption="lifetime commission" />
-        <MetricCard icon={<Coins size={16} color="#d29922" />} label="Pending" value={usd(s.pendingCents)} caption="owed, unpaid" />
-        <MetricCard icon={<Wallet size={16} color="#3fb950" />} label="Paid out" value={usd(s.paidCents)} caption="commission paid" />
+        <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Pending" value={usd(s.pendingCents)} caption="owed, unpaid" />
+        <MetricCard icon={<Wallet size={16} color={toneColor('positive')} />} label="Paid out" value={usd(s.paidCents)} caption="commission paid" />
       </XStack>
 
       <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" overflow="hidden">
@@ -382,7 +383,7 @@ function AffiliatesAdminReady({
             <Text flex={1} minW={90} fontSize="$2" style={{ fontFamily: 'monospace' }} color="$color11">
               {a.code || (a.requestedCode ? `${a.requestedCode}?` : '—')}
             </Text>
-            <Text flex={1} minW={80} fontSize="$2" fontWeight="700" color={statusTone(a.status)}>
+            <Text flex={1} minW={80} fontSize="$2" fontWeight="700" color={statusColor(a.status)}>
               {statusLabel(a.status)}
             </Text>
             <Text flex={1} minW={64} fontSize="$2" color="$color11" text="right">
