@@ -191,7 +191,7 @@ export function PlatformDetail({ name }: { name: string }) {
                 <Globe size={14} opacity={0.7} />
                 <Text
                   fontSize="$3"
-                  color="$blue11"
+                  color="$color12"
                   style={{ cursor: 'pointer', textDecoration: 'underline' }}
                   onPress={() => openExt(liveUrl)}
                 >
