@@ -1,0 +1,25 @@
+# ~7-line canonical caller — all real config lives in /hanzo.yml.
+# Builds + pushes BOTH console images (the embed artifact cloud go:embeds, and
+# the Next.js server image admin.hanzo.ai runs); auto-mirrors to registry.hanzo.ai.
+#
+# It replaces `.hanzo/workflows/deploy.yml`, which built the server image a
+# SECOND time by hand and could not: `buildctl-daemonless.sh` is not in the image
+# this fleet serves for `hanzo-build-linux-amd64` (every label in that pool maps
+# to catthehacker/ubuntu:act-24.04 — universe:infra/k8s/git-runner/statefulset.yaml),
+# and its `secrets.GIT_CLONE_TOKEN` exists on neither the repo nor the org. Its
+# `kubectl patch app` was futile too: cd.hanzo.ai's selfHeal restores the CR from
+# the universe pin on the next poll. Rollout is a reviewed tag pin in
+# hanzoai/universe, never a CI side effect.
+name: CI/CD
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # A hand-cut v* tag must produce its image, or the tag is a receipt for
+    # nothing — the exact drift the retired build-image.yml existed to prevent.
+    tags: ['v*']
+  pull_request:
+jobs:
+  cicd:
+    uses: hanzoai/ci/.github/workflows/build.yml@v1
+    secrets: inherit
