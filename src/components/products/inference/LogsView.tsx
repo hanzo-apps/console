@@ -21,7 +21,7 @@ import { useInferenceData } from './data'
 import { SectionCard, Segmented, StatusDot, type Option } from './parts'
 import { openLogDetail } from './panes'
 import { distinctLevels, distinctModels, logsFromRecords, type LogLine } from './logic'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 const LIMIT = 200
 

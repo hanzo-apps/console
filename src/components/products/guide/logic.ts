@@ -4,7 +4,7 @@
  * surface. Mirrors the onboarding `steps.ts` convention.
  */
 import type { GuideOverview, GuideStep, StepState, GuideEvent } from '~/lib/api/guide'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 /** Human label for a step state. */
 export function stateLabel(s: StepState): string {

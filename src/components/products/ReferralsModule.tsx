@@ -84,7 +84,7 @@ function ReferralsReady({
       {/* Link + reward explainer */}
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2">
-          <Gift size={18} color="#D4D4D4" />
+          <Gift size={18} color="$color11" />
           <Text fontSize="$5" fontWeight="700">
             Give {usd(data.refereeBonusCents)}, get {usd(data.referrerBonusCents)}
           </Text>

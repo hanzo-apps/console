@@ -27,7 +27,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { fmtValue, fmtDate, rowKeyOf } from './research-fmt'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 type State = { loading: boolean; error: unknown; totals: Totals | null; experiments: Experiment[] }
 
@@ -140,7 +140,7 @@ export function ResearchModule() {
           {/* Refutation highlight — the "don't re-chase" knowledge, reasoning inline. */}
           <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
             <XStack items="center" gap="$2">
-              <CircleSlash size={15} color="#D4D4D4" />
+              <CircleSlash size={15} color="$color11" />
               <Text fontSize="$4" fontWeight="700">
                 Refutations
               </Text>
@@ -153,7 +153,7 @@ export function ResearchModule() {
             ) : refutations.length ? (
               <YStack gap="$2.5">
                 {refutations.map((e) => (
-                  <YStack key={e.id} gap="$1" borderLeftWidth={2} borderColor="#D4D4D4" pl="$3">
+                  <YStack key={e.id} gap="$1" borderLeftWidth={2} borderColor="$color11" pl="$3">
                     <XStack items="center" gap="$2" flexWrap="wrap">
                       <Text fontSize="$3" fontWeight="600">{e.subject}</Text>
                       <Text fontSize="$2" color="$color10" className="hz-mono">{e.task}</Text>

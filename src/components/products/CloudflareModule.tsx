@@ -52,7 +52,7 @@ import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
 
 /** Cloudflare brand orange — used ONLY for Cloudflare-specific affordances. */
-const CF_ORANGE = '#F38020'
+const CF_TONE = 'var(--color11)' // the Cloudflare lane reads by icon + label, not hue
 
 type Async<T> =
   | { phase: 'loading' }
@@ -121,7 +121,7 @@ function Phase2Panel({ tab }: { tab: 'r2' | 'kv' | 'd1' }) {
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={640}>
       <XStack gap="$2" items="center">
-        <Cloud size={16} color={CF_ORANGE} />
+        <Cloud size={16} color={CF_TONE} />
         <Text fontSize="$4" fontWeight="700">
           {tab.toUpperCase()} — Phase 2
         </Text>
@@ -171,10 +171,10 @@ function LinkOut({ href, label }: { href: string; label?: string }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {...({ href, target: '_blank', rel: 'noopener noreferrer' } as any)}
     >
-      <Text fontSize="$2" style={{ color: CF_ORANGE }} numberOfLines={1}>
+      <Text fontSize="$2" style={{ color: CF_TONE }} numberOfLines={1}>
         {label ?? href.replace(/^https:\/\//, '')}
       </Text>
-      <ExternalLink size={12} color={CF_ORANGE} />
+      <ExternalLink size={12} color={CF_TONE} />
     </XStack>
   )
 }
@@ -620,7 +620,7 @@ function PagesDialogs({
       onClose={onClose}
       title={title}
       icon={dialog.kind === 'deleteProject' || dialog.kind === 'deleteDomain' ? Trash2 : Cloud}
-      iconColor={CF_ORANGE}
+      iconColor={CF_TONE}
       ariaLabel="Cloudflare Pages dialog"
     >
       {dialog.kind === 'newProject' ? (
@@ -855,7 +855,7 @@ function WorkersTab() {
                     : ''
         }
         icon={dialog.kind === 'deleteScript' || dialog.kind === 'deleteRoute' ? Trash2 : Zap}
-        iconColor={CF_ORANGE}
+        iconColor={CF_TONE}
         size={560}
         ariaLabel="Cloudflare Workers dialog"
       >

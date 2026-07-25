@@ -149,7 +149,7 @@ function TreasuryReady({ data, onChanged }: { data: TreasuryView; onChanged: () 
       {/* KPI row + solvency pill */}
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard icon={<Landmark size={16} color={toneColor('positive')} />} label="Reserve" value={usd(report.reserveCents)} caption="available balance" />
-        <MetricCard icon={<Coins size={16} color="#D4D4D4" />} label="Accrued" value={usd(report.accruedCents)} caption="lifetime revenue-share in" />
+        <MetricCard icon={<Coins size={16} color="$color11" />} label="Accrued" value={usd(report.accruedCents)} caption="lifetime revenue-share in" />
         <MetricCard icon={<HandCoins size={16} color={toneColor('warning')} />} label="Paid out" value={usd(report.paidCents)} caption="lifetime backed payouts" />
         <MetricCard icon={<Percent size={16} color={toneColor('neutral')} />} label="Revenue-share" value={pctFromBps(report.policy.revenueShareBps)} caption="of platform spend" />
       </XStack>
@@ -285,7 +285,7 @@ function SweepForm({ onChanged }: { onChanged: () => void }) {
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={280}>
       <XStack items="center" gap="$2">
-        <ArrowDownCircle size={16} color="#D4D4D4" />
+        <ArrowDownCircle size={16} color="$color11" />
         <Text fontSize="$4" fontWeight="700">
           Sweep revenue-share
         </Text>
@@ -424,7 +424,7 @@ function ByProgramPanel({ referral, affiliate, author }: { referral: number; aff
 function kindTone(kind: string) {
   switch (kind) {
     case 'accrual':
-      return '#D4D4D4'
+      return toneColor('neutral')
     case 'payout':
       return toneColor('warning')
     case 'seed':
