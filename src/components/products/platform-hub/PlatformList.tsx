@@ -118,7 +118,7 @@ export function PlatformList() {
             <Globe size={13} opacity={0.6} />
             <Text
               fontSize="$3"
-              color="$blue11"
+              color="$color12"
               numberOfLines={1}
               style={{ cursor: 'pointer', textDecoration: 'underline' }}
               onPress={() => openExt(live)}

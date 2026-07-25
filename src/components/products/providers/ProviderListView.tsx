@@ -92,7 +92,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
             {p.displayName || p.name}
           </Text>
           {p._builtin && (
-            <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$blue3" color="$blue11">
+            <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color12">
               Built-in
             </Text>
           )}

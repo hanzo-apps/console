@@ -98,11 +98,11 @@ export function RefButton({ loc, onPress }: { loc: { file?: string; line?: numbe
     <Text
       className="hz-mono"
       fontSize="$2"
-      color="$blue10"
+      color="$color11"
       numberOfLines={1}
       onPress={onPress}
       cursor={onPress ? 'pointer' : undefined}
-      hoverStyle={onPress ? { color: '$blue11' } : undefined}
+      hoverStyle={onPress ? { color: '$color12' } : undefined}
     >
       {locRef(loc)}
     </Text>
