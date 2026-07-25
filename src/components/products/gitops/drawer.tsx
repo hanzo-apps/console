@@ -28,6 +28,7 @@ import { Loader } from '~/components/ui/Loader'
 import { LazyProjectCanvas, CanvasFrame } from './canvas-lazy'
 import { renderServiceIcon } from '../platform-apps/icons'
 import { repoBaseName, treeToGraph } from './logic'
+import { toneColor } from '~/components/ui/tone'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -314,7 +315,7 @@ function SourceTab({ app, repo }: { app: Application; repo: string }) {
             label="Repository"
             value={
               <XStack items="center" gap="$1.5">
-                <GitBranch size={13} color="#8b949e" />
+                <GitBranch size={13} color={toneColor('muted')} />
                 <Text fontSize="$2" color="$color12" style={{ fontFamily: MONO }} numberOfLines={1}>
                   {state.repo ? `${state.repo.org}/${state.repo.name}` : repo || '—'}
                 </Text>
@@ -325,7 +326,7 @@ function SourceTab({ app, repo }: { app: Application; repo: string }) {
           {state.commit ? (
             <YStack gap="$1" py="$1.5">
               <XStack items="center" gap="$1.5">
-                <GitCommitHorizontal size={13} color="#8b949e" />
+                <GitCommitHorizontal size={13} color={toneColor('muted')} />
                 <Text fontSize="$2" color="$color12" style={{ fontFamily: MONO }}>
                   {state.commit.shortSha}
                 </Text>

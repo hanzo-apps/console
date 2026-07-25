@@ -21,6 +21,8 @@ import type { ServiceEdgeData, ServiceKind, ServiceNodeData, ServiceStatus, XYPo
 
 import type { Application, AppTree, HealthStatus, ResourceNode, SyncStatus } from '~/lib/api/gitops'
 import { inferAppCapability } from '~/lib/products/subsystems'
+import type { Tone } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 // ── Health fold ──────────────────────────────────────────────────────────────
 
@@ -92,25 +94,25 @@ export function resolveApp(a: Application): { health: HealthStatus; sync: SyncSt
   return { health, sync }
 }
 
-// ── Palette (GitHub-family hues; shared with @hanzo/canvas semantics) ────────
+// ── Tone (the ONE console map — weight, never hue) ───────────────────────────
 
-const HEALTH_COLOR: Record<HealthStatus, string> = {
-  Healthy: '#3fb950',
-  Progressing: '#d29922',
-  Degraded: '#f85149',
-  Suspended: '#8b949e',
-  Missing: '#6e7681',
-  Unknown: '#8b949e',
+const HEALTH_TONE: Record<HealthStatus, Tone> = {
+  Healthy: 'positive',
+  Progressing: 'warning',
+  Degraded: 'critical',
+  Suspended: 'muted',
+  Missing: 'muted',
+  Unknown: 'muted',
 }
-const SYNC_COLOR: Record<SyncStatus, string> = {
-  Synced: '#3fb950',
-  Syncing: '#d29922',
-  OutOfSync: '#d29922',
-  Unknown: '#8b949e',
+const SYNC_TONE: Record<SyncStatus, Tone> = {
+  Synced: 'positive',
+  Syncing: 'warning',
+  OutOfSync: 'warning',
+  Unknown: 'muted',
 }
 
-export const healthColor = (h: HealthStatus): string => HEALTH_COLOR[h]
-export const syncColor = (s: SyncStatus): string => SYNC_COLOR[s]
+export const healthColor = (h: HealthStatus): string => toneVar(HEALTH_TONE[h])
+export const syncColor = (s: SyncStatus): string => toneVar(SYNC_TONE[s])
 
 /** Whether a health verdict should visually pulse (a live thing converging). */
 export const healthPulses = (h: HealthStatus): boolean => h === 'Progressing'

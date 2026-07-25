@@ -37,6 +37,8 @@ import { usePoll, useReducedMotion } from '~/components/products/overview/living
 import { buildProjectCanvas, summarizeCanvas, type CanvasResource } from './platform-apps/canvas'
 import { renderServiceIcon } from './platform-apps/icons'
 import { buildAppTabs, buildResourceTabs } from './platform-apps/drawer'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 /** The managed data kinds the provisioning service serves. */
 const RESOURCE_KINDS: ResourceKind[] = ['sql', 'vector', 'kv', 'search', 's3', 'datastore', 'docdb']
@@ -216,9 +218,9 @@ export function PlatformAppsModule(_props: { params: Record<string, string> }) {
           {summary ? (
             <XStack gap="$3" flexWrap="wrap">
               <StatCard label="Services" value={summary.services} />
-              <StatCard label="Active" value={summary.active} tone={summary.active ? '#2ea043' : undefined} />
-              <StatCard label="Deploying" value={summary.deploying} tone={summary.deploying ? '#bb8009' : undefined} />
-              <StatCard label="Crashed" value={summary.crashed} tone={summary.crashed ? '#e5534b' : undefined} />
+              <StatCard label="Active" value={summary.active} tone={summary.active ? toneVar('positive') : undefined} />
+              <StatCard label="Deploying" value={summary.deploying} tone={summary.deploying ? toneVar('warning') : undefined} />
+              <StatCard label="Crashed" value={summary.crashed} tone={summary.crashed ? toneVar('critical') : undefined} />
             </XStack>
           ) : null}
           <CanvasFrame>
@@ -265,7 +267,7 @@ function CanvasFrame({ children }: { children: React.ReactNode }) {
 function ScopedEmpty({ onClear }: { onClear: () => void }) {
   return (
     <YStack flex={1} items="center" justify="center" gap="$3" p="$6" style={{ height: '100%' }}>
-      <Network size={28} color="#8b949e" />
+      <Network size={28} color={toneColor('muted')} />
       <Text fontSize="$3" color="$color11">
         No services in this scope.
       </Text>

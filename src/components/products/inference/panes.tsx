@@ -29,6 +29,7 @@ import {
   type Endpoint,
   type LogLine,
 } from './logic'
+import { toneVar } from '~/components/ui/tone-var'
 
 /** A label/value fact row. */
 function Fact({ label, value }: { label: string; value: ReactNode }) {
@@ -140,10 +141,10 @@ export function openEndpointDetail(
   })
 }
 
-/** A recorded-status pill (dot + label), green success / red error / neutral other. */
+/** A recorded-status pill (dot + label) — the dot's WEIGHT and the label carry the state. */
 function LevelBadge({ level }: { level: string }) {
   const l = level.toLowerCase()
-  const color = l === 'error' || l === 'failed' || l === 'fail' ? '#ef4444' : l === 'success' || l === 'ok' ? '#23c562' : '#64748b'
+  const color = toneVar(l === 'error' || l === 'failed' || l === 'fail' ? 'critical' : l === 'success' || l === 'ok' ? 'positive' : 'muted')
   return (
     <XStack items="center" gap="$1.5">
       <StatusDot color={color} size={8} />
@@ -301,7 +302,7 @@ function DeployForm({ onDeployed, nav }: { onDeployed: () => void; nav: (path: s
         </YStack>
 
         {error ? (
-          <Text fontSize="$2" style={{ color: '#ef4444' }}>
+          <Text fontSize="$2" style={{ color: toneVar('critical') }}>
             {error}
           </Text>
         ) : null}

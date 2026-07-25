@@ -19,7 +19,8 @@ import { MetricCard } from '~/components/ui/Metric'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
-import { shortDate, statusLabel, statusTone, usd } from './referrals/logic'
+import { shortDate, statusLabel, statusColor, usd } from './referrals/logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -117,9 +118,9 @@ function ReferralsAdminReady({ data }: { data: AdminReferralsView }) {
   return (
     <YStack gap="$4">
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Users size={16} color="#8b949e" />} label="Referrals" value={String(s.total)} caption={`${s.signedUp} signed up`} />
+        <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Referrals" value={String(s.total)} caption={`${s.signedUp} signed up`} />
         <MetricCard icon={<Gift size={16} color="#D4D4D4" />} label="Qualified" value={String(s.qualified + s.credited)} caption={`${s.credited} credited`} />
-        <MetricCard icon={<Coins size={16} color="#d29922" />} label="Credit granted" value={usd(s.grantedCents)} caption="both sides, promo credit" />
+        <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Credit granted" value={usd(s.grantedCents)} caption="both sides, promo credit" />
       </XStack>
 
       <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" overflow="hidden">
@@ -155,7 +156,7 @@ function ReferralsAdminReady({ data }: { data: AdminReferralsView }) {
               <Text fontSize="$3" fontWeight="600" color="$color12">
                 {r.referrerOrg}
               </Text>
-              <ArrowRight size={13} color="#6e7681" />
+              <ArrowRight size={13} color={toneColor('muted')} />
               <Text fontSize="$3" color="$color11">
                 {r.refereeOrg}
               </Text>
@@ -163,7 +164,7 @@ function ReferralsAdminReady({ data }: { data: AdminReferralsView }) {
             <Text flex={1} minW={90} fontSize="$2" style={{ fontFamily: 'monospace' }} color="$color11">
               {r.code}
             </Text>
-            <Text flex={1} minW={90} fontSize="$2" fontWeight="700" color={statusTone(r.status)}>
+            <Text flex={1} minW={90} fontSize="$2" fontWeight="700" color={statusColor(r.status)}>
               {statusLabel(r.status)}
             </Text>
             <Text flex={1} minW={90} fontSize="$3" color="$color12" text="right">

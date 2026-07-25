@@ -244,11 +244,17 @@ describe('rollbackTargets', () => {
 })
 
 describe('palette', () => {
-  it('has a distinct color per health and sync verdict', () => {
-    expect(healthColor('Healthy')).toBe('#3fb950')
-    expect(healthColor('Degraded')).toBe('#f85149')
-    expect(syncColor('Synced')).toBe('#3fb950')
-    expect(syncColor('OutOfSync')).toBe('#d29922')
+  it('draws every verdict from the greyscale ramp — weight, never hue', () => {
+    for (const h of ['Healthy', 'Progressing', 'Degraded', 'Suspended', 'Missing', 'Unknown'] as const)
+      expect(healthColor(h)).toMatch(/^var\(--color(9|10|11|12)\)$/)
+    for (const s of ['Synced', 'Syncing', 'OutOfSync', 'Unknown'] as const)
+      expect(syncColor(s)).toMatch(/^var\(--color(9|10|11|12)\)$/)
+  })
+  it('emphasises a degraded app over a healthy one, and de-emphasises the unknown', () => {
+    expect(healthColor('Degraded')).toBe('var(--color12)')
+    expect(healthColor('Healthy')).toBe('var(--color11)')
+    expect(healthColor('Unknown')).toBe('var(--color9)')
+    expect(syncColor('OutOfSync')).not.toBe(syncColor('Unknown'))
   })
   it('only a progressing app pulses', () => {
     expect(healthPulses('Progressing')).toBe(true)

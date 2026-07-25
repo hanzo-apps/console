@@ -21,13 +21,14 @@ import { useInferenceData } from './data'
 import { SectionCard, Segmented, StatusDot, type Option } from './parts'
 import { openLogDetail } from './panes'
 import { distinctLevels, distinctModels, logsFromRecords, type LogLine } from './logic'
+import { toneVar } from '~/components/ui/tone-var'
 
 const LIMIT = 200
 
-/** A recorded-status badge (dot + label), green success / red error / neutral other. */
+/** A recorded-status badge (dot + label) — the dot's WEIGHT and the label carry the state. */
 function LevelTag({ level }: { level: string }) {
   const l = level.toLowerCase()
-  const color = l === 'error' || l === 'failed' || l === 'fail' ? '#ef4444' : l === 'success' || l === 'ok' ? '#23c562' : '#64748b'
+  const color = toneVar(l === 'error' || l === 'failed' || l === 'fail' ? 'critical' : l === 'success' || l === 'ok' ? 'positive' : 'muted')
   return (
     <XStack items="center" gap="$1.5">
       <StatusDot color={color} size={8} />

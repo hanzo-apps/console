@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { usd, statusLabel, statusTone, shortDate, progressCaption } from './logic'
+import { usd, statusLabel, statusTone, statusColor, shortDate, progressCaption } from './logic'
 
 describe('referrals logic — money/label/tone formatting', () => {
   it('formats USD cents, em-dash for non-finite', () => {
@@ -19,10 +19,16 @@ describe('referrals logic — money/label/tone formatting', () => {
     expect(statusLabel('weird' as never)).toBe('weird')
   })
 
-  it('tones by status (credited green, qualified amber, signed_up neutral)', () => {
-    expect(statusTone('credited')).toBe('#3fb950')
-    expect(statusTone('qualified')).toBe('#d29922')
-    expect(statusTone('signed_up')).toBe('#8b949e')
+  it('tones by status (credited positive, qualified warning, signed_up muted)', () => {
+    expect(statusTone('credited')).toBe('positive')
+    expect(statusTone('qualified')).toBe('warning')
+    expect(statusTone('signed_up')).toBe('muted')
+  })
+
+  it('colors a status from the one greyscale map', () => {
+    for (const s of ['credited', 'qualified', 'signed_up'] as const)
+      expect(statusColor(s)).toMatch(/^\$color(9|10|11|12)$/)
+    expect(statusColor('signed_up')).toBe('$color9')
   })
 
   it('short-dates a unix second, em-dash for unset', () => {

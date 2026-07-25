@@ -21,6 +21,7 @@ import { ErrorState, asApiError } from '~/components/ui/States'
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { CodeBlock, Fact } from './parts'
 import { fmtWhen, fmtDateTime, fmtCount, sdkSnippet, ingestUrl } from './logic'
+import { toneColor } from '~/components/ui/tone'
 
 const PLATFORMS = ['javascript', 'node', 'python', 'go', 'ruby', 'java', 'php', 'rust', 'dotnet', 'other']
 
@@ -143,7 +144,7 @@ export function ProjectsPanel() {
             <FieldSelect value={platform} options={PLATFORMS} onChange={setPlatform} />
           </FieldRow>
           {createErr ? (
-            <Text fontSize="$2" color="#e5534b">
+            <Text fontSize="$2" color={toneColor('critical')}>
               {createErr}
             </Text>
           ) : null}

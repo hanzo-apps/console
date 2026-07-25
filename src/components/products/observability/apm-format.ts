@@ -7,6 +7,7 @@
  * separation of concerns: one module per unit system. No data is fabricated —
  * missing / non-finite values render as an em dash.
  */
+import { toneVar } from '~/components/ui/tone-var'
 
 const DASH = '—'
 
@@ -76,11 +77,10 @@ export const fmtAgo = (iso?: string | null): string => {
   return `${Math.round(h / 24)}d ago`
 }
 
-/** A tone color for an error rate (0..1 or 0..100): green calm, amber warn, red hot. */
+/** The weight an error rate (0..1 or 0..100) carries — calm, warn, hot. Greyscale by design. */
 export const errorTone = (rate?: number | null): string => {
   const pct = rate == null ? 0 : rate <= 1 ? rate * 100 : rate
-  if (!Number.isFinite(pct) || pct <= 0) return '#30a46c'
-  if (pct < 1) return '#d6c15a'
-  if (pct < 5) return '#f0a868'
-  return '#e5484d'
+  if (!Number.isFinite(pct) || pct <= 0) return toneVar('positive')
+  if (pct < 5) return toneVar('warning')
+  return toneVar('critical')
 }

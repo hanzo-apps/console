@@ -139,15 +139,23 @@ export function normalizeFunding(raw: unknown): FundingRow {
 /** The four known funding classes, in display order. */
 export const FUNDING_ORDER: FundingClass[] = ['credit', 'paid', 'paid_only', 'byo']
 
-/** Label + chart color + one-line meaning for each known funding class. */
+/**
+ * Label + chart color + one-line meaning for each known funding class.
+ *
+ * The console chrome is monochrome, so these four categories are separated by
+ * LIGHTNESS, not hue — the same descending neutral ramp `ui/Charts` CHART_PALETTE
+ * draws with (kept as literals here so this stays a pure, node-testable module with
+ * no React import). Order is display order: the class we most want to see first
+ * reads brightest.
+ */
 export const FUNDING_META: Record<FundingClass, { label: string; color: string; hint: string }> = {
-  credit: { label: 'Our credit', color: '#23c562', hint: 'Drawn from provider credit we hold (free to us).' },
-  paid: { label: 'Paid', color: '#A3A3A3', hint: 'Hanzo pays the provider for this usage.' },
-  paid_only: { label: 'Paid-only', color: '#ff9f45', hint: 'Provider with no credit — billed directly.' },
-  byo: { label: 'BYO key', color: '#737373', hint: "Served on a customer's own provider key." },
+  credit: { label: 'Our credit', color: '#EDEDED', hint: 'Drawn from provider credit we hold (free to us).' },
+  paid: { label: 'Paid', color: '#BBBBBB', hint: 'Hanzo pays the provider for this usage.' },
+  paid_only: { label: 'Paid-only', color: '#8A8A8A', hint: 'Provider with no credit — billed directly.' },
+  byo: { label: 'BYO key', color: '#5A5A5A', hint: "Served on a customer's own provider key." },
 }
 
-const OTHER_COLOR = '#64748b'
+const OTHER_COLOR = '#404040' // CHART_OTHER — the unclassified slice
 /** Label for a funding value (known → its label; unknown → the raw value). */
 export const fundingLabel = (f: string): string => FUNDING_META[f as FundingClass]?.label ?? (f || 'Other')
 /** Chart color for a funding value (known → its color; unknown → neutral). */

@@ -60,6 +60,8 @@ import {
   stateLabel,
   stateTone,
 } from './guide/logic'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -200,7 +202,7 @@ export function GuideModule({ params }: { params: Record<string, string> }) {
             <Card p="$3" borderWidth={1} borderColor="$borderColor" bg="$color2">
               <XStack items="center" justify="space-between" gap="$2">
                 <XStack items="center" gap="$2" flex={1} minW={0}>
-                  <TriangleAlert size={15} color="#e5534b" />
+                  <TriangleAlert size={15} color={toneColor('critical')} />
                   <Text fontSize="$3" color="$color11" flex={1}>
                     {actionError}
                   </Text>
@@ -276,20 +278,20 @@ function GuideReady({
           </Text>
         </XStack>
         <YStack bg="$color4" rounded="$4" height={8} width="100%" overflow="hidden">
-          <YStack bg="#2ea043" height={8} rounded="$4" width={`${pct}%`} />
+          <YStack bg={toneColor('positive')} height={8} rounded="$4" width={`${pct}%`} />
         </YStack>
       </Card>
 
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard
-          icon={<CircleCheck size={16} color="#2ea043" />}
+          icon={<CircleCheck size={16} color={toneColor('positive')} />}
           label="Complete"
           value={String(data.progress.done)}
           caption="steps done or skipped"
         />
         <MetricCard
-          icon={<ListChecks size={16} color="#8b949e" />}
+          icon={<ListChecks size={16} color={toneColor('muted')} />}
           label="Total"
           value={String(data.progress.total)}
           caption="steps in your guide"
@@ -341,7 +343,7 @@ function GuideReady({
         </XStack>
         {data.steps.length === 0 ? (
           <YStack p="$5" items="center" gap="$2">
-            <Compass size={22} color="#6e7681" />
+            <Compass size={22} color={toneColor('muted')} />
             <Text fontSize="$3" color="$color11">
               No steps in your guide yet
             </Text>
@@ -419,7 +421,7 @@ function CurrentStepCard({
 
       {blocked ? (
         <XStack items="center" gap="$2">
-          <Lock size={14} color="#8b949e" />
+          <Lock size={14} color={toneColor('muted')} />
           <Text fontSize="$2" color="$color10">
             {blockedLabel(step, overview) || 'Finish the prior steps first.'}
           </Text>
@@ -504,7 +506,7 @@ function StepRow({
               </Text>
               {blocked ? (
                 <XStack items="center" gap="$1">
-                  <Lock size={11} color="#8b949e" />
+                  <Lock size={11} color={toneColor('muted')} />
                   <Text fontSize="$1" color="$color10">
                     {blockedLabel(step, overview) || 'Blocked'}
                   </Text>
@@ -527,9 +529,9 @@ function StepRow({
           </YStack>
           {canExpand ? (
             expanded ? (
-              <ChevronDown size={15} color="#8b949e" />
+              <ChevronDown size={15} color={toneColor('muted')} />
             ) : (
-              <ChevronRight size={15} color="#8b949e" />
+              <ChevronRight size={15} color={toneColor('muted')} />
             )
           ) : null}
         </XStack>
@@ -629,12 +631,12 @@ function DoPanel({
 
 function EventRow({ e }: { e: GuideEvent }) {
   const err = e.type === 'error'
-  const tone = err ? '#e5534b' : e.type === 'end' || e.type === 'state' ? '#2ea043' : '#8b949e'
+  const tone = toneVar(err ? 'critical' : e.type === 'end' || e.type === 'state' ? 'positive' : 'muted')
   return (
     <XStack items="flex-start" gap="$2" py="$1">
       <YStack width={7} height={7} rounded="$2" mt="$1.5" bg={tone as never} />
       <YStack gap="$1" flex={1} minW={0}>
-        <Text fontSize="$2" fontWeight="600" color={err ? '#e5534b' : '$color12'}>
+        <Text fontSize="$2" fontWeight="600" color={err ? toneColor('critical') : '$color12'}>
           {eventLabel(e)}
         </Text>
         {e.text ? (
@@ -643,7 +645,7 @@ function EventRow({ e }: { e: GuideEvent }) {
           </Text>
         ) : null}
         {e.error ? (
-          <Text fontSize="$2" color="#e5534b">
+          <Text fontSize="$2" color={toneColor('critical')}>
             {e.error}
           </Text>
         ) : null}

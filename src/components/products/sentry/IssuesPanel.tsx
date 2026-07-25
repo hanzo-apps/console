@@ -22,6 +22,8 @@ import { ErrorState, asApiError } from '~/components/ui/States'
 import { FieldSelect } from '~/components/ui/Field'
 import { PeriodPicker, ProjectPicker, SearchInput } from './parts'
 import { summarizeIssues, levelSlices, fmtWhen, fmtCount, statusTone, ISSUE_SORTS } from './logic'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 const STATUS_TABS: { label: string; status: '' | IssueStatus }[] = [
   { label: 'Unresolved', status: 'unresolved' },
@@ -75,7 +77,7 @@ export function IssuesPanel({ projects }: { projects: SentryProject[] }) {
                 {r.type || 'Error'}
               </Text>
               {r.regressed ? (
-                <Text fontSize="$1" color="#f0a868">
+                <Text fontSize="$1" color={toneColor('warning')}>
                   regressed
                 </Text>
               ) : null}
@@ -95,7 +97,7 @@ export function IssuesPanel({ projects }: { projects: SentryProject[] }) {
         key: 'trend',
         header: 'Trend',
         width: 130,
-        render: (r) => (r.stats.length >= 2 ? <Sparkline values={r.stats} color="#e5534b" /> : <Text color="$color10">—</Text>),
+        render: (r) => (r.stats.length >= 2 ? <Sparkline values={r.stats} color={toneVar('critical')} /> : <Text color="$color10">—</Text>),
       },
       { key: 'count', header: 'Events', width: 84, align: 'right', mono: true, render: (r) => <Text className="hz-mono">{fmtCount(r.count)}</Text> },
       { key: 'userCount', header: 'Users', width: 72, align: 'right', mono: true, render: (r) => <Text className="hz-mono">{r.userCount ? fmtCount(r.userCount) : '—'}</Text> },
@@ -165,11 +167,11 @@ export function IssuesPanel({ projects }: { projects: SentryProject[] }) {
       ) : (
         <>
           <XStack gap="$3" flexWrap="wrap">
-            <MetricCard icon={<AlertTriangle size={16} color="#e5534b" />} label="Issues" value={fmtCount(kpis.total)} />
-            <MetricCard icon={<Activity size={16} color="#e5534b" />} label="Unresolved" value={fmtCount(kpis.unresolved)} />
-            <MetricCard icon={<TrendingUp size={16} color="#f0a868" />} label="Regressed" value={fmtCount(kpis.regressed)} />
-            <MetricCard icon={<Activity size={16} color="#6ea8fe" />} label="Events" value={fmtCount(kpis.events)} />
-            <MetricCard icon={<Users size={16} color="#6ea8fe" />} label="Users affected" value={fmtCount(kpis.users)} />
+            <MetricCard icon={<AlertTriangle size={16} color={toneColor('critical')} />} label="Issues" value={fmtCount(kpis.total)} />
+            <MetricCard icon={<Activity size={16} color={toneColor('critical')} />} label="Unresolved" value={fmtCount(kpis.unresolved)} />
+            <MetricCard icon={<TrendingUp size={16} color={toneColor('warning')} />} label="Regressed" value={fmtCount(kpis.regressed)} />
+            <MetricCard icon={<Activity size={16} color={toneColor('neutral')} />} label="Events" value={fmtCount(kpis.events)} />
+            <MetricCard icon={<Users size={16} color={toneColor('neutral')} />} label="Users affected" value={fmtCount(kpis.users)} />
             {slices.length > 0 ? (
               <Card p="$3.5" borderWidth={1} borderColor="$borderColor" items="center" justify="center" minW={172}>
                 <Donut slices={slices} size={120} thickness={16} legend center={<Text fontSize="$2" color="$color11">by level</Text>} />
