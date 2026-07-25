@@ -35,6 +35,19 @@ samp {
   font-feature-settings: 'tnum' 1;
 }
 
+/* Display headline — a tight, UNITLESS line-height for large type.
+   A Gui font-size token ships a line-height tuned for ONE line, so a display
+   headline overprints itself the moment it wraps (which it always does on a
+   phone). This must live in CSS: React Native Web reads a bare numeric
+   `lineHeight` in a style object as PIXELS, so `lineHeight: 1.1` there crushes
+   the text instead of scaling it. Unitless in real CSS is relative to the
+   element's own font-size, so ONE rule holds at every size token and
+   breakpoint. `className` forwards to the DOM node on web, so a Gui <Text>
+   can wear it. */
+.hz-display {
+  line-height: 1.1;
+}
+
 /* Data/numeric face — Geist Mono + tabular figures for metric values, prices, IDs,
    counts and code-like tokens. The dashboard-grade "numbers are typeset" detail
    (Linear/Stripe): stat tiles, table numeric cells and monospace identifiers read
