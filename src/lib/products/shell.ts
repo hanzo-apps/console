@@ -48,6 +48,7 @@ export const PRODUCT_SHELLS: Record<ShellId, ProductShell> = {
   social: { id: 'social', rootId: 'social', indexLabel: 'Overview', wordmark: 'Publish', home: 'social' },
   sentry: { id: 'sentry', rootId: 'sentry', indexLabel: 'Issues', wordmark: 'Sentry', home: 'sentry' },
   dns: { id: 'dns', rootId: 'dns', indexLabel: 'Zones', wordmark: 'DNS', home: 'dns' },
+  platform: { id: 'platform', rootId: 'platform', indexLabel: 'Overview', wordmark: 'Platform', home: 'platform' },
 }
 
 /** The descriptor for a shell id. */
