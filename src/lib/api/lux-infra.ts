@@ -53,6 +53,31 @@ export const LUX_QUERIES = {
   networkValidatorsUp: 'lux_network_validators_up',
   /** Per-network validator-set size. */
   networkValidatorsTotal: 'lux_network_validators_total',
+
+  // ── Absolute signals ────────────────────────────────────────────────────────
+  // Every query above describes validators relative to each other, and a fleet that
+  // has STOPPED agrees with itself perfectly — same height, same hash, all up, all
+  // peered. A board reading only those series paints a full row of green over a
+  // frozen chain, which is how a two-day freeze went unnoticed. These four cannot be
+  // satisfied by agreement: tip age is measured against our own clock, and the rest
+  // count conditions no amount of consensus can conceal.
+
+  /** Seconds since the freshest tip block in the network was produced. Climbs on
+   *  its own while the chain sits still. */
+  networkTipAge: 'lux_network_c_tip_age_seconds',
+  /** Highest minus lowest accepted tip across the set — a lagging or wedged node. */
+  networkHeightSpread: 'lux_network_block_height_spread',
+  /** Distinct block hashes reported at one height. >1 is a fork. */
+  networkTipHashVariants: 'lux_network_tip_hash_variants',
+  /** Validators whose pod reports Ready while their C-Chain RPC is dead. Readiness
+   *  lies, and this is the count of the lie. */
+  networkReadyButRpcDead: 'lux_network_ready_but_rpc_dead',
+
+  /** The live firing alert set. vmalert remote-writes its state into the same
+   *  VictoriaMetrics this proxy already reads, so the board shows what is ACTUALLY
+   *  firing over the existing authenticated path — not a second data path, and not
+   *  a UI re-derivation of the alert rules that could silently disagree with them. */
+  firingAlerts: `sum by (alertname, network, severity) (ALERTS{alertstate="firing",brand="lux"})`,
 } as const
 
 // ── The named Lux services the status grid tracks (pod-name prefixes) ────────────
