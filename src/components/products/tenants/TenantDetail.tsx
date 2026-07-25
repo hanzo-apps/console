@@ -339,7 +339,7 @@ export function TenantDetail({
           <FieldText value={faviconUrl} onChange={setFaviconUrl} placeholder="https://…/favicon.ico" />
         </FieldRow>
         <FieldRow label="Accent color">
-          <FieldText value={themeColor} onChange={setThemeColor} placeholder="#5E6AD2" />
+          <FieldText value={themeColor} onChange={setThemeColor} placeholder="#D4D4D4" />
         </FieldRow>
         <XStack gap="$3" items="center">
           <Button size="$2" theme="light" disabled={brandBusy} onPress={() => void saveBrand()}>

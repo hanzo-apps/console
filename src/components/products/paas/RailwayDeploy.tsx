@@ -33,10 +33,12 @@ import {
   type StationState,
 } from './railway'
 
-const ACCENT = '#7c5cff'
-const GREEN = '#23c562'
-const RED = '#ff5d8f'
-const MUTED = 'rgba(148,163,184,0.28)'
+// Monochrome by default; only the genuine deploy states carry a hue (live → green,
+// errored → red — design --state-success / --state-error). In-progress = neutral.
+const ACCENT = '#D4D4D4' // --neutral-300
+const GREEN = '#22c55e' // --state-success
+const RED = '#ef4444' // --state-error
+const MUTED = 'rgba(160,160,160,0.28)'
 
 export interface RailwayDeployProps {
   /** When both slugs are set, the component polls the live status and animates. */

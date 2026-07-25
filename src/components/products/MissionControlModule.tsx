@@ -194,11 +194,13 @@ function TerminalView({ events, empty }: { events: SessionEvent[]; empty: string
 }
 
 function kindColor(kind: string): string {
+  // Monochrome for non-semantic event kinds (design --neutral ladder); only the
+  // genuine states carry a hue (status→amber, control→red, message→green).
   switch (kind) {
     case 'tool-call':
-      return '#8b5cf6'
+      return '#A3A3A3' // --neutral-400
     case 'spawn':
-      return '#0ea5e9'
+      return '#737373' // --neutral-500
     case 'status':
       return '#d97706'
     case 'control':
