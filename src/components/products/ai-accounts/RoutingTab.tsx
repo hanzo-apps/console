@@ -121,7 +121,7 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
           <Card p="$4" gap="$4" borderWidth={1} borderColor="$borderColor" bg="$color2">
             <XStack items="flex-start" gap="$3" justify="space-between" flexWrap="wrap">
               <XStack items="center" gap="$2" flex={1} minW={0}>
-                <Route size={18} color="#a371f7" />
+                <Route size={18} color="#D4D4D4" />
                 <Text fontSize="$6" fontWeight="700">
                   Smart routing
                 </Text>

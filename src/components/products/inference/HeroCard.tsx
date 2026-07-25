@@ -3,7 +3,7 @@
 /**
  * "Connected to Hanzo Cloud" hero — the honest managed-state banner. It states the
  * real topology (workloads run on managed Hanzo Cloud; the raw fleet view is an admin
- * surface) and carries a tasteful purple graphic accent (pure SVG, no bespoke render).
+ * surface) and carries a tasteful monochrome graphic accent (pure SVG, no bespoke render).
  * White-labels by brand (`config.brandName`), so a Lux/Zoo console reads correctly.
  */
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -25,7 +25,7 @@ export function HeroCard() {
       <XStack items="center" gap="$4" flexWrap="wrap">
         <YStack flex={1} minW={300} gap="$2.5">
           <XStack items="center" gap="$2">
-            <StatusDot color="#23c562" />
+            <StatusDot color="#4ade80" />
             <Text fontSize="$1" color="$color11" fontWeight="700" style={{ letterSpacing: 0.4, textTransform: 'uppercase' }}>
               Managed · Connected
             </Text>

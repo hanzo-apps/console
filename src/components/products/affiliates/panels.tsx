@@ -74,7 +74,7 @@ export function EarningsPanel() {
   }, [state])
 
   return (
-    <PanelCard title="Rewards" icon={<TrendingUp size={18} color="#a371f7" />}>
+    <PanelCard title="Rewards" icon={<TrendingUp size={18} color="#D4D4D4" />}>
       {state.phase === 'loading' && <Text color="$color10">Loading your earnings…</Text>}
       {state.phase === 'error' && (
         <BackendStateCard state={state.error} onRetry={reload} hint="endpoint · GET /v1/affiliates/me/earnings" />
@@ -157,7 +157,7 @@ export function LinksPanel() {
   }, [])
 
   return (
-    <PanelCard title="Referral links" icon={<Link2 size={18} color="#a371f7" />}>
+    <PanelCard title="Referral links" icon={<Link2 size={18} color="#D4D4D4" />}>
       {state.phase === 'loading' && <Text color="$color10">Loading your links…</Text>}
       {state.phase === 'error' && (
         <BackendStateCard state={state.error} onRetry={reload} hint="endpoint · GET /v1/affiliates/me/links" />
@@ -286,7 +286,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
                 Your rank: #{state.data.you.rank}
                 {state.data.total > 0 ? <Text fontSize="$2" color="$color10"> {` of ${state.data.total}`}</Text> : null}
               </Text>
-              <Text fontSize="$3" fontWeight="700" color="#a371f7">
+              <Text fontSize="$3" fontWeight="700" color="#D4D4D4">
                 {usd(state.data.you.accruedCents)}
               </Text>
             </XStack>
@@ -315,7 +315,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
                     <Text
                       fontSize="$3"
                       fontWeight={row.isYou ? '700' : '600'}
-                      color={row.isYou ? '#a371f7' : '$color12'}
+                      color={row.isYou ? '#D4D4D4' : '$color12'}
                       numberOfLines={1}
                     >
                       {row.handle}

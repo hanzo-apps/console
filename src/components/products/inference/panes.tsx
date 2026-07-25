@@ -143,7 +143,7 @@ export function openEndpointDetail(
 /** A recorded-status pill (dot + label), green success / red error / neutral other. */
 function LevelBadge({ level }: { level: string }) {
   const l = level.toLowerCase()
-  const color = l === 'error' || l === 'failed' || l === 'fail' ? '#ff5d8f' : l === 'success' || l === 'ok' ? '#23c562' : '#64748b'
+  const color = l === 'error' || l === 'failed' || l === 'fail' ? '#ef4444' : l === 'success' || l === 'ok' ? '#23c562' : '#64748b'
   return (
     <XStack items="center" gap="$1.5">
       <StatusDot color={color} size={8} />
@@ -301,7 +301,7 @@ function DeployForm({ onDeployed, nav }: { onDeployed: () => void; nav: (path: s
         </YStack>
 
         {error ? (
-          <Text fontSize="$2" style={{ color: '#ff5d8f' }}>
+          <Text fontSize="$2" style={{ color: '#ef4444' }}>
             {error}
           </Text>
         ) : null}

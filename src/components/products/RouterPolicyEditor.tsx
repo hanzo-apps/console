@@ -39,8 +39,8 @@ import { useToast } from '~/components/ui/Toast'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
-/** Purple router accent (matches RouterModule). */
-const ACCENT = '#a371f7'
+/** Monochrome router accent — design --neutral-300 (matches RouterModule). */
+const ACCENT = '#D4D4D4'
 
 /** The canonical task tags a pool may map (matches the Go router Task set). */
 const TASKS = [

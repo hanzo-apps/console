@@ -72,7 +72,7 @@ export function hasTrend(series: readonly number[] | undefined): boolean {
 
 export const OK = '#23c562'
 export const WARN = '#f0a868'
-export const BAD = '#ff5d8f'
+export const BAD = '#ef4444'
 export const MUTED = '#64748b'
 
 /** Dot color for an activity/event status. */
