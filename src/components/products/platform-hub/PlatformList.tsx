@@ -31,7 +31,15 @@ const openExt = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
 }
 
-export function PlatformList() {
+export function PlatformList({
+  title = 'Platform',
+  subtitle = 'Create, deploy, and ship your projects — drop a build, bind a domain, and edit or chat about it on the same project across hanzo.app and hanzo.chat.',
+}: {
+  /** Header title/subtitle — overridable so the Platform home can render this as a
+   *  "Your projects" section under its own deploy hero (no duplicate "Platform" heading). */
+  title?: string
+  subtitle?: string
+} = {}) {
   const router = useRouter()
   const toast = useToast()
   const { projects, projectsError, loadingProjects, refreshProjects } = useScope()
@@ -157,8 +165,8 @@ export function PlatformList() {
   return (
     <YStack gap="$4">
       <PageHeader
-        title="Platform"
-        subtitle="Create, deploy, and ship your projects — drop a build, bind a domain, and edit or chat about it on the same project across hanzo.app and hanzo.chat."
+        title={title}
+        subtitle={subtitle}
         actions={
           !projectsError ? (
             <Button icon={<Plus size={16} />} onPress={() => setCreating((v) => !v)}>
