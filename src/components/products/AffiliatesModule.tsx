@@ -100,7 +100,7 @@ function AffiliateApply({ defaultRateBps, onApplied }: { defaultRateBps: number;
     <YStack gap="$3">
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2">
-          <Handshake size={18} color="#D4D4D4" />
+          <Handshake size={18} color="$color11" />
           <Text fontSize="$5" fontWeight="700">
             Earn {ratePct(defaultRateBps)} commission — ongoing
           </Text>
@@ -239,7 +239,7 @@ function AffiliateDashboard({
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Referred" value={String(data.referredCount)} caption="customers attributed" />
-        <MetricCard icon={<HandCoins size={16} color="#D4D4D4" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime commission" />
+        <MetricCard icon={<HandCoins size={16} color="$color11" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime commission" />
         <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
         <MetricCard icon={<Wallet size={16} color={toneColor('positive')} />} label="Paid out" value={usd(data.paidCents)} caption="commission paid" />
       </XStack>

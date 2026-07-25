@@ -36,7 +36,8 @@ import {
 import { fmtUsd, fmtInt } from '~/lib/api/functions'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { LineChart, Donut, CHART_PALETTE, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { LineChart, Donut, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { RAMP } from '~/lib/theme/ramp'
 import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
 import { MetricCard } from './functions/parts'
 
@@ -258,7 +259,7 @@ function LlmTab() {
   const slices: Slice[] = models.slice(0, 6).map((m, i) => ({
     label: m.model,
     value: m.spendCents,
-    color: CHART_PALETTE[i % CHART_PALETTE.length],
+    color: RAMP[i % RAMP.length],
   }))
 
   const cols: Column<ModelRow>[] = [

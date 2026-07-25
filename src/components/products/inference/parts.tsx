@@ -11,10 +11,13 @@ import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Search, TrendingDown, TrendingUp } from '@hanzogui/lucide-icons-2'
 
 import { Sparkline } from '~/components/ui/Charts'
+import { asColor } from '~/components/ui/color'
+import { toneVar } from '~/components/ui/tone'
+import { RAMP } from '~/lib/theme/ramp'
 import { fmtDelta } from './logic'
 
-/** The console's monochrome accent — design --neutral-300 (shared with the chart ramp). */
-export const ACCENT = '#D4D4D4'
+/** The console's monochrome accent — the lead step of the shared categorical scale. */
+export const ACCENT = RAMP[1]
 
 /** The ONE high-emphasis action (the mockup's "+ Deploy Endpoint") — a monochrome
  *  white-on-black primary (design --primary / --primary-foreground), theme-aware via
@@ -156,12 +159,12 @@ export function DeltaChip({ pct }: { pct: number | null }) {
     )
   }
   const up = Math.round(pct) >= 0
-  // Semantic direction only (design --state-success / --state-error) — no decorative hue.
-  const color = up ? '#22c55e' : '#ef4444'
+  // Direction is carried by the icon; colour only weights it (the one tone map).
+  const color = toneVar(up ? 'positive' : 'critical')
   const Icon = up ? TrendingUp : TrendingDown
   return (
     <XStack items="center" gap="$1">
-      <Icon size={13} color={color} />
+      <Icon size={13} color={asColor(color)} />
       <Text fontSize="$1" fontWeight="700" style={{ color }}>
         {fmtDelta(pct)}
       </Text>
@@ -254,7 +257,7 @@ export function HeroGraphic({ size = 190 }: { size?: number }) {
           <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
         </radialGradient>
         <linearGradient id="hz-inf-cube" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FAFAFA" />
+          <stop offset="0%" stopColor={RAMP[0]} />
           <stop offset="100%" stopColor={ACCENT} />
         </linearGradient>
       </defs>
@@ -265,9 +268,9 @@ export function HeroGraphic({ size = 190 }: { size?: number }) {
       {/* an isometric cube — the "serving unit" motif */}
       <g transform="translate(100 96)">
         <polygon points="0,-34 30,-17 30,17 0,34 -30,17 -30,-17" fill="url(#hz-inf-cube)" fillOpacity="0.9" />
-        <polygon points="0,-34 30,-17 0,0 -30,-17" fill="#F5F5F5" fillOpacity="0.85" />
+        <polygon points="0,-34 30,-17 0,0 -30,-17" fill={RAMP[0]} fillOpacity="0.85" />
         <polygon points="0,0 30,-17 30,17 0,34" fill={ACCENT} fillOpacity="0.7" />
-        <polygon points="0,0 -30,-17 -30,17 0,34" fill="#525252" fillOpacity="0.7" />
+        <polygon points="0,0 -30,-17 -30,17 0,34" fill={RAMP[6]} fillOpacity="0.7" />
       </g>
     </svg>
   )

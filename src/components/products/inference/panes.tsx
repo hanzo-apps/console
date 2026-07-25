@@ -29,7 +29,7 @@ import {
   type Endpoint,
   type LogLine,
 } from './logic'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 /** A label/value fact row. */
 function Fact({ label, value }: { label: string; value: ReactNode }) {

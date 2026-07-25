@@ -24,6 +24,8 @@ import { KnowledgeApi, type ImportResult } from '~/lib/api/knowledge'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { toneColor } from '~/components/ui/tone'
+import { RAMP } from '~/lib/theme/ramp'
 import {
   degreeOf,
   edgeColor,
@@ -193,12 +195,12 @@ function GraphView({ graph }: { graph: Graph }) {
         if (isSel) {
           ctx.globalAlpha = 1
           ctx.lineWidth = 2
-          ctx.strokeStyle = '#111827'
+          ctx.strokeStyle = RAMP[0]
           ctx.stroke()
         }
         ctx.globalAlpha = 1
         if (isSel || (deg[node.id] ?? 0) >= 2) {
-          ctx.fillStyle = '#4B5563'
+          ctx.fillStyle = RAMP[3]
           ctx.font = '11px system-ui, sans-serif'
           ctx.fillText(truncate(node.title, 22), s.pos[i].x + r + 3, s.pos[i].y + 3)
         }
@@ -413,7 +415,7 @@ function ImportPanel({ onImported }: { onImported: () => void }) {
 function EmptyGraph({ onImport }: { onImport: () => void }) {
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$6" gap="$3" items="center" maxW={640}>
-      <Network size={32} color="#615CED" />
+      <Network size={32} color={toneColor('muted')} />
       <Text fontSize="$6" fontWeight="700">
         No knowledge yet
       </Text>

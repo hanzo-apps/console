@@ -19,15 +19,15 @@ import { RefreshCw, Download, DollarSign, Wallet, CalendarDays, Hash, Activity, 
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { BarChart, Donut, CHART_PALETTE, CHART_OTHER, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { BarChart, Donut, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { RAMP, OTHER } from '~/lib/theme/ramp'
 import { MetricCard, Panel, LegendDot } from '~/components/ui/Metric'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import type { RangeKey } from '~/lib/api/aimetrics'
 import { UsageSummaryApi, type UsageSummary, type CategorySpend } from '~/lib/api/usage-summary'
 import { VisorApi, type VisorMachine } from '~/lib/api/visor'
 import { exportCSV } from '~/lib/csv'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 const usd = (cents: number): string => {
   const d = cents / 100
@@ -95,9 +95,9 @@ export function UsageModule(_props: { params: Record<string, string> }) {
   const totalByCategory = useMemo(() => (spend?.byCategory ?? []).reduce((a, c) => a + c.cents, 0), [spend])
   const categorySlices: Slice[] = useMemo(() => {
     const cats = spend?.byCategory ?? []
-    const top = cats.slice(0, 7).map((c, i): Slice => ({ label: c.category, value: c.cents, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
+    const top = cats.slice(0, 7).map((c, i): Slice => ({ label: c.category, value: c.cents, color: RAMP[i % RAMP.length] }))
     const rest = cats.slice(7)
-    if (rest.length) top.push({ label: `Other (${rest.length})`, value: rest.reduce((a, c) => a + c.cents, 0), color: CHART_OTHER })
+    if (rest.length) top.push({ label: `Other (${rest.length})`, value: rest.reduce((a, c) => a + c.cents, 0), color: OTHER })
     return top
   }, [spend])
 
@@ -190,7 +190,7 @@ export function UsageModule(_props: { params: Record<string, string> }) {
                   />
                   <YStack gap="$1" self="stretch">
                     {categorySlices.map((s) => (
-                      <LegendDot key={s.label} color={s.color ?? CHART_OTHER} label={s.label} value={usd(s.value)} />
+                      <LegendDot key={s.label} color={s.color ?? OTHER} label={s.label} value={usd(s.value)} />
                     ))}
                   </YStack>
                 </YStack>

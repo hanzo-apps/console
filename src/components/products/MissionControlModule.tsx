@@ -57,8 +57,7 @@ import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { useToast } from '~/components/ui/Toast'
 import { useLiveSessions, type LiveState } from './mission-control/live'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 // ── status tone palette — the ONE map, as CSS values; the pill's bg is a shade ──
 const TONE: Record<ReturnType<typeof statusTone>, { fg: string; bg: string; label: string }> = {
@@ -200,9 +199,9 @@ function kindColor(kind: string): string {
   // genuine states carry a WEIGHT off the one tone map, never a hue.
   switch (kind) {
     case 'tool-call':
-      return '#A3A3A3' // --neutral-400
+      return toneVar('neutral')
     case 'spawn':
-      return '#737373' // --neutral-500
+      return toneVar('muted')
     case 'status':
       return toneVar('warning')
     case 'control':

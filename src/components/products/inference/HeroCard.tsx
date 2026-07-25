@@ -10,6 +10,7 @@ import { Card, Text, XStack, YStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { ACCENT, HeroGraphic, StatusDot } from './parts'
+import { toneVar } from '~/components/ui/tone'
 
 export function HeroCard() {
   const brand = config.brandName || 'Hanzo Cloud'
@@ -25,7 +26,7 @@ export function HeroCard() {
       <XStack items="center" gap="$4" flexWrap="wrap">
         <YStack flex={1} minW={300} gap="$2.5">
           <XStack items="center" gap="$2">
-            <StatusDot color="#4ade80" />
+            <StatusDot color={toneVar('positive')} />
             <Text fontSize="$1" color="$color11" fontWeight="700" style={{ letterSpacing: 0.4, textTransform: 'uppercase' }}>
               Managed · Connected
             </Text>

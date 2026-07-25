@@ -49,7 +49,7 @@ import {
   colorForIndex,
 } from './charts'
 import type { ComputeData } from './state'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 const RANGES = ['1H', '6H', '24H', '7D', '30D'] as const
 const SEV: Record<string, string> = { critical: toneVar('critical'), error: toneVar('critical'), warning: toneVar('warning'), warn: toneVar('warning') }

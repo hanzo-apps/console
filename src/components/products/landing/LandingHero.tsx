@@ -8,13 +8,13 @@
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 
 import { config } from '~/config'
-import { CHART_PALETTE } from '~/components/ui/Charts'
+import { RAMP } from '~/lib/theme/ramp'
 import { asColor } from '~/components/ui/color'
 import { AccentButton, HeroGraphic } from '../inference/parts'
 import { openExternal } from './parts'
 import type { LandingAction, ProductLandingConfig } from './types'
 
-const ACCENT = CHART_PALETTE[0]
+const ACCENT = RAMP[0]
 
 /** A hex color at an alpha, as an `rgba()`. */
 function hex(h: string, a: number): string {

@@ -20,7 +20,7 @@
  */
 import type { Resource, ResourceKind } from '~/lib/api'
 import type { Slice } from '~/components/ui/Charts'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 // ── Lifecycle classification (mirrors ui/StatusTag toneOf, one truth) ─────────
 
