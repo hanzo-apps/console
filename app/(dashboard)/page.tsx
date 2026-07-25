@@ -168,11 +168,6 @@ export default function DashboardHome() {
   const { colorOf } = useProductColors()
   const showAdmin = useIsSuperAdmin()
   const push = (path: string) => router.push(path)
-  // Deploy OSS opens the external one-click template catalog in a new tab — the heavy
-  // 1000+-app catalog is never fetched or rendered on the dashboard's first paint.
-  const openTemplates = () => {
-    if (typeof window !== 'undefined') window.open(config.templatesUrl, '_blank', 'noopener,noreferrer')
-  }
   const groups = visibleCatalogByCategory(showAdmin)
 
   useEffect(() => setMounted(true), [])
@@ -229,12 +224,11 @@ export default function DashboardHome() {
         />
         <PrimaryActionTile
           icon={Boxes}
-          color={colorOf('templates')}
+          color={colorOf('store')}
           title="Deploy OSS"
           description="Deploy Postgres, n8n, Grafana, Supabase and more — one-click open-source apps on Hanzo Cloud."
-          ctaLabel="Browse templates"
-          external
-          onPress={openTemplates}
+          ctaLabel="Browse the App Store"
+          onPress={() => push('/store')}
         />
         <PrimaryActionTile
           icon={HandCoins}
