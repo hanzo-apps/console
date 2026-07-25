@@ -11,6 +11,7 @@ import {
   stepLayout,
   type Graph,
 } from './graph-logic'
+import { RAMP } from '~/lib/theme/ramp'
 
 describe('normalizeGraph', () => {
   it('parses nodes + edges and drops malformed/dangling rows', () => {
@@ -40,11 +41,20 @@ describe('normalizeGraph', () => {
 })
 
 describe('colors', () => {
-  it('maps known node/edge kinds and falls back', () => {
+  it('separates kinds by lightness on the shared scale — never by hue', () => {
+    for (const c of [nodeColor('kb-page'), nodeColor('kb-memory'), nodeColor('unresolved'), edgeColor('parent'), edgeColor('link')]) {
+      expect(RAMP).toContain(c)
+      const [r, g, b] = [1, 3, 5].map((i) => c.slice(i, i + 2))
+      expect(r).toBe(g) // zero saturation — a grey, not a colour
+      expect(g).toBe(b)
+    }
+  })
+
+  it('keeps distinct kinds distinguishable, and falls back for the unknown', () => {
     expect(nodeColor('kb-page')).not.toEqual(nodeColor('kb-memory'))
-    expect(nodeColor('unknown')).toBe('#615CED')
+    expect(nodeColor('unknown')).toBe(RAMP[3])
     expect(edgeColor('parent')).not.toEqual(edgeColor('provenance'))
-    expect(edgeColor('mystery')).toBe('#94A3B8')
+    expect(edgeColor('mystery')).toBe(RAMP[4])
   })
 })
 

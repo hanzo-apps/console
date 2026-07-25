@@ -55,7 +55,7 @@ import { useToast } from '~/components/ui/Toast'
 import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
 
 /** Cloudflare brand orange — used ONLY for the Cloudflare provider/proxy affordances. */
-const CF_ORANGE = '#F38020'
+const CF_TONE = 'var(--color11)' // the Cloudflare lane reads by icon + label, not hue
 
 type Async<T> =
   | { phase: 'loading' }
@@ -75,10 +75,10 @@ function ProviderBadge({ provider }: { provider: string }) {
       py="$1"
       rounded="$2"
       bg="$color3"
-      style={cf ? { backgroundColor: 'rgba(243,128,32,0.14)' } : undefined}
+      style={cf ? { backgroundColor: 'rgba(220,220,220,0.10)' } : undefined}
     >
-      {cf ? <Cloud size={12} color={CF_ORANGE} /> : <Server size={12} color="#9a9a9a" />}
-      <Text fontSize="$1" color={cf ? undefined : '$color11'} style={cf ? { color: CF_ORANGE } : undefined}>
+      {cf ? <Cloud size={12} color={CF_TONE} /> : <Server size={12} color="$color11" />}
+      <Text fontSize="$1" color={cf ? undefined : '$color11'} style={cf ? { color: CF_TONE } : undefined}>
         {providerLabel(provider)}
       </Text>
     </XStack>
@@ -102,12 +102,12 @@ function ProxiedCell({ zone, record }: { zone: Zone; record: DnsRecord }) {
   if (!isCloudflare(zone.provider) || !isProxyable(record.type)) return <Text fontSize="$2" color="$color9">—</Text>
   return record.proxied ? (
     <XStack items="center" gap="$1">
-      <Cloud size={13} color={CF_ORANGE} />
-      <Text fontSize="$2" style={{ color: CF_ORANGE }}>Proxied</Text>
+      <Cloud size={13} color={CF_TONE} />
+      <Text fontSize="$2" style={{ color: CF_TONE }}>Proxied</Text>
     </XStack>
   ) : (
     <XStack items="center" gap="$1">
-      <Cloud size={13} color="#9a9a9a" />
+      <Cloud size={13} color="$color11" />
       <Text fontSize="$2" color="$color10">DNS only</Text>
     </XStack>
   )
@@ -412,7 +412,7 @@ export function DnsModule(_props: { params: Record<string, string> }) {
       header: 'Zone',
       render: (z) => (
         <XStack items="center" gap="$2" flex={1} minW={0}>
-          <Globe size={14} color="#9a9a9a" />
+          <Globe size={14} color="$color11" />
           <Text fontSize="$3" color="$color12" numberOfLines={1} flex={1} minW={0}>{displayZone(z.name)}</Text>
         </XStack>
       ),
@@ -486,12 +486,12 @@ export function DnsModule(_props: { params: Record<string, string> }) {
           ) : (
             <>
               {cf?.connected ? (
-                <XStack items="center" gap="$1.5" px="$2.5" py="$1.5" rounded="$3" style={{ backgroundColor: 'rgba(243,128,32,0.14)' }}>
-                  <Cloud size={14} color={CF_ORANGE} />
-                  <Text fontSize="$2" style={{ color: CF_ORANGE }}>Cloudflare connected</Text>
+                <XStack items="center" gap="$1.5" px="$2.5" py="$1.5" rounded="$3" style={{ backgroundColor: 'rgba(220,220,220,0.10)' }}>
+                  <Cloud size={14} color={CF_TONE} />
+                  <Text fontSize="$2" style={{ color: CF_TONE }}>Cloudflare connected</Text>
                 </XStack>
               ) : (
-                <Button onPress={connectCloudflare} icon={<Cloud size={16} color={CF_ORANGE} />}>
+                <Button onPress={connectCloudflare} icon={<Cloud size={16} color={CF_TONE} />}>
                   Connect Cloudflare
                 </Button>
               )}

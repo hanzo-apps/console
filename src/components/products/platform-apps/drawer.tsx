@@ -43,7 +43,7 @@ import {
   validateEnvDrafts,
   type EnvDraft,
 } from './logic'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -514,7 +514,7 @@ function MetricsTab({ app }: { app: PlatformApp }) {
             label="Latency p95"
             value={`${Math.round(m.summary.p95Ms)} ms`}
             points={m.latencyP95Ms.map((p) => p.v)}
-            tone="#539bf5"
+            tone={toneVar('neutral')}
           />
           <Text fontSize="$1" color="$color9" pt="$2">
             Requests, errors, and latency are live from o11y (RED, trace-derived). Per-service CPU and memory are not exposed by

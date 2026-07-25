@@ -19,16 +19,16 @@
 import type { ReactElement, ReactNode } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 
-import { CHART_PALETTE } from './Charts'
+import { RAMP } from '~/lib/theme/ramp'
 import { toneColor } from './tone'
-import { toneVar } from './tone-var'
+import { toneVar } from './tone'
 
 /**
  * Categorical series ramp — the ONE ramp, shared verbatim with `ui/Charts`
- * (`CHART_PALETTE`): a monotonic descending-lightness neutral ladder, so a legend or
+ * (`RAMP`): a monotonic descending-lightness neutral ladder, so a legend or
  * a multi-series chart reads as ordered greys rather than a saturated rainbow.
  */
-export const SERIES = CHART_PALETTE
+export const SERIES = RAMP
 export const colorForIndex = (i: number): string => SERIES[i % SERIES.length]
 const TRACK = 'rgba(128,128,128,0.18)'
 

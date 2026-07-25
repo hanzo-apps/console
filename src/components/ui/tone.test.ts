@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { toneColor, toneOfStatus, statusColor, type Tone } from './tone'
+import { toneColor, toneOfStatus, statusColor, toneVar, type Tone } from './tone'
 
 const TONES: Tone[] = ['positive', 'warning', 'critical', 'neutral', 'muted']
 
@@ -37,5 +37,12 @@ describe('tone', () => {
     expect(statusColor('failed')).toBe(toneColor('critical'))
     expect(statusColor('ok')).toBe(toneColor('positive'))
     expect(statusColor('nonsense')).toMatch(/^\$color(9|1[0-2])$/)
+  })
+
+  it('toneVar restates the SAME token as CSS — one ladder, two forms', () => {
+    for (const t of TONES) {
+      expect(toneVar(t)).toBe(`var(--${toneColor(t).slice(1)})`)
+      expect(toneVar(t)).toMatch(/^var\(--color(9|1[0-2])\)$/)
+    }
   })
 })

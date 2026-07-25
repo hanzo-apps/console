@@ -61,7 +61,7 @@ export function RichTextDisplay({ value }: FieldDisplayProps) {
     return plain ? (
       <div className="hz-rt-read">{plain}</div>
     ) : (
-      <span style={{ color: 'var(--color9, #7c828c)' }}>—</span>
+      <span style={{ color: 'var(--color9)' }}>—</span>
     )
   }
   return <div className="hz-rt-read" dangerouslySetInnerHTML={{ __html: html }} />

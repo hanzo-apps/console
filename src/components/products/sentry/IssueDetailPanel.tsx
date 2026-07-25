@@ -18,8 +18,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Pill, Fact } from './parts'
 import { levelColor, statusTone, fmtWhen, fmtDateTime, fmtCount } from './logic'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 export function IssueDetailPanel({ id }: { id: string }) {
   const router = useRouter()
@@ -208,7 +207,7 @@ function StackTrace({ event }: { event: SentryEvent | null }) {
                   {f.context.map(([ln, code]) => {
                     const crash = ln === f.lineno
                     return (
-                      <XStack key={ln} gap="$2" px="$2" py={1} bg={crash ? 'rgba(229,83,75,0.14)' : undefined}>
+                      <XStack key={ln} gap="$2" px="$2" py={1} bg={crash ? 'rgba(220,220,220,0.14)' : undefined}>
                         <Text fontSize="$1" color="$color10" className="hz-mono" width={36} text="right">
                           {ln}
                         </Text>

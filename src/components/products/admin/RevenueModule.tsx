@@ -18,6 +18,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart } from '~/components/ui/Charts'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { toneVar } from '~/components/ui/tone'
 
 const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -59,7 +60,7 @@ export function RevenueModule() {
       </XStack>
       <YStack gap="$2">
         <Text fontSize="$4" color="$color12">Fleet spend (30 days)</Text>
-        {data ? <LineChart data={data.spendTrend.map((p) => ({ label: p.t, value: p.value }))} color="#22c55e" formatValue={(v) => usd(v)} /> : <Text color="$color10">Loading…</Text>}
+        {data ? <LineChart data={data.spendTrend.map((p) => ({ label: p.t, value: p.value }))} color={toneVar('positive')} formatValue={(v) => usd(v)} /> : <Text color="$color10">Loading…</Text>}
       </YStack>
       <YStack gap="$2">
         <Text fontSize="$5" color="$color12">Per-customer revenue</Text>

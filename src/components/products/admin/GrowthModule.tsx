@@ -62,24 +62,26 @@ import {
 } from '~/lib/guide/client'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard, Panel, UtilBar, LegendDot } from '~/components/ui/Metric'
-import { Donut, type Slice, CHART_PALETTE } from '~/components/ui/Charts'
+import { Donut, type Slice } from '~/components/ui/Charts'
+import { RAMP } from '~/lib/theme/ramp'
+import { asColor } from '~/components/ui/color'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { BackendStateCard, classifyRead } from '~/components/ui/BackendState'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
 import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 // ── semantic palette (deliberately separate from the brand accent) ──────────
 const ON = toneVar('positive') // enabled / on-track
 const OFF = toneVar('critical') // disabled
-const AUTO = '#A3A3A3' // automatable
+const AUTO = toneVar('neutral') // automatable
 /** Growth-stage semantic weights + copy — a stage is a state, carried by emphasis + label. */
 const STAGE_META: Record<string, { label: string; color: string; blurb: string }> = {
   formed: { label: 'Formed', color: toneVar('muted'), blurb: 'Set up — org created, first config in place.' },
-  launched: { label: 'Launched', color: '#A3A3A3', blurb: 'Live — a site or app is shipped.' },
-  activated: { label: 'Activated', color: '#737373', blurb: 'Traction — real usage and signups.' },
+  launched: { label: 'Launched', color: toneVar('neutral'), blurb: 'Live — a site or app is shipped.' },
+  activated: { label: 'Activated', color: toneVar('warning'), blurb: 'Traction — real usage and signups.' },
   scaling: { label: 'Scaling', color: toneVar('positive'), blurb: 'Growing — revenue is compounding.' },
 }
 
@@ -108,7 +110,7 @@ function EnableToggle({ enabled, busy, onToggle }: { enabled: boolean; busy: boo
       cursor={busy ? 'default' : 'pointer'}
       pressStyle={busy ? undefined : { opacity: 0.7 }}
       onPress={() => !busy && onToggle(!enabled)}
-      style={{ background: enabled ? 'rgba(35,197,98,0.12)' : 'rgba(148,163,184,0.10)' }}
+      style={{ background: enabled ? 'rgba(220,220,220,0.12)' : 'rgba(160,160,160,0.10)' }}
     >
       <YStack width={8} height={8} rounded="$10" style={{ backgroundColor: enabled ? ON : toneVar('muted') }} />
       <Text fontSize="$1" fontWeight="600" style={{ color: enabled ? ON : toneVar('muted') }}>
@@ -616,7 +618,7 @@ function CorpusPanel({ nonce }: { nonce: number }) {
     const counts = new Map<string, number>()
     for (const s of all ?? []) counts.set(s.category || 'uncategorized', (counts.get(s.category || 'uncategorized') ?? 0) + 1)
     const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])
-    const top = sorted.slice(0, 7).map(([label, value], i) => ({ label, value, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
+    const top = sorted.slice(0, 7).map(([label, value], i) => ({ label, value, color: RAMP[i % RAMP.length] }))
     const rest = sorted.slice(7).reduce((n, [, v]) => n + v, 0)
     return rest > 0 ? [...top, { label: 'other', value: rest, color: toneVar('muted') }] : top
   }, [all])
@@ -816,8 +818,8 @@ function LivePanel({ nonce }: { nonce: number }) {
           {funnel ? (
             <YStack gap="$2">
               {km ? <UtilBar value={Math.min(100, km.launchProgress)} width={240} color={ON} /> : null}
-              <LegendDot color="#A3A3A3" label="Pageviews" value={funnel.pageviews.toLocaleString()} />
-              <LegendDot color="#737373" label="Visitors" value={funnel.visitors.toLocaleString()} />
+              <LegendDot color={toneVar("neutral")} label="Pageviews" value={funnel.pageviews.toLocaleString()} />
+              <LegendDot color={toneVar("muted")} label="Visitors" value={funnel.visitors.toLocaleString()} />
               <LegendDot color={toneVar('warning')} label="Signups" value={funnel.signups.toLocaleString()} />
               <LegendDot color={ON} label="Orders" value={funnel.orders.toLocaleString()} />
             </YStack>
@@ -834,7 +836,7 @@ function LivePanel({ nonce }: { nonce: number }) {
             <XStack gap="$2" flexWrap="wrap">
               {signals.map(([name, on]) => (
                 <XStack key={name} items="center" gap="$1.5" px="$2.5" py="$1.5" rounded="$10" borderWidth={1} borderColor="$borderColor"
-                  style={{ background: on ? 'rgba(35,197,98,0.12)' : 'rgba(148,163,184,0.08)' }}>
+                  style={{ background: on ? 'rgba(220,220,220,0.12)' : 'rgba(160,160,160,0.08)' }}>
                   {on ? <CircleCheck size={13} color={toneColor('positive')} /> : <Circle size={13} color={toneColor('muted')} />}
                   <Text fontSize="$1" style={{ color: on ? ON : toneVar('muted') }}>{name}</Text>
                 </XStack>
@@ -861,7 +863,7 @@ function LivePanel({ nonce }: { nonce: number }) {
                   <Text fontSize="$3" fontWeight="600" color="$color12" flex={1} minW={0}>{m.title}</Text>
                   {m.stepId === suggest.next ? <Chip tone={ON}>do next</Chip> : null}
                   {m.automatable ? (
-                    <XStack items="center" gap="$1"><Bot size={12} color={AUTO} /><Text fontSize="$1" style={{ color: AUTO }}>automatable</Text></XStack>
+                    <XStack items="center" gap="$1"><Bot size={12} color={asColor(AUTO)} /><Text fontSize="$1" style={{ color: AUTO }}>automatable</Text></XStack>
                   ) : null}
                   {m.unlocks > 0 ? <Chip>unblocks {m.unlocks}</Chip> : null}
                 </XStack>

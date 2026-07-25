@@ -60,8 +60,7 @@ import {
   stateLabel,
   stateTone,
 } from './guide/logic'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -297,7 +296,7 @@ function GuideReady({
           caption="steps in your guide"
         />
         <MetricCard
-          icon={<Target size={16} color="#D4D4D4" />}
+          icon={<Target size={16} color="$color11" />}
           label="Next"
           value={cur ? cur.title : done ? 'Launched' : '—'}
           caption={done ? 'nothing left to do' : 'what to tackle now'}
@@ -400,7 +399,7 @@ function CurrentStepCard({
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" gap="$2" flexWrap="wrap">
         <XStack items="center" gap="$1.5" px="$2" py="$1" rounded="$10" bg="$color3">
-          <Target size={12} color="#D4D4D4" />
+          <Target size={12} color="$color11" />
           <Text fontSize="$1" fontWeight="600" color="$color11">
             Next step
           </Text>
@@ -514,7 +513,7 @@ function StepRow({
               ) : null}
               {step.automatable && !terminal ? (
                 <XStack items="center" gap="$1">
-                  <Sparkles size={11} color="#D4D4D4" />
+                  <Sparkles size={11} color="$color11" />
                   <Text fontSize="$1" color="$color10">
                     AI-ready
                   </Text>
@@ -595,7 +594,7 @@ function DoPanel({
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" bg="$color2">
       <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
         <XStack items="center" gap="$2" flex={1} minW={0}>
-          <Wand2 size={16} color="#D4D4D4" />
+          <Wand2 size={16} color="$color11" />
           <Text fontSize="$4" fontWeight="700" color="$color12" numberOfLines={1}>
             Business AI · {step.title}
           </Text>

@@ -15,16 +15,8 @@ import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Clock, TrendingDown, TrendingUp } from '@hanzogui/lucide-icons-2'
 
-import {
-  BarChart,
-  CHART_OTHER,
-  CHART_PALETTE,
-  Donut,
-  LineChart,
-  Sparkline,
-  type ChartPoint,
-  type Slice,
-} from '~/components/ui/Charts'
+import { BarChart, Donut, LineChart, Sparkline, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { RAMP, OTHER } from '~/lib/theme/ramp'
 import { useCountUp, useReducedMotion } from './hooks'
 import {
   ago,
@@ -54,7 +46,7 @@ import type {
   OverviewData,
   TimeseriesTile,
 } from './config'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 const UP = toneVar('positive')
 const DOWN = toneVar('critical')
@@ -91,7 +83,7 @@ export function MetricTileView({ tile, data, loading, live, index }: { tile: Met
   const raw = kpi?.value ?? 0
   const animate = live && !reduced && kpi !== undefined
   const shown = useCountUp(raw, animate)
-  const color = tile.color ?? CHART_PALETTE[index % CHART_PALETTE.length]
+  const color = tile.color ?? RAMP[index % RAMP.length]
   const delta = deltaOf(kpi)
   const Icon = tile.icon
 
@@ -180,9 +172,9 @@ export function TimeseriesTileView({ tile, data, loading }: { tile: TimeseriesTi
       ) : points.length < 2 ? (
         <EmptyPanel note="Not enough data in this range yet." />
       ) : tile.kind === 'bar' ? (
-        <BarChart data={points} color={CHART_PALETTE[1]} formatValue={fmt} />
+        <BarChart data={points} color={RAMP[1]} formatValue={fmt} />
       ) : (
-        <LineChart data={points} color={CHART_PALETTE[0]} formatValue={fmt} />
+        <LineChart data={points} color={RAMP[0]} formatValue={fmt} />
       )}
     </Panel>
   )
@@ -195,7 +187,7 @@ export function DistributionTileView({ tile, data, loading }: { tile: Distributi
   const total = distributionTotal(raw)
   const slices: Slice[] = raw
     .filter((s) => s.value > 0)
-    .map((s, i) => ({ label: s.label, value: s.value, color: i < CHART_PALETTE.length ? CHART_PALETTE[i] : CHART_OTHER }))
+    .map((s, i) => ({ label: s.label, value: s.value, color: i < RAMP.length ? RAMP[i] : OTHER }))
   const fmt = (v: number) => formatMetric(v, tile.unit)
 
   return (
@@ -226,7 +218,7 @@ export function DistributionTileView({ tile, data, loading }: { tile: Distributi
           <YStack flex={1} minW={200} gap="$2">
             {raw.filter((s) => s.value > 0).map((s, i) => (
               <XStack key={s.label} items="center" gap="$2.5">
-                <YStack width={10} height={10} rounded="$10" style={{ backgroundColor: i < CHART_PALETTE.length ? CHART_PALETTE[i] : CHART_OTHER }} />
+                <YStack width={10} height={10} rounded="$10" style={{ backgroundColor: i < RAMP.length ? RAMP[i] : OTHER }} />
                 <YStack flex={1}>
                   <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
                     {s.label}

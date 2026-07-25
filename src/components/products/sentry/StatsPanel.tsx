@@ -17,8 +17,7 @@ import { LineChart, BarChart } from '~/components/ui/Charts'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker } from './parts'
 import { statsToPoints, statsTotal, fmtCount } from './logic'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 type State =
   | { phase: 'loading' }

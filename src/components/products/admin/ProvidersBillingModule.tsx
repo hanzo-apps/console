@@ -44,8 +44,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { Donut } from '~/components/ui/Charts'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 // ── small presentational helpers ──────────────────────────────────────────────
 

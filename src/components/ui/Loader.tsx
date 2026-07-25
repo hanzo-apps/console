@@ -41,7 +41,7 @@ const ANIMATED: Partial<Record<string, () => string>> = {
  */
 export function BrandMark({ size = 48 }: { size?: number }) {
   const theme = useTheme()
-  const fill = theme.color12?.get() ?? '#ffffff'
+  const fill = theme.color12?.get() ?? 'var(--color12)'
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 

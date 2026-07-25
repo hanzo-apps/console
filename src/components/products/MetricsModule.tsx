@@ -38,6 +38,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard, Panel } from '~/components/ui/Metric'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { Donut, type DonutSegment } from '~/components/ui/Donut'
+import { toneVar } from '~/components/ui/tone'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 
 // The customer-facing Metrics view = the org's OWN usage board (requests/tokens/
@@ -164,8 +165,8 @@ function Ready({ data }: { data: Data }) {
   const uptimePct = summary.total > 0 ? Math.round((summary.healthy / summary.total) * 100) : 0
   const down = data.health.filter((r) => !r.up)
   const segments: DonutSegment[] = [
-    { label: 'Healthy', value: summary.healthy, color: '#30a46c' },
-    { label: 'Down', value: summary.down, color: '#e5484d' },
+    { label: 'Healthy', value: summary.healthy, color: toneVar('positive') },
+    { label: 'Down', value: summary.down, color: toneVar('critical') },
   ]
 
   return (
@@ -178,7 +179,7 @@ function Ready({ data }: { data: Data }) {
           label="Healthy"
           value={String(summary.healthy)}
           spark={data.healthy.map((p) => p.value)}
-          sparkColor="#30a46c"
+          sparkColor={toneVar('positive')}
         />
         <MetricCard icon={<XCircle size={16} />} label="Down" value={String(summary.down)} />
         <MetricCard icon={<Gauge size={16} />} label="Uptime" value={`${uptimePct}%`} caption="services up now" />
@@ -187,7 +188,7 @@ function Ready({ data }: { data: Data }) {
       {/* Real time series (zero-filled by VictoriaMetrics' step). */}
       <XStack gap="$4" flexWrap="wrap">
         <Panel title="Healthy services over time">
-          <LineChart data={data.healthy} color="#30a46c" formatValue={(v) => String(Math.round(v))} />
+          <LineChart data={data.healthy} color={toneVar('positive')} formatValue={(v) => String(Math.round(v))} />
         </Panel>
         <Panel title="Scrape targets over time">
           <LineChart data={data.targets} formatValue={(v) => String(Math.round(v))} />

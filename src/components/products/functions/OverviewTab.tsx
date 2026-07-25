@@ -42,7 +42,8 @@ import {
   type MetricsRange,
   type ServerlessFunction,
 } from '~/lib/api/functions'
-import { LineChart, Sparkline, Donut, CHART_PALETTE, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { LineChart, Sparkline, Donut, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { RAMP } from '~/lib/theme/ramp'
 import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { MetricCard, Delta } from './parts'
 import { FunctionsBrowser } from './FunctionsBrowser'
@@ -108,9 +109,9 @@ export function OverviewTab({
 
   const statusSlices: Slice[] = statusBreakdown
     ? [
-        { label: 'Success', value: statusBreakdown.success, color: CHART_PALETTE[1] },
-        { label: 'Timeout', value: statusBreakdown.timeout, color: CHART_PALETTE[2] },
-        { label: 'Error', value: statusBreakdown.error, color: CHART_PALETTE[4] },
+        { label: 'Success', value: statusBreakdown.success, color: RAMP[1] },
+        { label: 'Timeout', value: statusBreakdown.timeout, color: RAMP[2] },
+        { label: 'Error', value: statusBreakdown.error, color: RAMP[4] },
       ]
     : []
   const statusTotal = statusBreakdown ? statusBreakdown.success + statusBreakdown.timeout + statusBreakdown.error : 0
