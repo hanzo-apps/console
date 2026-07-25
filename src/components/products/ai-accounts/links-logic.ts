@@ -4,7 +4,7 @@
  * isolation so the dashboard stays a thin renderer over real `/v1/links` data.
  */
 import type { Device, Link, LinkKind, BillingMode } from '~/lib/api/links'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 export const kindLabel = (kind: LinkKind): string => (kind === 'apikey' ? 'API key' : 'Subscription')
 

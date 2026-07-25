@@ -72,11 +72,11 @@ import type { RangeKey } from '~/lib/api/aimetrics'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { Donut, CHART_PALETTE, CHART_OTHER } from '~/components/ui/Charts'
+import { Donut } from '~/components/ui/Charts'
+import { RAMP, OTHER } from '~/lib/theme/ramp'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 // ── small presentational helpers ──────────────────────────────────────────────
 
@@ -277,7 +277,7 @@ export function AiEconomicsModule() {
     return topModelShares(mix, 6).map((s, i) => ({
       label: s.label,
       value: s.value,
-      color: s.label === 'Other' ? CHART_OTHER : CHART_PALETTE[i % CHART_PALETTE.length],
+      color: s.label === 'Other' ? OTHER : RAMP[i % RAMP.length],
     }))
   }, [mix])
 
@@ -567,8 +567,8 @@ export function AiEconomicsModule() {
           </Text>
           <a href="https://api.hanzo.ai/v1/training/clients" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
             <XStack items="center" gap="$1.5" self="flex-start">
-              <ExternalLink size={13} color="#A3A3A3" />
-              <Text fontSize="$2" style={{ color: '#A3A3A3' }}>
+              <ExternalLink size={13} color="$color10" />
+              <Text fontSize="$2" style={{ color: 'var(--color10)' }}>
                 api.hanzo.ai/v1/training/clients
               </Text>
             </XStack>

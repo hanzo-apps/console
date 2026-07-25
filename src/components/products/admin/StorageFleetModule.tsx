@@ -17,8 +17,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -41,7 +40,7 @@ function FillBar({ pct }: { pct: number | null }) {
   const w = pct == null ? 0 : Math.max(2, Math.min(100, pct))
   return (
     <XStack items="center" gap="$2" flex={1} minW={120}>
-      <XStack flex={1} height={6} rounded="$10" style={{ backgroundColor: 'rgba(148,163,184,0.16)', overflow: 'hidden' }}>
+      <XStack flex={1} height={6} rounded="$10" style={{ backgroundColor: 'rgba(160,160,160,0.16)', overflow: 'hidden' }}>
         <XStack style={{ width: `${w}%`, backgroundColor: fillColor(pct) }} height={6} rounded="$10" />
       </XStack>
       <Text className="hz-mono" fontSize="$1" color="$color11" style={{ minWidth: 42, textAlign: 'right' }}>

@@ -26,8 +26,7 @@ import { SlideOver } from '~/components/ui/SlideOver'
 import { Donut, type Slice } from '~/components/ui/Charts'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { levelColor, statusTone } from './sentry/logic'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 /** Status filter tabs (label → the query value; '' = all). */
 const TABS: { label: string; status: '' | IssueStatus }[] = [

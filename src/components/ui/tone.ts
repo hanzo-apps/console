@@ -63,3 +63,13 @@ export function toneOfStatus(status: string): Tone {
 export function statusColor(status: string): (typeof TONE_COLOR)[Tone] {
   return toneColor(toneOfStatus(status))
 }
+
+/**
+ * The same ladder as a CSS value. A `$token` string resolves in a Gui `color=`/`bg=`
+ * prop but NOT in a raw `style={{…}}` object, an SVG presentation attribute, or a
+ * chart mark — those are plain CSS and need `var(--colorN)`. This is the token
+ * restated, not a second ladder: change the emphasis order above and both forms move.
+ */
+export function toneVar(tone: Tone): string {
+  return `var(--${toneColor(tone).slice(1)})`
+}

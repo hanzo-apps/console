@@ -20,13 +20,14 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 import { EmptyState } from '~/components/ui/EmptyState'
 import { UtilBar } from '~/components/ui/Metric'
 import { Loader } from '~/components/ui/Loader'
+import { providerColor } from '~/lib/products/ai-accounts'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 const pctText = (n?: number): string => (typeof n === 'number' ? `${Math.round(n)}%` : '—')
 const compact = (n: number): string => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n)
 
 const labelFor = (id: string): string => aiProvider(id)?.label ?? id
-const colorFor = (id: string): string => aiProvider(id)?.color ?? '$color8'
+const colorFor = (id: string): string => (aiProvider(id) ? providerColor(id) : 'var(--color8)')
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

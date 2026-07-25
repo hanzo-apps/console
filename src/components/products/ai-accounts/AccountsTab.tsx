@@ -22,6 +22,7 @@ import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
 import { toneColor } from '~/components/ui/tone'
+import { providerColor } from '~/lib/products/ai-accounts'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -86,7 +87,7 @@ function ProviderRow({
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" gap="$3" justify="space-between" flexWrap="wrap">
         <XStack items="center" gap="$3" flex={1} minW={0}>
-          <YStack width={10} height={10} rounded={99} style={{ backgroundColor: provider.color }} />
+          <YStack width={10} height={10} rounded={99} style={{ backgroundColor: providerColor(provider.id) }} />
           <YStack minW={0}>
             <XStack items="center" gap="$2" flexWrap="wrap">
               <Text fontSize="$5" fontWeight="700">

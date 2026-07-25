@@ -7,7 +7,7 @@
  * separation of concerns: one module per unit system. No data is fabricated —
  * missing / non-finite values render as an em dash.
  */
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 const DASH = '—'
 

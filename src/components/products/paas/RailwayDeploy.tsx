@@ -32,12 +32,13 @@ import {
   type RailwayPhase,
   type StationState,
 } from './railway'
+import { toneVar } from '~/components/ui/tone'
 
-// Monochrome by default; only the genuine deploy states carry a hue (live → green,
-// errored → red — design --state-success / --state-error). In-progress = neutral.
-const ACCENT = '#D4D4D4' // --neutral-300
-const GREEN = '#22c55e' // --state-success
-const RED = '#ef4444' // --state-error
+// Monochrome: a deploy state is carried by the station GLYPH (tick / cross / pulse)
+// and its weight off the one tone map — never by hue.
+const ACCENT = toneVar('neutral') // in-progress
+const GREEN = toneVar('positive') // live
+const RED = toneVar('critical') // errored
 const MUTED = 'rgba(160,160,160,0.28)'
 
 export interface RailwayDeployProps {
@@ -246,7 +247,7 @@ function Station({ cx, cy, state, tone, reduced }: { cx: number; cy: number; sta
         <path
           d={`M${cx - 4.5},${cy + 0.5} L${cx - 1.5},${cy + 3.5} L${cx + 4.5},${cy - 3.5}`}
           fill="none"
-          stroke="#fff"
+          stroke="var(--color1)"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -258,7 +259,7 @@ function Station({ cx, cy, state, tone, reduced }: { cx: number; cy: number; sta
     return (
       <g>
         <circle cx={cx} cy={cy} r={r} fill={RED} />
-        <path d={`M${cx - 3.5},${cy - 3.5} L${cx + 3.5},${cy + 3.5} M${cx + 3.5},${cy - 3.5} L${cx - 3.5},${cy + 3.5}`} stroke="#fff" strokeWidth={2} strokeLinecap="round" />
+        <path d={`M${cx - 3.5},${cy - 3.5} L${cx + 3.5},${cy + 3.5} M${cx + 3.5},${cy - 3.5} L${cx - 3.5},${cy + 3.5}`} stroke="var(--color1)" strokeWidth={2} strokeLinecap="round" />
       </g>
     )
   }
@@ -266,11 +267,11 @@ function Station({ cx, cy, state, tone, reduced }: { cx: number; cy: number; sta
     return (
       <g>
         {!reduced ? <circle cx={cx} cy={cy} r={r} fill={tone} className="hz-rail-pulse" /> : null}
-        <circle cx={cx} cy={cy} r={r} fill="var(--color2, #14161a)" stroke={tone} strokeWidth={3} />
+        <circle cx={cx} cy={cy} r={r} fill="var(--color2)" stroke={tone} strokeWidth={3} />
         <circle cx={cx} cy={cy} r={4} fill={tone} />
       </g>
     )
   }
   // pending
-  return <circle cx={cx} cy={cy} r={r} fill="var(--color2, #14161a)" stroke={MUTED} strokeWidth={2} />
+  return <circle cx={cx} cy={cy} r={r} fill="var(--color2)" stroke={MUTED} strokeWidth={2} />
 }

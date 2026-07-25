@@ -50,13 +50,14 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { Loader } from '~/components/ui/Loader'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { MetricCard, Panel } from '~/components/ui/Metric'
-import { Donut, LineChart, CHART_PALETTE, type Slice } from '~/components/ui/Charts'
+import { Donut, LineChart, type Slice } from '~/components/ui/Charts'
+import { RAMP } from '~/lib/theme/ramp'
 import { FieldSwitch } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
 
 // Monochrome accent — design --neutral-300 (the console is monochrome by construction).
-const ACCENT = '#D4D4D4'
+const ACCENT = 'var(--color11)'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -70,7 +71,7 @@ const tabPath = (id: string): string => (id ? `/router/${id}` : '/router')
 
 /** Map a pure `NamedValue[]` to polychrome donut slices (color assigned in the view). */
 const toSlices = (rows: NamedValue[]): Slice[] =>
-  rows.map((r, i) => ({ label: r.label, value: r.value, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
+  rows.map((r, i) => ({ label: r.label, value: r.value, color: RAMP[i % RAMP.length] }))
 
 export function RouterModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
