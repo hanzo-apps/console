@@ -17,6 +17,8 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,12 +27,13 @@ function fmtSize(gib: number): string {
   return gib >= 1024 ? `${(gib / 1024).toFixed(gib % 1024 === 0 ? 0 : 1)} TiB` : `${gib} GiB`
 }
 
-/** Fill urgency: green < 70%, amber < 85%, red ≥ 85% — so a near-full volume is loud. */
-function fillColor(pct: number | null): `#${string}` {
-  if (pct == null) return '#3a3a3a'
-  if (pct >= 85) return '#e5534b'
-  if (pct >= 70) return '#ff9f45'
-  return '#23c562'
+/** Fill urgency: nominal < 70%, warning < 85%, critical ≥ 85% — a near-full volume is loud
+ *  by WEIGHT (the label beside it says which), never by hue. */
+function fillColor(pct: number | null): string {
+  if (pct == null) return 'var(--color6)'
+  if (pct >= 85) return toneVar('critical')
+  if (pct >= 70) return toneVar('warning')
+  return toneVar('positive')
 }
 
 /** A usage bar — filled portion colored by urgency; a null fill renders an empty track + "—". */
@@ -149,7 +152,7 @@ export function StorageFleetModule() {
           <FillBar pct={d.pct} />
           {d.pct >= 70 && (
             <XStack items="center" gap="$1.5">
-              <TriangleAlert size={14} color={fillColor(d.pct)} />
+              <TriangleAlert size={14} color={toneColor(d.pct >= 85 ? 'critical' : 'warning')} />
               <Text fontSize="$1" style={{ color: fillColor(d.pct) }}>
                 {d.pct >= 85 ? 'Critical — scale this volume now.' : 'Filling — plan to scale soon.'}
               </Text>
@@ -166,7 +169,7 @@ export function StorageFleetModule() {
       {s && s.alerts.length > 0 && (
         <Card p="$3" gap="$2" borderWidth={1} borderColor="$borderColor">
           <XStack items="center" gap="$1.5">
-            <TriangleAlert size={15} color="#ff9f45" />
+            <TriangleAlert size={15} color={toneColor('warning')} />
             <Text fontSize="$3" fontWeight="700" color="$color12">Near-full volumes</Text>
           </XStack>
           {s.alerts.map((a) => (

@@ -4,6 +4,7 @@
  * surface. Mirrors the onboarding `steps.ts` convention.
  */
 import type { GuideOverview, GuideStep, StepState, GuideEvent } from '~/lib/api/guide'
+import { toneVar } from '~/components/ui/tone-var'
 
 /** Human label for a step state. */
 export function stateLabel(s: StepState): string {
@@ -19,17 +20,15 @@ export function stateLabel(s: StepState): string {
   }
 }
 
-/** A monochrome-friendly hue for a step state (Charts.tsx convention — hex literals). */
+/** The greyscale weight for a step state — the ONE console tone map, as a CSS value. */
 export function stateTone(s: StepState): string {
   switch (s) {
     case 'done':
-      return '#2ea043' // green
+      return toneVar('positive')
     case 'in_progress':
-      return '#d29922' // amber
-    case 'skipped':
-      return '#8b949e' // grey
+      return toneVar('warning')
     default:
-      return '#6e7681' // muted
+      return toneVar('muted') // skipped + to-do are both resolved-or-not-started
   }
 }
 

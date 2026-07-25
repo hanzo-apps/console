@@ -11,6 +11,7 @@ import { Button, Popover, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowDownRight, ArrowUpRight } from '@hanzogui/lucide-icons-2'
 
 import type { ProductIcon } from '~/lib/products/registry'
+import { toneColor } from '~/components/ui/tone'
 
 /**
  * The honest engine badge. `hanzoai/functions` is a **Fission** fork (the design
@@ -34,7 +35,7 @@ export function Delta({ pct }: { pct?: number | null }) {
   if (pct === undefined || pct === null || !Number.isFinite(pct)) return null
   const up = pct >= 0
   const Arrow = up ? ArrowUpRight : ArrowDownRight
-  const color = up ? '#3fb950' : '#f85149'
+  const color = toneColor(up ? 'positive' : 'critical')
   return (
     <XStack gap="$0.5" items="center">
       <Arrow size={12} color={color} />

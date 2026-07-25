@@ -75,18 +75,20 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { Donut, CHART_PALETTE, CHART_OTHER } from '~/components/ui/Charts'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 // ── small presentational helpers ──────────────────────────────────────────────
 
 const TONE: Record<'ok' | 'warn' | 'crit' | 'muted', { bg: string; fg: string }> = {
-  ok: { bg: 'rgba(35,197,98,0.14)', fg: '#23c562' },
-  warn: { bg: 'rgba(255,159,69,0.16)', fg: '#ff9f45' },
-  crit: { bg: 'rgba(229,83,75,0.16)', fg: '#e5534b' },
-  muted: { bg: 'rgba(148,163,184,0.16)', fg: '#94a3b8' },
+  ok: { bg: 'var(--color4)', fg: toneVar('positive') },
+  warn: { bg: 'var(--color4)', fg: toneVar('warning') },
+  crit: { bg: 'var(--color5)', fg: toneVar('critical') },
+  muted: { bg: 'var(--color3)', fg: toneVar('muted') },
 }
 
 /** Runway urgency color — undefined = the calm default token; hex for warn/crit. */
-const RUNWAY_COLOR: Record<'ok' | 'warn' | 'crit', string | undefined> = { ok: undefined, warn: '#ff9f45', crit: '#e5534b' }
+const RUNWAY_COLOR: Record<'ok' | 'warn' | 'crit', string | undefined> = { ok: undefined, warn: toneVar('warning'), crit: toneVar('critical') }
 
 function Pill({ tone, children }: { tone: 'ok' | 'warn' | 'crit' | 'muted'; children: string }) {
   const c = TONE[tone]
@@ -353,7 +355,7 @@ export function AiEconomicsModule() {
   )
   const creditCols: Column<ProviderCredit>[] = [
     { key: 'provider', header: 'Provider', render: (c) => <Text fontSize="$3" color="$color12">{c.provider || '—'}</Text> },
-    { key: 'remainingCents', header: 'Remaining', align: 'right', mono: true, render: (c) => <Text className="hz-mono" fontSize="$2" color={c.hasCredit ? '#23c562' : '$color11'}>{usd(c.remainingCents)}</Text> },
+    { key: 'remainingCents', header: 'Remaining', align: 'right', mono: true, render: (c) => <Text className="hz-mono" fontSize="$2" color={c.hasCredit ? toneColor('positive') : '$color11'}>{usd(c.remainingCents)}</Text> },
     { key: 'burnCents', header: 'Burn / day', align: 'right', mono: true, render: (c) => <Text className="hz-mono" fontSize="$2" color="$color11">{usd(c.burnCents)}</Text> },
     { key: 'runwayDays', header: 'Runway', align: 'right', render: (c) => <Text className="hz-mono" fontSize="$2" style={RUNWAY_COLOR[runwayTone(c.runwayDays)] ? { color: RUNWAY_COLOR[runwayTone(c.runwayDays)] } : undefined} color="$color11">{runwayLabel(c.runwayDays)}</Text> },
   ]
@@ -642,7 +644,7 @@ export function AiEconomicsModule() {
           </XStack>
 
           <XStack style={{ backgroundColor: TONE.warn.bg }} p="$3" rounded="$4" gap="$2" items="flex-start">
-            <ArrowUpRight size={15} color="#ff9f45" style={{ marginTop: 2 }} />
+            <ArrowUpRight size={15} color={toneColor('warning')} style={{ marginTop: 2 }} />
             <Text fontSize="$2" style={{ color: TONE.warn.fg }}>
               Per-request reward signal: not yet persisted. The offline profile uses eval scores today; the online LinUCB
               loop needs a per-request quality/reward written back — the known missing signal on the roadmap. Live numbers

@@ -22,7 +22,8 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
-import { dollarsToCents, sharePct, shortDate, statusLabel, statusTone, usd } from './authors/logic'
+import { dollarsToCents, sharePct, shortDate, statusLabel, statusColor, usd } from './authors/logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -214,7 +215,7 @@ function ActionEditor({
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="#D4D4D4">
       <XStack items="center" gap="$2">
-        {action.kind === 'approve' ? <BadgeCheck size={16} color="#3fb950" /> : <HandCoins size={16} color="#D4D4D4" />}
+        {action.kind === 'approve' ? <BadgeCheck size={16} color={toneColor('positive')} /> : <HandCoins size={16} color="#D4D4D4" />}
         <Text fontSize="$4" fontWeight="700">
           {action.kind === 'approve' ? 'Approve author' : 'Record payout'} · {action.author.org}
         </Text>
@@ -264,7 +265,7 @@ function ActionEditor({
       )}
 
       {error ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {error}
         </Text>
       ) : null}
@@ -295,10 +296,10 @@ function AuthorsAdminReady({
   return (
     <YStack gap="$4">
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Github size={16} color="#8b949e" />} label="Authors" value={String(s.total)} caption={`${s.approved} approved · ${s.connected} pending`} />
+        <MetricCard icon={<Github size={16} color={toneColor('muted')} />} label="Authors" value={String(s.total)} caption={`${s.approved} approved · ${s.connected} pending`} />
         <MetricCard icon={<HandCoins size={16} color="#D4D4D4" />} label="Accrued" value={usd(s.accruedCents)} caption="lifetime royalties" />
-        <MetricCard icon={<Coins size={16} color="#d29922" />} label="Pending" value={usd(s.pendingCents)} caption="owed, unpaid" />
-        <MetricCard icon={<Wallet size={16} color="#3fb950" />} label="Paid out" value={usd(s.paidCents)} caption="royalties paid" />
+        <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Pending" value={usd(s.pendingCents)} caption="owed, unpaid" />
+        <MetricCard icon={<Wallet size={16} color={toneColor('positive')} />} label="Paid out" value={usd(s.paidCents)} caption="royalties paid" />
       </XStack>
 
       <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" overflow="hidden">
@@ -353,7 +354,7 @@ function AuthorsAdminReady({
             <Text flex={1} minW={110} fontSize="$2" style={{ fontFamily: 'monospace' }} color="$color11">
               {a.githubLogin ? `@${a.githubLogin}` : '—'}
             </Text>
-            <Text flex={1} minW={80} fontSize="$2" fontWeight="700" color={statusTone(a.status)}>
+            <Text flex={1} minW={80} fontSize="$2" fontWeight="700" color={statusColor(a.status)}>
               {statusLabel(a.status)}
             </Text>
             <Text flex={1} minW={60} fontSize="$3" color="$color12" text="right">

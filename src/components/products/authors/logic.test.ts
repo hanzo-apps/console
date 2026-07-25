@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { usd, sharePct, statusLabel, statusTone, verifyMethodLabel, shortDate, payoutMethodLabel, dollarsToCents } from './logic'
+import { usd, sharePct, statusLabel, statusTone, statusColor, verifyMethodLabel, shortDate, payoutMethodLabel, dollarsToCents } from './logic'
 
 describe('authors logic — money/share/label/tone formatting', () => {
   it('formats USD cents, em-dash for non-finite', () => {
@@ -26,11 +26,18 @@ describe('authors logic — money/share/label/tone formatting', () => {
     expect(statusLabel('weird' as never)).toBe('weird')
   })
 
-  it('tones each status (literal union)', () => {
-    expect(statusTone('approved')).toBe('#3fb950')
-    expect(statusTone('connected')).toBe('#d29922')
-    expect(statusTone('suspended')).toBe('#f85149')
-    expect(statusTone('other' as never)).toBe('#8b949e')
+  it('tones each status by meaning, not hue', () => {
+    expect(statusTone('approved')).toBe('positive')
+    expect(statusTone('connected')).toBe('warning')
+    expect(statusTone('suspended')).toBe('critical')
+    expect(statusTone('other' as never)).toBe('muted')
+  })
+
+  it('colors a status from the one greyscale map', () => {
+    for (const s of ['approved', 'connected', 'suspended', 'other'] as const)
+      expect(statusColor(s as never)).toMatch(/^\$color(9|10|11|12)$/)
+    expect(statusColor('suspended')).toBe('$color12')
+    expect(statusColor('other' as never)).toBe('$color9')
   })
 
   it('labels the verify method', () => {

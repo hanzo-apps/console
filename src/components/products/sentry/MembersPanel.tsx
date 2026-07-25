@@ -21,6 +21,8 @@ import { MetricCard } from '~/components/ui/Metric'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Pill, Fact } from './parts'
 import { fmtDateTime } from './logic'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 type Data = { org: Organization | null; members: IamUser[]; roles: Role[] }
 type State = { phase: 'loading' } | { phase: 'error'; error: unknown } | { phase: 'ready'; data: Data }
@@ -62,7 +64,7 @@ export function MembersPanel() {
       </YStack>
     ) },
     { key: 'email', header: 'Email', render: (u) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{u.email || '—'}</Text> },
-    { key: 'role', header: 'Role', width: 120, render: (u) => <Pill label={roleLabel(u)} tone={u.isAdmin ? '#f0a868' : '#6ea8fe'} /> },
+    { key: 'role', header: 'Role', width: 120, render: (u) => <Pill label={roleLabel(u)} tone={toneVar(u.isAdmin ? 'warning' : 'neutral')} /> },
     { key: 'createdTime', header: 'Joined', width: 150, render: (u) => <Text fontSize="$2" color="$color11">{u.createdTime ? fmtDateTime(u.createdTime) : '—'}</Text> },
   ]
 
@@ -103,9 +105,9 @@ export function MembersPanel() {
                 {data.org?.createdTime ? <Fact label="Created" value={fmtDateTime(data.org.createdTime)} /> : null}
               </XStack>
             </Card>
-            <MetricCard icon={<Users size={16} color="#6ea8fe" />} label="Members" value={String(data.members.length)} />
-            <MetricCard icon={<Users size={16} color="#f0a868" />} label="Admins" value={String(admins)} />
-            <MetricCard icon={<Users size={16} color="#8b9bb4" />} label="Roles" value={String(data.roles.length)} />
+            <MetricCard icon={<Users size={16} color={toneColor('neutral')} />} label="Members" value={String(data.members.length)} />
+            <MetricCard icon={<Users size={16} color={toneColor('warning')} />} label="Admins" value={String(admins)} />
+            <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Roles" value={String(data.roles.length)} />
           </XStack>
 
           <YStack gap="$2">
