@@ -33,6 +33,15 @@ describe('LUX_QUERIES', () => {
     expect(LUX_QUERIES.kmsReady).toBe('kube_statefulset_status_replicas_ready{cluster="lux-k8s",namespace="lux-kms-go",statefulset="kms"}')
     expect(LUX_QUERIES.validatorUp).toBe('lux_validator_up')
     expect(LUX_QUERIES.networkValidatorsTotal).toBe('lux_network_validators_total')
+    // The absolute signals — the ones a frozen fleet cannot satisfy by agreeing
+    // with itself, so the board can never paint green over a stopped chain.
+    expect(LUX_QUERIES.networkTipAge).toBe('lux_network_c_tip_age_seconds')
+    expect(LUX_QUERIES.networkHeightSpread).toBe('lux_network_block_height_spread')
+    expect(LUX_QUERIES.networkTipHashVariants).toBe('lux_network_tip_hash_variants')
+    expect(LUX_QUERIES.networkReadyButRpcDead).toBe('lux_network_ready_but_rpc_dead')
+    expect(LUX_QUERIES.firingAlerts).toBe(
+      'sum by (alertname, network, severity) (ALERTS{alertstate="firing",brand="lux"})',
+    )
   })
 })
 
