@@ -1,5 +1,5 @@
 # Canonical CI config for hanzoai/console — read by the hanzoai/ci reusable
-# (.github/workflows/cicd.yml) and platform.hanzo.ai.
+# (.hanzo/workflows/cicd.yml) and platform.hanzo.ai.
 #
 # Publishes the console STATIC EMBED artifact (SPA static export at /dist) as a
 # versioned immutable image. hanzoai/cloud consumes it via `FROM ... AS console`
@@ -11,11 +11,10 @@
 # executes it. The Next.js SERVER image (admin.hanzo.ai, operator CR
 # universe:crs/console.yaml) was built by .github/workflows/build-image.yml until
 # that file was neutralized on 2026-07-24 in favour of a native pipeline that
-# cannot run yet: hanzoai/console is a Gitea PULL MIRROR with Actions DISABLED on
-# the forge (`mirror: true`, `has_actions: false`, zero runs), so nothing has
-# built it since — v8.5.23 and 8.5.24 shipped no image, and the CR still pins the
-# last one built, v8.5.22. Declaring it here puts it back on the ONE pipeline
-# that demonstrably runs.
+# could not run: hanzoai/console had the forge Actions unit DISABLED
+# (`has_actions: false`, zero runs), so nothing built it — v8.5.23 and 8.5.24
+# shipped no image, and the CR still pins the last one built, v8.5.22. Declaring
+# both images here puts them on the ONE pipeline, wherever it executes.
 #
 # Tag shape changes with the builder, deliberately: the shared builder publishes
 # the immutable `sha-<sha7>-amd64` per main push (plus the bare semver on a v*
