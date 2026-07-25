@@ -45,7 +45,7 @@ import type { OverviewAction, OverviewSpec } from './spec'
 import { resolveSpec } from './resolve'
 import { o11yServiceFor } from '~/components/products/subpage/sources'
 import { ProductObservability } from '~/components/products/observability/ProductObservability'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 /** Map a spec action's icon name to a real Lucide icon (kept out of the data layer). */
 const ACTION_ICON: Record<NonNullable<OverviewAction['icon']>, IconType> = {

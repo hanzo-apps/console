@@ -119,7 +119,7 @@ function ReferralsAdminReady({ data }: { data: AdminReferralsView }) {
     <YStack gap="$4">
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Referrals" value={String(s.total)} caption={`${s.signedUp} signed up`} />
-        <MetricCard icon={<Gift size={16} color="#D4D4D4" />} label="Qualified" value={String(s.qualified + s.credited)} caption={`${s.credited} credited`} />
+        <MetricCard icon={<Gift size={16} color="$color11" />} label="Qualified" value={String(s.qualified + s.credited)} caption={`${s.credited} credited`} />
         <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Credit granted" value={usd(s.grantedCents)} caption="both sides, promo credit" />
       </XStack>
 

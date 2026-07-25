@@ -40,8 +40,7 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 import { EmptyState } from '~/components/ui/EmptyState'
 import { MetricCard, UtilBar } from '~/components/ui/Metric'
 import { Loader } from '~/components/ui/Loader'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

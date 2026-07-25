@@ -25,7 +25,8 @@ import { findEntry } from '~/lib/products/registry'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { BarChart, Donut, CHART_PALETTE, CHART_OTHER, type Slice } from '~/components/ui/Charts'
+import { BarChart, Donut, type Slice } from '~/components/ui/Charts'
+import { RAMP, OTHER } from '~/lib/theme/ramp'
 import {
   groupSpend,
   filterGroups,
@@ -107,9 +108,9 @@ export function BillingReports(_props: { params: Record<string, string> }) {
 
   // Spend-share donut — top 7 groups + an "Other" roll-up, categorical palette.
   const slices: Slice[] = useMemo(() => {
-    const top = groups.slice(0, 7).map((g, i): Slice => ({ label: g.label, value: g.cents, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
+    const top = groups.slice(0, 7).map((g, i): Slice => ({ label: g.label, value: g.cents, color: RAMP[i % RAMP.length] }))
     const rest = groups.slice(7)
-    if (rest.length) top.push({ label: `Other (${rest.length})`, value: rest.reduce((a, g) => a + g.cents, 0), color: CHART_OTHER })
+    if (rest.length) top.push({ label: `Other (${rest.length})`, value: rest.reduce((a, g) => a + g.cents, 0), color: OTHER })
     return top
   }, [groups])
 

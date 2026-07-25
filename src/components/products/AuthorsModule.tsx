@@ -114,7 +114,7 @@ function AuthorConnect({ onConnected }: { onConnected: () => void }) {
     <YStack gap="$3">
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2">
-          <Github size={18} color="#D4D4D4" />
+          <Github size={18} color="$color11" />
           <Text fontSize="$5" fontWeight="700">
             Earn an ongoing share of the platform spend of every org that deploys your project
           </Text>
@@ -150,9 +150,9 @@ function AuthorConnect({ onConnected }: { onConnected: () => void }) {
       </Card>
 
       <XStack gap="$3" flexWrap="wrap">
-        <HowTile n="1" icon={<Github size={15} color="#D4D4D4" />} title="Connect GitHub" body="Link your GitHub account to claim the projects you author." />
-        <HowTile n="2" icon={<ShieldCheck size={15} color="#D4D4D4" />} title="Verify a repo" body="Prove you own a repository with the Hanzo GitHub app or a hanzo.json file." />
-        <HowTile n="3" icon={<Rocket size={15} color="#D4D4D4" />} title="Earn when it deploys" body="Every org that deploys your work earns you a share of their spend, every period." />
+        <HowTile n="1" icon={<Github size={15} color="$color11" />} title="Connect GitHub" body="Link your GitHub account to claim the projects you author." />
+        <HowTile n="2" icon={<ShieldCheck size={15} color="$color11" />} title="Verify a repo" body="Prove you own a repository with the Hanzo GitHub app or a hanzo.json file." />
+        <HowTile n="3" icon={<Rocket size={15} color="$color11" />} title="Earn when it deploys" body="Every org that deploys your work earns you a share of their spend, every period." />
       </XStack>
     </YStack>
   )
@@ -251,7 +251,7 @@ function AuthorDashboard({
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard icon={<Github size={16} color={toneColor('muted')} />} label="Repos" value={String(verifiedRepos)} caption="verified repositories" />
-        <MetricCard icon={<HandCoins size={16} color="#D4D4D4" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime royalties" />
+        <MetricCard icon={<HandCoins size={16} color="$color11" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime royalties" />
         <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
         <MetricCard icon={<Wallet size={16} color={toneColor('positive')} />} label="Paid out" value={usd(data.paidCents)} caption="royalties paid" />
       </XStack>
@@ -262,7 +262,7 @@ function AuthorDashboard({
       {/* Verify by file */}
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2">
-          <FileCode size={16} color="#D4D4D4" />
+          <FileCode size={16} color="$color11" />
           <Text fontSize="$4" fontWeight="700">
             Verify by file
           </Text>
@@ -429,7 +429,7 @@ function RepositoriesCard({
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" gap="$2">
-        <BookOpen size={16} color="#D4D4D4" />
+        <BookOpen size={16} color="$color11" />
         <Text fontSize="$4" fontWeight="700">
           Your repositories
         </Text>

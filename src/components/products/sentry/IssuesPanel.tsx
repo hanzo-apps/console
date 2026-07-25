@@ -22,8 +22,7 @@ import { ErrorState, asApiError } from '~/components/ui/States'
 import { FieldSelect } from '~/components/ui/Field'
 import { PeriodPicker, ProjectPicker, SearchInput } from './parts'
 import { summarizeIssues, levelSlices, fmtWhen, fmtCount, statusTone, ISSUE_SORTS } from './logic'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 const STATUS_TABS: { label: string; status: '' | IssueStatus }[] = [
   { label: 'Unresolved', status: 'unresolved' },

@@ -59,6 +59,7 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 import { Loader } from '~/components/ui/Loader'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { useToast } from '~/components/ui/Toast'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 type Async =
   | { phase: 'loading' }
@@ -73,8 +74,8 @@ const opt = <T extends string>(xs: { value: T; label: string }[]) => xs.map((o) 
 function StepDot({ status }: { status: 'done' | 'current' | 'upcoming' }) {
   if (status === 'done')
     return (
-      <XStack width={26} height={26} rounded={999} items="center" justify="center" style={{ backgroundColor: '#22a06b' }}>
-        <Check size={15} color="#fff" />
+      <XStack width={26} height={26} rounded={999} items="center" justify="center" style={{ backgroundColor: toneVar('positive') }}>
+        <Check size={15} color="$color1" />
       </XStack>
     )
   return (
@@ -194,7 +195,7 @@ function StartPanel({ onUpdate }: { onUpdate: (v: FormationView) => void }) {
   }
 
   return (
-    <Panel icon={<Building2 size={20} color="#8ea2ff" />} title="Form your company" blurb="Incorporate a new entity, or import one you already have.">
+    <Panel icon={<Building2 size={20} color="$color11" />} title="Form your company" blurb="Incorporate a new entity, or import one you already have.">
       <FieldRow label="Entity type">
         <FieldOptionSelect value={structure} options={opt(STRUCTURE_OPTIONS)} onChange={(v) => setStructure(v as Structure)} disabled={busy} placeholder="Choose an entity" />
       </FieldRow>
@@ -235,7 +236,7 @@ function StructurePanel({ view, onUpdate }: { view: FormationView; onUpdate: (v:
   }
 
   return (
-    <Panel icon={<Building2 size={20} color="#8ea2ff" />} title="Entity structure" blurb="Choose the legal entity, jurisdiction, and proposed name.">
+    <Panel icon={<Building2 size={20} color="$color11" />} title="Entity structure" blurb="Choose the legal entity, jurisdiction, and proposed name.">
       <FieldRow label="Entity type">
         <FieldOptionSelect value={structure} options={opt(STRUCTURE_OPTIONS)} onChange={(v) => setStructureV(v as Structure)} disabled={busy} placeholder="Choose an entity" />
       </FieldRow>
@@ -288,7 +289,7 @@ function FoundersPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: 
 
   return (
     <YStack gap="$4">
-      <Panel icon={<Users size={20} color="#8ea2ff" />} title="Founders & equity" blurb="Add each founding stakeholder and their ownership split.">
+      <Panel icon={<Users size={20} color="$color11" />} title="Founders & equity" blurb="Add each founding stakeholder and their ownership split.">
         <YStack gap="$3">
           {rows.map((r, i) => (
             <XStack key={i} gap="$2" items="center" flexWrap="wrap">
@@ -321,7 +322,7 @@ function KycPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: Forma
   const ready = allKycVerified(f)
 
   return (
-    <Panel icon={<ShieldCheck size={20} color="#8ea2ff" />} title="Identity verification (KYC)" blurb="Every founder must clear identity verification before the formation fee.">
+    <Panel icon={<ShieldCheck size={20} color="$color11" />} title="Identity verification (KYC)" blurb="Every founder must clear identity verification before the formation fee.">
       <Card p="$3" bg="$color2" borderWidth={1} borderColor="$borderColor">
         <Text fontSize="$2" color="$color11">
           The automated KYC provider is not connected yet — verification is a manual review. Start the sessions, then record each founder’s result. A founder is treated as verified ONLY once the backend records it.
@@ -366,14 +367,14 @@ function PaymentPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: F
   const f = view.formation
   const { busy, run } = useAction(onUpdate)
   return (
-    <Panel icon={<CreditCard size={20} color="#8ea2ff" />} title="Formation fee" blurb="A one-time $999 fee covers document generation and the state filing.">
+    <Panel icon={<CreditCard size={20} color="$color11" />} title="Formation fee" blurb="A one-time $999 fee covers document generation and the state filing.">
       <XStack items="baseline" gap="$2">
         <Text fontSize="$9" fontWeight="600" color="$color12" className="hz-mono">$999</Text>
         <Text fontSize="$3" color="$color10">one-time</Text>
       </XStack>
       {f.paid ? (
         <XStack items="center" gap="$2">
-          <CircleCheck size={16} color="#22a06b" />
+          <CircleCheck size={16} color={toneColor('positive')} />
           <Text fontSize="$3" color="$green10">Paid{f.paymentRef ? ` · ${f.paymentRef}` : ''}</Text>
         </XStack>
       ) : null}
@@ -396,7 +397,7 @@ function DocumentsPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v:
   const { busy, run } = useAction(onUpdate)
   const generated = f.documentIds.length > 0
   return (
-    <Panel icon={<FileText size={20} color="#8ea2ff" />} title="Formation documents" blurb="Generate the incorporation documents into your data room.">
+    <Panel icon={<FileText size={20} color="$color11" />} title="Formation documents" blurb="Generate the incorporation documents into your data room.">
       {generated ? (
         <YStack gap="$2">
           <Text fontSize="$2" color="$color11">{f.documentIds.length} document{f.documentIds.length === 1 ? '' : 's'} generated.</Text>
@@ -425,7 +426,7 @@ function EsignPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: For
   const f = view.formation
   const { busy, run } = useAction(onUpdate)
   return (
-    <Panel icon={<Signature size={20} color="#8ea2ff" />} title="Sign the documents" blurb="Every founder signs the formation documents.">
+    <Panel icon={<Signature size={20} color="$color11" />} title="Sign the documents" blurb="Every founder signs the formation documents.">
       <Card p="$3" bg="$color2" borderWidth={1} borderColor="$borderColor">
         <Text fontSize="$2" color="$color11">
           The e-signature provider is not connected yet — signing is recorded manually. Request signatures, then mark the set signed once every founder has signed.
@@ -457,7 +458,7 @@ function GenesisPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: F
   const { busy, run } = useAction(onUpdate)
   const recorded = !!f.genesis?.root
   return (
-    <Panel icon={<Landmark size={20} color="#8ea2ff" />} title="Equity genesis" blurb="Seed the cap table with the founding allocation and anchor its root on-chain.">
+    <Panel icon={<Landmark size={20} color="$color11" />} title="Equity genesis" blurb="Seed the cap table with the founding allocation and anchor its root on-chain.">
       {recorded ? (
         <YStack gap="$2">
           <XStack items="center" gap="$2"><Text fontSize="$2" color="$color10">Genesis root:</Text><Text fontSize="$2" className="hz-mono" color="$color12" numberOfLines={1}>{f.genesis!.root}</Text></XStack>
@@ -484,7 +485,7 @@ function GenesisPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: F
 function DonePanel({ view }: { view: FormationView }) {
   const f = view.formation
   return (
-    <Panel icon={<CircleCheck size={20} color="#22a06b" />} title={`${f.name || 'Your company'} is incorporated`} blurb="Formation complete. Manage your equity from the Cap Table.">
+    <Panel icon={<CircleCheck size={20} color={toneColor('positive')} />} title={`${f.name || 'Your company'} is incorporated`} blurb="Formation complete. Manage your equity from the Cap Table.">
       <YStack gap="$2">
         <XStack gap="$2" items="center"><Text fontSize="$2" color="$color10">Entity:</Text><Text fontSize="$2" color="$color12">{structureLabel(f.structure)} · {jurisdictionLabel(f.jurisdiction)}</Text></XStack>
         <XStack gap="$2" items="center"><Text fontSize="$2" color="$color10">Founders:</Text><Text fontSize="$2" color="$color12">{f.founders.length}</Text></XStack>
@@ -506,7 +507,7 @@ function ImportPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: Fo
   const [sheetId, setSheetId] = useState('')
   const ready = f.imported && f.capTableImported
   return (
-    <Panel icon={<Landmark size={20} color="#8ea2ff" />} title="Import your company" blurb="Bring an already-incorporated company’s documents and cap table into Hanzo.">
+    <Panel icon={<Landmark size={20} color="$color11" />} title="Import your company" blurb="Bring an already-incorporated company’s documents and cap table into Hanzo.">
       <FieldRow label="Drive folder id (documents)">
         <XStack gap="$2" items="center" flexWrap="wrap">
           <YStack flex={1} minW={200}><FieldText value={folderId} onChange={setFolderId} placeholder="Google Drive folder id" disabled={busy} /></YStack>

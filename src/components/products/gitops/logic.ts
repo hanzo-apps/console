@@ -21,8 +21,7 @@ import type { ServiceEdgeData, ServiceKind, ServiceNodeData, ServiceStatus, XYPo
 
 import type { Application, AppTree, HealthStatus, ResourceNode, SyncStatus } from '~/lib/api/gitops'
 import { inferAppCapability } from '~/lib/products/subsystems'
-import type { Tone } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar, type Tone } from '~/components/ui/tone'
 
 // ── Health fold ──────────────────────────────────────────────────────────────
 

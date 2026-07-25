@@ -19,7 +19,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker, SearchInput, Fact } from './parts'
 import { fmtDurationMs, fmtDateTime, fmtCount, logLevelTone } from './logic'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 export function TracesPanel({ id, projects }: { id?: string; projects: SentryProject[] }) {
   const router = useRouter()

@@ -13,6 +13,7 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { classifyBackend } from './BackendState'
+import { toneColor, toneVar } from './tone'
 
 export function ConfirmDelete({
   message,
@@ -48,7 +49,7 @@ export function ConfirmDelete({
         {message}
       </Text>
       {err ? (
-        <Text fontSize="$2" color="$red10">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {err}
         </Text>
       ) : null}
@@ -57,7 +58,7 @@ export function ConfirmDelete({
           onPress={go}
           disabled={busy}
           icon={<Trash2 size={15} />}
-          style={{ backgroundColor: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
+          style={{ backgroundColor: toneVar('critical'), borderColor: toneVar('critical'), color: 'var(--color1)' }}
         >
           {busy ? 'Deleting…' : confirmLabel}
         </Button>

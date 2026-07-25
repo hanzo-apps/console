@@ -50,8 +50,7 @@ import {
   type FleetBuild,
   type FleetGit,
 } from './logic'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
