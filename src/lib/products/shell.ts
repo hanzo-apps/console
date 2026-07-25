@@ -39,6 +39,8 @@ export type ProductShell = {
  * look); the newer faces wear their product wordmark next to the Hanzo brand mark.
  * The single-screen faces (marketing/ads/social — one route, no sub-pages) surface a
  * lone "Overview" nav item; billing/sentry surface their root module's sub-pages.
+ * `platform` is the ONE exception — a full-catalog control-plane shell (rootId null,
+ * like console) that merely boots into the fleet map (see its descriptor below).
  */
 export const PRODUCT_SHELLS: Record<ShellId, ProductShell> = {
   console: { id: 'console', rootId: null, indexLabel: 'Overview', wordmark: '', home: '' },
@@ -48,15 +50,25 @@ export const PRODUCT_SHELLS: Record<ShellId, ProductShell> = {
   social: { id: 'social', rootId: 'social', indexLabel: 'Overview', wordmark: 'Publish', home: 'social' },
   sentry: { id: 'sentry', rootId: 'sentry', indexLabel: 'Issues', wordmark: 'Sentry', home: 'sentry' },
   dns: { id: 'dns', rootId: 'dns', indexLabel: 'Zones', wordmark: 'DNS', home: 'dns' },
-  platform: { id: 'platform', rootId: 'platform', indexLabel: 'Overview', wordmark: 'Platform', home: 'platform' },
+  // The CONTROL-PLANE shell (platform.<brand>) — the CTO-called upgrade of the initial
+  // single-product platform face. A third shape: like `console` it keeps the FULL catalog
+  // nav (rootId null → NOT a single-product scope, so a global admin sees every platform/
+  // admin surface — Deploy, Applications, Clusters, Kubernetes, Tenants, Storage, …), but
+  // it BOOTS into the Deploy fleet map (`gitops` — the operator App-CR drift board: every
+  // app's declared/running/latest/drift + builds/logs/rollback) instead of the customer
+  // home. This is what makes platform.hanzo.ai the fleet control plane. The per-org deploy
+  // home (the `platform` product) stays reachable as one nav item among many.
+  platform: { id: 'platform', rootId: null, indexLabel: 'Overview', wordmark: 'Platform', home: 'gitops' },
 }
 
 /** The descriptor for a shell id. */
 export const shellFor = (id: ShellId): ProductShell => PRODUCT_SHELLS[id]
 
 /**
- * True when a shell scopes the console to a SINGLE product face (billing/sentry) —
- * i.e. it has a root module and a home to boot into. The full `console` is false.
- * ONE predicate the nav + home + catalog gates share.
+ * True when a shell scopes the console nav to a SINGLE product face (billing/sentry) —
+ * i.e. it has a ROOT module. The full-catalog shells are false: `console` (no home) and
+ * `platform` (the control plane — full nav, but boots into `gitops` via `home`, not a
+ * scope). A `home` alone never scopes the nav; only a `rootId` does. ONE predicate the
+ * nav + home + catalog gates share.
  */
 export const isProductShell = (id: ShellId): boolean => shellFor(id).rootId !== null
