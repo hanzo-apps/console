@@ -59,6 +59,13 @@ export type ConsoleConfig = {
    */
   templatesUrl: string
   /**
+   * OSS App Store catalog base — the CDN that serves the 1000+ one-click open-source
+   * app catalog (`<base>/meta.json`) and per-app blueprints (`<base>/blueprints/<id>/`).
+   * The App Store product fetches this DIRECTLY from the browser (open CORS), so it works
+   * in the go:embed console with no BFF. Env-overridable via NEXT_PUBLIC_OSS_CATALOG_URL.
+   */
+  ossCatalogUrl: string
+  /**
    * hanzo.app builder base URL — where the Templates gallery's "Open in builder"
    * deep-links (fork a starter → customize by prompt in the builder). Shared,
    * env-overridable via NEXT_PUBLIC_APP_URL; default https://hanzo.app.
@@ -129,6 +136,9 @@ const SHARED = {
   // PaaS deploy flow's templates surface; repoint NEXT_PUBLIC_TEMPLATES_URL at
   // templates.<brand> once that standalone catalog UI is stood up.
   templatesUrl: trimSlash(process.env.NEXT_PUBLIC_TEMPLATES_URL ?? `${PLATFORM_URL}/templates`),
+  // The OSS App Store catalog CDN — the live 1000+-app one-click catalog. Fetched
+  // cross-origin from the browser (open CORS), so it needs no BFF (works in the embed).
+  ossCatalogUrl: trimSlash(process.env.NEXT_PUBLIC_OSS_CATALOG_URL ?? 'https://templates.hanzo.ai'),
   appUrl: trimSlash(process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanzo.app'),
   chatUrl: trimSlash(process.env.NEXT_PUBLIC_CHAT_URL ?? 'https://hanzo.chat'),
 }
