@@ -18,8 +18,10 @@ import { STAGES, type Company, type Contact, type Opportunity } from '~/lib/api/
 /** Title-case a SCREAMING_SNAKE stage value ("NEW" → "New"). */
 const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 
+// Monochrome-leaning: the early, non-semantic stages read neutral (gray); the later
+// stages keep a restrained progression cue toward the "won" state (green = CUSTOMER).
 const STAGE_COLOR: Record<string, TagColor> = {
-  NEW: 'blue', SCREENING: 'purple', MEETING: 'amber', PROPOSAL: 'teal', CUSTOMER: 'green',
+  NEW: 'gray', SCREENING: 'gray', MEETING: 'amber', PROPOSAL: 'teal', CUSTOMER: 'green',
 }
 
 /** The opportunity stage options (drives the select cell + the pipeline board lanes). */

@@ -565,8 +565,8 @@ export function AiEconomicsModule() {
           </Text>
           <a href="https://api.hanzo.ai/v1/training/clients" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
             <XStack items="center" gap="$1.5" self="flex-start">
-              <ExternalLink size={13} color="#3aa0ff" />
-              <Text fontSize="$2" style={{ color: '#3aa0ff' }}>
+              <ExternalLink size={13} color="#A3A3A3" />
+              <Text fontSize="$2" style={{ color: '#A3A3A3' }}>
                 api.hanzo.ai/v1/training/clients
               </Text>
             </XStack>

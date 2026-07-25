@@ -497,7 +497,7 @@ export const PHASE_DOT: Record<EndpointPhase, string> = {
   available: '#23c562',
   ready: '#23c562',
   provisioning: '#f0a868',
-  failed: '#ff5d8f',
+  failed: '#ef4444',
   disabled: '#64748b',
   unknown: '#64748b',
 }

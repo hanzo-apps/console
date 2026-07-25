@@ -27,7 +27,7 @@ const LIMIT = 200
 /** A recorded-status badge (dot + label), green success / red error / neutral other. */
 function LevelTag({ level }: { level: string }) {
   const l = level.toLowerCase()
-  const color = l === 'error' || l === 'failed' || l === 'fail' ? '#ff5d8f' : l === 'success' || l === 'ok' ? '#23c562' : '#64748b'
+  const color = l === 'error' || l === 'failed' || l === 'fail' ? '#ef4444' : l === 'success' || l === 'ok' ? '#23c562' : '#64748b'
   return (
     <XStack items="center" gap="$1.5">
       <StatusDot color={color} size={8} />

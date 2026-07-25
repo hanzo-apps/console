@@ -223,14 +223,14 @@ function ActionEditor({
   onCancel: () => void
 }) {
   return (
-    <Card p="$4" gap="$3" borderWidth={1} borderColor="#a371f7">
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="#D4D4D4">
       <XStack items="center" gap="$2">
         {action.kind === 'approve' ? (
           <BadgeCheck size={16} color="#3fb950" />
         ) : action.kind === 'rate' ? (
           <Percent size={16} color="#d29922" />
         ) : (
-          <HandCoins size={16} color="#a371f7" />
+          <HandCoins size={16} color="#D4D4D4" />
         )}
         <Text fontSize="$4" fontWeight="700">
           {action.kind === 'approve' ? 'Approve affiliate' : action.kind === 'rate' ? 'Set commission rate' : 'Record payout'} ·{' '}
@@ -331,7 +331,7 @@ function AffiliatesAdminReady({
     <YStack gap="$4">
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard icon={<Users size={16} color="#8b949e" />} label="Affiliates" value={String(s.total)} caption={`${s.approved} approved · ${s.applied} pending`} />
-        <MetricCard icon={<HandCoins size={16} color="#a371f7" />} label="Accrued" value={usd(s.accruedCents)} caption="lifetime commission" />
+        <MetricCard icon={<HandCoins size={16} color="#D4D4D4" />} label="Accrued" value={usd(s.accruedCents)} caption="lifetime commission" />
         <MetricCard icon={<Coins size={16} color="#d29922" />} label="Pending" value={usd(s.pendingCents)} caption="owed, unpaid" />
         <MetricCard icon={<Wallet size={16} color="#3fb950" />} label="Paid out" value={usd(s.paidCents)} caption="commission paid" />
       </XStack>

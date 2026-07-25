@@ -23,22 +23,28 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Text, XStack, YStack, useTheme } from '@hanzo/gui'
 
-/** Distinct hues for categorical series (e.g. spend-by-model donut), dark-tuned. */
+/**
+ * Categorical series ramp — MONOCHROME, per the design system ("Never a saturated
+ * rainbow"). A monotonic descending-lightness neutral ramp off the design neutral
+ * ladder (tokens/colors.css --neutral-*), so a donut / stacked bar reads as ordered
+ * greys and stays legible on true-black without a single hue. The lead entry is the
+ * near-white ACCENT used by sparklines and hero graphics.
+ */
 export const CHART_PALETTE = [
-  '#7c5cff',
-  '#23c562',
-  '#ff9f45',
-  '#3aa0ff',
-  '#ff5d8f',
-  '#16c0c8',
-  '#c084fc',
-  '#f4c245',
+  '#EDEDED',
+  '#D4D4D4',
+  '#BBBBBB',
+  '#A3A3A3',
+  '#8A8A8A',
+  '#737373',
+  '#5A5A5A',
+  '#454545',
 ]
-export const CHART_OTHER = '#64748b'
+export const CHART_OTHER = '#404040' // --neutral-700 — the "Other" slice
 
 const ACCENT = CHART_PALETTE[0]
-const GRID = 'rgba(148,163,184,0.16)'
-const AXIS = 'rgba(148,163,184,0.85)'
+const GRID = 'rgba(160,160,160,0.16)'
+const AXIS = 'rgba(160,160,160,0.85)'
 
 /** A point on a temporal/sequential axis (LineChart / BarChart). */
 export type ChartPoint = { label: string; value: number }

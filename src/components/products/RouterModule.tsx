@@ -55,7 +55,8 @@ import { FieldSwitch } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
 
-const ACCENT = '#a371f7'
+// Monochrome accent — design --neutral-300 (the console is monochrome by construction).
+const ACCENT = '#D4D4D4'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
