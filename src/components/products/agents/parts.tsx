@@ -44,7 +44,7 @@ import { asColor } from '~/components/ui/color'
 /** Status → hex — one source of truth for the pill dot + the health donut. */
 export const STATUS_HEX: Record<AgentStatus, string> = {
   active: '#30a46c',
-  idle: '#3aa0ff',
+  idle: '#A3A3A3',
   error: '#e5484d',
   draft: '#8b95a5',
 }
@@ -134,8 +134,8 @@ export function HealthDonut({ breakdown }: { breakdown: Record<AgentStatus, numb
 // ── Recent Activity feed ───────────────────────────────────────────────────────
 
 const ACTIVITY_META: Record<AgentActivityKind, { icon: typeof Activity; color: string; verb: string }> = {
-  invoked: { icon: Activity, color: '#3aa0ff', verb: 'invoked' },
-  updated: { icon: Pencil, color: '#c084fc', verb: 'updated' },
+  invoked: { icon: Activity, color: '#A3A3A3', verb: 'invoked' },
+  updated: { icon: Pencil, color: '#737373', verb: 'updated' },
   failed: { icon: TriangleAlert, color: '#e5484d', verb: 'failed' },
   scaled: { icon: ArrowUpRight, color: '#f4c245', verb: 'scaled' },
   created: { icon: Bot, color: '#30a46c', verb: 'created' },

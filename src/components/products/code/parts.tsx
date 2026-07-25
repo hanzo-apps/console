@@ -46,8 +46,8 @@ export function Panel({
 
 /** Retrieval-tier → hex — one source for the tier badge dot. */
 const TIER_HEX: Record<string, string> = {
-  text: '#3aa0ff',
-  symbol: '#c084fc',
+  text: '#A3A3A3',
+  symbol: '#737373',
   semantic: '#16c0c8',
   hybrid: '#f4c245',
 }

@@ -1,5 +1,9 @@
 import './fonts.css'
 import '@hanzogui/core/reset.css'
+// Hanzo Design System tokens (vendored from hanzoai/design) — the monochrome
+// source of truth. Imported BEFORE globals.css so the console's Tamagui theme can
+// derive its ladder from the design neutral/semantic tokens.
+import './design/index.css'
 import './globals.css'
 
 import type { Metadata, Viewport } from 'next'

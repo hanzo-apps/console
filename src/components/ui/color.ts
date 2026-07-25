@@ -9,7 +9,7 @@ import type { GetThemeValueForKey } from '@hanzo/gui'
  */
 export type IconColor = GetThemeValueForKey<'color'>
 
-/** Cast a raw CSS color (e.g. `#5E6AD2`) to Gui's `color` prop type. */
+/** Cast a raw CSS color (e.g. `#D4D4D4`) to Gui's `color` prop type. */
 export const asColor = (hex: string): IconColor => hex as unknown as IconColor
 
 /** A lucide/Gui icon component that accepts a size + a (token-or-cast) color —

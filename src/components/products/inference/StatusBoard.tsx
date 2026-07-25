@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Inference · Status — a rich per-endpoint health board in the same dark-card / purple
- * language as the main dashboard. An overall "Connected to <brand>" summary (real
+ * Inference · Status — a rich per-endpoint health board in the same dark-card /
+ * monochrome language as the main dashboard. An overall "Connected to <brand>" summary (real
  * ready/provisioning/failed tally from the live endpoint status) sits above a per-
  * endpoint health table: status dot + availability badge + a 7-day activity sparkline
  * (REAL ledger requests). Uptime + P95 render an honest "—" (no per-endpoint source

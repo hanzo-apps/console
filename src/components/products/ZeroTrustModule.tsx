@@ -75,7 +75,7 @@ const dotColor = (status?: string): string => {
   const st = (status ?? '').toLowerCase()
   if (['active', 'online', 'healthy', 'up', 'connected', 'ready', 'available'].includes(st)) return '#23c562'
   if (['degraded', 'warning', 'pending', 'connecting'].includes(st)) return '#ff9f45'
-  if (['down', 'error', 'failed', 'offline', 'revoked'].includes(st)) return '#ff5d8f'
+  if (['down', 'error', 'failed', 'offline', 'revoked'].includes(st)) return '#ef4444'
   return 'rgba(148,163,184,0.55)'
 }
 

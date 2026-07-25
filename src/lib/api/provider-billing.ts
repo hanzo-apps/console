@@ -142,9 +142,9 @@ export const FUNDING_ORDER: FundingClass[] = ['credit', 'paid', 'paid_only', 'by
 /** Label + chart color + one-line meaning for each known funding class. */
 export const FUNDING_META: Record<FundingClass, { label: string; color: string; hint: string }> = {
   credit: { label: 'Our credit', color: '#23c562', hint: 'Drawn from provider credit we hold (free to us).' },
-  paid: { label: 'Paid', color: '#3aa0ff', hint: 'Hanzo pays the provider for this usage.' },
+  paid: { label: 'Paid', color: '#A3A3A3', hint: 'Hanzo pays the provider for this usage.' },
   paid_only: { label: 'Paid-only', color: '#ff9f45', hint: 'Provider with no credit — billed directly.' },
-  byo: { label: 'BYO key', color: '#c084fc', hint: "Served on a customer's own provider key." },
+  byo: { label: 'BYO key', color: '#737373', hint: "Served on a customer's own provider key." },
 }
 
 const OTHER_COLOR = '#64748b'
