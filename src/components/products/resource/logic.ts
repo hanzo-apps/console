@@ -138,7 +138,9 @@ export type ResourceSpec = {
   repo: string
 }
 
-const cloud = 'https://cloud.hanzo.ai'
+/** The ONE Hanzo API endpoint. Every product's provision call is `api.hanzo.ai/v1/<kind>`
+ *  — there is no per-service API host, so a copied snippet works from anywhere. */
+const api = 'https://api.hanzo.ai'
 
 /** Public docs URL for a managed kind (matches the registry's `${DOCS}/<kind>`).
  * The docs site is served under the /docs base path, so the link must include it. */
@@ -151,7 +153,7 @@ export const repoUrl = (spec: ResourceSpec): string => `https://github.com/${spe
 export function provisionSnippet(kind: ResourceKind, name: string): Snippet {
   return {
     title: 'Provision via API',
-    code: `curl -X POST ${cloud}/v1/${kind} \\
+    code: `curl -X POST ${api}/v1/${kind} \\
   -H 'Content-Type: application/json' \\
   --cookie "$HANZO_SESSION" \\
   -d '{"name":"${name}"}'`,

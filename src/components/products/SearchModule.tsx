@@ -43,7 +43,9 @@ const openExternal = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
 }
 
-const originNow = (): string => (typeof window !== 'undefined' ? window.location.origin : 'https://cloud.hanzo.ai')
+// Browser: the console's own origin (the session-callable form). SSR/build fallback:
+// the ONE Hanzo API endpoint — never a per-service host.
+const originNow = (): string => (typeof window !== 'undefined' ? window.location.origin : 'https://api.hanzo.ai')
 
 /** A small labelled fact row (label left, value right / below). */
 function Fact({ label, value }: { label: string; value: string }) {
