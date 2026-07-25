@@ -1,23 +1,23 @@
 name: Sync to Hanzo Git
 # Tells git.hanzo.ai a push happened. It runs ZERO CI.
 #
-# WHY THIS REPO IS NOT YET SINGLE-FILE. The law is one file here; console still
-# carries `cicd.yml`, and it is the ONLY thing building either console image.
-# Measured against the live forge: hanzoai/console reports `mirror: true` and
-# `has_actions: false` — a Gitea pull mirror with Actions disabled, zero runs
-# ever — so `.hanzo/workflows/*` cannot execute. That is not theoretical: when
-# build-image.yml was neutralized on 2026-07-24 in favour of the native
-# pipeline, the server image stopped being built, and v8.5.23 / 8.5.24 shipped
-# no image at all (the operator CR still pins v8.5.22, the last one built).
-# hanzo.yml now declares that image so the pipeline that DOES run builds it.
+# This is now the only file here, as the law says. cicd.yml moved to
+# `.hanzo/workflows/` verbatim (a 7-line caller over hanzo.yml, so nothing else
+# changed) and the hand-rolled buildctl in `.hanzo/workflows/deploy.yml` retired
+# into it.
 #
-# The unblock is one act on the forge, not a code change: convert
-# hanzoai/console from pull mirror to canonical, which also enables Actions
-# (hanzoai/.github `scripts/forge-migrate.sh convert --repo hanzoai/console`).
-# Then cicd.yml moves to `.hanzo/workflows/` verbatim — it is a 7-line caller
-# over hanzo.yml, so nothing else changes — the hand-rolled buildctl in
-# `.hanzo/workflows/deploy.yml` retires into it, and this becomes the only file
-# in this directory.
+# What blocked that move was never the code: hanzoai/console is a Gitea pull
+# mirror and had the Actions UNIT disabled (`mirror: true, has_actions: false`,
+# zero runs ever), so nothing under `.hanzo/workflows` could execute. Enabling
+# the unit is the whole unblock — a pull-mirror sync does fire Actions
+# (hanzoai/git: services/mirror/mirror_pull.go calls notify_service.
+# SyncPushCommits, and services/actions/notifier.go turns that into a run), so
+# converting the mirror to canonical is a separate question about who owns main,
+# not a precondition for CI.
+#
+# The cost of getting that order wrong is on the record: build-image.yml was
+# neutralized on 2026-07-24 in favour of a native pipeline that could not run,
+# and v8.5.23 / 8.5.24 shipped no image at all.
 on:
   push:
     branches: [main]
