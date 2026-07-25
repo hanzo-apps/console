@@ -162,6 +162,7 @@ import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
 import { MetricsModule } from '~/components/products/MetricsModule'
+import { LuxNetworkModule } from '~/components/products/LuxNetworkModule'
 import { DnsModule } from '~/components/products/DnsModule'
 import { DomainsModule } from '~/components/products/DomainsModule'
 import { CloudflareModule } from '~/components/products/CloudflareModule'
@@ -2752,6 +2753,30 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AttestationsModule }],
   },
 
+  {
+    // console.lux.cloud LUX NETWORK board — the SuperAdmin infrastructure/investor
+    // view of the REAL luxd + lux-k8s fleet: validators (per-network up/height/peers/
+    // bootstrapped, the mainnet primary highlighted with its 2.5B LUX stake), node +
+    // pod memory pressure, and the named-service status grid. In-console `module`
+    // (owns its route), reading the SuperAdmin-gated, allowlisted cloud VM proxy
+    // (lib/api/lux-infra.ts → /v1/o11y/vm/query). SUPERADMIN + LUX ONLY: `admin: true`
+    // hides it from every customer and the module renders OperatorAccessRequired for a
+    // non-SuperAdmin; `brands: ['lux']` keeps it OFF every non-Lux console (zero
+    // cross-brand leak). The cloud proxy (admin(c) + fixed allowlist) is the
+    // authoritative server gate. Honest by construction — every value folds real
+    // telemetry, on-chain uptime is labeled a tracker bug, nothing fabricated.
+    id: 'lux-network',
+    label: 'Lux Network',
+    icon: Waypoints,
+    description: 'Live validators, node and pod memory, and Lux service health across the fleet — real telemetry.',
+    category: 'Web3',
+    status: 'enabled',
+    admin: true,
+    brands: ['lux'],
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: LuxNetworkModule }],
+  },
   // ── Web3 · Chain apps — launch tiles for the DEPLOYED Lux / Zoo dApp suite.
   //    These are standalone web3 apps that live at their OWN domains (owned by
   //    the Lux / Zoo products, not Hanzo control planes), so they are `external`
