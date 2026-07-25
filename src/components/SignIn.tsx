@@ -4,8 +4,10 @@
  * Sign-in experience — the ONE way the console presents sign-in, wherever the user
  * lands on it.
  *
- * @hanzo/iam ONLY: a single "Log in with Hanzo" button that starts the IAM redirect +
- * PKCE flow (`useIam().login()`). IAM (hanzo.id) owns every credential step — password,
+ * @hanzo/iam ONLY: a single "Log in with <brand>" button that starts the IAM redirect +
+ * PKCE flow (`useIam().login()`). The button names the ACTIVE brand — the same
+ * `config.brandName` the heading above it already reads, resolved from the host — so a
+ * Lux or Zoo console never says "Hanzo". IAM owns every credential step — password,
  * social providers, email-code, MFA and wallet all live on its hosted login, so the
  * console never renders an inline password form or reconstructs an IdP URL. On an admin
  * host `config`/`iamConfig` already target the reserved `admin-console` app in the
@@ -47,7 +49,7 @@ export function SignIn() {
         <Text color="$color11">Sign in to your account</Text>
       </YStack>
       <PrimaryButton size="$5" onPress={() => void login()}>
-        Log in with Hanzo
+        Log in with {config.brandName}
       </PrimaryButton>
     </YStack>
   )
