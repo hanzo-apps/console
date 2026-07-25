@@ -3,7 +3,7 @@
 Unified admin console for **Hanzo Cloud** and all cloud products. Our code,
 BSD-3-Clause, built on **@hanzo/gui** (the Tamagui-based cross-platform UI).
 NOT an observability-console fork, NOT casibase — it is a clean client over the unified `/v1`
-backend (`hanzoai/cloud`, the casibase API at https://cloud.hanzo.ai/v1/*).
+backend (`hanzoai/cloud`), reached at the ONE Hanzo API endpoint https://api.hanzo.ai/v1/*.
 
 ## Base: Next.js 15 (app router) + @hanzo/gui
 
@@ -185,10 +185,13 @@ The nav shell, catalog home, favorites, and router still render from the one
 
 ### Job 3 — PaaS embedded natively under Deploy (NOT an iframe)
 
-`PlatformModule.tsx` is the embedded PaaS, wired to the REAL platform.hanzo.ai
-control plane. The browser calls console2's OWN origin under `/paas/*`; the
-server route `app/paas/[...path]/route.ts` forwards to `platform.hanzo.ai/v1/*`
-with the service token from **server-only** env `PAAS_SERVICE_TOKEN` (sourced via
+`PlatformModule.tsx` is the embedded PaaS, wired to the REAL PaaS control plane.
+The browser calls console2's OWN origin under `/paas/*`; the server route
+`app/paas/[...path]/route.ts` forwards to the ONE Hanzo API endpoint at
+`/v1/paas/*` (`CLOUD_API_URL`, default `https://api.hanzo.ai` — in-cluster in
+prod), never a second API host: `platform.hanzo.ai` serves no `/v1/paas/*` route
+and 401s every `/v1/*` path uniformly.
+It carries the service token from **server-only** env `PAAS_SERVICE_TOKEN` (sourced via
 KMS — never `NEXT_PUBLIC_`, never in the browser bundle, no CORS). It lists real
 apps across clusters with **declared vs running tag + drift** and a real
 health-gated **redeploy** (`POST /v1/apps/<id>/redeploy`). The six Deploy

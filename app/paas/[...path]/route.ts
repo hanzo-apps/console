@@ -1,9 +1,16 @@
 /**
- * Same-origin proxy to the platform.hanzo.ai control plane (Job 3 — embedded
- * PaaS). The browser calls console2's OWN origin (`/paas/...`); this server-side
- * handler forwards to `platform.hanzo.ai/v1/...`, injecting the service token
- * from server-only env (sourced via KMS — never `NEXT_PUBLIC_`, never in the
- * browser bundle). This is the real control-plane API, not an iframe stub.
+ * Same-origin proxy to the PaaS control plane (Job 3 — embedded PaaS). The
+ * browser calls console2's OWN origin (`/paas/...`); this server-side handler
+ * forwards to the ONE Hanzo API endpoint at `/v1/paas/...`, injecting the
+ * service token from server-only env (sourced via KMS — never `NEXT_PUBLIC_`,
+ * never in the browser bundle). This is the real control-plane API, not an
+ * iframe stub.
+ *
+ * ONE ENDPOINT: there is no per-service API host. `/v1/paas/*` is served by the
+ * unified backend behind `api.hanzo.ai` (same `CLOUD_API_URL` every other server
+ * proxy here uses — in-cluster in prod, the public gateway everywhere else). It
+ * used to aim at `platform.hanzo.ai`, which serves NO `/v1/paas/*` route at all
+ * and 401s every `/v1/*` path uniformly, so the board could never load.
  *
  * SECURITY: the forwarded token is a PLATFORM SERVICE token — full control-plane
  * authority, NOT tenant-scoped. So this route is gated to brand admins exactly
@@ -33,7 +40,7 @@ import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
 
-const PLATFORM_URL = (process.env.PLATFORM_URL ?? 'https://platform.hanzo.ai').replace(/\/+$/, '')
+const API_URL = (process.env.CLOUD_API_URL ?? 'https://api.hanzo.ai').replace(/\/+$/, '')
 const TOKEN = process.env.PAAS_SERVICE_TOKEN ?? ''
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
@@ -73,7 +80,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   // 1:1 on both sides: this proxy is the PaaS plane, so it forwards to the PaaS
   // plane. It aimed at `/v1/<x>` because that IS where the standalone Node platform
   // served apps; the plane moved into cloud under `/v1/paas` and the path did not.
-  const url = `${PLATFORM_URL}/v1/paas/${path.join('/')}${search}`
+  const url = `${API_URL}/v1/paas/${path.join('/')}${search}`
   const init: RequestInit = {
     method: req.method,
     headers: {

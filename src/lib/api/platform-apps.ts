@@ -5,7 +5,7 @@
  * logs, env, domains), scoped to their org by the Bearer owner claim server-side.
  *
  * It is DISTINCT from `lib/api/platform.ts` (`PlatformApi.apps()` — the ADMIN
- * fleet drift board over `platform.hanzo.ai/v1/apps`) and from the casibase
+ * fleet drift board over the `/paas` proxy) and from the casibase
  * `applications` OAuth admin. cloud's `/v1/platform` speaks PLAIN REST (raw JSON,
  * not the casibase `{status,msg,data}` envelope), so this uses the `restGet/
  * restPost/restPut/restDelete` layer.
