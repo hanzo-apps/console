@@ -27,7 +27,7 @@ import { BookOpen, Globe, Info, SlidersHorizontal } from '@hanzogui/lucide-icons
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
-import { BrandMark } from '~/components/ui/BrandLogo'
+import { BrandMark, useOrgLogo } from '~/components/ui/BrandLogo'
 
 type MenuItem = {
   icon: typeof SlidersHorizontal
@@ -105,6 +105,11 @@ function BrandMenu({ x, y, items, onClose }: { x: number; y: number; items: Menu
 export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const router = useRouter()
   const brand = getBrand()
+  // White-label: the selected org's OWN logo is the primary chrome identity (the
+  // tenant's brand, front and center). The host BrandMark is only the fallback when
+  // the org has set no logo — the `hanzo` org's logo is the Hanzo mark, so it stays
+  // on-brand. `useOrgLogo` is the ONE cached org-logo source, shared with BrandLogo.
+  const orgLogo = useOrgLogo()
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
   const go = useCallback(
@@ -152,7 +157,18 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
           color: 'var(--color12)',
         }}
       >
-        <BrandMark size={24} />
+        {orgLogo ? (
+          // The org's own IAM logo, at the brand-mark size — the tenant's brand leads
+          // the chrome; the Hanzo H is hidden whenever the org has its own.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={orgLogo}
+            alt={brand.brandName}
+            style={{ height: 24, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'block' }}
+          />
+        ) : (
+          <BrandMark size={24} />
+        )}
       </div>
       {menu ? <BrandMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} /> : null}
     </>

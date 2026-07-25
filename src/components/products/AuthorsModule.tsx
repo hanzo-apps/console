@@ -87,7 +87,7 @@ export function AuthorsModule() {
         (state.data.isAuthor ? (
           <AuthorDashboard data={state.data} copiedKey={copiedKey} onCopy={copy} onChanged={load} />
         ) : (
-          <AuthorConnect defaultShareBps={state.data.defaultShareBps} onConnected={load} />
+          <AuthorConnect onConnected={load} />
         ))}
     </YStack>
   )
@@ -95,7 +95,7 @@ export function AuthorsModule() {
 
 // ── connect (not yet enrolled) ────────────────────────────────────────────────
 
-function AuthorConnect({ defaultShareBps, onConnected }: { defaultShareBps: number; onConnected: () => void }) {
+function AuthorConnect({ onConnected }: { onConnected: () => void }) {
   const [login, setLogin] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -115,13 +115,13 @@ function AuthorConnect({ defaultShareBps, onConnected }: { defaultShareBps: numb
         <XStack items="center" gap="$2">
           <Github size={18} color="#a371f7" />
           <Text fontSize="$5" fontWeight="700">
-            Earn {sharePct(defaultShareBps)} of the platform spend of every org that deploys your project
+            Earn an ongoing share of the platform spend of every org that deploys your project
           </Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
           The OSS Author program pays you an ongoing share of the platform spend of every organization that deploys your
-          open-source project on Hanzo. Connect GitHub, verify the repositories you own, and earn {sharePct(defaultShareBps)}{' '}
-          every period — for as long as teams build on your work. New authors are reviewed by our team before earnings begin.
+          open-source project on Hanzo. Connect GitHub, verify the repositories you own, and earn your share every period —
+          for as long as teams build on your work. New authors are reviewed by our team before earnings begin.
         </Text>
         <YStack gap="$1">
           <FieldRow label="GitHub login (optional)">
@@ -151,7 +151,7 @@ function AuthorConnect({ defaultShareBps, onConnected }: { defaultShareBps: numb
       <XStack gap="$3" flexWrap="wrap">
         <HowTile n="1" icon={<Github size={15} color="#a371f7" />} title="Connect GitHub" body="Link your GitHub account to claim the projects you author." />
         <HowTile n="2" icon={<ShieldCheck size={15} color="#a371f7" />} title="Verify a repo" body="Prove you own a repository with the Hanzo GitHub app or a hanzo.json file." />
-        <HowTile n="3" icon={<Rocket size={15} color="#a371f7" />} title="Earn when it deploys" body={`Every org that deploys your work earns you ${sharePct(defaultShareBps)} of their spend, every period.`} />
+        <HowTile n="3" icon={<Rocket size={15} color="#a371f7" />} title="Earn when it deploys" body="Every org that deploys your work earns you a share of their spend, every period." />
       </XStack>
     </YStack>
   )
@@ -202,7 +202,7 @@ function AuthorDashboard({
           <XStack items="center" gap="$2">
             <Github size={18} color={statusTone(data.status)} />
             <Text fontSize="$5" fontWeight="700">
-              Author · {sharePct(data.shareBps)} share
+              Author
             </Text>
             {data.verified ? (
               <XStack items="center" gap="$1">
@@ -224,6 +224,12 @@ function AuthorDashboard({
           </Text>
         ) : null}
 
+        {/* The real royalty rate — a muted DASHBOARD detail for the enrolled author,
+            deliberately NOT in any hero/CTA copy (the CTO cut the public "earn X%"). */}
+        <Text fontSize="$2" color="$color10">
+          Your rate: <Text color="$color12" fontWeight="700">{sharePct(data.shareBps)}</Text> of a deploying org's platform spend.
+        </Text>
+
         {data.status === 'connected' ? (
           <Text fontSize="$3" color="$color11">
             Your account is pending approval — verify repos now; earnings start once staff approve you.
@@ -235,7 +241,7 @@ function AuthorDashboard({
           </Text>
         ) : (
           <Text fontSize="$3" color="$color11">
-            You’re approved. Every org that deploys your verified repositories earns you {sharePct(data.shareBps)} of their
+            You’re approved. Every org that deploys your verified repositories earns you a share of their
             spend, every period.
           </Text>
         )}

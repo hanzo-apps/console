@@ -58,6 +58,7 @@ import {
   Lock,
   LogOut,
   Menu,
+  Mic,
   PanelLeft,
   Plus,
   Repeat,
@@ -107,6 +108,7 @@ import { OrgSwitcher } from '~/components/OrgSwitcher'
 import { leaveOrg } from '~/lib/org-scope'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
+import { voiceSupported } from '~/lib/voice'
 import { WorkbenchDock } from '~/components/workbench/Workbench'
 
 const EXPANDED_W = 264
@@ -1062,7 +1064,11 @@ export function Dashboard({ children }: { children: ReactNode }) {
   const { signOut } = useSession()
   const { get, set } = usePreferences()
   const launcher = useAppLauncher()
-  const { docked } = useFloatingChat()
+  // The assistant: `docked` reserves the right column; `openChat` (the small brand-H)
+  // opens it as the right sidebar; `startVoice` (the mic) opens it AND starts listening.
+  const { docked, openChat, startVoice } = useFloatingChat()
+  // Show the mic only where the browser can actually listen (no dead control).
+  const [voiceOk] = useState(() => voiceSupported())
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   // Collapsed-rail hover flyout (desktop only): the full sidebar overlays the content
@@ -1184,6 +1190,31 @@ export function Dashboard({ children }: { children: ReactNode }) {
               Apps
             </Text>
           </Button>
+
+          {/* Talk to Hanzo — a SMALL brand-H opens the assistant in the right sidebar
+              (desktop) / sheet (phones); the mic starts a voice session. AI help is one
+              small press away, while the user's OWN brand still leads the chrome
+              (top-left). Shown on every viewport. Replaces the old floating circle. */}
+          <Button
+            size="$3"
+            chromeless
+            borderWidth={1}
+            borderColor="$borderColor"
+            icon={<BrandMark size={16} />}
+            onPress={openChat}
+            aria-label="Chat with Hanzo"
+          />
+          {voiceOk ? (
+            <Button
+              size="$3"
+              chromeless
+              borderWidth={1}
+              borderColor="$borderColor"
+              icon={<Mic size={17} />}
+              onPress={startVoice}
+              aria-label="Talk to Hanzo"
+            />
+          ) : null}
 
           {/* Spacer — pushes the right-side controls to the edge at lg+. Below lg the
               search box fills the row (two flex:1 siblings would halve it). */}

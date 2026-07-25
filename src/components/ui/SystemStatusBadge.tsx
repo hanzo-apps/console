@@ -37,8 +37,11 @@ const DOT: Record<Overall | 'loading', '$green10' | '$yellow10' | '$red10' | '$c
   loading: '$color8',
 }
 
-function labelFor(s: StatusPayload | null): string {
-  if (!s) return 'Checking…'
+function labelFor(s: StatusPayload | null, probed: boolean): string {
+  // Before the first probe: "Checking…". After a probe that yielded nothing (e.g.
+  // /system-status isn't served on this deployment — the go:embed build prunes the
+  // BFF route), degrade to a neutral "Status" — never a permanent "Checking…".
+  if (!s) return probed ? 'Status' : 'Checking…'
   switch (s.overall) {
     case 'operational':
       return 'All systems operational'
@@ -55,6 +58,7 @@ const POLL_MS = 60_000
 
 export function SystemStatusBadge() {
   const [data, setData] = useState<StatusPayload | null>(null)
+  const [probed, setProbed] = useState(false)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
   const statusUrl = data?.statusUrl ?? config.statusUrl
 
@@ -65,6 +69,8 @@ export function SystemStatusBadge() {
       if (res.ok) setData((await res.json()) as StatusPayload)
     } catch {
       // keep the last known state; the badge stays non-blocking
+    } finally {
+      setProbed(true)
     }
   }, [])
 
@@ -82,7 +88,7 @@ export function SystemStatusBadge() {
   }, [load])
 
   const dot = DOT[data ? data.overall : 'loading']
-  const label = labelFor(data)
+  const label = labelFor(data, probed)
   const openFull = () => window.open(statusUrl, '_blank', 'noopener,noreferrer')
 
   return (

@@ -132,6 +132,10 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
   const errRate = totals.requests ? (errors / totals.requests) * 100 : 0
   const [key, setKey] = useState<KeyStatus | null>(null)
   const [keyLoading, setKeyLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [newKey, setNewKey] = useState<string | null>(null)
+  const [keyErr, setKeyErr] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -143,6 +147,23 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
       alive = false
     }
   }, [])
+
+  // Mint (or rotate) the account's real hk- Cloud API key. The secret is returned
+  // ONCE by create() and shown once here (copy affordance); status() then reflects
+  // the new key's public prefix. Honest error on failure — never a fake key.
+  const createKey = async () => {
+    setCreating(true)
+    setKeyErr(null)
+    try {
+      const r = await KeysApi.create()
+      setNewKey(r.accessKey)
+      setKey(await KeysApi.status())
+    } catch (e) {
+      setKeyErr(e instanceof Error ? e.message : 'Could not create the key.')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const docs = `${config.docsUrl}/docs`
 
@@ -156,14 +177,26 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
           <MetricCard icon={<Activity size={15} />} label="Spend" value={usd(totals.cents)} caption="Charged, last 24h" />
         </XStack>
 
-        {/* API keys summary — the account's real hk- credential (never the secret). */}
+        {/* API keys — the account's real hk- credential. Create/rotate the key INLINE
+            (the secret shows ONCE, copy it), or Manage in the full API Keys product. */}
         <Card p="$3" gap="$2" borderWidth={1} borderColor="$borderColor" bg="$color2">
-          <XStack items="center" gap="$2">
+          <XStack items="center" gap="$2" flexWrap="wrap">
             <KeyRound size={14} color="$color10" />
             <Text fontSize="$2" fontWeight="600" color="$color12">
               API keys
             </Text>
-            <XStack flex={1} />
+            <XStack flex={1} minW={8} />
+            <Button
+              size="$1"
+              bg="$color5"
+              disabled={creating}
+              onPress={() => void createKey()}
+              aria-label={key?.hasKey ? 'Create a new API key' : 'Create an API key'}
+            >
+              <Text fontSize="$1" color="$color12" fontWeight="700">
+                {creating ? 'Creating…' : key?.hasKey ? 'New key' : 'Create key'}
+              </Text>
+            </Button>
             <Button size="$1" chromeless iconAfter={<ChevronRight size={12} />} onPress={() => onGo('/api-keys')}>
               <Text fontSize="$1" color="$color11">
                 Manage
@@ -177,6 +210,39 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
                 ? `Cloud API key active · ${key.keyPrefix ? `${key.keyPrefix}…` : 'hk-…'}`
                 : 'No Cloud API key yet — create one to call the gateway as Bearer hk-…'}
           </Text>
+          {newKey ? (
+            <YStack gap="$1" p="$2" rounded="$3" borderWidth={1} borderColor="$color7" bg="$color1">
+              <Text fontSize="$1" color="$color11" fontWeight="700">
+                Your new key — copy it now, it is shown only once:
+              </Text>
+              <XStack gap="$2" items="center">
+                <Text flex={1} fontSize="$1" color="$color12" className="hz-mono" numberOfLines={1}>
+                  {newKey}
+                </Text>
+                <Button
+                  size="$1"
+                  onPress={() => {
+                    try {
+                      void navigator.clipboard?.writeText(newKey)
+                    } catch {
+                      /* clipboard unavailable — the key text is selectable */
+                    }
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 1500)
+                  }}
+                >
+                  <Text fontSize="$1" fontWeight="700">
+                    {copied ? 'Copied' : 'Copy'}
+                  </Text>
+                </Button>
+              </XStack>
+            </YStack>
+          ) : null}
+          {keyErr ? (
+            <Text fontSize="$1" color="#f85149">
+              {keyErr}
+            </Text>
+          ) : null}
           <Text fontSize="$1" color="$color9">
             hk- (cloud key) · sk- (provider key) · pk- (publishable) — presented as Authorization: Bearer to api.hanzo.ai.
           </Text>
