@@ -3,8 +3,8 @@
  *
  * Endpoint surface (ported from hanzoai/ai web/src/backend/*.js), grouped by
  * resource. Every call goes through `client.ts` (cookie credentials, envelope
- * unwrapping, typed errors). Base URL is `config.cloudUrl` (default
- * https://cloud.hanzo.ai).
+ * unwrapping, typed errors). Base URL is `config.cloudUrl` — same-origin in the
+ * browser, and the ONE Hanzo API endpoint (https://api.hanzo.ai) off-origin.
  */
 export { ApiError, type ApiResponse } from './client'
 export * from './types'

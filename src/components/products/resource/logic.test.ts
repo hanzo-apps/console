@@ -116,7 +116,7 @@ describe('specs cover every wire kind', () => {
 describe('snippets are real contract text, never fabricated metrics', () => {
   it('provision hits POST /v1/<kind> with the given name', () => {
     const s = provisionSnippet('kv', 'my-cache')
-    expect(s.code).toContain('POST https://cloud.hanzo.ai/v1/kv')
+    expect(s.code).toContain('POST https://api.hanzo.ai/v1/kv')
     expect(s.code).toContain('"name":"my-cache"')
   })
   it('connect uses the kind client command + the hint', () => {
