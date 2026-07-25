@@ -57,7 +57,7 @@ function KV({ label, value }: { label: string; value: string }) {
 
 /** A pill (stage / tier-1 / status). */
 function Pill({ text, tone }: { text: string; tone?: 'green' | 'amber' | 'gray' | 'blue' }) {
-  const bg = tone === 'green' ? '$green4' : tone === 'amber' ? '$yellow4' : tone === 'blue' ? '$blue4' : '$color4'
+  const bg = tone === 'green' ? '$green4' : tone === 'amber' ? '$yellow4' : tone === 'blue' ? '$color4' : '$color4'
   return (
     <Card bg={bg} px="$2" py="$1" borderRadius="$4">
       <Text fontSize="$1" fontWeight="700">{text}</Text>
