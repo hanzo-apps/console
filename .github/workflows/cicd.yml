@@ -1,11 +1,16 @@
 # ~7-line canonical caller — all real config lives in /hanzo.yml.
-# Builds + pushes the console-embed artifact on OUR arc pool; auto-mirrors to
-# registry.hanzo.ai. The Next.js server image stays in build-image.yml.
+# Builds + pushes BOTH console images (the embed artifact cloud go:embeds, and
+# the Next.js server image admin.hanzo.ai runs) on OUR arc pool; auto-mirrors to
+# registry.hanzo.ai. It moves to .hanzo/workflows the moment this repo's forge
+# copy can run it — see .github/workflows/sync.yml for the measured blocker.
 name: CI/CD
 on:
   workflow_dispatch:
   push:
     branches: [main]
+    # A hand-cut v* tag must produce its image, or the tag is a receipt for
+    # nothing — the exact drift the retired build-image.yml existed to prevent.
+    tags: ['v*']
   pull_request:
 jobs:
   cicd:
