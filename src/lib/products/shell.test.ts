@@ -19,8 +19,8 @@ import {
 // env restored), so no window mocking.
 
 const ALL: ShellId[] = ['console', 'billing', 'marketing', 'ads', 'social', 'sentry', 'dns', 'platform']
-/** The single-product FACES (everything but the full console). */
-const FACES: ShellId[] = ['billing', 'marketing', 'ads', 'social', 'sentry', 'dns', 'platform']
+/** The single-product FACES (everything but the full-catalog console + platform). */
+const FACES: ShellId[] = ['billing', 'marketing', 'ads', 'social', 'sentry', 'dns']
 
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_PRODUCT_SHELL
@@ -56,6 +56,14 @@ describe('product-shell descriptor', () => {
     }
   })
 
+  it('platform is the CONTROL-PLANE shell — full catalog (rootId null, not a product shell), boots into the gitops fleet map', () => {
+    const p = shellFor('platform')
+    expect(p.rootId).toBeNull() // full catalog nav — a global admin sees every surface
+    expect(isProductShell('platform')).toBe(false) // NOT a single-product scope
+    expect(p.home).toBe('gitops') // …but boots into the Deploy fleet map, not the per-org home
+    expect(p.indexLabel).toBe('Overview')
+  })
+
   it('wordmarks: billing keeps mark-only; the newer faces wear their product wordmark', () => {
     expect(shellFor('billing').wordmark).toBe('') // legacy look, unchanged
     expect(shellFor('marketing').wordmark).toBe('Marketing')
@@ -69,7 +77,7 @@ describe('product-shell descriptor', () => {
   it('sentry boots into Issues, dns into Zones; every other face indexes on Overview', () => {
     expect(shellFor('sentry').indexLabel).toBe('Issues')
     expect(shellFor('dns').indexLabel).toBe('Zones')
-    for (const id of ['billing', 'marketing', 'ads', 'social', 'platform'] as ShellId[]) {
+    for (const id of ['billing', 'marketing', 'ads', 'social'] as ShellId[]) {
       expect(shellFor(id).indexLabel).toBe('Overview')
     }
   })
@@ -118,6 +126,9 @@ describe('shellFromHost — ONE resolver, five faces', () => {
       process.env.NEXT_PUBLIC_PRODUCT_SHELL = id
       expect(shellFromHost('cloud.hanzo.ai')).toBe(id)
     }
+    // the control-plane shell is overridable too (preview any host as platform)
+    process.env.NEXT_PUBLIC_PRODUCT_SHELL = 'platform'
+    expect(shellFromHost('cloud.hanzo.ai')).toBe('platform')
     process.env.NEXT_PUBLIC_PRODUCT_SHELL = 'console'
     expect(shellFromHost('sentry.hanzo.ai')).toBe('console')
   })
