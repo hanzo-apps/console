@@ -12,12 +12,17 @@
  */
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { HanzoHeader, HANZO_PRODUCT_CATEGORIES } from '@hanzogui/shell'
+import { HanzoHeader, HANZO_PRODUCT_CATEGORIES, findSurfaceByHost, type HanzoSurface } from '@hanzogui/shell'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
 import { categoriesForBrand, CATEGORY_SUMMARY } from '~/lib/products/brand-scope'
+import { landingSurface } from '~/lib/products/landing-surface'
 import { ConsoleFooter } from '~/components/ConsoleFooter'
+
+/** The shared header, with its CTAs re-pointed at this landing's own sign-in
+ *  (the canonical surface aims them AT the console — a self-link from here). */
+const LANDING_SURFACE: HanzoSurface = landingSurface(findSurfaceByHost('cloud.hanzo.ai'))
 
 export function PublicLanding() {
   const router = useRouter()
@@ -39,11 +44,9 @@ export function PublicLanding() {
         brand-neutral bar so no Hanzo ecosystem URL leaks onto their console.
       */}
       {brand.id === 'hanzo' ? (
-        <HanzoHeader
-          surface="cloud.hanzo.ai"
-          productsTaxonomy={HANZO_PRODUCT_CATEGORIES}
-          account={signIn}
-        />
+        // The header's own primary CTA IS the sign-in (see LANDING_SURFACE), so no
+        // separate `account` control — one way in, not two competing buttons.
+        <HanzoHeader surface={LANDING_SURFACE} productsTaxonomy={HANZO_PRODUCT_CATEGORIES} />
       ) : (
         <XStack
           items="center"
