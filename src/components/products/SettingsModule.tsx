@@ -272,7 +272,7 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
         <FieldRow label="Primary color">
           <XStack gap="$3" items="center" flexWrap="wrap">
             <YStack flex={1} minW={200}>
-              <FieldText value={colorPrimary} onChange={(v) => onEdit(() => setColorPrimary(v))} disabled={ro} placeholder="#5E6AD2" />
+              <FieldText value={colorPrimary} onChange={(v) => onEdit(() => setColorPrimary(v))} disabled={ro} placeholder="#D4D4D4" />
             </YStack>
             <ColorSwatch hex={colorPrimary} />
           </XStack>

@@ -102,7 +102,7 @@ export function DeltaChip({ pct }: { pct: number | null }) {
   }
   const rounded = Math.round(pct)
   const up = rounded >= 0
-  const color = up ? '#23c562' : '#ff5d8f'
+  const color = up ? '#23c562' : '#ef4444'
   const Icon = up ? TrendingUp : TrendingDown
   const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : ''
   return (

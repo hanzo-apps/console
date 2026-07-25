@@ -2,8 +2,8 @@
 
 /**
  * LandingHero — the clean product hero (kicker + title + one-line what-it-is + primary
- * CTA), in the inference `HeroCard` idiom: monochrome-tasteful with a functional purple
- * accent + the shared pure-SVG `HeroGraphic`. White-labels by brand (`config.brandName`).
+ * CTA), in the inference `HeroCard` idiom: monochrome, with a neutral wash accent (the
+ * design chart ramp lead) + the shared pure-SVG `HeroGraphic`. White-labels by brand.
  */
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 

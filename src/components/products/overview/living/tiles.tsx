@@ -56,7 +56,7 @@ import type {
 } from './config'
 
 const UP = '#23c562'
-const DOWN = '#ff5d8f'
+const DOWN = '#ef4444'
 
 /** Format an axis label for a series interval. */
 const fmtAxis = (iso: string, interval: string): string => {

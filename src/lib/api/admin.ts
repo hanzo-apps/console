@@ -23,7 +23,7 @@ export type { Paged }
  *  brands with. Mirrors the Casdoor/IAM `ThemeData` shape. */
 export type ThemeData = {
   themeType?: string
-  /** Primary accent color (hex), e.g. `#5E6AD2`. */
+  /** Primary accent color (hex), e.g. `#D4D4D4`. */
   colorPrimary?: string
   borderRadius?: number
   isCompact?: boolean
