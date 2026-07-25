@@ -1,7 +1,30 @@
 /* Canonical Hanzo faces — Geist Sans (UI/body/headings) + Geist Mono (code/data).
-   Imported FIRST (before the reset + globals) so these @import rules land at the very
-   top of the compiled CSS bundle, where the spec requires @import to appear. When they
-   live in globals.css they are emitted AFTER the reset rules and dropped as invalid, so
-   Geist never loads and the app falls back to system-ui. */
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css');
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css');
+   SELF-HOSTED, because a font we serve ourselves is the only kind that arrives.
+
+   These were `@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/...')`. The import
+   ORDER was fixed once already (an @import emitted after the reset rules is invalid and
+   dropped), but the fonts still never loaded in production: the browser refuses the
+   cross-origin stylesheet (ERR_BLOCKED_BY_ORB), so `document.fonts.size` was 0 on live
+   console.hanzo.ai and every customer read the whole product in system-ui while every
+   rule in the app asked for Geist. A third-party CDN on our own critical render path is
+   also a dependency we do not control.
+
+   One VARIABLE file per family (56K + 58K) spans weights 100-900, so eighteen static
+   cuts collapse to two requests and any weight the design reaches for already exists —
+   no second place to add a face. `font-display: swap` keeps text readable while they
+   load; `local()` lets an installed copy win with no download at all. */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: local('Geist'), url('/fonts/Geist-Variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: local('Geist Mono'), url('/fonts/GeistMono-Variable.woff2') format('woff2');
+}
