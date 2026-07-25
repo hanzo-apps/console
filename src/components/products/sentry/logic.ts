@@ -4,8 +4,7 @@
 // (logic.test.ts) and the panels stay thin views over real `/v1/sentry` data.
 import type { SentryIssue, StatPoint, Period } from '~/lib/api/sentry'
 import type { Slice, ChartPoint } from '~/components/ui/Charts'
-import { toneVar } from '~/components/ui/tone-var'
-import type { Tone } from '~/components/ui/tone'
+import { toneVar, type Tone } from '~/components/ui/tone'
 
 // ── Level → tone (the ONE console map — severity by weight, never hue) ────────
 

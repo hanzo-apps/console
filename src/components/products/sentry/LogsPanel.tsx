@@ -18,7 +18,7 @@ import { SlideOver } from '~/components/ui/SlideOver'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker, SearchInput, Pill, Fact } from './parts'
 import { logLevelTone, fmtDateTime } from './logic'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 const LEVELS = ['', 'error', 'warning', 'info', 'debug'] as const
 

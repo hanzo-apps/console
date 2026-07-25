@@ -31,7 +31,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
 import { subpageSourcesFor } from './sources'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 type DeployState =
   | { phase: 'loading' }

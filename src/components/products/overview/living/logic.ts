@@ -23,8 +23,7 @@ import type {
   OverviewHealth,
   OverviewSeries,
 } from './config'
-import { toneVar } from '~/components/ui/tone-var'
-import type { Tone } from '~/components/ui/tone'
+import { toneVar, type Tone } from '~/components/ui/tone'
 
 // ── value formatting ─────────────────────────────────────────────────────────
 

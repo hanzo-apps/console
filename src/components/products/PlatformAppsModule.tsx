@@ -37,8 +37,7 @@ import { usePoll, useReducedMotion } from '~/components/products/overview/living
 import { buildProjectCanvas, summarizeCanvas, type CanvasResource } from './platform-apps/canvas'
 import { renderServiceIcon } from './platform-apps/icons'
 import { buildAppTabs, buildResourceTabs } from './platform-apps/drawer'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 /** The managed data kinds the provisioning service serves. */
 const RESOURCE_KINDS: ResourceKind[] = ['sql', 'vector', 'kv', 'search', 's3', 'datastore', 'docdb']

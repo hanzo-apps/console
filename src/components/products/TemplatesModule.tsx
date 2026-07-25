@@ -77,7 +77,7 @@ function TemplatePreview({ t }: { t: Template }) {
         alignItems: 'center',
         justifyContent: 'center',
         background: show
-          ? '#0b0b0c'
+          ? 'var(--color1)'
           : // Monochrome tile — zero-saturation neutrals; the per-category seed varies only
             // the LIGHTNESS (never the hue), so tiles stay distinct but read as one greyscale.
             `linear-gradient(135deg, hsl(0 0% ${14 + (hue % 8)}%), hsl(0 0% ${7 + (hue % 5)}%))`,

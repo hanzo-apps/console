@@ -31,7 +31,7 @@ import {
 } from '~/lib/api/aimetrics'
 import type { CatalogModel } from '~/lib/api/models-catalog'
 import type { RawMlEndpoint } from '~/lib/api/inference'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 // ── the unified endpoint view-model ──────────────────────────────────────────
 

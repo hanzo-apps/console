@@ -21,8 +21,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Pill, Fact } from './parts'
 import { fmtDateTime } from './logic'
-import { toneColor } from '~/components/ui/tone'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 type Data = { org: Organization | null; members: IamUser[]; roles: Role[] }
 type State = { phase: 'loading' } | { phase: 'error'; error: unknown } | { phase: 'ready'; data: Data }

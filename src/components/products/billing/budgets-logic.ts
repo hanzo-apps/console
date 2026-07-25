@@ -5,7 +5,7 @@
  * follows the backend's own `warn`/`over` verdict.
  */
 import type { SpendAlert } from '~/lib/api/billing'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 /** A budget's spend state, in priority order. */
 export type CapVerdict = 'unlimited' | 'over' | 'warn' | 'ok'

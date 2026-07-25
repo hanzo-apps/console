@@ -40,13 +40,14 @@ import {
 } from '~/lib/api/agents'
 import { Donut, BarRows, type Slice } from '~/components/ui/Charts'
 import { asColor } from '~/components/ui/color'
+import { toneVar, type Tone } from '~/components/ui/tone'
 
-/** Status → hex — one source of truth for the pill dot + the health donut. */
-export const STATUS_HEX: Record<AgentStatus, string> = {
-  active: '#30a46c',
-  idle: '#A3A3A3',
-  error: '#e5484d',
-  draft: '#8b95a5',
+/** Status → tone — one source of truth for the pill dot + the health donut. */
+export const STATUS_TONE: Record<AgentStatus, Tone> = {
+  active: 'positive',
+  idle: 'neutral',
+  error: 'critical',
+  draft: 'muted',
 }
 
 /** A colored status dot (inline SVG so the color is a raw hex matching the Donut). */
@@ -62,7 +63,7 @@ export function Dot({ color, size = 8 }: { color: string; size?: number }) {
 export function StatusPill({ status }: { status: AgentStatus }) {
   return (
     <XStack items="center" gap="$1.5">
-      <Dot color={STATUS_HEX[status]} />
+      <Dot color={toneVar(STATUS_TONE[status])} />
       <Text fontSize="$2" color="$color12" numberOfLines={1}>
         {AGENT_STATUS_LABEL[status]}
       </Text>
@@ -96,7 +97,7 @@ export function HealthDonut({ breakdown }: { breakdown: Record<AgentStatus, numb
   const slices: Slice[] = AGENT_STATUSES.map((s) => ({
     label: AGENT_STATUS_LABEL[s],
     value: breakdown[s] ?? 0,
-    color: STATUS_HEX[s],
+    color: toneVar(STATUS_TONE[s]),
   }))
   return (
     <YStack items="center" gap="$3">
@@ -133,13 +134,13 @@ export function HealthDonut({ breakdown }: { breakdown: Record<AgentStatus, numb
 
 // ── Recent Activity feed ───────────────────────────────────────────────────────
 
-const ACTIVITY_META: Record<AgentActivityKind, { icon: typeof Activity; color: string; verb: string }> = {
-  invoked: { icon: Activity, color: '#A3A3A3', verb: 'invoked' },
-  updated: { icon: Pencil, color: '#737373', verb: 'updated' },
-  failed: { icon: TriangleAlert, color: '#e5484d', verb: 'failed' },
-  scaled: { icon: ArrowUpRight, color: '#f4c245', verb: 'scaled' },
-  created: { icon: Bot, color: '#30a46c', verb: 'created' },
-  deployed: { icon: RefreshCw, color: '#16c0c8', verb: 'deployed' },
+const ACTIVITY_META: Record<AgentActivityKind, { icon: typeof Activity; tone: Tone; verb: string }> = {
+  invoked: { icon: Activity, tone: 'neutral', verb: 'invoked' },
+  updated: { icon: Pencil, tone: 'muted', verb: 'updated' },
+  failed: { icon: TriangleAlert, tone: 'critical', verb: 'failed' },
+  scaled: { icon: ArrowUpRight, tone: 'warning', verb: 'scaled' },
+  created: { icon: Bot, tone: 'positive', verb: 'created' },
+  deployed: { icon: RefreshCw, tone: 'neutral', verb: 'deployed' },
 }
 
 /** One row of the Recent Activity feed. */
@@ -149,7 +150,7 @@ function ActivityRow({ e, now }: { e: AgentActivity; now: number }) {
   return (
     <XStack gap="$2.5" items="flex-start" py="$1.5" borderBottomWidth={1} borderColor="$borderColor">
       <YStack width={26} height={26} items="center" justify="center" rounded="$10" bg="$color3">
-        <Icon size={13} color={asColor(meta.color)} />
+        <Icon size={13} color={asColor(toneVar(meta.tone))} />
       </YStack>
       <YStack flex={1} minW={0} gap="$0.5">
         <Text fontSize="$2" color="$color12" numberOfLines={1}>

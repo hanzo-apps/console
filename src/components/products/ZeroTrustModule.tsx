@@ -57,7 +57,7 @@ import {
   derivePosture,
   liveCount,
 } from '~/components/products/zt/logic'
-import { toneVar } from '~/components/ui/tone-var'
+import { toneVar } from '~/components/ui/tone'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
