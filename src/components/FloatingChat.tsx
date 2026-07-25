@@ -29,7 +29,8 @@ import { Button, Dialog, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui
 import { PanelRight, PanelRightClose, Sparkles, X } from '@hanzogui/lucide-icons-2'
 
 import { ChatConversation } from '~/components/products/chat/ChatConversation'
-import { BrandMark } from '~/components/ui/BrandLogo'
+// NB: the old `BrandMark` bubble import was removed with the floating circle — the
+// assistant now opens from the topbar's small brand-H + mic controls.
 import { usePreferences } from '~/lib/products/preferences'
 
 type FloatingChatApi = {
@@ -49,6 +50,14 @@ type FloatingChatApi = {
   ask: (prompt: string) => void
   /** The current pending seed for the composer (consumed once by the active conversation). */
   seed: string | null
+  /** Open the assistant as the right sidebar (docked column) on desktop, or the
+   *  full sheet on phones — the topbar brand-H entry. Toggles. */
+  openChat: () => void
+  /** Open the assistant AND start listening — "talk to Hanzo" (the topbar mic). */
+  startVoice: () => void
+  /** Monotonic voice-start signal; the active conversation opens the mic when it
+   *  changes (each `startVoice` increments it). */
+  voiceSignal: number
 }
 
 const Ctx = createContext<FloatingChatApi | null>(null)
@@ -107,6 +116,7 @@ function ChatSheet({
   onDock,
   docked,
   seed,
+  voiceSignal,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
@@ -117,6 +127,8 @@ function ChatSheet({
   docked: boolean
   /** Pre-fill seed for the composer (from `useFloatingChat().ask`). */
   seed?: string | null
+  /** Voice-start signal forwarded to the conversation ("talk to Hanzo"). */
+  voiceSignal?: number
 }) {
   // Size is CSS-driven (media props), not a JS branch: base = mobile full-bleed
   // sheet; `$lg` = a compact popover pinned bottom-right. The scrim dims the page
@@ -183,7 +195,7 @@ function ChatSheet({
 
             {/* The ONE working conversation, given a flex container to fill. */}
             <YStack flex={1} minH={0} p="$3">
-              <ChatConversation compact seed={seed ?? undefined} onShowHistory={onHistory} />
+              <ChatConversation compact seed={seed ?? undefined} voiceSignal={voiceSignal} onShowHistory={onHistory} />
             </YStack>
           </YStack>
         </Dialog.Content>
@@ -199,13 +211,13 @@ function ChatSheet({
  */
 export function DockedChatPanel() {
   const router = useRouter()
-  const { setDocked, seed } = useFloatingChat()
+  const { setDocked, seed, voiceSignal } = useFloatingChat()
   const onHistory = useCallback(() => router.push('/chat'), [router])
   return (
     <YStack flex={1} minH={0} bg="$color1">
       <AssistantHeader docked onDockToggle={() => setDocked(false)} />
       <YStack flex={1} minH={0} p="$3">
-        <ChatConversation compact seed={seed ?? undefined} onShowHistory={onHistory} />
+        <ChatConversation compact seed={seed ?? undefined} voiceSignal={voiceSignal} onShowHistory={onHistory} />
       </YStack>
     </YStack>
   )
@@ -254,8 +266,30 @@ export function Chat({ children }: { children: ReactNode }) {
     setIsOpen(false)
   }, [setDocked])
 
+  // Voice-start signal — each "talk to Hanzo" click increments it; the active
+  // conversation opens the mic on change.
+  const [voiceSignal, setVoiceSignal] = useState(0)
+
+  // The topbar brand-H entry: TOGGLE the assistant. Desktop → the docked right
+  // sidebar column; phones (no column) → the full sheet. Setting both in tandem is
+  // correct because at lg+ the sheet is suppressed while docked, and below lg the
+  // dock column is display:none — so one control opens the right surface per viewport.
+  const openChat = useCallback(() => {
+    const next = !docked
+    setDocked(next)
+    setIsOpen(next)
+  }, [docked, setDocked])
+
+  // The topbar mic: OPEN the assistant (sidebar on desktop / sheet on phones) and
+  // start listening.
+  const startVoice = useCallback(() => {
+    setDocked(true)
+    setIsOpen(true)
+    setVoiceSignal((n) => n + 1)
+  }, [setDocked])
+
   return (
-    <Ctx.Provider value={{ isOpen, open, close, toggle, docked, setDocked, ask, seed }}>
+    <Ctx.Provider value={{ isOpen, open, close, toggle, docked, setDocked, ask, seed, openChat, startVoice, voiceSignal }}>
       {children}
 
       {/* The bubble — fixed bottom-right over every page. Hidden while open (the
@@ -263,27 +297,24 @@ export function Chat({ children }: { children: ReactNode }) {
           surfaces (would overlap the page composer). At lg+ it is ALSO hidden when
           docked (the permanent column is the surface); on phones it always shows,
           since docking has no room there. */}
-      {!isOpen && !onChatSurface ? (
-        <YStack position="fixed" b={24} r={24} $lg={{ display: docked ? 'none' : 'flex' }}>
-          {/* The support/AI bubble = the brand 'H' mark (white-labeled per brand),
-              on Material paper elevation with a gentle hover lift. */}
-          <Button
-            circular
-            size="$6"
-            bg="$color5"
-            className="hz-lift hz-elevation-3"
-            hoverStyle={{ bg: '$color6' }}
-            pressStyle={{ bg: '$color7' }}
-            icon={<BrandMark size={22} />}
-            onPress={open}
-            aria-label="Open AI assistant"
-          />
-        </YStack>
-      ) : null}
+      {/* NO floating bubble — the big circle that covered page content is gone. The
+          assistant is opened from the topbar (the small brand-H "chat" control + the
+          "talk to Hanzo" mic), so the user's OWN brand leads the chrome and AI help is
+          one small press away. `open`/`toggle`/`ask` still drive it programmatically
+          (e.g. the Code hub's "Ask AI"). */}
 
-      {/* The floating sheet. On desktop it's hidden while docked (the column is the
-          surface); on phones it's the assistant even when docked. */}
-      <ChatSheet open={isOpen} onOpenChange={setIsOpen} onHistory={onHistory} onDock={dock} docked={docked} seed={seed} />
+      {/* The floating sheet. Suppressed on the full chat/playground surfaces (the page
+          IS the composer) and, at lg+, while docked (the right column is the surface);
+          on phones it's the assistant even when docked. */}
+      <ChatSheet
+        open={isOpen && !onChatSurface}
+        onOpenChange={setIsOpen}
+        onHistory={onHistory}
+        onDock={dock}
+        docked={docked}
+        seed={seed}
+        voiceSignal={voiceSignal}
+      />
     </Ctx.Provider>
   )
 }
