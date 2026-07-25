@@ -28,7 +28,7 @@ type State =
 
 const IMPACT_COLOR = {
   critical: '$red10',
-  serious: '$orange10',
+  serious: '$yellow10',
   moderate: '$yellow10',
   minor: '$color11',
 } as const satisfies Record<Impact, string>

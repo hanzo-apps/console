@@ -33,8 +33,8 @@ const INPUT_BASE: CSSProperties = {
 function SourceBadge({ source }: { source: GrantSource }) {
   const trial = source === 'trial'
   return (
-    <XStack items="center" px="$2" py="$1" rounded="$3" bg={trial ? '$blue3' : '$green3'}>
-      <Text fontSize="$1" color={trial ? '$blue11' : '$green11'}>{trial ? 'Trial' : 'Prepaid'}</Text>
+    <XStack items="center" px="$2" py="$1" rounded="$3" bg={trial ? '$color3' : '$green3'}>
+      <Text fontSize="$1" color={trial ? '$color12' : '$green11'}>{trial ? 'Trial' : 'Prepaid'}</Text>
     </XStack>
   )
 }
