@@ -122,6 +122,7 @@ import { RouterModule } from '~/components/products/RouterModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { PlatformModule } from '~/components/products/PlatformModule'
+import { StoreModule } from '~/components/products/store/StoreModule'
 import { MapModule } from '~/components/products/map/MapModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { KnowledgeModule } from '~/components/products/KnowledgeModule'
@@ -2046,6 +2047,23 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: PlatformModule },
       { path: ':name', component: PlatformModule },
     ],
+  },
+  {
+    // App Store — the OSS one-click marketplace: browse the LIVE 1000+-app catalog
+    // (templates.hanzo.ai/meta.json, open CORS → fetched straight from the browser, no
+    // BFF) and deploy any of them over the console's REAL PaaS path (`PaasApi` →
+    // `/v1/platform/*`). The maker "Earn 20%" hook routes to the in-console OSS Author
+    // program. The centerpiece of the platform.<brand> deploy experience.
+    id: 'store',
+    label: 'App Store',
+    icon: Boxes,
+    description: 'Deploy 1000+ open-source apps — Postgres, n8n, Grafana, and more — to your cloud in one click.',
+    gcp: 'Cloud Marketplace',
+    category: 'Platform',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: StoreModule }],
   },
   {
     // Deploy — the native ArgoCD replacement, rendered as a Railway-grade fleet MAP
