@@ -72,12 +72,12 @@ import { useToast } from '~/components/ui/Toast'
 // ── semantic palette (deliberately separate from the brand accent) ──────────
 const ON = '#23c562' // enabled / on-track
 const OFF = '#e5534b' // disabled
-const AUTO = '#3aa0ff' // automatable
+const AUTO = '#A3A3A3' // automatable
 /** Growth-stage semantic colors + copy — a stage is a state, so it gets its own hue. */
 const STAGE_META: Record<string, { label: string; color: string; blurb: string }> = {
   formed: { label: 'Formed', color: '#94a3b8', blurb: 'Set up — org created, first config in place.' },
-  launched: { label: 'Launched', color: '#3aa0ff', blurb: 'Live — a site or app is shipped.' },
-  activated: { label: 'Activated', color: '#c084fc', blurb: 'Traction — real usage and signups.' },
+  launched: { label: 'Launched', color: '#A3A3A3', blurb: 'Live — a site or app is shipped.' },
+  activated: { label: 'Activated', color: '#737373', blurb: 'Traction — real usage and signups.' },
   scaling: { label: 'Scaling', color: '#23c562', blurb: 'Growing — revenue is compounding.' },
 }
 
@@ -814,8 +814,8 @@ function LivePanel({ nonce }: { nonce: number }) {
           {funnel ? (
             <YStack gap="$2">
               {km ? <UtilBar value={Math.min(100, km.launchProgress)} width={240} color={ON} /> : null}
-              <LegendDot color="#3aa0ff" label="Pageviews" value={funnel.pageviews.toLocaleString()} />
-              <LegendDot color="#c084fc" label="Visitors" value={funnel.visitors.toLocaleString()} />
+              <LegendDot color="#A3A3A3" label="Pageviews" value={funnel.pageviews.toLocaleString()} />
+              <LegendDot color="#737373" label="Visitors" value={funnel.visitors.toLocaleString()} />
               <LegendDot color="#f0a868" label="Signups" value={funnel.signups.toLocaleString()} />
               <LegendDot color={ON} label="Orders" value={funnel.orders.toLocaleString()} />
             </YStack>

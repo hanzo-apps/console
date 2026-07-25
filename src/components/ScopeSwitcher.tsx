@@ -22,16 +22,18 @@ import { STOCK_ENVIRONMENTS } from '~/lib/scope'
 import { isStockNetwork, parseCustomNetwork, type Network } from '~/lib/network'
 import { FieldText } from '~/components/ui/Field'
 
-/** A small colored dot keyed to the network tier. */
-type DotColor = '$green10' | '$yellow10' | '$blue10' | '$purple10' | '$orange10'
+/** A small dot keyed to the network tier. Monochrome by default; only the genuine
+ *  states carry a hue — mainnet is live (green), testnet is a caution (amber). Every
+ *  other tier is a neutral off the design ladder (Tamagui $colorN). */
+type DotColor = '$green10' | '$yellow10' | '$color10' | '$color9' | '$color8'
 const NET_DOT: Record<string, DotColor> = {
   mainnet: '$green10',
   testnet: '$yellow10',
-  devnet: '$blue10',
-  local: '$purple10',
+  devnet: '$color10',
+  local: '$color8',
 }
-const netDot = (n: Network): DotColor => (n.custom ? '$orange10' : NET_DOT[n.id] ?? '$purple10')
-const envDot = (env: string): DotColor => NET_DOT[env] ?? '$orange10'
+const netDot = (n: Network): DotColor => (n.custom ? '$color9' : NET_DOT[n.id] ?? '$color9')
+const envDot = (env: string): DotColor => NET_DOT[env] ?? '$color9'
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 /** The (networkID, evmChainID) subtitle — collapsed when they're equal (sovereign L1). */

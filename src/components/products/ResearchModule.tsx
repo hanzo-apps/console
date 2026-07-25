@@ -35,11 +35,12 @@ const fmtCount = (n: number): string => (Number.isFinite(n) ? n.toLocaleString()
 const fmtUsd = (n: number): string => (!Number.isFinite(n) ? '—' : n >= 100 ? `$${Math.round(n).toLocaleString()}` : `$${n.toFixed(2)}`)
 
 // ── verdict pill — the console's tinted-chip grammar, verdict-aware tones ──
-// A refutation is DELIBERATELY not error-red: indigo reads as ruled-out knowledge, the
-// whole point of an evidentiary layer. Hexes are the console's theme-neutral house set.
+// A refutation is DELIBERATELY not error-red: a neutral grey reads as ruled-out
+// knowledge (the point of an evidentiary layer). Only proven/inconclusive carry a
+// genuine hue (green / amber); the palette is monochrome + the two allowed semantics.
 const VERDICT_STYLE: Record<Exclude<Verdict, ''>, { fg: string; bg: string }> = {
   proven: { fg: '#3fb950', bg: 'rgba(63,185,80,0.16)' },
-  refuted: { fg: '#a371f7', bg: 'rgba(163,113,247,0.16)' },
+  refuted: { fg: '#D4D4D4', bg: 'rgba(212,212,212,0.14)' },
   inconclusive: { fg: '#f0a868', bg: 'rgba(240,168,104,0.16)' },
 }
 const NEUTRAL = { fg: '#8b9bb4', bg: 'rgba(139,155,180,0.16)' }
@@ -138,7 +139,7 @@ export function ResearchModule() {
           {/* Refutation highlight — the "don't re-chase" knowledge, reasoning inline. */}
           <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
             <XStack items="center" gap="$2">
-              <CircleSlash size={15} color="#a371f7" />
+              <CircleSlash size={15} color="#D4D4D4" />
               <Text fontSize="$4" fontWeight="700">
                 Refutations
               </Text>
@@ -151,7 +152,7 @@ export function ResearchModule() {
             ) : refutations.length ? (
               <YStack gap="$2.5">
                 {refutations.map((e) => (
-                  <YStack key={e.id} gap="$1" borderLeftWidth={2} borderColor="#a371f7" pl="$3">
+                  <YStack key={e.id} gap="$1" borderLeftWidth={2} borderColor="#D4D4D4" pl="$3">
                     <XStack items="center" gap="$2" flexWrap="wrap">
                       <Text fontSize="$3" fontWeight="600">{e.subject}</Text>
                       <Text fontSize="$2" color="$color10" className="hz-mono">{e.task}</Text>

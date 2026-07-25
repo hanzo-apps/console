@@ -72,7 +72,7 @@ export function fleetStats(rows: Resource[]): FleetStats {
 const STATUS_COLORS: Record<Exclude<Lifecycle, 'other'> | 'other', string> = {
   ready: '#23c562',
   provisioning: '#f4c245',
-  error: '#ff5d8f',
+  error: '#ef4444',
   other: '#64748b',
 }
 
