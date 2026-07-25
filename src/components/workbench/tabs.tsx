@@ -52,6 +52,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { RuntimeNotice } from '~/components/products/observability/RuntimeNotice'
 import { TracesModule } from '~/components/products/TracesModule'
 import { curlFor, eventsFrom, hanzoCli, inspectorRoute, parseCommand, renderOutput, type PlatformEvent } from './logic'
+import { toneColor } from '~/components/ui/tone'
 
 const usd = (cents: number, dp = 2): string => `$${(cents / 100).toFixed(dp)}`
 const timeOf = (ms: number | null): string =>
@@ -239,7 +240,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
             </YStack>
           ) : null}
           {keyErr ? (
-            <Text fontSize="$1" color="#f85149">
+            <Text fontSize="$1" color={toneColor('critical')}>
               {keyErr}
             </Text>
           ) : null}
@@ -424,7 +425,7 @@ export function EventsTab({ records }: { records: UsageRecord[] }) {
                   fontSize="$1"
                   numberOfLines={1}
                   className="hz-mono"
-                  color={e.status !== '' && e.status !== 'success' ? '#e5534b' : '$color11'}
+                  color={e.status !== '' && e.status !== 'success' ? toneColor('critical') : '$color11'}
                 >
                   {e.type}
                 </Text>
@@ -613,7 +614,7 @@ function AlertsView() {
           <XStack key={a.id} gap="$3" py={3} items="center">
             <Cell flex={1}>{a.name}</Cell>
             <Cell w={90} dim>{a.severity || '—'}</Cell>
-            <Text width={90} fontSize="$1" className="hz-mono" color={a.state === 'firing' ? '#e5534b' : '$color10'}>
+            <Text width={90} fontSize="$1" className="hz-mono" color={a.state === 'firing' ? toneColor('critical') : '$color10'}>
               {a.state}
             </Text>
           </XStack>
@@ -729,7 +730,7 @@ function InsightsView() {
           degraded.map((h) => (
             <Card key={h.service} p="$3" gap="$1" borderWidth={1} borderColor="$borderColor" bg="$color2">
               <XStack items="center" gap="$2">
-                <AlertTriangle size={13} color={h.tone === 'red' ? '#e5534b' : '#f0a868'} />
+                <AlertTriangle size={13} color={toneColor(h.tone === 'red' ? 'critical' : 'warning')} />
                 <Text fontSize="$2" fontWeight="600" color="$color12">
                   {h.service}
                 </Text>
@@ -864,7 +865,7 @@ export function InspectorTab({ records }: { records: UsageRecord[] }) {
                   {result.ok ? <CopyBtn value={curlFor(result.path)} label="curl" /> : null}
                 </XStack>
               ) : null}
-              <Text fontSize="$1" color={result.ok ? '$color12' : '#e5534b'} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+              <Text fontSize="$1" color={result.ok ? '$color12' : toneColor('critical')} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
                 {result.output}
               </Text>
               {related.length > 0 ? (
@@ -986,7 +987,7 @@ export function ShellTab() {
                   </>
                 ) : null}
               </XStack>
-              <Text fontSize="$1" color={e.ok ? '$color12' : '#e5534b'} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+              <Text fontSize="$1" color={e.ok ? '$color12' : toneColor('critical')} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
                 {e.output}
               </Text>
             </YStack>

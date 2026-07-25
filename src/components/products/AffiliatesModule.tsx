@@ -21,8 +21,9 @@ import { MetricCard } from '~/components/ui/Metric'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { payoutMethodLabel, ratePct, shortDate, statusLabel, statusTone, usd } from './affiliates/logic'
+import { payoutMethodLabel, ratePct, shortDate, statusLabel, statusColor, usd } from './affiliates/logic'
 import { EarningsPanel, LinksPanel, LeaderboardPanel } from './affiliates/panels'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -123,7 +124,7 @@ function AffiliateApply({ defaultRateBps, onApplied }: { defaultRateBps: number;
           </Text>
         </YStack>
         {error ? (
-          <Text fontSize="$2" color="#f85149">
+          <Text fontSize="$2" color={toneColor('critical')}>
             {error}
           </Text>
         ) : null}
@@ -181,12 +182,12 @@ function AffiliateDashboard({
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2" justify="space-between" flexWrap="wrap">
           <XStack items="center" gap="$2">
-            <BadgeCheck size={18} color={statusTone(data.status)} />
+            <BadgeCheck size={18} color={statusColor(data.status)} />
             <Text fontSize="$5" fontWeight="700">
               Affiliate · {ratePct(data.rateBps)} commission
             </Text>
           </XStack>
-          <Text fontSize="$2" fontWeight="700" color={statusTone(data.status)}>
+          <Text fontSize="$2" fontWeight="700" color={statusColor(data.status)}>
             {statusLabel(data.status)}
           </Text>
         </XStack>
@@ -237,10 +238,10 @@ function AffiliateDashboard({
 
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Users size={16} color="#8b949e" />} label="Referred" value={String(data.referredCount)} caption="customers attributed" />
+        <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Referred" value={String(data.referredCount)} caption="customers attributed" />
         <MetricCard icon={<HandCoins size={16} color="#D4D4D4" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime commission" />
-        <MetricCard icon={<Coins size={16} color="#d29922" />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
-        <MetricCard icon={<Wallet size={16} color="#3fb950" />} label="Paid out" value={usd(data.paidCents)} caption="commission paid" />
+        <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
+        <MetricCard icon={<Wallet size={16} color={toneColor('positive')} />} label="Paid out" value={usd(data.paidCents)} caption="commission paid" />
       </XStack>
 
       {/* Rewards, links, and leaderboard — only for a live (approved) affiliate. */}
@@ -261,7 +262,7 @@ function AffiliateDashboard({
         </XStack>
         {data.payouts.length === 0 ? (
           <YStack p="$5" items="center" gap="$2">
-            <Wallet size={22} color="#6e7681" />
+            <Wallet size={22} color={toneColor('muted')} />
             <Text fontSize="$3" color="$color11">
               No payouts yet
             </Text>

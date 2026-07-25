@@ -34,6 +34,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { useToast } from '~/components/ui/Toast'
 import { DetailRow, Badge } from '~/components/products/observability/parts'
 import { DisabledAction } from './parts'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -47,7 +48,7 @@ const openExternal = (href: string) => {
 /** Status-code pill, tinted by class (2xx green · 4xx amber · 5xx red). */
 function CodePill({ code }: { code?: number }) {
   if (code === undefined) return <Text fontSize="$2" color="$color10">—</Text>
-  const color = code < 300 ? '#3fb950' : code < 500 ? '#d29922' : '#f85149'
+  const color = toneColor(code < 300 ? 'positive' : code < 500 ? 'warning' : 'critical')
   return (
     <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color={color} fontWeight="700">
       {code}
@@ -221,7 +222,7 @@ export function DetailRail({
                           <Badge label={t.type} />
                           <Text fontSize="$2" color="$color11" numberOfLines={1}>{t.target ?? t.name}</Text>
                         </XStack>
-                        <Text fontSize="$1" color={t.enabled ? '#3fb950' : '$color10'}>{t.enabled ? 'enabled' : 'disabled'}</Text>
+                        <Text fontSize="$1" color={t.enabled ? toneColor('positive') : '$color10'}>{t.enabled ? 'enabled' : 'disabled'}</Text>
                       </XStack>
                     ))}
                   </YStack>

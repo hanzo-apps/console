@@ -17,13 +17,14 @@ import type { PlatformApp } from '~/lib/api'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { fmtAge } from './resource'
+import { toneColor } from '~/components/ui/tone'
 
 function DriftBadge({ app }: { app: PlatformApp }) {
   const sev = app.drift?.severity
   if (!sev || sev.toLowerCase() === 'none') return <Text fontSize="$2" color="$color10">—</Text>
   const hot = ['high', 'critical', 'error'].includes(sev.toLowerCase())
   return (
-    <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color4" color={hot ? '#e5534b' : '$color12'}>
+    <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color4" color={hot ? toneColor('critical') : '$color12'}>
       {sev}
     </Text>
   )
