@@ -5,16 +5,17 @@
  * follows the backend's own `warn`/`over` verdict.
  */
 import type { SpendAlert } from '~/lib/api/billing'
+import { toneVar } from '~/components/ui/tone-var'
 
 /** A budget's spend state, in priority order. */
 export type CapVerdict = 'unlimited' | 'over' | 'warn' | 'ok'
 
-/** Meter/dot palette — ONE place, shared by the bar fill and the verdict pill. */
+/** Meter/dot weight — the ONE console tone map, as a CSS value (bar fill + verdict pill). */
 export const METER_COLORS: Record<CapVerdict, string> = {
-  ok: '#7ee787',
-  warn: '#f0a868',
-  over: '#e5534b',
-  unlimited: '#6ea8fe',
+  ok: toneVar('positive'),
+  warn: toneVar('warning'),
+  over: toneVar('critical'),
+  unlimited: toneVar('neutral'),
 } as const
 
 export const VERDICT_LABEL: Record<CapVerdict, string> = {

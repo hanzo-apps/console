@@ -46,6 +46,7 @@ import {
   summarizeRuns,
   validateFlowName,
 } from './automations/logic'
+import { toneColor } from '~/components/ui/tone'
 
 const TABS = [
   { id: '', label: 'Flows' },
@@ -189,7 +190,7 @@ function FlowsView({ onBrowse }: { onBrowse: () => void }) {
           Refresh
         </Button>
       </XStack>
-      {createErr ? <Text fontSize="$2" color="#e5534b">{createErr}</Text> : null}
+      {createErr ? <Text fontSize="$2" color={toneColor('critical')}>{createErr}</Text> : null}
 
       {error ? (
         <BackendStateCard state={error} onRetry={() => void refresh()} hint="Flows you create here run on the native /v1/automations engine." />
@@ -302,8 +303,8 @@ function FlowDetail({
           Delete
         </Button>
       </XStack>
-      {note ? <Text fontSize="$2" color="#7ee787">{note}</Text> : null}
-      {err ? <Text fontSize="$2" color="#e5534b">{err}</Text> : null}
+      {note ? <Text fontSize="$2" color={toneColor('positive')}>{note}</Text> : null}
+      {err ? <Text fontSize="$2" color={toneColor('critical')}>{err}</Text> : null}
 
       <YStack gap="$0">
         <Fact label="Status" value={<StatusTag status={flowStatusText(flow.status)} />} />

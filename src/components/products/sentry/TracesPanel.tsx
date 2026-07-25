@@ -19,6 +19,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker, SearchInput, Fact } from './parts'
 import { fmtDurationMs, fmtDateTime, fmtCount, logLevelTone } from './logic'
+import { toneVar } from '~/components/ui/tone-var'
 
 export function TracesPanel({ id, projects }: { id?: string; projects: SentryProject[] }) {
   const router = useRouter()
@@ -61,7 +62,7 @@ function TraceList({ projects, onOpen }: { projects: SentryProject[]; onOpen: (t
     ) },
     { key: 'durationMs', header: 'Duration', width: 100, align: 'right', mono: true, render: (t) => <Text className="hz-mono">{fmtDurationMs(t.durationMs)}</Text> },
     { key: 'spanCount', header: 'Spans', width: 76, align: 'right', mono: true, render: (t) => <Text className="hz-mono">{fmtCount(t.spanCount)}</Text> },
-    { key: 'errorCount', header: 'Errors', width: 76, align: 'right', mono: true, render: (t) => <Text className="hz-mono" style={{ color: t.errorCount > 0 ? '#e5534b' : undefined }}>{t.errorCount || 0}</Text> },
+    { key: 'errorCount', header: 'Errors', width: 76, align: 'right', mono: true, render: (t) => <Text className="hz-mono" style={{ color: t.errorCount > 0 ? toneVar('critical') : undefined }}>{t.errorCount || 0}</Text> },
     { key: 'project', header: 'Project', width: 120, render: (t) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{t.project || '—'}</Text> },
     { key: 'timestamp', header: 'When', width: 150, render: (t) => <Text fontSize="$2" color="$color11">{fmtDateTime(t.timestamp)}</Text> },
   ]
@@ -219,7 +220,7 @@ function Waterfall({ spans, traceDurationMs }: { spans: SentrySpan[]; traceDurat
                 <YStack
                   height={10}
                   rounded="$1"
-                  style={{ position: 'absolute', left: `${left}%`, width: `${width}%`, backgroundColor: err ? '#e5534b' : logLevelTone('info') }}
+                  style={{ position: 'absolute', left: `${left}%`, width: `${width}%`, backgroundColor: err ? toneVar('critical') : logLevelTone('info') }}
                 />
               </YStack>
               <Text width={72} text="right" fontSize="$1" color="$color11" className="hz-mono">

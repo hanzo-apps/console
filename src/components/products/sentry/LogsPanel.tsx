@@ -18,6 +18,7 @@ import { SlideOver } from '~/components/ui/SlideOver'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker, SearchInput, Pill, Fact } from './parts'
 import { logLevelTone, fmtDateTime } from './logic'
+import { toneVar } from '~/components/ui/tone-var'
 
 const LEVELS = ['', 'error', 'warning', 'info', 'debug'] as const
 
@@ -108,8 +109,8 @@ export function LogsPanel({ projects }: { projects: SentryProject[] }) {
           <YStack gap="$3">
             <XStack gap="$2" flexWrap="wrap">
               <Pill label={detail.level} tone={logLevelTone(detail.level)} />
-              {detail.logger ? <Pill label={detail.logger} tone="#8b9bb4" /> : null}
-              {detail.project ? <Pill label={detail.project} tone="#6ea8fe" /> : null}
+              {detail.logger ? <Pill label={detail.logger} tone={toneVar('muted')} /> : null}
+              {detail.project ? <Pill label={detail.project} tone={toneVar('neutral')} /> : null}
             </XStack>
             <YStack borderWidth={1} borderColor="$borderColor" rounded="$3" p="$3" bg="$color1" style={{ overflowX: 'auto' }}>
               <Text fontSize="$2" color="$color12" className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>

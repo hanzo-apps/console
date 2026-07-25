@@ -24,6 +24,7 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 import { FieldSwitch } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -156,7 +157,7 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
             </Text>
 
             <XStack items="center" gap="$2">
-              <Sparkles size={15} color="#3fb950" />
+              <Sparkles size={15} color={toneColor('positive')} />
               <Text fontSize="$3" fontWeight="600" color="$color12">
                 Up to 90% lower spend — workload-dependent.
               </Text>

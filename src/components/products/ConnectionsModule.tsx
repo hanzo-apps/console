@@ -26,6 +26,7 @@ import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { useToast } from '~/components/ui/Toast'
 import { ApiError } from '~/lib/api/client'
 import { AiConnectionsApi, AI_CONNECTION_PROVIDERS, type AiConnection, type AiConnectionProvider } from '~/lib/api/ai-connections'
+import { toneColor } from '~/components/ui/tone'
 
 type Phase = { t: 'loading' } | { t: 'ready' } | { t: 'error'; state: BackendState }
 
@@ -81,8 +82,8 @@ function ProviderCard({
         </XStack>
         {connected ? (
           <XStack items="center" gap="$1.5">
-            <Check size={15} color="#7ee787" />
-            <Text fontSize="$2" fontWeight="700" color="#7ee787">
+            <Check size={15} color={toneColor('positive')} />
+            <Text fontSize="$2" fontWeight="700" color={toneColor('positive')}>
               Connected
             </Text>
           </XStack>
