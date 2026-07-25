@@ -11,6 +11,7 @@ import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, Copy, Search } from '@hanzogui/lucide-icons-2'
 
 import { PERIODS, type Period, type SentryProject } from '~/lib/api/sentry'
+import { toneColor } from '~/components/ui/tone'
 
 /** A compact time-range button row (1h · 24h · 7d · …). */
 export function PeriodPicker({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
@@ -122,7 +123,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
     }
   }
   return (
-    <Button size="$2" chromeless icon={done ? <Check size={14} color="#7ee787" /> : <Copy size={14} />} onPress={copy}>
+    <Button size="$2" chromeless icon={done ? <Check size={14} color={toneColor('positive')} /> : <Copy size={14} />} onPress={copy}>
       {done ? 'Copied' : label}
     </Button>
   )

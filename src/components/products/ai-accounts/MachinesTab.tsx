@@ -40,6 +40,8 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 import { EmptyState } from '~/components/ui/EmptyState'
 import { MetricCard, UtilBar } from '~/components/ui/Metric'
 import { Loader } from '~/components/ui/Loader'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -122,9 +124,9 @@ function AccountRow({ link, busy, onRevoke }: { link: Link; busy: boolean; onRev
         </XStack>
         <XStack items="center" gap="$2" flexWrap="wrap">
           <Badge text={kindLabel(link.kind)} />
-          <Badge text={billingLabel(link.billing)} tone={link.billing === 'plan' ? '#16a34a' : undefined} />
+          <Badge text={billingLabel(link.billing)} tone={link.billing === 'plan' ? toneVar('positive') : undefined} />
           {revoked ? (
-            <Badge text="logged out" tone="#dc2626" />
+            <Badge text="logged out" tone={toneVar('critical')} />
           ) : (
             <Button
               size="$2"
@@ -247,7 +249,7 @@ function CandidateRow({ c, rank, primary }: { c: RouteCandidate; rank: number; p
       p="$2.5"
       rounded="$4"
       borderWidth={1}
-      borderColor={primary ? '#16a34a' : '$borderColor'}
+      borderColor={primary ? toneColor('positive') : '$borderColor'}
       bg="$color1"
       flexWrap="wrap"
     >
@@ -261,11 +263,11 @@ function CandidateRow({ c, rank, primary }: { c: RouteCandidate; rank: number; p
         <Text fontSize="$1" color="$color10">
           {c.provider}
         </Text>
-        {primary ? <Badge text="primary" tone="#16a34a" /> : null}
+        {primary ? <Badge text="primary" tone={toneVar('positive')} /> : null}
       </XStack>
       <XStack items="center" gap="$3" flexWrap="wrap">
-        <Badge text={billingLabel(c.billing)} tone={c.billing === 'plan' ? '#16a34a' : undefined} />
-        <Text fontSize="$2" color={c.available ? '$color12' : '#dc2626'} className="hz-mono">
+        <Badge text={billingLabel(c.billing)} tone={c.billing === 'plan' ? toneVar('positive') : undefined} />
+        <Text fontSize="$2" color={c.available ? '$color12' : toneColor('critical')} className="hz-mono">
           {c.available ? `${pctText(c.headroomPct)} left` : c.reason || 'unavailable'}
         </Text>
       </XStack>

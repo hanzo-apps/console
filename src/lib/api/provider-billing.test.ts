@@ -189,7 +189,7 @@ describe('formatting', () => {
     expect(fundingLabel('credit')).toBe('Our credit')
     expect(fundingLabel('mystery')).toBe('mystery')
     expect(fundingColor('paid')).toBe(FUNDING_META.paid.color)
-    expect(fundingColor('mystery')).toBe('#64748b')
+    expect(fundingColor('mystery')).toBe('#404040')
   })
 })
 

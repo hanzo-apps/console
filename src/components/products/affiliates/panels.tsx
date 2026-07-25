@@ -24,6 +24,7 @@ import { FieldRow, FieldText } from '~/components/ui/Field'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { monthLabel, ratePct, usd } from './logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -182,7 +183,7 @@ export function LinksPanel() {
                 <FieldText value={label} onChange={setLabel} disabled={busy || atCap} placeholder="e.g. Twitter, newsletter" />
               </FieldRow>
               {err ? (
-                <Text fontSize="$2" color="#f85149">
+                <Text fontSize="$2" color={toneColor('critical')}>
                   {err}
                 </Text>
               ) : null}
@@ -265,7 +266,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
   }, [handle, reload])
 
   return (
-    <PanelCard title="Leaderboard" icon={<Trophy size={18} color="#d29922" />}>
+    <PanelCard title="Leaderboard" icon={<Trophy size={18} color={toneColor('warning')} />}>
       {state.phase === 'loading' && <Text color="$color10">Loading the leaderboard…</Text>}
       {state.phase === 'error' && (
         <BackendStateCard state={state.error} onRetry={reload} hint="endpoint · GET /v1/affiliates/leaderboard" />
@@ -339,7 +340,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
               <FieldText value={handle} onChange={setHandle} disabled={busy} placeholder="e.g. buildwithme — leave blank to stay private" />
             </FieldRow>
             {err ? (
-              <Text fontSize="$2" color="#f85149">
+              <Text fontSize="$2" color={toneColor('critical')}>
                 {err}
               </Text>
             ) : null}

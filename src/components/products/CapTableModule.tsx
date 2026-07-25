@@ -67,6 +67,7 @@ import { CHART_PALETTE } from '~/components/ui/Charts'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
 import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
+import { toneColor } from '~/components/ui/tone'
 
 type Tab = 'summary' | 'stakeholders' | 'shares' | 'classes' | 'fundraising'
 const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
@@ -132,9 +133,9 @@ function SummaryTab({ summary }: { summary: CapTableSummary }) {
     <YStack gap="$4">
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard icon={<Coins size={16} color="#8ea2ff" />} label="Fully diluted" value={int(t.fullyDilutedShares)} caption="shares (incl. granted options)" />
-        <MetricCard icon={<ScrollText size={16} color="#7ee787" />} label="Outstanding" value={int(t.outstandingShares)} caption="issued shares" />
-        <MetricCard icon={<Percent size={16} color="#f0a868" />} label="Options" value={int(t.grantedOptions)} caption="granted, dilutive" />
-        <MetricCard icon={<Users size={16} color="#c792ea" />} label="Stakeholders" value={int(t.stakeholders)} caption={`${int(t.shareClasses)} share class${t.shareClasses === 1 ? '' : 'es'}`} />
+        <MetricCard icon={<ScrollText size={16} color={toneColor('positive')} />} label="Outstanding" value={int(t.outstandingShares)} caption="issued shares" />
+        <MetricCard icon={<Percent size={16} color={toneColor('warning')} />} label="Options" value={int(t.grantedOptions)} caption="granted, dilutive" />
+        <MetricCard icon={<Users size={16} color={toneColor('neutral')} />} label="Stakeholders" value={int(t.stakeholders)} caption={`${int(t.shareClasses)} share class${t.shareClasses === 1 ? '' : 'es'}`} />
       </XStack>
 
       <XStack gap="$4" flexWrap="wrap">

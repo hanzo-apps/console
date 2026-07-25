@@ -13,10 +13,11 @@ describe('labels + tones', () => {
     expect(billingLabel('plan')).toBe('Billed to your plan')
     expect(billingLabel('commerce')).toBe('Billed via credits')
   })
-  it('headroom tone: healthy → warning → exhausted', () => {
-    expect(headroomTone(80)).toBe('#16a34a')
-    expect(headroomTone(30)).toBe('#d97706')
-    expect(headroomTone(5)).toBe('#dc2626')
+  it('headroom tone: healthy → warning → exhausted, by weight not hue', () => {
+    expect(headroomTone(80)).toBe('var(--color11)') // positive
+    expect(headroomTone(30)).toBe('var(--color11)') // warning
+    expect(headroomTone(5)).toBe('var(--color12)') // critical — the one you must not miss
+    for (const p of [80, 30, 5]) expect(headroomTone(p)).toMatch(/^var\(--color(9|10|11|12)\)$/)
   })
   it('pctText is honest about missing numbers', () => {
     expect(pctText(42)).toBe('42%')

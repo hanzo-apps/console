@@ -18,6 +18,8 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Pill, Fact } from './parts'
 import { levelColor, statusTone, fmtWhen, fmtDateTime, fmtCount } from './logic'
+import { toneColor } from '~/components/ui/tone'
+import { toneVar } from '~/components/ui/tone-var'
 
 export function IssueDetailPanel({ id }: { id: string }) {
   const router = useRouter()
@@ -109,10 +111,10 @@ export function IssueDetailPanel({ id }: { id: string }) {
           <XStack gap="$2" flexWrap="wrap">
             <Pill label={`level ${issue.level}`} tone={levelColor(issue.level)} />
             <Pill label={issue.status} tone={statusTone(issue.status)} />
-            {issue.regressed ? <Pill label="regressed" tone="#f0a868" /> : null}
-            {issue.project ? <Pill label={issue.project} tone="#6ea8fe" /> : null}
-            {(ev?.environment || issue.environment) ? <Pill label={ev?.environment || issue.environment} tone="#8b9bb4" /> : null}
-            {(ev?.release || issue.release) ? <Pill label={`release ${ev?.release || issue.release}`} tone="#8b9bb4" /> : null}
+            {issue.regressed ? <Pill label="regressed" tone={toneVar('warning')} /> : null}
+            {issue.project ? <Pill label={issue.project} tone={toneVar('neutral')} /> : null}
+            {(ev?.environment || issue.environment) ? <Pill label={ev?.environment || issue.environment} tone={toneVar('muted')} /> : null}
+            {(ev?.release || issue.release) ? <Pill label={`release ${ev?.release || issue.release}`} tone={toneVar('muted')} /> : null}
           </XStack>
 
           <Card p="$4" borderWidth={1} borderColor="$borderColor">
@@ -195,7 +197,7 @@ function StackTrace({ event }: { event: SentryEvent | null }) {
                 </Text>
               </YStack>
               {f.inApp ? (
-                <Text fontSize="$1" color="#6ea8fe">
+                <Text fontSize="$1" color={toneColor('neutral')}>
                   in app
                 </Text>
               ) : null}
@@ -210,7 +212,7 @@ function StackTrace({ event }: { event: SentryEvent | null }) {
                         <Text fontSize="$1" color="$color10" className="hz-mono" width={36} text="right">
                           {ln}
                         </Text>
-                        <Text fontSize="$1" color={crash ? '#e5534b' : '$color11'} className="hz-mono" style={{ whiteSpace: 'pre' }}>
+                        <Text fontSize="$1" color={crash ? toneColor('critical') : '$color11'} className="hz-mono" style={{ whiteSpace: 'pre' }}>
                           {code}
                         </Text>
                       </XStack>

@@ -17,7 +17,8 @@ import { ReferralsApi, type ReferralOverview } from '~/lib/api/referrals'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { progressCaption, shortDate, statusLabel, statusTone, usd } from './referrals/logic'
+import { progressCaption, shortDate, statusLabel, statusColor, usd } from './referrals/logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -126,15 +127,15 @@ function ReferralsReady({
 
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Users size={16} color="#8b949e" />} label="Invites" value={String(data.counts.total)} caption="teams referred" />
+        <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Invites" value={String(data.counts.total)} caption="teams referred" />
         <MetricCard
-          icon={<CircleCheck size={16} color="#3fb950" />}
+          icon={<CircleCheck size={16} color={toneColor('positive')} />}
           label="Credited"
           value={String(data.counts.credited)}
           caption={data.counts.qualified ? `${data.counts.qualified} qualifying` : 'rewarded referrals'}
         />
         <MetricCard
-          icon={<Coins size={16} color="#d29922" />}
+          icon={<Coins size={16} color={toneColor('warning')} />}
           label="Credit earned"
           value={usd(data.creditsEarnedCents)}
           caption="added to your balance"
@@ -150,7 +151,7 @@ function ReferralsReady({
         </XStack>
         {data.referrals.length === 0 ? (
           <YStack p="$5" items="center" gap="$2">
-            <Gift size={22} color="#6e7681" />
+            <Gift size={22} color={toneColor('muted')} />
             <Text fontSize="$3" color="$color11">
               No referrals yet
             </Text>
@@ -181,7 +182,7 @@ function ReferralsReady({
                   </Text>
                 </YStack>
                 <XStack items="center" gap="$3">
-                  <Text fontSize="$2" fontWeight="700" color={statusTone(r.status)}>
+                  <Text fontSize="$2" fontWeight="700" color={statusColor(r.status)}>
                     {statusLabel(r.status)}
                   </Text>
                   <Text fontSize="$3" fontWeight="700" color="$color12" minW={64} text="right">

@@ -31,6 +31,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
 import { subpageSourcesFor } from './sources'
+import { toneVar } from '~/components/ui/tone-var'
 
 type DeployState =
   | { phase: 'loading' }
@@ -49,7 +50,7 @@ function verdict(apps: PlatformApp[]): { tone: 'green' | 'yellow' | 'red'; label
   return { tone: 'green', label: 'Operational' }
 }
 
-const TONE_DOT = { green: '#3fb950', yellow: '#d29922', red: '#f85149' } as const
+const TONE_DOT = { green: toneVar('positive'), yellow: toneVar('warning'), red: toneVar('critical') } as const
 const HEALTH_WORD = { green: 'Healthy', yellow: 'Elevated errors', red: 'Degraded' } as const
 
 const fmtRate = (n: number): string => (n >= 100 ? Math.round(n).toString() : n.toFixed(n >= 10 ? 1 : 2))
