@@ -272,7 +272,15 @@ async function request<T>(
   }
 
   if (!res.ok && json?.status !== 'ok') {
-    throw new ApiError(json?.msg || `Request failed (HTTP ${res.status})`, res.status)
+    // `msg` is the casibase envelope's field. The plain-REST /v1 surfaces mounted on
+    // the same backend answer `error` instead — the paywall's 402 body is
+    // {"error":"subscription_required"} — so a response can legitimately carry either.
+    // Reading only `msg` discarded that reason and left "Request failed (HTTP 402)",
+    // which the honest-error classifier could only render as a generic top-up prompt,
+    // sending a planless org to buy credits that will not satisfy the gate.
+    const alt = (json as { error?: unknown })?.error
+    const reason = json?.msg || (typeof alt === 'string' ? alt : '')
+    throw new ApiError(reason || `Request failed (HTTP ${res.status})`, res.status)
   }
   return json
 }
