@@ -3,7 +3,7 @@
  * unit-testable in the plain-node vitest env and shared by the module + any future
  * surface. Mirrors the onboarding `steps.ts` convention.
  */
-import type { GuideOverview, GuideStep, StepState, GuideEvent } from '~/lib/api/guide'
+import type { GuideOverview, GuideStep, StepState, GuideEvent, GuideSuggestion } from '~/lib/api/guide'
 
 /** Human label for a step state. */
 export function stateLabel(s: StepState): string {
@@ -79,6 +79,35 @@ export function blockedLabel(step: GuideStep, o: GuideOverview): string {
   if (step.blockedBy.length === 0) return ''
   const titles = step.blockedBy.map((id) => o.steps.find((s) => s.id === id)?.title ?? id)
   return `Blocked by: ${titles.join(', ')}`
+}
+
+// ── Chat + suggest + budget (Business AI "what to do next") ──────────────────
+
+/** One chat turn: who spoke and what they said. */
+export type ChatTurn = { role: 'you' | 'ai'; text: string }
+
+/**
+ * Format USD cents as `$X.XX`, or an em-dash when the balance is unknown — the ONE
+ * money format for the Guide's budget display (mirrors the sidebar wallet).
+ */
+export function usd(cents: number | null | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) return '—'
+  return `$${(cents / 100).toFixed(2)}`
+}
+
+/**
+ * The AI-ready quests among a suggestion set — the ones the Business AI can run for
+ * the founder (so the chat/suggest UI offers a "Do it for me" on exactly these). The
+ * suggest endpoint only returns AVAILABLE candidates, so an automatable one is always
+ * runnable.
+ */
+export function automatableSuggestions(suggestions: GuideSuggestion[]): GuideSuggestion[] {
+  return suggestions.filter((s) => s.automatable && s.stepId.length > 0)
+}
+
+/** The single best next quest (the first, highest-leverage suggestion), or null. */
+export function topSuggestion(suggestions: GuideSuggestion[]): GuideSuggestion | null {
+  return suggestions.length > 0 ? suggestions[0] : null
 }
 
 /** Label for one streamed Business AI event type. */

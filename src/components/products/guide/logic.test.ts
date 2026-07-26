@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { GuideOverview, GuideStep } from '~/lib/api/guide'
+import type { GuideOverview, GuideStep, GuideSuggestion } from '~/lib/api/guide'
 import {
   stateLabel,
   isTerminal,
@@ -9,7 +9,19 @@ import {
   isComplete,
   blockedLabel,
   eventLabel,
+  usd,
+  automatableSuggestions,
+  topSuggestion,
 } from './logic'
+
+const suggestion = (p: Partial<GuideSuggestion> & { stepId: string }): GuideSuggestion => ({
+  stepId: p.stepId,
+  title: p.title ?? p.stepId,
+  why: p.why ?? '',
+  rationale: p.rationale ?? '',
+  automatable: p.automatable ?? false,
+  unlocks: p.unlocks ?? 0,
+})
 
 const step = (p: Partial<GuideStep> & { id: string }): GuideStep => ({
   id: p.id,
@@ -101,5 +113,27 @@ describe('guide logic', () => {
     expect(eventLabel({ type: 'action', tool: 'content_generate' })).toBe('Running content_generate')
     expect(eventLabel({ type: 'state', state: 'done' })).toBe('Marked done')
     expect(eventLabel({ type: 'end' })).toBe('Finished')
+  })
+
+  it('usd formats cents, em-dash on unknown', () => {
+    expect(usd(12685)).toBe('$126.85')
+    expect(usd(0)).toBe('$0.00')
+    expect(usd(null)).toBe('—')
+    expect(usd(undefined)).toBe('—')
+    expect(usd(NaN)).toBe('—')
+  })
+
+  it('automatableSuggestions keeps only AI-ready quests with a step id', () => {
+    const got = automatableSuggestions([
+      suggestion({ stepId: 'positioning', automatable: true }),
+      suggestion({ stepId: 'company', automatable: false }),
+      suggestion({ stepId: '', automatable: true }), // no id → dropped
+    ])
+    expect(got.map((s) => s.stepId)).toEqual(['positioning'])
+  })
+
+  it('topSuggestion returns the first (best) or null', () => {
+    expect(topSuggestion([suggestion({ stepId: 'a' }), suggestion({ stepId: 'b' })])?.stepId).toBe('a')
+    expect(topSuggestion([])).toBeNull()
   })
 })
