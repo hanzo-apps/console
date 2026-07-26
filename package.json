@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.5.28",
+  "version": "8.5.29",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
@@ -53,7 +53,7 @@
     "react-dom": "19.2.7",
     "react-native-web": "0.21.2",
     "superjson": "2.2.2",
-    "@hanzogui/shell": "^7.6.4"
+    "@hanzogui/shell": "^7.6.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
