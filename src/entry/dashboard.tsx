@@ -79,7 +79,6 @@ import {
   type ProductSubpage,
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired } from '~/lib/products/match'
-import { ProductUpstreamNote } from '~/components/products/ProductUpstreamNote'
 import { ConsoleFooter } from '~/components/ConsoleFooter'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
@@ -1021,8 +1020,31 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   )
 }
 
-export function Dashboard({ children }: { children: ReactNode }) {
+/**
+ * The breadcrumb bar — a route-dependent LEAF. It owns its own `usePathname()` so the
+ * route subscription lives here, not in the shell: on `/` (the overview home) it
+ * renders nothing; on any product route it shows the bordered breadcrumb strip. Keeping
+ * this a separate component is what lets `Dashboard` stay inert across navigation.
+ */
+function BreadcrumbsBar() {
   const pathname = usePathname() ?? ''
+  if (pathname === '/') return null
+  return (
+    <XStack borderBottomWidth={1} borderColor="$borderColor" justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
+      <XStack width="100%" maxW={CONTENT_MAX} py="$2.5">
+        <Breadcrumbs />
+      </XStack>
+    </XStack>
+  )
+}
+
+export function Dashboard({ children }: { children: ReactNode }) {
+  // NB: the shell does NOT subscribe to `usePathname()` — that is confined to the
+  // leaves that actually depend on the route (`SidebarNav` for the active highlight,
+  // `BreadcrumbsBar` below). So a navigation click re-renders ONLY the swapped page
+  // content + those leaves; the topbar and sidebar chrome stay put (no flicker, no
+  // lost scroll/state). Any shell re-render is a genuine shell interaction (collapse,
+  // drawer, dock), never a route change.
   const router = useRouter()
   const { signOut } = useSession()
   const { get, set } = usePreferences()
@@ -1174,20 +1196,13 @@ export function Dashboard({ children }: { children: ReactNode }) {
           />
         </XStack>
 
-        {pathname !== '/' ? (
-          <XStack borderBottomWidth={1} borderColor="$borderColor" justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
-            <XStack width="100%" maxW={CONTENT_MAX} py="$2.5">
-              <Breadcrumbs />
-            </XStack>
-          </XStack>
-        ) : null}
+        <BreadcrumbsBar />
 
         {/* Content — a centered, capped column so wide desktops read comfortably. */}
         <ScrollView flex={1}>
           <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
             <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
               {children}
-              <ProductUpstreamNote pathname={pathname} />
               <ConsoleFooter />
             </YStack>
           </XStack>
