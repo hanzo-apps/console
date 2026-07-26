@@ -119,9 +119,12 @@ function asListResult<T>(body: unknown): BaseListResult<T> {
 /** Best-effort human message from a Base error body (`{ message }` / `{ msg }`). */
 async function errorMessage(res: Response): Promise<string> {
   try {
-    const j = (await res.json()) as { message?: unknown; msg?: unknown }
+    const j = (await res.json()) as { message?: unknown; msg?: unknown; error?: unknown }
     if (typeof j?.message === 'string' && j.message) return j.message
     if (typeof j?.msg === 'string' && j.msg) return j.msg
+    // `error` is the plain-REST shape (e.g. the paywall's 402
+    // {"error":"subscription_required"}); without it the reason is lost.
+    if (typeof j?.error === 'string' && j.error) return j.error
   } catch {
     // non-JSON body — fall through to the status line
   }
