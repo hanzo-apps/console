@@ -7,10 +7,11 @@ name: Sync from GitHub
 # Fast-forward ONLY: a divergence fails loudly here instead of force-pushing
 # either side.
 #
-# Inert until hanzoai/console stops being a Gitea pull mirror — while it is one,
-# the forge overwrites main from GitHub on its own timer and rejects the push
-# below. That conversion is also what turns Actions on here (measured today:
-# mirror: true, has_actions: false ⇒ zero native runs).
+# LIVE: the pull-mirror conversion is done (mirror: false, has_actions: true), so
+# this cron owns the GitHub -> canonical direction and the push below lands.
+#
+# It moves refs/heads/main and NOTHING else — never tags. That restriction is
+# load-bearing, not incidental; see the tag note in cicd.yml.
 on:
   schedule:
     - cron: '*/10 * * * *'
