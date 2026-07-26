@@ -70,7 +70,7 @@ export function ErrorState({
   copy?: HonestCopy
 }) {
   const router = useRouter()
-  const { title, body, reauth, topUp } = honestError(err, copy)
+  const { title, body, reauth, topUp, subscribe } = honestError(err, copy)
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={620}>
       <XStack gap="$2" items="center">
@@ -82,7 +82,13 @@ export function ErrorState({
       <Text fontSize="$3" color="$color11">
         {body}
       </Text>
-      {topUp ? (
+      {subscribe ? (
+        // 402 subscription_required — a PLANLESS org. Credits cannot fix this: the
+        // paywall would refuse the next request just the same, so send them to plans.
+        <Button size="$2" theme="light" self="flex-start" icon={<CreditCard size={14} />} onPress={() => router.push('/plans')}>
+          See plans
+        </Button>
+      ) : topUp ? (
         // 402 — an unfunded org. Send them to top up, not to a dead "Retry".
         <Button size="$2" theme="light" self="flex-start" icon={<CreditCard size={14} />} onPress={() => router.push('/billing/credits')}>
           Add credits
