@@ -7,8 +7,13 @@
  * hostname), so the mark follows the brand: each brand's OWN published,
  * self-contained animated SVG — the logo IS that brand's "AI" you can play with
  * (it animates in on load, flourishes on hover, squashes on press; pure CSS, no
- * JS). A static block-H renders during SSR / first paint (no hydration mismatch),
- * then upgrades to the brand's interactive animated mark on mount.
+ * JS). The brand's own STATIC mark renders during SSR / first paint (no hydration
+ * mismatch), then upgrades to its interactive animated mark on mount.
+ *
+ * The static branch used to hardcode Hanzo's block-H labelled "Hanzo". Because
+ * ANIMATED only covers hanzo/lux/zoo, a pars host never left that branch — it
+ * showed the Hanzo mark permanently, not just on first paint. Both halves now
+ * come from the `@hanzo/brand` registry, which carries a mark per brand.
  */
 import { useEffect, useState } from 'react'
 
@@ -18,15 +23,7 @@ import { getAnimatedSVG as luxAnimated } from '@luxfi/logo'
 import { getAnimatedSVG as zooAnimated } from '@zooai/logo'
 
 import { config } from '~/config'
-
-/** The five-path Hanzo mark — identical geometry to `app/icon.svg` (SSR fallback). */
-const MARK_PATHS = [
-  'M22.21 67V44.6369H0V67H22.21Z',
-  'M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z',
-  'M22.21 0H0V22.3184H22.21V0Z',
-  'M66.7198 0H44.5098V22.3184H66.7198V0Z',
-  'M66.7198 67V44.6369H44.5098V67H66.7198Z',
-]
+import { getBrand } from '~/lib/branding/brands'
 
 /** Brand → its published animated mark (load → hover → press, pure CSS, no JS). */
 const ANIMATED: Partial<Record<string, () => string>> = {
@@ -47,12 +44,25 @@ export function BrandMark({ size = 48 }: { size?: number }) {
 
   const animate = mounted ? ANIMATED[config.brand] : undefined
   if (!animate) {
+    // The brand's OWN static mark from the shared registry — not Hanzo's. This
+    // branch renders on SSR / first paint for every brand, and PERMANENTLY for
+    // any brand with no animated package: ANIMATED covers hanzo/lux/zoo, so a
+    // pars host fell through to a hardcoded Hanzo H labelled "Hanzo" forever,
+    // which is the white-label invariant broken outright. `@hanzo/brand` already
+    // carries a mark per brand (PARS_MARK included) and BrandLogo's BrandMark
+    // reads exactly these fields — this is the same one source, not a copy.
+    const brand = getBrand()
     return (
-      <svg width={size} height={size} viewBox="0 0 67 67" style={{ fill }} role="img" aria-label="Hanzo">
-        {MARK_PATHS.map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </svg>
+      <svg
+        width={size}
+        height={size}
+        viewBox={brand.logoViewBox}
+        style={{ fill }}
+        role="img"
+        aria-label={brand.brandName}
+        // logoContent is a build-time-trusted registry constant, never user input.
+        dangerouslySetInnerHTML={{ __html: brand.logoContent }}
+      />
     )
   }
   // Size the self-contained animated SVG to the box (it has a viewBox, no w/h).
