@@ -30,6 +30,7 @@ import { isLiveSquareEnv, dollarsToCents, validateTopupCents, PRESET_TOPUP_USD }
 import { useSquareCard } from '~/lib/billing/use-square-card'
 import { useCloudBalance, spendableCents, invalidateBalance, balanceSplitLabel } from '~/lib/billing/live-balance'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
@@ -250,9 +251,8 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
             </XStack>
           ) : null}
 
-          <Button
+          <PrimaryButton
             size="$4"
-            theme="light"
             icon={<CreditCard size={16} />}
             disabled={!canPay}
             opacity={canPay ? 1 : 0.6}
@@ -263,7 +263,7 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
               : cents !== null && !amountError
                 ? `Pay ${usd(cents)}`
                 : 'Enter an amount'}
-          </Button>
+          </PrimaryButton>
         </Card>
       )}
 
