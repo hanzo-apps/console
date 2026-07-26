@@ -25,6 +25,8 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { Donut, type Slice } from '~/components/ui/Charts'
 import { RuntimeNotice } from './observability/RuntimeNotice'
+import { levelColor, statusTone } from './sentry/logic'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 /** Status filter tabs (label → the query value; '' = all). */
 const TABS: { label: string; status: '' | IssueStatus }[] = [
@@ -33,14 +35,6 @@ const TABS: { label: string; status: '' | IssueStatus }[] = [
   { label: 'Resolved', status: 'resolved' },
   { label: 'Ignored', status: 'ignored' },
 ]
-
-const LEVEL_COLOR: Record<string, string> = {
-  fatal: '#b3202c',
-  error: '#e5534b',
-  warning: '#f0a868',
-  info: '#6ea8fe',
-  debug: '#8b9bb4',
-}
 
 type State = { phase: 'loading' } | { phase: 'error'; error: unknown } | { phase: 'ready'; issues: Issue[] }
 
@@ -57,7 +51,7 @@ function levelSlices(issues: Issue[]): Slice[] {
   for (const i of issues) by.set(i.level, (by.get(i.level) ?? 0) + 1)
   return [...by.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([level, value]) => ({ label: level, value, color: LEVEL_COLOR[level] ?? '#8b9bb4' }))
+    .map(([level, value]) => ({ label: level, value, color: levelColor(level) }))
 }
 
 function fmtWhen(iso: string): string {
@@ -69,10 +63,6 @@ function fmtWhen(iso: string): string {
   if (s < 3600) return `${Math.floor(s / 60)}m ago`
   if (s < 86_400) return `${Math.floor(s / 3600)}h ago`
   return `${Math.floor(s / 86_400)}d ago`
-}
-
-function statusTone(status: IssueStatus): string {
-  return status === 'resolved' ? '#7ee787' : status === 'ignored' ? '#8b9bb4' : '#e5534b'
 }
 
 export function ErrorsModule({ params }: { params: Record<string, string> }) {
@@ -133,7 +123,7 @@ export function ErrorsModule({ params }: { params: Record<string, string> }) {
                 {r.type || 'Error'}
               </Text>
               {r.regressed ? (
-                <Text fontSize="$1" color="#f0a868">
+                <Text fontSize="$1" color={toneColor('warning')}>
                   regressed
                 </Text>
               ) : null}
@@ -202,10 +192,10 @@ export function ErrorsModule({ params }: { params: Record<string, string> }) {
       ) : (
         <>
           <XStack gap="$3" flexWrap="wrap">
-            <MetricCard icon={<AlertTriangle size={16} color="#e5534b" />} label="Issues" value={String(kpis.total)} />
-            <MetricCard icon={<Activity size={16} color="#e5534b" />} label="Unresolved" value={String(kpis.unresolved)} />
-            <MetricCard icon={<TrendingUp size={16} color="#f0a868" />} label="Regressed" value={String(kpis.regressed)} />
-            <MetricCard icon={<Activity size={16} color="#6ea8fe" />} label="Events" value={String(kpis.events)} />
+            <MetricCard icon={<AlertTriangle size={16} color={toneColor('critical')} />} label="Issues" value={String(kpis.total)} />
+            <MetricCard icon={<Activity size={16} color={toneColor('critical')} />} label="Unresolved" value={String(kpis.unresolved)} />
+            <MetricCard icon={<TrendingUp size={16} color={toneColor('warning')} />} label="Regressed" value={String(kpis.regressed)} />
+            <MetricCard icon={<Activity size={16} color={toneColor('neutral')} />} label="Events" value={String(kpis.events)} />
             {slices.length > 0 ? (
               <Card p="$3.5" borderWidth={1} borderColor="$borderColor" items="center" justify="center" minW={172}>
                 <Donut slices={slices} size={120} thickness={16} legend center={<Text fontSize="$2" color="$color11">by level</Text>} />
@@ -229,7 +219,7 @@ export function ErrorsModule({ params }: { params: Record<string, string> }) {
         onClose={() => setDetail(null)}
         title={detail?.issue?.type || 'Issue'}
         icon={AlertTriangle}
-        iconColor="#e5534b"
+        iconColor={toneColor('critical')}
         size={480}
       >
         {detailLoading || !detail?.issue ? (
@@ -259,10 +249,10 @@ function IssueDetailView({ detail, onAct }: { detail: IssueDetail; onAct: (id: s
       ) : null}
 
       <XStack gap="$2" flexWrap="wrap">
-        <Tag label={`level ${issue.level}`} tone={LEVEL_COLOR[issue.level] ?? '#8b9bb4'} />
+        <Tag label={`level ${issue.level}`} tone={levelColor(issue.level)} />
         <Tag label={issue.status} tone={statusTone(issue.status)} />
-        {issue.regressed ? <Tag label="regressed" tone="#f0a868" /> : null}
-        {issue.serviceName ? <Tag label={issue.serviceName} tone="#6ea8fe" /> : null}
+        {issue.regressed ? <Tag label="regressed" tone={toneVar('warning')} /> : null}
+        {issue.serviceName ? <Tag label={issue.serviceName} tone={toneVar('neutral')} /> : null}
       </XStack>
 
       <XStack gap="$3" flexWrap="wrap">

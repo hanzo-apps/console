@@ -1,8 +1,3 @@
-/* Canonical Hanzo faces — Geist Sans (UI/body/headings) + Geist Mono (code/data),
-   loaded from the same CDN package so both faces resolve one way. Geist ships a full
-   real weight range, so headings render a true heavier cut, never a synthesized face. */
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css');
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css');
 
 html,
 body,
@@ -38,6 +33,19 @@ samp {
 .hz-tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
+}
+
+/* Display headline — a tight, UNITLESS line-height for large type.
+   A Gui font-size token ships a line-height tuned for ONE line, so a display
+   headline overprints itself the moment it wraps (which it always does on a
+   phone). This must live in CSS: React Native Web reads a bare numeric
+   `lineHeight` in a style object as PIXELS, so `lineHeight: 1.1` there crushes
+   the text instead of scaling it. Unitless in real CSS is relative to the
+   element's own font-size, so ONE rule holds at every size token and
+   breakpoint. `className` forwards to the DOM node on web, so a Gui <Text>
+   can wear it. */
+.hz-display {
+  line-height: 1.1;
 }
 
 /* Data/numeric face — Geist Mono + tabular figures for metric values, prices, IDs,
@@ -274,11 +282,11 @@ html:root.t_light {
 }
 
 .hz-skeleton {
-  background-color: var(--color3, rgba(148, 163, 184, 0.14));
+  background-color: var(--color3);
   background-image: linear-gradient(
     90deg,
     transparent 0%,
-    var(--color4, rgba(148, 163, 184, 0.22)) 50%,
+    var(--color4) 50%,
     transparent 100%
   );
   background-size: 160px 100%;
@@ -541,7 +549,7 @@ body {
       some controls; this is the global floor so nothing is ever focus-invisible.
       Colour reads from the theme scale, so it adapts in light and dark. */
 :focus-visible {
-  outline: 2px solid var(--color9, #6c6c6c);
+  outline: 2px solid var(--color9);
   outline-offset: 2px;
   border-radius: 3px;
 }

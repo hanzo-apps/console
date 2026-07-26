@@ -41,7 +41,7 @@ export type BrandId = 'hanzo' | 'lux' | 'zoo' | 'pars' | '7stars' | 'yotoda'
  * identity (which IAM you log into, the wordmark) is resolved separately by
  * `brandFromHost`, so a face NEVER crosses brands (sentry.lux.cloud is the lux brand).
  */
-export type ShellId = 'console' | 'billing' | 'marketing' | 'ads' | 'social' | 'sentry' | 'dns'
+export type ShellId = 'console' | 'billing' | 'marketing' | 'ads' | 'social' | 'sentry' | 'dns' | 'platform'
 
 export type ConsoleConfig = {
   /** Resolved brand id (from hostname). */
@@ -52,6 +52,19 @@ export type ConsoleConfig = {
   cloudUrl: string
   /** PaaS base URL (DOKS cluster control plane) — shared. */
   platformUrl: string
+  /**
+   * OSS one-click template catalog URL — where the home "Deploy OSS" tile opens the
+   * open-source app catalog (Postgres/n8n/Grafana/Supabase/…). Shared; defaults to the
+   * PaaS templates surface, env-overridable via NEXT_PUBLIC_TEMPLATES_URL.
+   */
+  templatesUrl: string
+  /**
+   * OSS App Store catalog base — the CDN that serves the 1000+ one-click open-source
+   * app catalog (`<base>/meta.json`) and per-app blueprints (`<base>/blueprints/<id>/`).
+   * The App Store product fetches this DIRECTLY from the browser (open CORS), so it works
+   * in the go:embed console with no BFF. Env-overridable via NEXT_PUBLIC_OSS_CATALOG_URL.
+   */
+  ossCatalogUrl: string
   /**
    * hanzo.app builder base URL — where the Templates gallery's "Open in builder"
    * deep-links (fork a starter → customize by prompt in the builder). Shared,
@@ -116,8 +129,16 @@ export type ConsoleConfig = {
 }
 
 /** Fields shared by every brand. Env-overridable per-deploy. */
+const PLATFORM_URL = trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai')
 const SHARED = {
-  platformUrl: trimSlash(process.env.NEXT_PUBLIC_PLATFORM_URL ?? 'https://platform.hanzo.ai'),
+  platformUrl: PLATFORM_URL,
+  // The OSS one-click template catalog the "Deploy OSS" home tile opens. Defaults to the
+  // PaaS deploy flow's templates surface; repoint NEXT_PUBLIC_TEMPLATES_URL at
+  // templates.<brand> once that standalone catalog UI is stood up.
+  templatesUrl: trimSlash(process.env.NEXT_PUBLIC_TEMPLATES_URL ?? `${PLATFORM_URL}/templates`),
+  // The OSS App Store catalog CDN — the live 1000+-app one-click catalog. Fetched
+  // cross-origin from the browser (open CORS), so it needs no BFF (works in the embed).
+  ossCatalogUrl: trimSlash(process.env.NEXT_PUBLIC_OSS_CATALOG_URL ?? 'https://templates.hanzo.ai'),
   appUrl: trimSlash(process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanzo.app'),
   chatUrl: trimSlash(process.env.NEXT_PUBLIC_CHAT_URL ?? 'https://hanzo.chat'),
 }
@@ -364,22 +385,37 @@ export function isDnsHost(host?: string | null): boolean {
 }
 
 /**
+ * True on the dedicated PaaS control-plane host (platform.<brand>, e.g.
+ * platform.hanzo.ai) — the SAME console image wearing the Platform product face (the
+ * embedded PaaS: real apps/deploys/drift + health-gated redeploy over the /paas
+ * control plane, the `platform` catalog module). Strict `platform.` prefix.
+ * platform.hanzo.ai is a Platform-faced alias of console.hanzo.ai (same cloud backend)
+ * that boots straight into the control plane, while console.hanzo.ai keeps Platform as
+ * one product among many — one shared surface, two entry points (mirrors dns.<brand>).
+ */
+export function isPlatformHost(host?: string | null): boolean {
+  return normHost(host).startsWith('platform.')
+}
+
+/**
  * The product shell a host wears, resolved at runtime — the ONE resolver for EVERY
  * console FACE. `NEXT_PUBLIC_PRODUCT_SHELL` overrides for dev/preview (any host → a
  * chosen face); otherwise each dedicated host (or its legacy `NEXT_PUBLIC_*_ONLY=1`
- * env) selects its face — billing / marketing / ads / social / sentry — and everything
- * else is the full `console`. Brand is resolved separately (`brandFromHost`), so the
- * shell is orthogonal — a face NEVER crosses a brand (sentry.lux.cloud is the lux brand).
+ * env) selects its face — billing / marketing / ads / social / sentry / dns / platform —
+ * and everything else is the full `console`. Brand is resolved separately
+ * (`brandFromHost`), so the shell is orthogonal — a face NEVER crosses a brand
+ * (sentry.lux.cloud is the lux brand).
  */
 export function shellFromHost(host?: string | null): ShellId {
   const env = process.env.NEXT_PUBLIC_PRODUCT_SHELL
-  if (env === 'billing' || env === 'marketing' || env === 'ads' || env === 'social' || env === 'sentry' || env === 'dns' || env === 'console') return env
+  if (env === 'billing' || env === 'marketing' || env === 'ads' || env === 'social' || env === 'sentry' || env === 'dns' || env === 'platform' || env === 'console') return env
   if (isBillingOnly(host)) return 'billing'
   if (isMarketing(host)) return 'marketing'
   if (isAds(host)) return 'ads'
   if (isSocial(host)) return 'social'
   if (isSentryHost(host)) return 'sentry'
   if (isDnsHost(host)) return 'dns'
+  if (isPlatformHost(host)) return 'platform'
   return 'console'
 }
 

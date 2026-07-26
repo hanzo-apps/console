@@ -35,6 +35,7 @@ import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type Hones
 import { MetadataEditor } from './pricing/MetadataEditor'
 import { centsToInput, distinctCategories, formatUsd, inputToCents, metadataToRows, type MetadataRow, rowsToMetadata } from './catalog/logic'
 import { annualDisplay, PLAN_CATEGORIES, priceDisplay } from './plans/logic'
+import { toneVar } from '~/components/ui/tone'
 
 const PLANS_COPY: HonestCopy = {
   notFound:
@@ -470,7 +471,7 @@ function PlanForm({
             onPress={onDelete}
             disabled={busy}
             ml="auto"
-            style={{ color: '#dc2626' }}
+            style={{ color: toneVar('critical') }}
           >
             Delete
           </Button>

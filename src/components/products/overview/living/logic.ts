@@ -23,6 +23,7 @@ import type {
   OverviewHealth,
   OverviewSeries,
 } from './config'
+import { toneVar, type Tone } from '~/components/ui/tone'
 
 // ── value formatting ─────────────────────────────────────────────────────────
 
@@ -70,10 +71,10 @@ export function hasTrend(series: readonly number[] | undefined): boolean {
 
 // ── status / health colors (the ONE mapping) ─────────────────────────────────
 
-export const OK = '#23c562'
-export const WARN = '#f0a868'
-export const BAD = '#ff5d8f'
-export const MUTED = '#64748b'
+export const OK = toneVar('positive')
+export const WARN = toneVar('warning')
+export const BAD = toneVar('critical')
+export const MUTED = toneVar('muted')
 
 /** Dot color for an activity/event status. */
 export function statusColor(status: string): string {
@@ -83,13 +84,22 @@ export function statusColor(status: string): string {
   return OK // success or unknown/'' reads as nominal (the ledger's inference rows are completed)
 }
 
+/**
+ * The tone a service-health verdict carries. This is the SEMANTIC decision, kept
+ * separate from the colour: in a monochrome chrome two tones may legitimately share
+ * a token, so "is this row healthy?" must be asked of the tone, never of the colour.
+ */
+export function healthTone(health: string): Tone {
+  const h = health.toLowerCase()
+  if (h === 'green' || h === 'healthy' || h === 'ok') return 'positive'
+  if (h === 'yellow' || h === 'degraded' || h === 'warn') return 'warning'
+  if (h === 'red' || h === 'down' || h === 'unhealthy') return 'critical'
+  return 'muted'
+}
+
 /** Dot color for a service-health verdict. */
 export function healthColor(health: string): string {
-  const h = health.toLowerCase()
-  if (h === 'green' || h === 'healthy' || h === 'ok') return OK
-  if (h === 'yellow' || h === 'degraded' || h === 'warn') return WARN
-  if (h === 'red' || h === 'down' || h === 'unhealthy') return BAD
-  return MUTED
+  return toneVar(healthTone(health))
 }
 
 /** Dot color for an alert severity. */
@@ -120,7 +130,7 @@ export function worstHealth(rows: readonly OverviewHealth[]): '' | 'green' | 'ye
 /** Count healthy rows / total (for the "12/14 healthy" header). */
 export function healthTally(rows: readonly OverviewHealth[]): { healthy: number; total: number } {
   const total = rows.length
-  const healthy = rows.filter((r) => healthColor(r.health) === OK).length
+  const healthy = rows.filter((r) => healthTone(r.health) === 'positive').length
   return { healthy, total }
 }
 

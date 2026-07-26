@@ -1,0 +1,32 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Hanzo Design System tokens — VENDORED from hanzoai/design (@hanzo/design).
+
+   This directory is the canonical Hanzo design language expressed as CSS custom
+   properties: the monochrome neutral ladder + opacity ladder, the ONLY permitted
+   semantic hues (live/success/warning/error), type scale, 4px spacing ramp,
+   radius, elevation and motion. It is the SINGLE SOURCE OF TRUTH for how every
+   Hanzo surface looks.
+
+   @hanzo/design is not yet published to npm, so its token layer is vendored here
+   verbatim (the README's stated contract: "code copies over 1:1"). Do NOT edit
+   these files in the console — edit them in hanzoai/design and re-sync. Synced
+   from hanzoai/design tokens/ on 2026-07-24.
+
+   The console's Tamagui theme (app/globals.css) DERIVES its --colorN ladder and
+   borders from this neutral ladder, so the whole product reads from one palette.
+   ───────────────────────────────────────────────────────────────────────────── */
+@import './colors.css';
+@import './typography.css';
+@import './spacing.css';
+@import './radius.css';
+@import './elevation.css';
+@import './motion.css';
+@import './z.css';
+
+/* Font families — the console loads the Geist faces via app/fonts.css; these vars
+   let the vendored typography roles (--type-*) resolve without re-importing fonts. */
+:root {
+  --font-sans: 'Geist', 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}

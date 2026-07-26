@@ -15,8 +15,8 @@
  *    links (docs · reference · SDKs · CLI).
  *  - Logs      — the recent charged API calls, filterable, row → JSON detail.
  *  - Events    — the platform-event stream projected from the same real ledger.
- *  - Webhooks  — event destinations (real rows when the endpoint API is live, else
- *    the honest create-first-destination state).
+ *  - Webhooks  — a read-only live glance at the org's endpoints that deep-links into
+ *    the full Webhooks product (which owns config/security/test/logs CRUD).
  *  - Health    — Alerts · Errors · Insights from the o11y runtime.
  *  - Inspector — fetch any object by id (agent_… / fn_… / a resource path) → JSON.
  *  - Traces    — the existing TracesModule (LLM/agent traces), embedded.
@@ -26,7 +26,7 @@
  * here; the heavier tabs load their own data on selection. Command parsing + the
  * id router live in the pure `./logic` (tested).
  */
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
@@ -75,7 +75,12 @@ export function WorkbenchDock() {
   const { get, set } = usePreferences()
   const open = get<boolean>('workbenchOpen', false)
   const [tab, setTab] = useState<TabId>('overview')
-  const [tall, setTall] = useState(false)
+  // Freely resizable dock height (px), persisted per-user — drag the top handle to
+  // ANY height; the maximize button is a quick tall/compact preset.
+  const [height, setHeight] = useState<number>(() => get<number>('workbenchHeight', 380))
+  const heightRef = useRef(height)
+  heightRef.current = height
+  const dragRef = useRef<{ startY: number; startH: number } | null>(null)
   const [records, setRecords] = useState<UsageRecord[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -106,6 +111,37 @@ export function WorkbenchDock() {
     router.push(path)
     set('workbenchOpen', false)
   }
+
+  // Drag-to-resize: grab the top handle and drag to any height; the final height
+  // persists per-user on release. Bounded [200px, 90vh].
+  const onDrag = useCallback((e: MouseEvent) => {
+    const d = dragRef.current
+    if (!d) return
+    const max = typeof window !== 'undefined' ? window.innerHeight * 0.9 : 900
+    setHeight(Math.max(200, Math.min(max, d.startH + (d.startY - e.clientY))))
+  }, [])
+  const endDrag = useCallback(() => {
+    dragRef.current = null
+    window.removeEventListener('mousemove', onDrag)
+    window.removeEventListener('mouseup', endDrag)
+    set('workbenchHeight', Math.round(heightRef.current))
+  }, [onDrag, set])
+  const startDrag = useCallback(
+    (e: { clientY: number; preventDefault: () => void }) => {
+      e.preventDefault()
+      dragRef.current = { startY: e.clientY, startH: heightRef.current }
+      window.addEventListener('mousemove', onDrag)
+      window.addEventListener('mouseup', endDrag)
+    },
+    [onDrag, endDrag],
+  )
+  // Remove any live drag listeners on unmount (leak-free).
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('mousemove', onDrag)
+      window.removeEventListener('mouseup', endDrag)
+    }
+  }, [onDrag, endDrag])
 
   const ledgerBacked = tab === 'overview' || tab === 'logs' || tab === 'events'
 
@@ -139,7 +175,7 @@ export function WorkbenchDock() {
     ) : tab === 'traces' ? (
       <TracesTab />
     ) : tab === 'webhooks' ? (
-      <WebhooksTab />
+      <WebhooksTab onGo={go} />
     ) : tab === 'health' ? (
       <HealthTab />
     ) : tab === 'inspector' ? (
@@ -151,7 +187,22 @@ export function WorkbenchDock() {
   return (
     <YStack display="none" $lg={{ display: 'flex' }} borderTopWidth={1} borderColor="$borderColor" bg="$color1">
       {open ? (
-        <YStack style={{ height: tall ? '70vh' : 380 }} borderBottomWidth={1} borderColor="$borderColor">
+        <YStack style={{ height }} borderBottomWidth={1} borderColor="$borderColor">
+          {/* Drag-to-resize handle — grab the top edge and drag to ANY height. */}
+          <div
+            onMouseDown={startDrag}
+            title="Drag to resize"
+            style={{
+              height: 8,
+              flexShrink: 0,
+              cursor: 'ns-resize',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div style={{ width: 44, height: 3, borderRadius: 999, background: 'var(--color7)' }} />
+          </div>
           <XStack items="center" gap="$1" px="$2" height={40} borderBottomWidth={1} borderColor="$borderColor">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} flex={1}>
               <XStack items="center" gap="$1">
@@ -181,9 +232,14 @@ export function WorkbenchDock() {
             <Button
               size="$2"
               chromeless
-              icon={tall ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-              onPress={() => setTall(!tall)}
-              aria-label={tall ? 'Shrink workbench' : 'Expand workbench'}
+              icon={height > 500 ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              onPress={() => {
+                const max = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.85) : 720
+                const next = height > 500 ? 380 : max
+                setHeight(next)
+                set('workbenchHeight', next)
+              }}
+              aria-label={height > 500 ? 'Shrink workbench' : 'Expand workbench'}
             />
             <Button size="$2" chromeless icon={<X size={14} />} onPress={() => set('workbenchOpen', false)} aria-label="Close workbench" />
           </XStack>

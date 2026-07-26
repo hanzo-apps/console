@@ -6,9 +6,9 @@
  */
 
 .hz-rt-shell {
-  border: 1px solid var(--borderColor, #26292e);
+  border: 1px solid var(--borderColor);
   border-radius: 10px;
-  background: var(--color1, #050505);
+  background: var(--color1);
   overflow: hidden;
 }
 
@@ -19,8 +19,8 @@
   align-items: center;
   gap: 2px;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--borderColor, #26292e);
-  background: var(--color2, #0a0a0a);
+  border-bottom: 1px solid var(--borderColor);
+  background: var(--color2);
 }
 
 .hz-rt-btn {
@@ -33,18 +33,18 @@
   border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
-  color: var(--color11, #cdd2da);
+  color: var(--color11);
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 .hz-rt-btn:hover:not(:disabled) {
-  background: var(--color4, #1f1f1f);
-  color: var(--color12, #f0f2f5);
+  background: var(--color4);
+  color: var(--color12);
 }
 .hz-rt-btn-active {
-  background: var(--color5, #242628);
-  color: var(--color12, #f0f2f5);
-  border-color: var(--borderColorHover, #363a40);
+  background: var(--color5);
+  color: var(--color12);
+  border-color: var(--borderColorHover);
 }
 .hz-rt-btn:disabled {
   opacity: 0.4;
@@ -55,7 +55,7 @@
   width: 1px;
   height: 20px;
   margin: 0 4px;
-  background: var(--borderColor, #26292e);
+  background: var(--borderColor);
 }
 
 /* ── editable area ────────────────────────────────────────────────────────── */
@@ -68,16 +68,16 @@
   overflow-y: auto;
   padding: 14px 16px;
   outline: none;
-  color: var(--color12, #f0f2f5);
+  color: var(--color12);
   font-size: 15px;
   line-height: 1.65;
-  caret-color: var(--color12, #f0f2f5);
+  caret-color: var(--color12);
 }
 .hz-rt-placeholder {
   position: absolute;
   top: 14px;
   left: 16px;
-  color: var(--color9, #848a93);
+  color: var(--color9);
   pointer-events: none;
   user-select: none;
   font-size: 15px;
@@ -92,8 +92,8 @@
 .hz-rt-content .hz-rt-quote {
   margin: 12px 0;
   padding: 4px 0 4px 14px;
-  border-left: 3px solid var(--borderColorHover, #363a40);
-  color: var(--color10, #a4abb4);
+  border-left: 3px solid var(--borderColorHover);
+  color: var(--color10);
   font-style: italic;
 }
 .hz-rt-content .hz-rt-ul,
@@ -101,14 +101,14 @@
 .hz-rt-content .hz-rt-ul { list-style: disc; }
 .hz-rt-content .hz-rt-ol { list-style: decimal; }
 .hz-rt-content .hz-rt-li { margin: 3px 0; }
-.hz-rt-content .hz-rt-link { color: var(--accentColor, #6aa9ff); text-decoration: underline; cursor: pointer; }
+.hz-rt-content .hz-rt-link { color: var(--accentColor); text-decoration: underline; cursor: pointer; }
 .hz-rt-content .hz-rt-bold { font-weight: 700; }
 .hz-rt-content .hz-rt-italic { font-style: italic; }
 .hz-rt-content .hz-rt-underline { text-decoration: underline; }
 
 /* ── read-only rendered HTML (record detail) ──────────────────────────────── */
 .hz-rt-read {
-  color: var(--color12, #f0f2f5);
+  color: var(--color12);
   font-size: 15px;
   line-height: 1.65;
   /* Bounded so a long body never blows out a detail row or a table cell; the
@@ -124,12 +124,12 @@
 .hz-rt-read p { margin: 0 0 10px; }
 .hz-rt-read blockquote {
   margin: 12px 0; padding: 4px 0 4px 14px;
-  border-left: 3px solid var(--borderColorHover, #363a40);
-  color: var(--color10, #a4abb4); font-style: italic;
+  border-left: 3px solid var(--borderColorHover);
+  color: var(--color10); font-style: italic;
 }
 .hz-rt-read ul { margin: 8px 0; padding-left: 26px; list-style: disc; }
 .hz-rt-read ol { margin: 8px 0; padding-left: 26px; list-style: decimal; }
 .hz-rt-read li { margin: 3px 0; }
-.hz-rt-read a { color: var(--accentColor, #6aa9ff); text-decoration: underline; }
+.hz-rt-read a { color: var(--accentColor); text-decoration: underline; }
 .hz-rt-read strong, .hz-rt-read b { font-weight: 700; }
 .hz-rt-read em, .hz-rt-read i { font-style: italic; }

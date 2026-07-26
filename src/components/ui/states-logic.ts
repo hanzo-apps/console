@@ -16,7 +16,13 @@ export type HonestCopy = { notFound?: string; unauthorized?: string }
  * `reauth` (401 → re-sign-in) or `topUp` (402 → add credits). A plain failure sets
  * neither; the two are mutually exclusive by construction (distinct statuses).
  */
-export type HonestError = { title: string; body: string; reauth?: boolean; topUp?: boolean }
+export type HonestError = {
+  title: string
+  body: string
+  reauth?: boolean
+  topUp?: boolean
+  subscribe?: boolean
+}
 
 /**
  * Map an ApiError to an honest title + body. Defaults are generic and truthful.
@@ -25,9 +31,16 @@ export type HonestError = { title: string; body: string; reauth?: boolean; topUp
  * `reauth`), a 403 means the signed-in account isn't authorized for this surface.
  * A signed-in user is NEVER told to "sign in" for a 403.
  *
- * A 402 is DISTINCT again: the org has no funded balance, so this balance-gated
- * product can't load. That is not a crash and not an access failure — it's a
- * top-up prompt (`topUp`), so the caller offers "Add credits", not "Retry".
+ * A 402 is DISTINCT again, and it is TWO different asks that must not be conflated:
+ *
+ *   - `subscription_required` — the paywall refused a gated product route because the
+ *     org holds no paid plan. The fix is to SUBSCRIBE (`subscribe`), so the caller
+ *     offers "See plans" and sends them to the plans page.
+ *   - anything else — the org has no funded balance for a metered call. The fix is to
+ *     top up (`topUp`), so the caller offers "Add credits".
+ *
+ * Sending a planless org to /billing/credits buys credits it cannot spend, and the
+ * paywall would refuse the very next request. Neither is a crash or an access failure.
  */
 export function honestError(err: ApiError, copy: HonestCopy = {}): HonestError {
   if (err.status === 404)
@@ -42,12 +55,21 @@ export function honestError(err: ApiError, copy: HonestCopy = {}): HonestError {
       title: 'Service unavailable',
       body: 'The service is starting up or temporarily unavailable. Retry in a moment.',
     }
-  if (err.status === 402)
+  if (err.status === 402) {
+    // The paywall answers {"error":"subscription_required"}; the API clients surface
+    // that as the message. Match the machine-readable token, not prose.
+    if (/subscription_required/i.test(err.message))
+      return {
+        title: 'Subscribe to continue',
+        body: 'This product is included with a paid plan. Your organization does not have one yet — pick a plan to turn it on.',
+        subscribe: true,
+      }
     return {
       title: 'Add credits to continue',
       body: 'This product needs a funded balance to load. Add credits to your organization to get started.',
       topUp: true,
     }
+  }
   if (err.status === 401)
     return {
       title: 'Your session expired',

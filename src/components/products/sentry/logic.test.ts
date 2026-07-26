@@ -69,11 +69,14 @@ describe('formatters', () => {
     expect(fmtDurationMs(2100)).toBe('2.1s')
     expect(fmtDurationMs(-1)).toBe('—')
   })
-  it('tones resolve without throwing', () => {
-    expect(statusTone('resolved')).toBe('#7ee787')
-    expect(statusTone('unresolved')).toBe('#e5534b')
-    expect(logLevelTone('WARN')).toBe('#f0a868')
-    expect(logLevelTone('info')).toBe('#6ea8fe')
+  it('tones resolve to the greyscale ramp — weight, never hue', () => {
+    for (const v of [statusTone('resolved'), statusTone('unresolved'), statusTone('ignored'), logLevelTone('WARN'), logLevelTone('info'), levelColor('fatal'), levelColor('nonsense')])
+      expect(v).toMatch(/^var\(--color(9|10|11|12)\)$/)
+    // Unresolved must out-emphasise resolved; ignored is the quietest.
+    expect(statusTone('unresolved')).toBe('var(--color12)')
+    expect(statusTone('resolved')).toBe('var(--color11)')
+    expect(statusTone('ignored')).toBe('var(--color9)')
+    expect(logLevelTone('error')).toBe('var(--color12)')
   })
 })
 

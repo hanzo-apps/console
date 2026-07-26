@@ -23,22 +23,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Text, XStack, YStack, useTheme } from '@hanzo/gui'
 
-/** Distinct hues for categorical series (e.g. spend-by-model donut), dark-tuned. */
-export const CHART_PALETTE = [
-  '#7c5cff',
-  '#23c562',
-  '#ff9f45',
-  '#3aa0ff',
-  '#ff5d8f',
-  '#16c0c8',
-  '#c084fc',
-  '#f4c245',
-]
-export const CHART_OTHER = '#64748b'
+import { RAMP } from '~/lib/theme/ramp'
 
-const ACCENT = CHART_PALETTE[0]
-const GRID = 'rgba(148,163,184,0.16)'
-const AXIS = 'rgba(148,163,184,0.85)'
+const ACCENT = RAMP[0]
+const GRID = 'rgba(160,160,160,0.16)'
+const AXIS = 'rgba(160,160,160,0.85)'
 
 /** A point on a temporal/sequential axis (LineChart / BarChart). */
 export type ChartPoint = { label: string; value: number }
@@ -125,13 +114,13 @@ function Tooltip({ x, height, label, value }: { x: number; height: number; label
     >
       <div
         style={{
-          background: 'rgba(15,17,21,0.94)',
-          border: '1px solid rgba(148,163,184,0.25)',
+          background: 'rgba(10,10,10,0.94)',
+          border: '1px solid rgba(160,160,160,0.25)',
           borderRadius: 8,
           padding: '6px 9px',
           fontSize: 11,
           lineHeight: 1.35,
-          color: '#e2e8f0',
+          color: RAMP[0],
           whiteSpace: 'nowrap',
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
         }}
@@ -212,7 +201,7 @@ export function LineChart({
           {hover != null && data[hover] ? (
             <>
               <line x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + innerH} stroke={AXIS} strokeWidth={1} strokeDasharray="3 3" />
-              <circle cx={x(hover)} cy={y(data[hover].value)} r={4} fill={color} stroke="#0f1115" strokeWidth={2} />
+              <circle cx={x(hover)} cy={y(data[hover].value)} r={4} fill={color} stroke="var(--color1)" strokeWidth={2} />
             </>
           ) : null}
           {ticks.map((t) => (

@@ -50,6 +50,7 @@ import {
   type FleetBuild,
   type FleetGit,
 } from './logic'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -208,16 +209,16 @@ export function GitOpsModule({ params }: { params: Record<string, string> }) {
       {summary ? (
         <XStack gap="$2.5" flexWrap="wrap">
           <FilterStat label="Applications" value={summary.total} active={lens === 'all'} onPress={() => setLens('all')} />
-          <FilterStat label="Healthy" value={summary.healthy} tone="#2ea043" active={lens === 'Healthy'} onPress={() => setLens('Healthy')} />
-          <FilterStat label="Progressing" value={summary.progressing} tone="#bb8009" active={lens === 'Progressing'} onPress={() => setLens('Progressing')} />
-          <FilterStat label="Degraded" value={summary.degraded} tone="#e5534b" active={lens === 'Degraded'} onPress={() => setLens('Degraded')} />
-          <FilterStat label="Out of sync" value={summary.outOfSync} tone="#bb8009" active={lens === 'OutOfSync'} onPress={() => setLens('OutOfSync')} />
+          <FilterStat label="Healthy" value={summary.healthy} tone={toneVar('positive')} active={lens === 'Healthy'} onPress={() => setLens('Healthy')} />
+          <FilterStat label="Progressing" value={summary.progressing} tone={toneVar('warning')} active={lens === 'Progressing'} onPress={() => setLens('Progressing')} />
+          <FilterStat label="Degraded" value={summary.degraded} tone={toneVar('critical')} active={lens === 'Degraded'} onPress={() => setLens('Degraded')} />
+          <FilterStat label="Out of sync" value={summary.outOfSync} tone={toneVar('warning')} active={lens === 'OutOfSync'} onPress={() => setLens('OutOfSync')} />
         </XStack>
       ) : null}
 
       {state.phase === 'ready' && apps.length > 0 ? (
         <XStack maxW={360} items="center" gap="$2">
-          <Search size={15} color="#8b949e" />
+          <Search size={15} color={toneColor('muted')} />
           <YStack flex={1}>
             <FieldText value={query} onChange={setQuery} placeholder="Filter by name or image repository…" />
           </YStack>
@@ -333,7 +334,7 @@ function FilterStat({
 function ScopedEmpty({ onClear }: { onClear: () => void }) {
   return (
     <YStack flex={1} items="center" justify="center" gap="$3" p="$6" style={{ height: '100%' }}>
-      <GitBranch size={28} color="#8b949e" />
+      <GitBranch size={28} color={toneColor('muted')} />
       <Text fontSize="$3" color="$color11">
         No applications in this filter.
       </Text>

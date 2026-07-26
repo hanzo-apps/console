@@ -225,9 +225,9 @@ export function IngestView({ owner }: { owner: string }) {
                 </Text>
                 <Text
                   fontSize="$2"
-                  color="$blue10"
+                  color="$color11"
                   cursor="pointer"
-                  hoverStyle={{ color: '$blue11' }}
+                  hoverStyle={{ color: '$color12' }}
                   onPress={() => router.push(`/tasks/${encodeURIComponent(owner)}/${encodeURIComponent(ingest.stats.workflowId!)}`)}
                 >
                   Track in Tasks →

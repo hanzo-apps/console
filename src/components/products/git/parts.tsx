@@ -111,7 +111,7 @@ export function ClonePanel({ cloneUrl, sshUrl }: { cloneUrl: string; sshUrl: str
 
 /** Folder / file icon for a tree row. */
 export function EntryIcon({ type }: { type: 'tree' | 'blob' }) {
-  return type === 'tree' ? <Folder size={15} color="$blue10" /> : <FileIcon2 size={15} color="$color9" />
+  return type === 'tree' ? <Folder size={15} color="$color11" /> : <FileIcon2 size={15} color="$color9" />
 }
 
 /**
@@ -269,9 +269,9 @@ export function PathBreadcrumb({
         className="hz-mono"
         fontSize="$3"
         fontWeight="700"
-        color="$blue10"
+        color="$color11"
         cursor="pointer"
-        hoverStyle={{ color: '$blue11' }}
+        hoverStyle={{ color: '$color12' }}
         onPress={() => onNavigate('')}
       >
         {repoName}
@@ -291,9 +291,9 @@ export function PathBreadcrumb({
               <Text
                 className="hz-mono"
                 fontSize="$3"
-                color="$blue10"
+                color="$color11"
                 cursor="pointer"
-                hoverStyle={{ color: '$blue11' }}
+                hoverStyle={{ color: '$color12' }}
                 onPress={() => onNavigate(c.path)}
               >
                 {c.name}

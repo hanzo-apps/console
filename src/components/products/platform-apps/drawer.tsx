@@ -43,6 +43,7 @@ import {
   validateEnvDrafts,
   type EnvDraft,
 } from './logic'
+import { toneVar } from '~/components/ui/tone'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -403,7 +404,7 @@ function MetricRow({ label, value, sub, points, tone }: { label: string; value: 
           ) : null}
         </XStack>
       </YStack>
-      <MetricSparkline points={points} width={96} height={28} stroke={tone ?? '#2ea043'} strokeWidth={1.5} fill={`${tone ?? '#2ea043'}22`} />
+      <MetricSparkline points={points} width={96} height={28} stroke={tone ?? toneVar('positive')} strokeWidth={1.5} fill="var(--color5)" />
     </XStack>
   )
 }
@@ -500,20 +501,20 @@ function MetricsTab({ app }: { app: PlatformApp }) {
             value={fmt(m.summary.requests, 1)}
             sub={`in the last ${METRICS_RANGES.find((r) => r.id === rangeSec)?.label}`}
             points={m.requests.map((p) => p.v)}
-            tone="#2ea043"
+            tone={toneVar('positive')}
           />
           <MetricRow
             label="Error rate"
             value={`${m.summary.errorRate.toFixed(m.summary.errorRate < 10 ? 1 : 0)}%`}
             sub={`${fmt(m.summary.errors, 1)} errors`}
             points={m.errors.map((p) => p.v)}
-            tone={m.summary.errorRate >= 5 ? '#e5534b' : m.summary.errorRate >= 1 ? '#bb8009' : '#2ea043'}
+            tone={toneVar(m.summary.errorRate >= 5 ? 'critical' : m.summary.errorRate >= 1 ? 'warning' : 'positive')}
           />
           <MetricRow
             label="Latency p95"
             value={`${Math.round(m.summary.p95Ms)} ms`}
             points={m.latencyP95Ms.map((p) => p.v)}
-            tone="#539bf5"
+            tone={toneVar('neutral')}
           />
           <Text fontSize="$1" color="$color9" pt="$2">
             Requests, errors, and latency are live from o11y (RED, trace-derived). Per-service CPU and memory are not exposed by

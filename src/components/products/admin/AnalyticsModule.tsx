@@ -23,6 +23,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { LineChart, BarChart, type ChartPoint } from '~/components/ui/Charts'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { toneVar } from '~/components/ui/tone'
 
 type Range = '7d' | '30d' | '90d' | 'all'
 const RANGES: { key: Range; label: string }[] = [
@@ -46,9 +47,9 @@ function RetentionHeatmap({ data }: { data: AnalyticsData['retention'] }) {
   if (data.cohorts.length === 0) return <NotEnough title="No cohorts yet" why="Retention appears once customers sign up and start using the platform." />
   const cols = data.periods
   const cell = (v: number) => {
-    // green intensity by retention %; 0% = faint, 100% = solid.
+    // Retention reads as INK DENSITY, not hue: faint at 0%, solid at 100%.
     const a = Math.max(0.06, Math.min(1, v / 100))
-    return `rgba(34,197,94,${a})`
+    return `rgba(220,220,220,${a})`
   }
   return (
     <YStack gap="$2" style={{ overflowX: 'auto' }}>
@@ -71,7 +72,7 @@ function RetentionHeatmap({ data }: { data: AnalyticsData['retention'] }) {
               <YStack key={k} width={44} height={36} rounded="$2" items="center" justify="center"
                 bg={has ? undefined : 'transparent'}
                 style={has ? { background: cell(v) } : undefined}>
-                {has && <Text fontSize="$1" color={v >= 55 ? '#04210f' : '$color11'}>{Math.round(v)}%</Text>}
+                {has && <Text fontSize="$1" color={v >= 55 ? '$color1' : '$color11'}>{Math.round(v)}%</Text>}
               </YStack>
             )
           })}
@@ -144,11 +145,11 @@ export function AnalyticsModule() {
       <XStack gap="$4" flexWrap="wrap">
         <YStack gap="$2" flex={1} minW={320}>
           <Text fontSize="$4" color="$color12">Usage / revenue over time</Text>
-          {data ? (c.usage ? <LineChart data={pts(data.usage)} color="#22c55e" formatValue={(v) => usd(v)} /> : <NotEnough title="No usage yet" why="Fleet usage revenue appears as customers consume." />) : <Text color="$color10">Loading…</Text>}
+          {data ? (c.usage ? <LineChart data={pts(data.usage)} color={toneVar('positive')} formatValue={(v) => usd(v)} /> : <NotEnough title="No usage yet" why="Fleet usage revenue appears as customers consume." />) : <Text color="$color10">Loading…</Text>}
         </YStack>
         <YStack gap="$2" flex={1} minW={320}>
           <Text fontSize="$4" color="$color12">Top customers by usage</Text>
-          {data && data.topCustomers.length > 0 ? <BarChart data={data.topCustomers.map((t) => ({ label: t.hint || t.label, value: t.value }))} color="#22c55e" formatValue={(v) => usd(v)} /> : <NotEnough title="No usage attributed yet" why="Top customers appear once usage is recorded." />}
+          {data && data.topCustomers.length > 0 ? <BarChart data={data.topCustomers.map((t) => ({ label: t.hint || t.label, value: t.value }))} color={toneVar('positive')} formatValue={(v) => usd(v)} /> : <NotEnough title="No usage attributed yet" why="Top customers appear once usage is recorded." />}
         </YStack>
       </XStack>
 

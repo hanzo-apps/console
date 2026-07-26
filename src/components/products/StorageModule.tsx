@@ -354,7 +354,7 @@ function ObjectBrowser({ bucket, onBack }: { bucket: string; onBack: () => void 
       render: (o) =>
         o.isDir ? (
           <XStack gap="$2" items="center">
-            <Folder size={15} color="$blue10" />
+            <Folder size={15} color="$color11" />
             <Text fontSize="$3" fontWeight="600" numberOfLines={1}>
               {folderLabel(o.key)}
             </Text>

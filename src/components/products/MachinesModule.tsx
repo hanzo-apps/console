@@ -60,6 +60,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { Donut, type DonutSegment } from '~/components/ui/Donut'
+import { toneVar, type Tone } from '~/components/ui/tone'
 import { FieldSelect } from '~/components/ui/Field'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import {
@@ -90,11 +91,11 @@ type DetailTab = (typeof DETAIL_TABS)[number]
 const PAGE_SIZE = 10
 const DASH = '—'
 
-/** Status → hex (donut + dot) and a GUI bg token (pill). One source of truth. */
-const STATUS_HEX: Record<MachineStatus, string> = {
-  online: '#30a46c',
-  busy: '#e2a336',
-  offline: '#e5484d',
+/** Status → tone (donut + dot + pill). One source of truth — the console tone map. */
+const STATUS_TONE: Record<MachineStatus, Tone> = {
+  online: 'positive',
+  busy: 'warning',
+  offline: 'critical',
 }
 
 // ── Small presentational helpers ─────────────────────────────────────────────
@@ -116,7 +117,7 @@ function Dot({ color, size = 9 }: { color: string; size?: number }) {
 function StatusPill({ status }: { status: MachineStatus }) {
   return (
     <XStack items="center" gap="$1.5">
-      <Dot color={STATUS_HEX[status]} size={8} />
+      <Dot color={toneVar(STATUS_TONE[status])} size={8} />
       <Text fontSize="$2" color="$color12">
         {MACHINE_STATUS_LABEL[status]}
       </Text>
@@ -341,7 +342,7 @@ function AdminMachines(_props: { params: Record<string, string> }) {
   const donutSegments: DonutSegment[] = (['online', 'busy', 'offline'] as MachineStatus[]).map((s) => ({
     label: MACHINE_STATUS_LABEL[s],
     value: summary.byStatus[s],
-    color: STATUS_HEX[s],
+    color: toneVar(STATUS_TONE[s]),
   }))
 
   const header = (

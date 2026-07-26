@@ -24,7 +24,7 @@ import { useToast } from '~/components/ui/Toast'
 
 /** run = in-flight (blue), ok = done (green), down = failed (red), idle = queued/canceled (neutral). */
 export const JOB_TONE_COLOR: Record<JobTone, string> = {
-  run: '$blue10',
+  run: '$color11',
   ok: '$green10',
   down: '$red10',
   idle: '$color9',

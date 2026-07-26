@@ -20,6 +20,7 @@
  */
 import type { Resource, ResourceKind } from '~/lib/api'
 import type { Slice } from '~/components/ui/Charts'
+import { toneVar } from '~/components/ui/tone'
 
 // ── Lifecycle classification (mirrors ui/StatusTag toneOf, one truth) ─────────
 
@@ -68,12 +69,12 @@ export function fleetStats(rows: Resource[]): FleetStats {
   return { total: rows.length, ready, provisioning, error, since }
 }
 
-/** Semantic colours for the status donut (SVG needs concrete hex, not tokens). */
+/** Status-donut weights — the ONE console tone map, as CSS values (SVG can't read tokens). */
 const STATUS_COLORS: Record<Exclude<Lifecycle, 'other'> | 'other', string> = {
-  ready: '#23c562',
-  provisioning: '#f4c245',
-  error: '#ff5d8f',
-  other: '#64748b',
+  ready: toneVar('positive'),
+  provisioning: toneVar('warning'),
+  error: toneVar('critical'),
+  other: toneVar('muted'),
 }
 
 /** The status breakdown as donut slices (only the non-zero buckets). */
@@ -137,7 +138,9 @@ export type ResourceSpec = {
   repo: string
 }
 
-const cloud = 'https://cloud.hanzo.ai'
+/** The ONE Hanzo API endpoint. Every product's provision call is `api.hanzo.ai/v1/<kind>`
+ *  — there is no per-service API host, so a copied snippet works from anywhere. */
+const api = 'https://api.hanzo.ai'
 
 /** Public docs URL for a managed kind (matches the registry's `${DOCS}/<kind>`).
  * The docs site is served under the /docs base path, so the link must include it. */
@@ -150,7 +153,7 @@ export const repoUrl = (spec: ResourceSpec): string => `https://github.com/${spe
 export function provisionSnippet(kind: ResourceKind, name: string): Snippet {
   return {
     title: 'Provision via API',
-    code: `curl -X POST ${cloud}/v1/${kind} \\
+    code: `curl -X POST ${api}/v1/${kind} \\
   -H 'Content-Type: application/json' \\
   --cookie "$HANZO_SESSION" \\
   -d '{"name":"${name}"}'`,

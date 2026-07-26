@@ -19,16 +19,25 @@
 import type { ReactElement, ReactNode } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 
-/** Distinct, theme-neutral series colors (mid-saturation reads on dark + light). */
-export const SERIES = ['#6ea8fe', '#7ee787', '#f0a868', '#c792ea', '#56d4c4', '#e879a6', '#d6c15a', '#8b9bb4'] as const
+import { RAMP } from '~/lib/theme/ramp'
+import { toneColor } from './tone'
+import { toneVar } from './tone'
+
+/**
+ * Categorical series ramp — the ONE ramp, shared verbatim with `ui/Charts`
+ * (`RAMP`): a monotonic descending-lightness neutral ladder, so a legend or
+ * a multi-series chart reads as ordered greys rather than a saturated rainbow.
+ */
+export const SERIES = RAMP
 export const colorForIndex = (i: number): string => SERIES[i % SERIES.length]
 const TRACK = 'rgba(128,128,128,0.18)'
 
-/** Tone for a utilization/temperature value (green calm → red hot). */
+/** Weight for a utilization/temperature value (calm → hot). Greyscale by design —
+ *  the label and the bar's own fill carry the reading, not a hue. */
 export function utilColor(pct: number): string {
-  if (pct >= 90) return '#e5534b'
-  if (pct >= 70) return '#f0a868'
-  return '#7ee787'
+  if (pct >= 90) return toneVar('critical')
+  if (pct >= 70) return toneVar('warning')
+  return toneVar('positive')
 }
 
 /**
@@ -157,7 +166,7 @@ export function MetricCard({
           </Text>
         </XStack>
         {delta ? (
-          <Text fontSize="$1" color={up ? '#7ee787' : '#e5534b'}>
+          <Text fontSize="$1" color={toneColor(up ? 'positive' : 'critical')}>
             {up ? '▲' : '▼'} {Math.abs(delta.pct)}%
           </Text>
         ) : null}

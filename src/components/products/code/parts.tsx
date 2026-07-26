@@ -16,6 +16,7 @@ import { Check, Copy } from '@hanzogui/lucide-icons-2'
 
 import { fmtScore, fullRef, locRef, scoreFraction, type Citation, type Span } from '~/lib/api/code'
 import { asColor } from '~/components/ui/color'
+import { RAMP } from '~/lib/theme/ramp'
 
 /** A titled dashboard card — the ONE panel wrapper the board composes. */
 export function Panel({
@@ -44,18 +45,19 @@ export function Panel({
   )
 }
 
-/** Retrieval-tier → hex — one source for the tier badge dot. */
-const TIER_HEX: Record<string, string> = {
-  text: '#3aa0ff',
-  symbol: '#c084fc',
-  semantic: '#16c0c8',
-  hybrid: '#f4c245',
+/** Retrieval tier is a CATEGORY, not a state — it reads off the shared categorical
+ *  scale (lightness, never hue). The badge's own label names the tier. */
+const TIER_STEP: Record<string, string> = {
+  text: RAMP[0],
+  symbol: RAMP[1],
+  semantic: RAMP[2],
+  hybrid: RAMP[3],
 }
 
 /** A subtle badge naming the retrieval tier that surfaced a hit. */
 export function TierBadge({ tier }: { tier?: string }) {
   if (!tier) return null
-  const hex = TIER_HEX[tier] ?? '#8b95a5'
+  const hex = TIER_STEP[tier] ?? RAMP[5]
   return (
     <XStack items="center" gap="$1.5" px="$2" py="$0.5" rounded="$10" bg="$color3">
       <YStack width={7} height={7} rounded="$10" bg={asColor(hex)} />
@@ -98,11 +100,11 @@ export function RefButton({ loc, onPress }: { loc: { file?: string; line?: numbe
     <Text
       className="hz-mono"
       fontSize="$2"
-      color="$blue10"
+      color="$color11"
       numberOfLines={1}
       onPress={onPress}
       cursor={onPress ? 'pointer' : undefined}
-      hoverStyle={onPress ? { color: '$blue11' } : undefined}
+      hoverStyle={onPress ? { color: '$color12' } : undefined}
     >
       {locRef(loc)}
     </Text>

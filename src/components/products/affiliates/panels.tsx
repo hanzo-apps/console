@@ -24,6 +24,7 @@ import { FieldRow, FieldText } from '~/components/ui/Field'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { monthLabel, ratePct, usd } from './logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -74,7 +75,7 @@ export function EarningsPanel() {
   }, [state])
 
   return (
-    <PanelCard title="Rewards" icon={<TrendingUp size={18} color="#a371f7" />}>
+    <PanelCard title="Rewards" icon={<TrendingUp size={18} color="$color11" />}>
       {state.phase === 'loading' && <Text color="$color10">Loading your earnings…</Text>}
       {state.phase === 'error' && (
         <BackendStateCard state={state.error} onRetry={reload} hint="endpoint · GET /v1/affiliates/me/earnings" />
@@ -157,7 +158,7 @@ export function LinksPanel() {
   }, [])
 
   return (
-    <PanelCard title="Referral links" icon={<Link2 size={18} color="#a371f7" />}>
+    <PanelCard title="Referral links" icon={<Link2 size={18} color="$color11" />}>
       {state.phase === 'loading' && <Text color="$color10">Loading your links…</Text>}
       {state.phase === 'error' && (
         <BackendStateCard state={state.error} onRetry={reload} hint="endpoint · GET /v1/affiliates/me/links" />
@@ -182,7 +183,7 @@ export function LinksPanel() {
                 <FieldText value={label} onChange={setLabel} disabled={busy || atCap} placeholder="e.g. Twitter, newsletter" />
               </FieldRow>
               {err ? (
-                <Text fontSize="$2" color="#f85149">
+                <Text fontSize="$2" color={toneColor('critical')}>
                   {err}
                 </Text>
               ) : null}
@@ -265,7 +266,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
   }, [handle, reload])
 
   return (
-    <PanelCard title="Leaderboard" icon={<Trophy size={18} color="#d29922" />}>
+    <PanelCard title="Leaderboard" icon={<Trophy size={18} color={toneColor('warning')} />}>
       {state.phase === 'loading' && <Text color="$color10">Loading the leaderboard…</Text>}
       {state.phase === 'error' && (
         <BackendStateCard state={state.error} onRetry={reload} hint="endpoint · GET /v1/affiliates/leaderboard" />
@@ -286,7 +287,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
                 Your rank: #{state.data.you.rank}
                 {state.data.total > 0 ? <Text fontSize="$2" color="$color10"> {` of ${state.data.total}`}</Text> : null}
               </Text>
-              <Text fontSize="$3" fontWeight="700" color="#a371f7">
+              <Text fontSize="$3" fontWeight="700" color="$color11">
                 {usd(state.data.you.accruedCents)}
               </Text>
             </XStack>
@@ -315,7 +316,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
                     <Text
                       fontSize="$3"
                       fontWeight={row.isYou ? '700' : '600'}
-                      color={row.isYou ? '#a371f7' : '$color12'}
+                      color={row.isYou ? '$color11' : '$color12'}
                       numberOfLines={1}
                     >
                       {row.handle}
@@ -339,7 +340,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
               <FieldText value={handle} onChange={setHandle} disabled={busy} placeholder="e.g. buildwithme — leave blank to stay private" />
             </FieldRow>
             {err ? (
-              <Text fontSize="$2" color="#f85149">
+              <Text fontSize="$2" color={toneColor('critical')}>
                 {err}
               </Text>
             ) : null}

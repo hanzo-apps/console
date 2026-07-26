@@ -19,13 +19,14 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@hanzo/gui'
-import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
+import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight, Mic, Square } from '@hanzogui/lucide-icons-2'
 import { useAnalytics } from '@hanzo/event/react'
 import { EVENTS } from '@hanzo/event'
 
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { DEFAULT_MODEL } from '~/lib/api/families'
 import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
+import { useVoice } from '~/lib/voice'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -158,17 +159,20 @@ function PromptChip({ label, onPress }: { label: string; onPress: () => void }) 
 
 // Seeded to the assistant's real domain — each is answerable from the grounded
 // Hanzo knowledge (the product catalog + docs), so the first tap shows real expertise.
-const SUGGESTED_PROMPTS = [
-  'How do I launch a GPU?',
-  'What is Hanzo Base, and how is it different from Vector?',
-  'How does pricing work?',
-  'What AI models are available?',
+type Suggestion = { label: string; fill?: string; href?: string }
+const SUGGESTED_PROMPTS: Suggestion[] = [
+  { label: 'Build an app →', href: `${config.appUrl}/dev` },
+  { label: 'Launch a GPU', fill: 'How do I launch a GPU on Hanzo, and what does it cost?' },
+  { label: 'Deploy an agent with tools', fill: 'Walk me through building and deploying an agent with tools on Hanzo.' },
+  { label: 'Which model should I use?', fill: 'Which AI model is best for coding, writing, and vision — and how do I call it?' },
+  { label: 'How does pricing work?', fill: 'How does Hanzo pricing and billing work?' },
 ]
 
 export function ChatConversation({
   onShowHistory,
   compact = false,
   seed,
+  voiceSignal = 0,
 }: {
   onShowHistory: () => void
   /** Embedded mode (the floating bubble): drop the page header + fixed min-height
@@ -177,6 +181,10 @@ export function ChatConversation({
   /** A one-shot composer seed (from `useFloatingChat().ask`, e.g. the Code hub's
    * "Ask AI about this code"): pre-fills + focuses the composer, never auto-sends. */
   seed?: string
+  /** A monotonically increasing signal from the topbar "talk to Hanzo" control:
+   * each increment opens the mic (and speaks replies). 0 = never. A no-op when
+   * voice is unsupported, so nothing breaks on Safari/Firefox — the user just types. */
+  voiceSignal?: number
 }) {
   const analytics = useAnalytics()
   const [model, setModel] = useState('')
@@ -247,12 +255,13 @@ export function ChatConversation({
    * (re-run the last turn). A failure drops the empty turn and renders an honest
    * error card, never fabricated text.
    */
-  const streamReply = async (q: string, history: ChatMessage[]) => {
+  const streamReply = async (q: string, history: ChatMessage[]): Promise<string> => {
     setSending(true)
     setError(null)
     const ctrl = new AbortController()
     abortRef.current = ctrl
     setMessages((m) => [...m, { role: 'assistant', content: '', time: turnTime() }])
+    let replyText = ''
     try {
       const final = await AiApi.ragChatStream(
         { question: q, history, system, store: ASSISTANT_DOCS_STORE, model: model || undefined, temperature: 0.7 },
@@ -272,6 +281,7 @@ export function ChatConversation({
         next[next.length - 1] = { ...last, content: final || '(empty response)' }
         return next
       })
+      replyText = final || ''
     } catch (e) {
       // Drop the still-empty assistant turn; surface the error card (unless aborted).
       setMessages((m) => {
@@ -283,10 +293,27 @@ export function ChatConversation({
       if (abortRef.current === ctrl) abortRef.current = null
       setSending(false)
     }
+    return replyText
   }
 
-  const send = async () => {
-    const q = input.trim()
+  // Voice — "talk to Hanzo". A completed utterance (onFinal) is sent as a turn; the
+  // interim transcript shows live in the composer; while voice mode is on the reply
+  // is spoken back (hands-free). Feature-detected — the mic renders only when
+  // supported, so a browser without SpeechRecognition never shows a dead control.
+  const [voiceMode, setVoiceMode] = useState(false)
+  const voiceModeRef = useRef(voiceMode)
+  voiceModeRef.current = voiceMode
+  const sendTextRef = useRef<(raw: string) => Promise<void>>(async () => {})
+  const voice = useVoice({
+    onFinal: (t) => {
+      setVoiceMode(true)
+      void sendTextRef.current(t)
+    },
+    onInterim: (t) => setInput(t),
+  })
+
+  const sendText = async (raw: string) => {
+    const q = raw.trim()
     if (!q || sending) return
     const history = messages.map(({ role, content }) => ({ role, content }))
     // First turn of a conversation starts a chat; every turn is a message sent.
@@ -294,7 +321,13 @@ export function ChatConversation({
     analytics.capture(EVENTS.CHAT_MESSAGE_SENT)
     setMessages((m) => [...m, { role: 'user', content: q, time: turnTime() }])
     setInput('')
-    await streamReply(q, history)
+    const reply = await streamReply(q, history)
+    // Voice-initiated turn → speak the reply back so a hands-free user hears it.
+    if (voiceModeRef.current && reply) voice.speak(reply)
+  }
+  sendTextRef.current = sendText
+  const send = () => {
+    void sendText(input)
   }
 
   /** Re-run the last user turn (the error-card retry) — resend, don't duplicate it. */
@@ -328,6 +361,17 @@ export function ChatConversation({
 
   // Cancel any in-flight stream when the conversation unmounts (leak-free).
   useEffect(() => () => abortRef.current?.abort(), [])
+
+  // Open the mic when the topbar "talk to Hanzo" control fires (each increment of
+  // voiceSignal). A no-op when voice is unsupported, so nothing breaks on Safari/
+  // Firefox — the user just types.
+  useEffect(() => {
+    if (voiceSignal > 0 && voice.supported) {
+      setVoiceMode(true)
+      voice.start()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceSignal])
 
   const empty = messages.length === 0 && !error
 
@@ -387,7 +431,7 @@ export function ChatConversation({
               <YStack items="center" gap="$3" maxW={460}>
                 <SparkleAvatar size={56} />
                 <Text fontSize={compact ? '$6' : '$8'} fontWeight="800" color="$color12" text="center">
-                  How can I help?
+                  What do you want to build?
                 </Text>
                 <Text fontSize="$3" color="$color11" text="center" lineHeight={22}>
                   Ask about {config.brandName} — models, GPUs, data, deploys, billing — or anything
@@ -397,7 +441,15 @@ export function ChatConversation({
               </YStack>
               <YStack gap="$2.5" items="center" self="stretch" maxW={620} mx="auto" width="100%">
                 {SUGGESTED_PROMPTS.map((s) => (
-                  <PromptChip key={s} label={s} onPress={() => useSuggestion(s)} />
+                  <PromptChip
+                    key={s.label}
+                    label={s.label}
+                    onPress={() =>
+                      s.href
+                        ? typeof window !== 'undefined' && window.open(s.href, '_blank', 'noopener')
+                        : useSuggestion(s.fill ?? s.label)
+                    }
+                  />
                 ))}
               </YStack>
             </YStack>
@@ -497,6 +549,27 @@ export function ChatConversation({
               hoverStyle={{ bg: '$color4' }}
               aria-label="Insert code block"
             />
+            {/* Talk to Hanzo — the mic renders ONLY when this browser supports
+                speech recognition (never a dead control). Listening → a red Stop. */}
+            {voice.supported ? (
+              <Button
+                size="$2"
+                circular
+                chromeless
+                icon={voice.listening ? <Square size={15} /> : <Mic size={16} />}
+                onPress={() => {
+                  if (voice.listening) {
+                    voice.stop()
+                  } else {
+                    setVoiceMode(true)
+                    voice.start()
+                  }
+                }}
+                bg={voice.listening ? '$red5' : undefined}
+                hoverStyle={{ bg: voice.listening ? '$red6' : '$color4' }}
+                aria-label={voice.listening ? 'Stop listening' : 'Talk to Hanzo'}
+              />
+            ) : null}
             <Button
               size="$3"
               circular

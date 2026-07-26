@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, isSocialHost, isSentryHost, shellFromHost, brandFromHost, cloudAudience, studioUrl, type ShellId } from './index'
+import { resolveConfig, isAdminHost, isBillingOnlyHost, isMarketingHost, isAdsHost, isSocialHost, isSentryHost, isPlatformHost, shellFromHost, brandFromHost, cloudAudience, studioUrl, type ShellId } from './index'
 
 /**
  * Per-host admin login client (admin.hanzo.ai global-admin cutover).
@@ -338,6 +338,7 @@ describe('config: unified product shell (five faces)', () => {
     social: 'social.hanzo.ai',
     sentry: 'sentry.hanzo.ai',
     dns: 'dns.hanzo.ai',
+    platform: 'platform.hanzo.ai',
   }
 
   it('resolveConfig(host).shell is the host face; a full-console host is "console"', () => {
@@ -373,6 +374,21 @@ describe('config: unified product shell (five faces)', () => {
     expect(isSentryHost('mysentry.hanzo.ai')).toBe(false)
     expect(isSentryHost('')).toBe(false)
     expect(shellFromHost('sentry.lux.cloud')).toBe('sentry')
+  })
+
+  it('isPlatformHost + shellFromHost agree, and the platform host is strict', () => {
+    // platform.<brand> boots the embedded PaaS control-plane face (apps/deploys/drift),
+    // NOT the full-console catalog grid — the live console.hanzo.ai vs platform.hanzo.ai fix.
+    expect(isPlatformHost('platform.hanzo.ai')).toBe(true)
+    expect(isPlatformHost('PLATFORM.Lux.cloud:443')).toBe(true)
+    expect(isPlatformHost('myplatform.hanzo.ai')).toBe(false)
+    expect(isPlatformHost('')).toBe(false)
+    expect(resolveConfig('platform.hanzo.ai').shell).toBe('platform')
+    expect(resolveConfig('platform.lux.cloud').shell).toBe('platform')
+    // orthogonal to brand — platform.lux.cloud is the lux brand wearing the Platform face
+    expect(resolveConfig('platform.lux.cloud').brand).toBe('lux')
+    // a full-console host is NOT the platform face
+    expect(resolveConfig('console.hanzo.ai').shell).toBe('console')
   })
 
   it('WHITE-LABEL: a face never crosses a brand — every face host keeps its own brand', () => {

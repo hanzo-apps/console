@@ -57,6 +57,7 @@ import {
   derivePosture,
   liveCount,
 } from '~/components/products/zt/logic'
+import { toneVar } from '~/components/ui/tone'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -69,14 +70,15 @@ const TABS = [
 
 type LucideIcon = typeof Waypoints
 
-// Status → dot color. Live is green; an explicit degraded/down status earns
-// amber/red; anything else stays neutral (we never invent a "degraded" state).
+// Status → dot weight (the chrome is monochrome — emphasis, never hue). Live reads
+// nominal; an explicit degraded/down status is emphasised; anything else stays muted
+// (we never invent a "degraded" state).
 const dotColor = (status?: string): string => {
   const st = (status ?? '').toLowerCase()
-  if (['active', 'online', 'healthy', 'up', 'connected', 'ready', 'available'].includes(st)) return '#23c562'
-  if (['degraded', 'warning', 'pending', 'connecting'].includes(st)) return '#ff9f45'
-  if (['down', 'error', 'failed', 'offline', 'revoked'].includes(st)) return '#ff5d8f'
-  return 'rgba(148,163,184,0.55)'
+  if (['active', 'online', 'healthy', 'up', 'connected', 'ready', 'available'].includes(st)) return toneVar('positive')
+  if (['degraded', 'warning', 'pending', 'connecting'].includes(st)) return toneVar('warning')
+  if (['down', 'error', 'failed', 'offline', 'revoked'].includes(st)) return toneVar('critical')
+  return toneVar('muted')
 }
 
 function Dot({ color }: { color: string }) {

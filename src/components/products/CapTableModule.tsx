@@ -63,10 +63,11 @@ import { SlideOver } from '~/components/ui/SlideOver'
 import { FieldRow, FieldText, FieldSelect, FieldOptionSelect } from '~/components/ui/Field'
 import { MetricCard } from '~/components/ui/Metric'
 import { Donut } from '~/components/ui/Charts'
-import { CHART_PALETTE } from '~/components/ui/Charts'
+import { RAMP } from '~/lib/theme/ramp'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
 import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
+import { toneColor } from '~/components/ui/tone'
 
 type Tab = 'summary' | 'stakeholders' | 'shares' | 'classes' | 'fundraising'
 const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
@@ -100,7 +101,7 @@ function useList<T>(load: () => Promise<T>): [Async<T>, () => void] {
 // ── Summary tab ────────────────────────────────────────────────────────────────
 
 function OwnershipDonut({ summary }: { summary: CapTableSummary }) {
-  const slices = ownershipSlices(summary).map((s, i) => ({ ...s, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
+  const slices = ownershipSlices(summary).map((s, i) => ({ ...s, color: RAMP[i % RAMP.length] }))
   if (slices.length === 0) {
     return <Text fontSize="$2" color="$color10">No equity issued yet — issue shares to see the ownership split.</Text>
   }
@@ -131,10 +132,10 @@ function SummaryTab({ summary }: { summary: CapTableSummary }) {
   return (
     <YStack gap="$4">
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Coins size={16} color="#8ea2ff" />} label="Fully diluted" value={int(t.fullyDilutedShares)} caption="shares (incl. granted options)" />
-        <MetricCard icon={<ScrollText size={16} color="#7ee787" />} label="Outstanding" value={int(t.outstandingShares)} caption="issued shares" />
-        <MetricCard icon={<Percent size={16} color="#f0a868" />} label="Options" value={int(t.grantedOptions)} caption="granted, dilutive" />
-        <MetricCard icon={<Users size={16} color="#c792ea" />} label="Stakeholders" value={int(t.stakeholders)} caption={`${int(t.shareClasses)} share class${t.shareClasses === 1 ? '' : 'es'}`} />
+        <MetricCard icon={<Coins size={16} color="$color11" />} label="Fully diluted" value={int(t.fullyDilutedShares)} caption="shares (incl. granted options)" />
+        <MetricCard icon={<ScrollText size={16} color={toneColor('positive')} />} label="Outstanding" value={int(t.outstandingShares)} caption="issued shares" />
+        <MetricCard icon={<Percent size={16} color={toneColor('warning')} />} label="Options" value={int(t.grantedOptions)} caption="granted, dilutive" />
+        <MetricCard icon={<Users size={16} color={toneColor('neutral')} />} label="Stakeholders" value={int(t.stakeholders)} caption={`${int(t.shareClasses)} share class${t.shareClasses === 1 ? '' : 'es'}`} />
       </XStack>
 
       <XStack gap="$4" flexWrap="wrap">

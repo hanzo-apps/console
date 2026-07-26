@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Inference · Status — a rich per-endpoint health board in the same dark-card / purple
- * language as the main dashboard. An overall "Connected to <brand>" summary (real
+ * Inference · Status — a rich per-endpoint health board in the same dark-card /
+ * monochrome language as the main dashboard. An overall "Connected to <brand>" summary (real
  * ready/provisioning/failed tally from the live endpoint status) sits above a per-
  * endpoint health table: status dot + availability badge + a 7-day activity sparkline
  * (REAL ledger requests). Uptime + P95 render an honest "—" (no per-endpoint source
@@ -21,6 +21,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { useInferenceData } from './data'
 import { CellStat, MiniSparkline, SectionCard, StatusDot } from './parts'
 import { PHASE_DOT, endpointDailyRequests, statusSummary, type Endpoint } from './logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Row = { e: Endpoint; spark: number[] }
 
@@ -91,7 +92,7 @@ export function StatusBoard() {
 
 /** The overall "Connected to <brand>" health summary — real counts, honest tone. */
 function SummaryCard({ brand, summary, loading }: { brand: string; summary: ReturnType<typeof statusSummary>; loading: boolean }) {
-  const tone = summary.failed > 0 ? '#f0a868' : '#23c562'
+  const tone = toneColor(summary.failed > 0 ? 'warning' : 'positive')
   const stat = (label: string, value: number) => (
     <YStack gap="$0.5" minW={92}>
       <Text fontSize="$1" color="$color10">
@@ -105,7 +106,7 @@ function SummaryCard({ brand, summary, loading }: { brand: string; summary: Retu
   return (
     <Card borderWidth={1} borderColor="$borderColor" bg="$color2" rounded="$5" p="$4" gap="$3.5">
       <XStack items="center" gap="$2.5">
-        <YStack width={32} height={32} items="center" justify="center" rounded="$4" style={{ backgroundColor: 'rgba(35,197,98,0.14)' }}>
+        <YStack width={32} height={32} items="center" justify="center" rounded="$4" style={{ backgroundColor: 'var(--color4)' }}>
           <ShieldCheck size={18} color={tone} />
         </YStack>
         <YStack gap="$0.5" flex={1}>
