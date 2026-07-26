@@ -4,6 +4,7 @@
  * Locks the fixes from the state-of-the-art QA pass so they can't silently
  * regress:
  *   - the body is a hard no-horizontal-scroll surface (overflow-x guard),
+ *   - the landing header has no link to nowhere and exactly ONE sign-in,
  *   - a global :focus-visible keyboard ring exists,
  *   - the overview loads REAL data (KPI numbers, not skeletons),
  *   - the per-product quick-links band navigates to the right destination,
@@ -75,6 +76,29 @@ test.describe('console polish — public (CSS floor + responsive)', () => {
     const overflowX = await page.evaluate(() => getComputedStyle(document.body).overflowX)
     // `clip` (preferred) or `hidden` — either bans a horizontal scroll container.
     expect(['clip', 'hidden']).toContain(overflowX)
+  })
+
+  /**
+   * The landing header must carry exactly ONE sign-in, and it must go somewhere.
+   *
+   * @hanzogui/shell 7.5.1 defaulted `signInHref` to '#' and rendered its default
+   * account affordance unconditionally, so the landing shipped TWO "Sign in"
+   * controls side by side — the surface's own primary CTA (→ /signin) and a
+   * second one that was a live-looking anchor to nowhere. It survived unnoticed
+   * because the header collapses below 900px, so only DESKTOP shows it; that is
+   * why this asserts at 1440×900 and not at the mobile widths above.
+   */
+  test('landing header has no dead links, and exactly one sign-in', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
+    await page.waitForSelector('header a', { timeout: 20_000 })
+    const links = await page.$$eval('header a', (as) =>
+      as.map((a) => ({ text: (a.textContent ?? '').trim(), href: a.getAttribute('href') ?? '' })),
+    )
+    const dead = links.filter((l) => l.href === '' || l.href === '#')
+    expect(dead, `header links to nowhere: ${JSON.stringify(dead)}`).toEqual([])
+    const signIns = links.filter((l) => /^sign in$/i.test(l.text))
+    expect(signIns.length, `header sign-in controls: ${JSON.stringify(signIns)}`).toBe(1)
   })
 
   test('a global :focus-visible keyboard ring is defined', async ({ page }) => {
