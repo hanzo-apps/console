@@ -18,6 +18,17 @@ on:
     # A hand-cut v* tag must produce its image, or the tag is a receipt for
     # nothing — the exact drift the retired build-image.yml existed to prevent.
     tags: ['v*']
+    # One tag at a time, never a bulk replay. The forge resolves workflows from
+    # the PUSHED REF's OWN tree (app.ini WORKFLOW_DIRS = .hanzo,.github,.gitea),
+    # and this repo's history is a minio/console fork whose old trees still carry
+    # .github/workflows/{release,pipeline,codespell}.yml. Re-pushing the ~692
+    # historical tags therefore enqueues ~3 runs each (~1400 total) onto the
+    # SHARED runner queue and starves every other repo. Nothing on main can gate
+    # that — main's tree is not consulted for a tag push. The only lever is to
+    # close the door first:
+    #   PATCH /api/v1/repos/hanzoai/console {"has_actions":false}
+    #   ...push the tags, confirm they landed, then set it back to true.
+    # Tags already on the forge never re-fire; a push event needs a ref to CHANGE.
   pull_request:
 jobs:
   cicd:
