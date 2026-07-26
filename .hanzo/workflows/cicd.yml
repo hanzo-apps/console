@@ -20,12 +20,13 @@ on:
     tags: ['v*']
     # One tag at a time, never a bulk replay. The forge resolves workflows from
     # the PUSHED REF's OWN tree (app.ini WORKFLOW_DIRS = .hanzo,.github,.gitea),
-    # and this repo's history is a minio/console fork whose old trees still carry
-    # .github/workflows/{release,pipeline,codespell}.yml. Re-pushing the ~692
-    # historical tags therefore enqueues ~3 runs each (~1400 total) onto the
-    # SHARED runner queue and starves every other repo. Nothing on main can gate
-    # that — main's tree is not consulted for a tag push. The only lever is to
-    # close the door first:
+    # so main's tree is NOT consulted for a tag push and nothing edited here can
+    # gate one. This repo's history is a minio/console fork, and its old trees
+    # still carry tag-triggered upstream CI. Parsed over the 646 tags reachable
+    # locally (the forge holds 692): pipeline.yml 559, release.yml 547,
+    # codespell.yml 263, build-image.yml 36, build-and-push.yml 21, cicd.yml 3
+    # = 1429 runs, i.e. 2-3 per tag, onto the SHARED runner queue. That is what
+    # starved every other repo. The only lever is to close the door first:
     #   PATCH /api/v1/repos/hanzoai/console {"has_actions":false}
     #   ...push the tags, confirm they landed, then set it back to true.
     # Tags already on the forge never re-fire; a push event needs a ref to CHANGE.
