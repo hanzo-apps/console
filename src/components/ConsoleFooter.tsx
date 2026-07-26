@@ -11,6 +11,8 @@ import { getBrand } from '~/lib/branding/brands'
  * (getBrand) so the white-labelled consoles point at their own site, not hanzo.ai.
  * One place (DRY).
  */
+const SHRINK = { flexShrink: 1 } as const
+
 export function ConsoleFooter() {
   const router = useRouter()
   const site = getBrand().websiteUrl
@@ -31,6 +33,8 @@ export function ConsoleFooter() {
   const linkStyle = {
     fontSize: '$2' as const,
     color: '$color10' as const,
+    // Anchor underlines by default; nothing else on any Hanzo surface does.
+    textDecorationLine: 'none' as const,
     hoverStyle: { color: '$color12' as const },
   }
 
@@ -49,9 +53,15 @@ export function ConsoleFooter() {
       <Text fontSize="$2" color="$color10">
         © {year} {config.brandName}
       </Text>
-      <XStack items="center" gap="$5" flexWrap="wrap">
+      {/*
+        Every wrapping row here needs SHRINK — a View is `flex-shrink: 0` by
+        default, so these clusters held their max-content width, flex-wrap never
+        engaged, and on a 390px phone the last legal link (Terms) sat past the
+        right edge of a document that cannot scroll to reach it.
+      */}
+      <XStack items="center" gap="$5" flexWrap="wrap" style={SHRINK}>
         {/* Developers */}
-        <XStack items="center" gap="$3" flexWrap="wrap">
+        <XStack items="center" gap="$3" flexWrap="wrap" style={SHRINK}>
           <Text fontSize="$1" color="$color9" letterSpacing={0.4}>
             Developers
           </Text>
@@ -73,7 +83,7 @@ export function ConsoleFooter() {
           </Anchor>
         </XStack>
         {/* Support / legal */}
-        <XStack items="center" gap="$4" flexWrap="wrap">
+        <XStack items="center" gap="$4" flexWrap="wrap" style={SHRINK}>
           {legalLinks.map((l) => (
             <Anchor key={l.href} href={l.href} target="_blank" rel="noreferrer" {...linkStyle}>
               {l.label}
