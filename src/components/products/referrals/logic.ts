@@ -4,6 +4,7 @@
  * (registry/React never imported here).
  */
 import type { MyReferral, ReferralStatus } from '~/lib/api/referrals'
+import { toneColor, type Tone } from '~/components/ui/tone'
 
 /** USD cents → "$10.00" (em-dash for a non-finite value — honest, never NaN). */
 export function usd(cents: number | null | undefined): string {
@@ -25,17 +26,23 @@ export function statusLabel(status: ReferralStatus): string {
   }
 }
 
-/** Tone color for a status pill (neutral → amber → green). A literal union so it
- *  is assignable to the @hanzo/gui `color` prop (a widened `string` is not). */
-export function statusTone(status: ReferralStatus): '#3fb950' | '#d29922' | '#8b949e' {
+/** The tone a referral status carries (muted → warning → positive). Domain
+ *  knowledge lives here; the appearance comes from the one console-wide map in
+ *  `~/components/ui/tone`. */
+export function statusTone(status: ReferralStatus): Tone {
   switch (status) {
     case 'credited':
-      return '#3fb950' // granted — green
+      return 'positive' // granted
     case 'qualified':
-      return '#d29922' // qualified, grant pending — amber
+      return 'warning' // qualified, grant pending
     default:
-      return '#8b949e' // signed up — neutral
+      return 'muted' // signed up
   }
+}
+
+/** Greyscale token for a status pill — `toneColor ∘ statusTone`. */
+export function statusColor(status: ReferralStatus) {
+  return toneColor(statusTone(status))
 }
 
 /** Unix seconds → a short local date; empty when unset (0). */

@@ -7,6 +7,7 @@
  * descriptor. The non-AI groups are honest, catalog-driven "coming soon" rows (no
  * backend yet) — never fabricated integrations.
  */
+import { BRANDS, brandForModel } from '~/components/ui/brand'
 
 /** How an account is linked: a pasted API key, an OAuth token, or a web cookie header. */
 export type ConnectMode = 'api' | 'oauth' | 'web'
@@ -17,8 +18,6 @@ export type AiProvider = {
   label: string
   /** Short vendor line. */
   vendor: string
-  /** Brand accent (CSS color). */
-  color: string
   /** Supported link modes, in preference order (first = default). */
   modes: ConnectMode[]
   /** The native org lane — usage is always available from the org's own ledger, no key to paste. */
@@ -26,12 +25,26 @@ export type AiProvider = {
 }
 
 export const AI_PROVIDERS: AiProvider[] = [
-  { id: 'hanzo', label: 'Hanzo', vendor: 'Hanzo Cloud', color: '#111111', modes: ['api'], native: true },
-  { id: 'codex', label: 'OpenAI / Codex', vendor: 'OpenAI', color: '#10a37f', modes: ['api', 'oauth', 'web'] },
-  { id: 'claude', label: 'Anthropic / Claude', vendor: 'Anthropic', color: '#d97757', modes: ['oauth', 'web', 'api'] },
+  { id: 'hanzo', label: 'Hanzo', vendor: 'Hanzo Cloud', modes: ['api'], native: true },
+  { id: 'codex', label: 'OpenAI / Codex', vendor: 'OpenAI', modes: ['api', 'oauth', 'web'] },
+  { id: 'claude', label: 'Anthropic / Claude', vendor: 'Anthropic', modes: ['oauth', 'web', 'api'] },
 ]
 
 export const aiProvider = (id: string): AiProvider | undefined => AI_PROVIDERS.find((p) => p.id === id)
+
+/**
+ * The vendor's own mark colour, RESOLVED from the ONE brand map (`ui/brand`) rather
+ * than re-declared here — a model vendor's hue is THEIR identity and must not drift
+ * from the logo shown beside it. Keyed off `vendor` first (the lane id is a product
+ * name, so `codex` only resolves through "OpenAI"), via the same `brandForModel`
+ * resolver the avatars use. The house lane has no vendor hue: it takes the chrome
+ * token, because Hanzo IS the chrome here.
+ */
+export function providerColor(id: string): string {
+  const key = brandForModel(aiProvider(id)?.vendor ?? '', id)
+  if (!key || key === 'zen' || key === 'hanzo' || key === 'enso') return 'var(--color11)'
+  return BRANDS[key].bg
+}
 
 export const isAiProvider = (id: string): id is AiProvider['id'] => AI_PROVIDERS.some((p) => p.id === id)
 

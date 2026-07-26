@@ -36,7 +36,8 @@ import { MetricCard } from '~/components/ui/Metric'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldText } from '~/components/ui/Field'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { payoutMethodLabel, sharePct, shortDate, statusLabel, statusTone, usd, verifyMethodLabel } from './authors/logic'
+import { payoutMethodLabel, sharePct, shortDate, statusLabel, statusColor, usd, verifyMethodLabel } from './authors/logic'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -87,7 +88,7 @@ export function AuthorsModule() {
         (state.data.isAuthor ? (
           <AuthorDashboard data={state.data} copiedKey={copiedKey} onCopy={copy} onChanged={load} />
         ) : (
-          <AuthorConnect defaultShareBps={state.data.defaultShareBps} onConnected={load} />
+          <AuthorConnect onConnected={load} />
         ))}
     </YStack>
   )
@@ -95,7 +96,7 @@ export function AuthorsModule() {
 
 // ── connect (not yet enrolled) ────────────────────────────────────────────────
 
-function AuthorConnect({ defaultShareBps, onConnected }: { defaultShareBps: number; onConnected: () => void }) {
+function AuthorConnect({ onConnected }: { onConnected: () => void }) {
   const [login, setLogin] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -113,15 +114,15 @@ function AuthorConnect({ defaultShareBps, onConnected }: { defaultShareBps: numb
     <YStack gap="$3">
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2">
-          <Github size={18} color="#a371f7" />
+          <Github size={18} color="$color11" />
           <Text fontSize="$5" fontWeight="700">
-            Earn {sharePct(defaultShareBps)} of the platform spend of every org that deploys your project
+            Earn an ongoing share of the platform spend of every org that deploys your project
           </Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
           The OSS Author program pays you an ongoing share of the platform spend of every organization that deploys your
-          open-source project on Hanzo. Connect GitHub, verify the repositories you own, and earn {sharePct(defaultShareBps)}{' '}
-          every period — for as long as teams build on your work. New authors are reviewed by our team before earnings begin.
+          open-source project on Hanzo. Connect GitHub, verify the repositories you own, and earn your share every period —
+          for as long as teams build on your work. New authors are reviewed by our team before earnings begin.
         </Text>
         <YStack gap="$1">
           <FieldRow label="GitHub login (optional)">
@@ -137,7 +138,7 @@ function AuthorConnect({ defaultShareBps, onConnected }: { defaultShareBps: numb
           </Text>
         </YStack>
         {error ? (
-          <Text fontSize="$2" color="#f85149">
+          <Text fontSize="$2" color={toneColor('critical')}>
             {error}
           </Text>
         ) : null}
@@ -149,9 +150,9 @@ function AuthorConnect({ defaultShareBps, onConnected }: { defaultShareBps: numb
       </Card>
 
       <XStack gap="$3" flexWrap="wrap">
-        <HowTile n="1" icon={<Github size={15} color="#a371f7" />} title="Connect GitHub" body="Link your GitHub account to claim the projects you author." />
-        <HowTile n="2" icon={<ShieldCheck size={15} color="#a371f7" />} title="Verify a repo" body="Prove you own a repository with the Hanzo GitHub app or a hanzo.json file." />
-        <HowTile n="3" icon={<Rocket size={15} color="#a371f7" />} title="Earn when it deploys" body={`Every org that deploys your work earns you ${sharePct(defaultShareBps)} of their spend, every period.`} />
+        <HowTile n="1" icon={<Github size={15} color="$color11" />} title="Connect GitHub" body="Link your GitHub account to claim the projects you author." />
+        <HowTile n="2" icon={<ShieldCheck size={15} color="$color11" />} title="Verify a repo" body="Prove you own a repository with the Hanzo GitHub app or a hanzo.json file." />
+        <HowTile n="3" icon={<Rocket size={15} color="$color11" />} title="Earn when it deploys" body="Every org that deploys your work earns you a share of their spend, every period." />
       </XStack>
     </YStack>
   )
@@ -200,20 +201,20 @@ function AuthorDashboard({
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2" justify="space-between" flexWrap="wrap">
           <XStack items="center" gap="$2">
-            <Github size={18} color={statusTone(data.status)} />
+            <Github size={18} color={statusColor(data.status)} />
             <Text fontSize="$5" fontWeight="700">
-              Author · {sharePct(data.shareBps)} share
+              Author
             </Text>
             {data.verified ? (
               <XStack items="center" gap="$1">
-                <BadgeCheck size={16} color="#3fb950" />
-                <Text fontSize="$2" color="#3fb950">
+                <BadgeCheck size={16} color={toneColor('positive')} />
+                <Text fontSize="$2" color={toneColor('positive')}>
                   verified identity
                 </Text>
               </XStack>
             ) : null}
           </XStack>
-          <Text fontSize="$2" fontWeight="700" color={statusTone(data.status)}>
+          <Text fontSize="$2" fontWeight="700" color={statusColor(data.status)}>
             {statusLabel(data.status)}
           </Text>
         </XStack>
@@ -223,6 +224,12 @@ function AuthorDashboard({
             GitHub: <Text style={{ fontFamily: 'monospace' }} color="$color12">@{data.githubLogin}</Text>
           </Text>
         ) : null}
+
+        {/* The real royalty rate — a muted DASHBOARD detail for the enrolled author,
+            deliberately NOT in any hero/CTA copy (the CTO cut the public "earn X%"). */}
+        <Text fontSize="$2" color="$color10">
+          Your rate: <Text color="$color12" fontWeight="700">{sharePct(data.shareBps)}</Text> of a deploying org's platform spend.
+        </Text>
 
         {data.status === 'connected' ? (
           <Text fontSize="$3" color="$color11">
@@ -235,7 +242,7 @@ function AuthorDashboard({
           </Text>
         ) : (
           <Text fontSize="$3" color="$color11">
-            You’re approved. Every org that deploys your verified repositories earns you {sharePct(data.shareBps)} of their
+            You’re approved. Every org that deploys your verified repositories earns you a share of their
             spend, every period.
           </Text>
         )}
@@ -243,10 +250,10 @@ function AuthorDashboard({
 
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Github size={16} color="#8b949e" />} label="Repos" value={String(verifiedRepos)} caption="verified repositories" />
-        <MetricCard icon={<HandCoins size={16} color="#a371f7" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime royalties" />
-        <MetricCard icon={<Coins size={16} color="#d29922" />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
-        <MetricCard icon={<Wallet size={16} color="#3fb950" />} label="Paid out" value={usd(data.paidCents)} caption="royalties paid" />
+        <MetricCard icon={<Github size={16} color={toneColor('muted')} />} label="Repos" value={String(verifiedRepos)} caption="verified repositories" />
+        <MetricCard icon={<HandCoins size={16} color="$color11" />} label="Accrued" value={usd(data.accruedCents)} caption="lifetime royalties" />
+        <MetricCard icon={<Coins size={16} color={toneColor('warning')} />} label="Pending" value={usd(data.pendingCents)} caption="awaiting payout" />
+        <MetricCard icon={<Wallet size={16} color={toneColor('positive')} />} label="Paid out" value={usd(data.paidCents)} caption="royalties paid" />
       </XStack>
 
       {/* Repositories */}
@@ -255,7 +262,7 @@ function AuthorDashboard({
       {/* Verify by file */}
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack items="center" gap="$2">
-          <FileCode size={16} color="#a371f7" />
+          <FileCode size={16} color="$color11" />
           <Text fontSize="$4" fontWeight="700">
             Verify by file
           </Text>
@@ -291,7 +298,7 @@ function AuthorDashboard({
         </XStack>
         {data.deploys.length === 0 ? (
           <YStack p="$5" items="center" gap="$2">
-            <Rocket size={22} color="#6e7681" />
+            <Rocket size={22} color={toneColor('muted')} />
             <Text fontSize="$3" color="$color11">
               No deploys yet
             </Text>
@@ -340,7 +347,7 @@ function AuthorDashboard({
         </XStack>
         {data.payouts.length === 0 ? (
           <YStack p="$5" items="center" gap="$2">
-            <Wallet size={22} color="#6e7681" />
+            <Wallet size={22} color={toneColor('muted')} />
             <Text fontSize="$3" color="$color11">
               No payouts yet
             </Text>
@@ -422,7 +429,7 @@ function RepositoriesCard({
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" gap="$2">
-        <BookOpen size={16} color="#a371f7" />
+        <BookOpen size={16} color="$color11" />
         <Text fontSize="$4" fontWeight="700">
           Your repositories
         </Text>
@@ -442,7 +449,7 @@ function RepositoriesCard({
         </PrimaryButton>
       </XStack>
       {error ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {error}
         </Text>
       ) : null}
@@ -478,13 +485,13 @@ function RepositoriesCard({
                 </Text>
                 {r.verified ? (
                   <XStack items="center" gap="$1">
-                    <BadgeCheck size={13} color="#3fb950" />
-                    <Text fontSize="$2" color="#3fb950">
+                    <BadgeCheck size={13} color={toneColor('positive')} />
+                    <Text fontSize="$2" color={toneColor('positive')}>
                       {verifyMethodLabel(r.method)}
                     </Text>
                   </XStack>
                 ) : (
-                  <Text fontSize="$2" color="#d29922">
+                  <Text fontSize="$2" color={toneColor('warning')}>
                     Unverified
                   </Text>
                 )}

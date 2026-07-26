@@ -35,6 +35,7 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldText } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -52,7 +53,7 @@ const usd = (cents: number | null | undefined): string => {
 /** Signed USD cents → "+$10.00" / "-$10.00" (for a journal posting leg). */
 const signedUsd = (cents: number): string => (cents < 0 ? `-${usd(-cents)}` : `+${usd(cents)}`)
 
-/** Basis points → a human percent ("500" → "5%", "1550" → "15.5%"). */
+/** Basis points → a human percent ("2000" → "20%", "1550" → "15.5%"). */
 const pctFromBps = (bps: number): string => {
   if (!Number.isFinite(bps)) return '—'
   const pct = bps / 100
@@ -147,10 +148,10 @@ function TreasuryReady({ data, onChanged }: { data: TreasuryView; onChanged: () 
     <YStack gap="$4">
       {/* KPI row + solvency pill */}
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Landmark size={16} color="#3fb950" />} label="Reserve" value={usd(report.reserveCents)} caption="available balance" />
-        <MetricCard icon={<Coins size={16} color="#a371f7" />} label="Accrued" value={usd(report.accruedCents)} caption="lifetime revenue-share in" />
-        <MetricCard icon={<HandCoins size={16} color="#d29922" />} label="Paid out" value={usd(report.paidCents)} caption="lifetime backed payouts" />
-        <MetricCard icon={<Percent size={16} color="#6ea8fe" />} label="Revenue-share" value={pctFromBps(report.policy.revenueShareBps)} caption="of platform spend" />
+        <MetricCard icon={<Landmark size={16} color={toneColor('positive')} />} label="Reserve" value={usd(report.reserveCents)} caption="available balance" />
+        <MetricCard icon={<Coins size={16} color="$color11" />} label="Accrued" value={usd(report.accruedCents)} caption="lifetime revenue-share in" />
+        <MetricCard icon={<HandCoins size={16} color={toneColor('warning')} />} label="Paid out" value={usd(report.paidCents)} caption="lifetime backed payouts" />
+        <MetricCard icon={<Percent size={16} color={toneColor('neutral')} />} label="Revenue-share" value={pctFromBps(report.policy.revenueShareBps)} caption="of platform spend" />
       </XStack>
 
       <XStack items="center" gap="$2">
@@ -187,10 +188,10 @@ function SolvencyPill({ solvent }: { solvent: boolean }) {
       py="$1"
       rounded="$10"
       borderWidth={1}
-      borderColor={solvent ? '#3fb950' : '#d29922'}
+      borderColor={toneColor(solvent ? 'positive' : 'warning')}
     >
-      {solvent ? <CheckCircle2 size={13} color="#3fb950" /> : <TriangleAlert size={13} color="#d29922" />}
-      <Text fontSize="$2" fontWeight="700" color={solvent ? '#3fb950' : '#d29922'}>
+      {solvent ? <CheckCircle2 size={13} color={toneColor('positive')} /> : <TriangleAlert size={13} color={toneColor('warning')} />}
+      <Text fontSize="$2" fontWeight="700" color={toneColor(solvent ? 'positive' : 'warning')}>
         {solvent ? 'Solvent' : 'Fund empty'}
       </Text>
     </XStack>
@@ -207,7 +208,7 @@ function PolicyForm({ currentBps, updatedAt, onChanged }: { currentBps: number; 
   const save = useCallback(() => {
     const bps = bpsFromPct(pct)
     if (bps == null) {
-      setErr('Enter a non-negative percent (e.g. 5 for 5%).')
+      setErr('Enter a non-negative percent (e.g. 20 for 20%).')
       return
     }
     setBusy(true)
@@ -224,7 +225,7 @@ function PolicyForm({ currentBps, updatedAt, onChanged }: { currentBps: number; 
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" gap="$2">
-        <Percent size={16} color="#6ea8fe" />
+        <Percent size={16} color={toneColor('neutral')} />
         <Text fontSize="$4" fontWeight="700">
           Revenue-share policy
         </Text>
@@ -238,14 +239,14 @@ function PolicyForm({ currentBps, updatedAt, onChanged }: { currentBps: number; 
           <Text fontSize="$2" color="$color11">
             New share (%)
           </Text>
-          <FieldText value={pct} onChange={setPct} disabled={busy} placeholder="e.g. 5" />
+          <FieldText value={pct} onChange={setPct} disabled={busy} placeholder="e.g. 20" />
         </YStack>
         <PrimaryButton size="$3" onPress={save} disabled={busy}>
           {busy ? 'Saving…' : 'Update policy'}
         </PrimaryButton>
       </XStack>
       {err ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {err}
         </Text>
       ) : null}
@@ -284,7 +285,7 @@ function SweepForm({ onChanged }: { onChanged: () => void }) {
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={280}>
       <XStack items="center" gap="$2">
-        <ArrowDownCircle size={16} color="#a371f7" />
+        <ArrowDownCircle size={16} color="$color11" />
         <Text fontSize="$4" fontWeight="700">
           Sweep revenue-share
         </Text>
@@ -315,7 +316,7 @@ function SweepForm({ onChanged }: { onChanged: () => void }) {
         </Text>
       ) : null}
       {err ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {err}
         </Text>
       ) : null}
@@ -352,7 +353,7 @@ function SeedForm({ onChanged }: { onChanged: () => void }) {
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={280}>
       <XStack items="center" gap="$2">
-        <PiggyBank size={16} color="#3fb950" />
+        <PiggyBank size={16} color={toneColor('positive')} />
         <Text fontSize="$4" fontWeight="700">
           Seed reserve
         </Text>
@@ -383,7 +384,7 @@ function SeedForm({ onChanged }: { onChanged: () => void }) {
         </Text>
       ) : null}
       {err ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {err}
         </Text>
       ) : null}
@@ -420,16 +421,16 @@ function ByProgramPanel({ referral, affiliate, author }: { referral: number; aff
 
 // ── double-entry journal ─────────────────────────────────────────────────────
 
-function kindTone(kind: string): '#3fb950' | '#a371f7' | '#d29922' | '#8b949e' {
+function kindTone(kind: string) {
   switch (kind) {
     case 'accrual':
-      return '#a371f7'
+      return toneColor('neutral')
     case 'payout':
-      return '#d29922'
+      return toneColor('warning')
     case 'seed':
-      return '#3fb950'
+      return toneColor('positive')
     default:
-      return '#8b949e'
+      return toneColor('muted')
   }
 }
 
@@ -483,10 +484,10 @@ function JournalPanel({ journal }: { journal: JournalEntry[] }) {
 
 // ── Hanzo L1 anchor ──────────────────────────────────────────────────────────
 
-function anchorTone(status: string): '#3fb950' | '#f85149' | '#d29922' {
-  if (status === 'anchored') return '#3fb950'
-  if (status === 'error') return '#f85149'
-  return '#d29922'
+function anchorTone(status: string) {
+  if (status === 'anchored') return toneColor('positive')
+  if (status === 'error') return toneColor('critical')
+  return toneColor('warning')
 }
 
 function AnchorPanel({ anchor, onChanged }: { anchor: AnchorStatus; onChanged: () => void }) {
@@ -508,7 +509,7 @@ function AnchorPanel({ anchor, onChanged }: { anchor: AnchorStatus; onChanged: (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
         <XStack items="center" gap="$2">
-          <Anchor size={16} color="#6ea8fe" />
+          <Anchor size={16} color={toneColor('neutral')} />
           <Text fontSize="$4" fontWeight="700">
             Hanzo L1 anchor
           </Text>
@@ -518,8 +519,8 @@ function AnchorPanel({ anchor, onChanged }: { anchor: AnchorStatus; onChanged: (
             </Text>
           </XStack>
           {anchor.currentRoot ? (
-            <XStack items="center" gap="$1.5" px="$2" py="$0.5" rounded="$10" borderWidth={1} borderColor={anchor.synced ? '#3fb950' : '#d29922'}>
-              <Text fontSize="$1" fontWeight="700" color={anchor.synced ? '#3fb950' : '#d29922'}>
+            <XStack items="center" gap="$1.5" px="$2" py="$0.5" rounded="$10" borderWidth={1} borderColor={toneColor(anchor.synced ? 'positive' : 'warning')}>
+              <Text fontSize="$1" fontWeight="700" color={toneColor(anchor.synced ? 'positive' : 'warning')}>
                 {anchor.synced ? 'Synced' : 'Stale'}
               </Text>
             </XStack>
@@ -559,7 +560,7 @@ function AnchorPanel({ anchor, onChanged }: { anchor: AnchorStatus; onChanged: (
         </Text>
       ) : null}
       {err ? (
-        <Text fontSize="$2" color="#f85149">
+        <Text fontSize="$2" color={toneColor('critical')}>
           {err}
         </Text>
       ) : null}

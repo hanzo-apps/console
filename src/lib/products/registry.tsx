@@ -102,6 +102,7 @@ import { Users,
   AlertTriangle,
   Cloud,
   FlaskConical,
+  Webhook,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId, type ShellId } from '~/config'
@@ -112,6 +113,7 @@ import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
 import { StorageFleetModule } from '~/components/products/admin/StorageFleetModule'
+import { GrowthModule } from '~/components/products/admin/GrowthModule'
 import { UsageCapsPromoModule } from '~/components/products/admin/UsageCapsPromoModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
 import { RoutingModule } from '~/components/products/admin/RoutingModule'
@@ -120,6 +122,7 @@ import { RouterModule } from '~/components/products/RouterModule'
 import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { PlatformModule } from '~/components/products/PlatformModule'
+import { StoreModule } from '~/components/products/store/StoreModule'
 import { MapModule } from '~/components/products/map/MapModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { KnowledgeModule } from '~/components/products/KnowledgeModule'
@@ -160,6 +163,7 @@ import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
 import { MetricsModule } from '~/components/products/MetricsModule'
+import { LuxNetworkModule } from '~/components/products/LuxNetworkModule'
 import { DnsModule } from '~/components/products/DnsModule'
 import { DomainsModule } from '~/components/products/DomainsModule'
 import { CloudflareModule } from '~/components/products/CloudflareModule'
@@ -215,6 +219,7 @@ import { ErrorsModule } from '~/components/products/ErrorsModule'
 import { SentryModule, SENTRY_TABS } from '~/components/products/SentryModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
 import { VpcModule } from '~/components/products/VpcModule'
+import { WebhooksModule } from '~/components/products/WebhooksModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
 import { FunctionsModule } from '~/components/products/FunctionsModule'
 import { ContainersModule } from '~/components/products/ContainersModule'
@@ -1086,6 +1091,28 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: StorageFleetModule }],
   },
   {
+    // admin.hanzo.ai GROWTH cockpit — the SuperAdmin operator view of the Zen-of-Hanzo
+    // Guide engine (cloud clients/guide, /v1/guide/*): the authored blueprint (64 archetype
+    // principles + the launch journey), the strategy corpus (the ~888 modern + 114 heritage
+    // tactics), and the org's OWN live growth read (stage · signals · key metrics · ranked
+    // next-best moves). Every blueprint item carries a live enable/disable lever (PATCH) +
+    // inline edit, and "Publish version" snapshots the whole blueprint (versioned).
+    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/launcher/palette;
+    // the module also gates on useIsSuperAdmin, and the /v1/guide blueprint routes are
+    // SuperAdmin-gated server-side). Reads ride the `guide` head on the /v1 user-bearer BFF
+    // (allow-listed in proxy-allow.ts). This is the "see and modify the guide backend" surface.
+    id: 'growth',
+    label: 'Growth',
+    icon: Target,
+    description: 'Observe and operate the Zen-of-Hanzo Guide engine — the authored blueprint, the ~888-tactic corpus, and the live growth read (stage · signals · next-best moves).',
+    category: 'Observe',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: GrowthModule }],
+  },
+  {
     // admin.hanzo.ai AI ECONOMICS board — the STRATEGIC lens beside the Provider Billing
     // (treasury) + Finance (P&L) boards: the per-(provider,model) REQUEST MIX (how many
     // of each model), unit economics (upstream cost vs revenue vs gross margin + runway),
@@ -1894,6 +1921,25 @@ export const catalog: CatalogEntry[] = [
     routes: overviewRoutes('api'),
   },
   {
+    // Webhooks — the org's outbound event destinations over the real cloud
+    // /v1/webhooks surface (config · enable/disable · rotate secret · test-send ·
+    // delivery logs). A full CRUD module like VPC/LoadBalancer; the newer
+    // sub-features (test/deliveries/rotate) degrade gracefully if not yet routed.
+    // The `:view` route is the deliveries deep-link (auto-expands that endpoint).
+    id: 'webhooks',
+    label: 'Webhooks',
+    icon: Webhook,
+    description: 'Deliver platform events to your endpoints — signed, retried, logged.',
+    category: 'Dev',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [
+      { path: '', component: WebhooksModule },
+      { path: ':view', component: WebhooksModule },
+    ],
+  },
+  {
     // The customer-facing "connect your tools" page. A logged-in org connects
     // Slack / GitHub (and any provider the cloud connector framework registers) via
     // a Connect button that runs the ORG-AUTHED OAuth flow through the canonical /v1
@@ -2001,6 +2047,23 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: PlatformModule },
       { path: ':name', component: PlatformModule },
     ],
+  },
+  {
+    // App Store — the OSS one-click marketplace: browse the LIVE 1000+-app catalog
+    // (templates.hanzo.ai/meta.json, open CORS → fetched straight from the browser, no
+    // BFF) and deploy any of them over the console's REAL PaaS path (`PaasApi` →
+    // `/v1/platform/*`). The maker "Earn 20%" hook routes to the in-console OSS Author
+    // program. The centerpiece of the platform.<brand> deploy experience.
+    id: 'store',
+    label: 'App Store',
+    icon: Boxes,
+    description: 'Deploy 1000+ open-source apps — Postgres, n8n, Grafana, and more — to your cloud in one click.',
+    gcp: 'Cloud Marketplace',
+    category: 'Platform',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: StoreModule }],
   },
   {
     // Deploy — the native ArgoCD replacement, rendered as a Railway-grade fleet MAP
@@ -2708,6 +2771,30 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AttestationsModule }],
   },
 
+  {
+    // console.lux.cloud LUX NETWORK board — the SuperAdmin infrastructure/investor
+    // view of the REAL luxd + lux-k8s fleet: validators (per-network up/height/peers/
+    // bootstrapped, the mainnet primary highlighted with its 2.5B LUX stake), node +
+    // pod memory pressure, and the named-service status grid. In-console `module`
+    // (owns its route), reading the SuperAdmin-gated, allowlisted cloud VM proxy
+    // (lib/api/lux-infra.ts → /v1/o11y/vm/query). SUPERADMIN + LUX ONLY: `admin: true`
+    // hides it from every customer and the module renders OperatorAccessRequired for a
+    // non-SuperAdmin; `brands: ['lux']` keeps it OFF every non-Lux console (zero
+    // cross-brand leak). The cloud proxy (admin(c) + fixed allowlist) is the
+    // authoritative server gate. Honest by construction — every value folds real
+    // telemetry, on-chain uptime is labeled a tracker bug, nothing fabricated.
+    id: 'lux-network',
+    label: 'Lux Network',
+    icon: Waypoints,
+    description: 'Live validators, node and pod memory, and Lux service health across the fleet — real telemetry.',
+    category: 'Web3',
+    status: 'enabled',
+    admin: true,
+    brands: ['lux'],
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: LuxNetworkModule }],
+  },
   // ── Web3 · Chain apps — launch tiles for the DEPLOYED Lux / Zoo dApp suite.
   //    These are standalone web3 apps that live at their OWN domains (owned by
   //    the Lux / Zoo products, not Hanzo control planes), so they are `external`

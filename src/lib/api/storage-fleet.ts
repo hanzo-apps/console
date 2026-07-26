@@ -3,13 +3,13 @@
  * watch the analytics datastore (and every volume) fill and scale DO storage before
  * it runs out. admin.hanzo.ai only.
  *
- * ONE read on the aggregate surface: `GET /v1/admin/storage` — the `storage` head is
+ * ONE read on the aggregate surface: `GET /v1/admin/block-storage` — the `block-storage` head is
  * allow-listed in `admin-aggregate.ts` + `next.config.mjs`, so the request rides the
  * SAME global-admin-gated `app/admin/aggregate` BFF (getAdminGate → fail-closed 403,
  * then a minted user bearer) as every other admin read; in the go:embed console it
- * hits cloud's `/v1/admin/storage` directly under the first-party session cookie.
+ * hits cloud's `/v1/admin/block-storage` directly under the first-party session cookie.
  *
- * Backend contract (cloud `clients/admin/storage.go`, DO API inventory + o11y/df fill):
+ * Backend contract (cloud `clients/admin/block_storage.go`, DO API inventory + o11y/df fill):
  *   {
  *     fleet:     { count, totalGiB, usedGiB?, pct?, monthlyUsd },
  *     datastore: { name, mount, sizeGiB, usedGiB, pct } | null,   // the analytics backend, highlighted
@@ -127,7 +127,7 @@ export function normalizeSnapshot(raw: unknown): StorageSnapshot {
 export const StorageFleetApi = {
   /** The block-storage fleet snapshot — global-admin only. */
   async snapshot(): Promise<StorageSnapshot> {
-    const raw = await restGet<unknown>(originV1Url('admin/storage'))
+    const raw = await restGet<unknown>(originV1Url('admin/block-storage'))
     return normalizeSnapshot(raw)
   },
 }

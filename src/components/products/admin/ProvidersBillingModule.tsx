@@ -44,13 +44,14 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { Donut } from '~/components/ui/Charts'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 // ── small presentational helpers ──────────────────────────────────────────────
 
 const BADGE_TONE: Record<'credit' | 'paid' | 'empty', { bg: string; fg: string }> = {
-  credit: { bg: 'rgba(35,197,98,0.14)', fg: '#23c562' },
-  paid: { bg: 'rgba(255,159,69,0.16)', fg: '#ff9f45' },
-  empty: { bg: 'rgba(148,163,184,0.16)', fg: '#94a3b8' },
+  credit: { bg: 'var(--color4)', fg: toneVar('positive') },
+  paid: { bg: 'var(--color4)', fg: toneVar('warning') },
+  empty: { bg: 'var(--color3)', fg: toneVar('muted') },
 }
 
 function Pill({ tone, children }: { tone: 'credit' | 'paid' | 'empty'; children: string }) {
@@ -67,7 +68,7 @@ function Pill({ tone, children }: { tone: 'credit' | 'paid' | 'empty'; children:
 }
 
 /** Runway urgency color — undefined = the calm default token; hex for warn/crit. */
-const RUNWAY_COLOR: Record<'ok' | 'warn' | 'crit', string | undefined> = { ok: undefined, warn: '#ff9f45', crit: '#e5534b' }
+const RUNWAY_COLOR: Record<'ok' | 'warn' | 'crit', string | undefined> = { ok: undefined, warn: toneVar('warning'), crit: toneVar('critical') }
 
 function Fact({ icon, label, value, valueColor }: { icon: React.ReactNode; label: string; value: string; valueColor?: string }) {
   return (
@@ -110,7 +111,7 @@ function ProviderCreditCard({ c }: { c: ProviderCredit }) {
       </XStack>
 
       <YStack gap="$0.5">
-        <Text className="hz-mono" fontSize="$9" fontWeight="700" color={c.hasCredit ? '#23c562' : '$color12'} numberOfLines={1}>
+        <Text className="hz-mono" fontSize="$9" fontWeight="700" color={c.hasCredit ? toneColor('positive') : '$color12'} numberOfLines={1}>
           {usd(c.remainingCents)}
         </Text>
         <Text fontSize="$2" color="$color10">

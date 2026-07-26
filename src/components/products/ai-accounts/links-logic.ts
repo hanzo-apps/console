@@ -4,6 +4,7 @@
  * isolation so the dashboard stays a thin renderer over real `/v1/links` data.
  */
 import type { Device, Link, LinkKind, BillingMode } from '~/lib/api/links'
+import { toneVar } from '~/components/ui/tone'
 
 export const kindLabel = (kind: LinkKind): string => (kind === 'apikey' ? 'API key' : 'Subscription')
 
@@ -11,11 +12,11 @@ export const kindLabel = (kind: LinkKind): string => (kind === 'apikey' ? 'API k
 export const billingLabel = (billing: BillingMode): string =>
   billing === 'plan' ? 'Billed to your plan' : 'Billed via credits'
 
-/** Bar color by remaining headroom: healthy → warning → exhausted. */
+/** Bar weight by remaining headroom: healthy → warning → exhausted. Greyscale by design. */
 export const headroomTone = (remainingPct: number): string => {
-  if (remainingPct > 50) return '#16a34a'
-  if (remainingPct > 15) return '#d97706'
-  return '#dc2626'
+  if (remainingPct > 50) return toneVar('positive')
+  if (remainingPct > 15) return toneVar('warning')
+  return toneVar('critical')
 }
 
 export const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`

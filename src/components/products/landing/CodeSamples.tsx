@@ -12,6 +12,7 @@ import { Check, Copy, Play } from '@hanzogui/lucide-icons-2'
 
 import { LandingCard, openExternal } from './parts'
 import type { CodeSample, LandingAction } from './types'
+import { toneColor } from '~/components/ui/tone'
 
 export function CodeSamples({ samples, run, title = 'Quick start' }: { samples: CodeSample[]; run?: LandingAction; title?: string }) {
   const [active, setActive] = useState(0)
@@ -61,7 +62,7 @@ export function CodeSamples({ samples, run, title = 'Quick start' }: { samples: 
             )
           })}
         </XStack>
-        <Button size="$2" chromeless icon={copied ? <Check size={14} color="#23c562" /> : <Copy size={14} />} onPress={copy}>
+        <Button size="$2" chromeless icon={copied ? <Check size={14} color={toneColor('positive')} /> : <Copy size={14} />} onPress={copy}>
           {copied ? 'Copied' : 'Copy'}
         </Button>
       </XStack>
@@ -73,7 +74,7 @@ export function CodeSamples({ samples, run, title = 'Quick start' }: { samples: 
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
             whiteSpace: 'pre',
             fontSize: 12,
-            lineHeight: 1.6,
+            lineHeight: '1.6em',
           }}
         >
           {sample.code}

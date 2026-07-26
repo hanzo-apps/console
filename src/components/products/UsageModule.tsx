@@ -19,13 +19,15 @@ import { RefreshCw, Download, DollarSign, Wallet, CalendarDays, Hash, Activity, 
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { BarChart, Donut, CHART_PALETTE, CHART_OTHER, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { BarChart, Donut, type ChartPoint, type Slice } from '~/components/ui/Charts'
+import { RAMP, OTHER } from '~/lib/theme/ramp'
 import { MetricCard, Panel, LegendDot } from '~/components/ui/Metric'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import type { RangeKey } from '~/lib/api/aimetrics'
 import { UsageSummaryApi, type UsageSummary, type CategorySpend } from '~/lib/api/usage-summary'
 import { VisorApi, type VisorMachine } from '~/lib/api/visor'
 import { exportCSV } from '~/lib/csv'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 const usd = (cents: number): string => {
   const d = cents / 100
@@ -93,9 +95,9 @@ export function UsageModule(_props: { params: Record<string, string> }) {
   const totalByCategory = useMemo(() => (spend?.byCategory ?? []).reduce((a, c) => a + c.cents, 0), [spend])
   const categorySlices: Slice[] = useMemo(() => {
     const cats = spend?.byCategory ?? []
-    const top = cats.slice(0, 7).map((c, i): Slice => ({ label: c.category, value: c.cents, color: CHART_PALETTE[i % CHART_PALETTE.length] }))
+    const top = cats.slice(0, 7).map((c, i): Slice => ({ label: c.category, value: c.cents, color: RAMP[i % RAMP.length] }))
     const rest = cats.slice(7)
-    if (rest.length) top.push({ label: `Other (${rest.length})`, value: rest.reduce((a, c) => a + c.cents, 0), color: CHART_OTHER })
+    if (rest.length) top.push({ label: `Other (${rest.length})`, value: rest.reduce((a, c) => a + c.cents, 0), color: OTHER })
     return top
   }, [spend])
 
@@ -154,13 +156,13 @@ export function UsageModule(_props: { params: Record<string, string> }) {
         <>
           {/* ── KPI band ──────────────────────────────────────────────────── */}
           <XStack flexWrap="wrap" gap="$3">
-            <MetricCard icon={<DollarSign size={16} color="#7ee787" />} label="Spend (period)" value={spend ? usd(spend.totalCents) : '—'} caption={spend?.available ? 'metered consumption' : 'billing not connected'} spark={spend?.series?.map((p) => p.cents)} sparkColor="#7ee787" />
-            <MetricCard icon={<CalendarDays size={16} color="#6ea8fe" />} label="Month-to-date" value={spend?.available ? usd(spend.mtdCents) : '—'} caption="all products" />
-            <MetricCard icon={<Wallet size={16} color="#c792ea" />} label="Prepaid balance" value={spend?.available ? usd(spend.availableCents) : '—'} caption="available credit" />
-            <MetricCard icon={<Hash size={16} color="#f0a868" />} label="LLM tokens" value={llm?.available ? compact(llm.tokens) : '—'} caption={llm?.available ? `${compact(llm.requests)} requests` : 'warehouse not connected'} />
-            <MetricCard icon={<Activity size={16} color="#56d4c4" />} label="LLM spend" value={llm?.available ? usd(llm.costCents) : '—'} caption={llm?.available ? `${llm.models} models` : undefined} />
-            <MetricCard icon={<Server size={16} color="#6ea8fe" />} label="Machines" value={machineCount != null ? String(machineCount) : '—'} caption={runningCount != null ? `${runningCount} running` : 'inventory unavailable'} />
-            <MetricCard icon={<Cpu size={16} color="#e879a6" />} label="GPUs" value={gpuCount != null ? String(gpuCount) : '—'} caption="accelerated machines" />
+            <MetricCard icon={<DollarSign size={16} color={toneColor('positive')} />} label="Spend (period)" value={spend ? usd(spend.totalCents) : '—'} caption={spend?.available ? 'metered consumption' : 'billing not connected'} spark={spend?.series?.map((p) => p.cents)} sparkColor={toneVar('positive')} />
+            <MetricCard icon={<CalendarDays size={16} color={toneColor('neutral')} />} label="Month-to-date" value={spend?.available ? usd(spend.mtdCents) : '—'} caption="all products" />
+            <MetricCard icon={<Wallet size={16} color={toneColor('neutral')} />} label="Prepaid balance" value={spend?.available ? usd(spend.availableCents) : '—'} caption="available credit" />
+            <MetricCard icon={<Hash size={16} color={toneColor('warning')} />} label="LLM tokens" value={llm?.available ? compact(llm.tokens) : '—'} caption={llm?.available ? `${compact(llm.requests)} requests` : 'warehouse not connected'} />
+            <MetricCard icon={<Activity size={16} color={toneColor('neutral')} />} label="LLM spend" value={llm?.available ? usd(llm.costCents) : '—'} caption={llm?.available ? `${llm.models} models` : undefined} />
+            <MetricCard icon={<Server size={16} color={toneColor('neutral')} />} label="Machines" value={machineCount != null ? String(machineCount) : '—'} caption={runningCount != null ? `${runningCount} running` : 'inventory unavailable'} />
+            <MetricCard icon={<Cpu size={16} color={toneColor('neutral')} />} label="GPUs" value={gpuCount != null ? String(gpuCount) : '—'} caption="accelerated machines" />
           </XStack>
 
           {/* ── Cost roll-up ──────────────────────────────────────────────── */}
@@ -188,7 +190,7 @@ export function UsageModule(_props: { params: Record<string, string> }) {
                   />
                   <YStack gap="$1" self="stretch">
                     {categorySlices.map((s) => (
-                      <LegendDot key={s.label} color={s.color ?? CHART_OTHER} label={s.label} value={usd(s.value)} />
+                      <LegendDot key={s.label} color={s.color ?? OTHER} label={s.label} value={usd(s.value)} />
                     ))}
                   </YStack>
                 </YStack>
@@ -233,9 +235,9 @@ export function UsageModule(_props: { params: Record<string, string> }) {
 function SourceBadge({ label, ok }: { label: string; ok: boolean }) {
   return (
     <XStack items="center" gap="$1.5" px="$2.5" py="$1" rounded="$10" bg="$color2" borderWidth={1} borderColor="$borderColor">
-      <YStack width={7} height={7} rounded="$10" bg={ok ? '#7ee787' : '$color8'} />
+      <YStack width={7} height={7} rounded="$10" bg={ok ? toneColor('positive') : '$color8'} />
       <Text fontSize="$1" color="$color11">{label}</Text>
-      <Text fontSize="$1" color={ok ? '#7ee787' : '$color9'}>{ok ? 'connected' : 'not connected'}</Text>
+      <Text fontSize="$1" color={ok ? toneColor('positive') : '$color9'}>{ok ? 'connected' : 'not connected'}</Text>
     </XStack>
   )
 }

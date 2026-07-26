@@ -21,6 +21,8 @@ import { BackendStateCard, classifyBackend, type BackendState } from '~/componen
 import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
+import { toneColor } from '~/components/ui/tone'
+import { providerColor } from '~/lib/products/ai-accounts'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -85,14 +87,14 @@ function ProviderRow({
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" gap="$3" justify="space-between" flexWrap="wrap">
         <XStack items="center" gap="$3" flex={1} minW={0}>
-          <YStack width={10} height={10} rounded={99} style={{ backgroundColor: provider.color }} />
+          <YStack width={10} height={10} rounded={99} style={{ backgroundColor: providerColor(provider.id) }} />
           <YStack minW={0}>
             <XStack items="center" gap="$2" flexWrap="wrap">
               <Text fontSize="$5" fontWeight="700">
                 {provider.label}
               </Text>
               <XStack px="$2" py="$0.5" rounded="$2" borderWidth={1} borderColor="$borderColor" bg="$color2">
-                <Text fontSize="$1" color={TRACKED.has(provider.id) ? '#3fb950' : '$color10'}>
+                <Text fontSize="$1" color={TRACKED.has(provider.id) ? toneColor('positive') : '$color10'}>
                   {TRACKED.has(provider.id) ? 'In-app tracked' : 'Connect-only'}
                 </Text>
               </XStack>
@@ -105,14 +107,14 @@ function ProviderRow({
 
         {provider.native ? (
           <XStack items="center" gap="$2">
-            <Check size={15} color="#3fb950" />
+            <Check size={15} color={toneColor('positive')} />
             <Text fontSize="$2" color="$color11">
               Connected · this org
             </Text>
           </XStack>
         ) : connected ? (
           <XStack items="center" gap="$2" flexWrap="wrap">
-            <Check size={15} color="#3fb950" />
+            <Check size={15} color={toneColor('positive')} />
             <Text fontSize="$2" color="$color11">
               {MODE_LABEL[connected.mode]} linked
             </Text>

@@ -24,6 +24,7 @@ import { usePins, useProductColors } from '~/lib/products/pins'
 import { findEntry } from '~/lib/products/registry'
 import { Reorder } from '~/components/ui/Reorder'
 import { asColor } from '~/components/ui/color'
+import { contrastText } from '~/lib/theme/accent'
 
 /** A round color swatch button; ringed + checked when selected. */
 function SwatchButton({ hex, selected, onPress }: { hex: string; selected: boolean; onPress: () => void }) {
@@ -42,7 +43,7 @@ function SwatchButton({ hex, selected, onPress }: { hex: string; selected: boole
       style={{ backgroundColor: hex }}
       aria-label={selected ? 'Selected color' : 'Set color'}
     >
-      {selected ? <Check size={16} color={asColor('#ffffff')} /> : null}
+      {selected ? <Check size={16} color={asColor(contrastText(hex))} /> : null}
     </XStack>
   )
 }

@@ -4,30 +4,31 @@
 // (logic.test.ts) and the panels stay thin views over real `/v1/sentry` data.
 import type { SentryIssue, StatPoint, Period } from '~/lib/api/sentry'
 import type { Slice, ChartPoint } from '~/components/ui/Charts'
+import { toneVar, type Tone } from '~/components/ui/tone'
 
-// ── Level → tone (severity color, theme-neutral) ──────────────────────────────
+// ── Level → tone (the ONE console map — severity by weight, never hue) ────────
 
-export const LEVEL_COLOR: Record<string, string> = {
-  fatal: '#b3202c',
-  error: '#e5534b',
-  warning: '#f0a868',
-  info: '#6ea8fe',
-  debug: '#8b9bb4',
+export const LEVEL_TONE: Record<string, Tone> = {
+  fatal: 'critical',
+  error: 'critical',
+  warning: 'warning',
+  info: 'neutral',
+  debug: 'muted',
 }
-export const levelColor = (level: string): string => LEVEL_COLOR[level.toLowerCase()] ?? '#8b9bb4'
+export const levelColor = (level: string): string => toneVar(LEVEL_TONE[level.toLowerCase()] ?? 'muted')
 
-/** Status color — resolved calm-green, ignored muted, unresolved alert-red. */
+/** Status color — resolved reads as normal, ignored de-emphasised, unresolved loudest. */
 export function statusTone(status: string): string {
-  return status === 'resolved' ? '#7ee787' : status === 'ignored' ? '#8b9bb4' : '#e5534b'
+  return toneVar(status === 'resolved' ? 'positive' : status === 'ignored' ? 'muted' : 'critical')
 }
 
 /** Log/trace-status color, reusing the level ramp (error/warn/ok). */
 export function logLevelTone(level: string): string {
   const l = level.toLowerCase()
-  if (l === 'error' || l === 'fatal' || l === 'critical') return '#e5534b'
-  if (l === 'warn' || l === 'warning') return '#f0a868'
-  if (l === 'debug' || l === 'trace') return '#8b9bb4'
-  return '#6ea8fe'
+  if (l === 'error' || l === 'fatal' || l === 'critical') return toneVar('critical')
+  if (l === 'warn' || l === 'warning') return toneVar('warning')
+  if (l === 'debug' || l === 'trace') return toneVar('muted')
+  return toneVar('neutral')
 }
 
 // ── Issue KPIs + distribution ─────────────────────────────────────────────────

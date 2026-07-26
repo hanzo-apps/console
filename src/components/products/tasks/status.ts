@@ -30,7 +30,7 @@ export function statusOf(raw: string): { label: string; tone: Tone; bucket: Buck
 }
 
 const TONE_BG: Record<Tone, string> = { green: '$color5', yellow: '$color4', red: '$color4', neutral: '$color3' }
-const TONE_FG: Record<Tone, string> = { green: '$color12', yellow: '$color12', red: '#e5534b', neutral: '$color11' }
+const TONE_FG: Record<Tone, string> = { green: '$color12', yellow: '$color12', red: '$color12', neutral: '$color11' }
 
 /** The bg/fg tokens for a status pill (Text style props). */
 export function statusStyle(raw: string): { label: string; bg: string; color: string } {

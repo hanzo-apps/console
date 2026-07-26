@@ -4,6 +4,7 @@
  * (registry/React never imported here).
  */
 import type { AuthorStatus, RepoVerifyMethod } from '~/lib/api/authors'
+import { toneColor, type Tone } from '~/components/ui/tone'
 
 /** USD cents → "$10.00" (em-dash for a non-finite value — honest, never NaN). */
 export function usd(cents: number | null | undefined): string {
@@ -11,7 +12,7 @@ export function usd(cents: number | null | undefined): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-/** Basis points → a human percent ("500" → "5%", "1550" → "15.5%"). */
+/** Basis points → a human percent ("2000" → "20%", "1550" → "15.5%"). */
 export function sharePct(shareBps: number | null | undefined): string {
   if (shareBps == null || !Number.isFinite(shareBps)) return '—'
   const pct = shareBps / 100
@@ -33,19 +34,25 @@ export function statusLabel(status: AuthorStatus): string {
   }
 }
 
-/** Tone color for a status pill. A literal union so it is assignable to the
- *  @hanzo/gui `color` prop (a widened `string` is not). */
-export function statusTone(status: AuthorStatus): '#3fb950' | '#d29922' | '#f85149' | '#8b949e' {
+/** The tone an author status carries. Domain knowledge lives here (*connected*
+ *  means the repo is linked but the payout account is still awaiting review);
+ *  the appearance comes from the one console-wide map in `~/components/ui/tone`. */
+export function statusTone(status: AuthorStatus): Tone {
   switch (status) {
     case 'approved':
-      return '#3fb950' // active — green
+      return 'positive'
     case 'connected':
-      return '#d29922' // awaiting review — amber
+      return 'warning'
     case 'suspended':
-      return '#f85149' // suspended — red
+      return 'critical'
     default:
-      return '#8b949e'
+      return 'muted'
   }
+}
+
+/** Greyscale token for a status pill — `toneColor ∘ statusTone`. */
+export function statusColor(status: AuthorStatus) {
+  return toneColor(statusTone(status))
 }
 
 /** Human label for how a repo was verified. */

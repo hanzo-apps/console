@@ -43,7 +43,9 @@ const openExternal = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
 }
 
-const originNow = (): string => (typeof window !== 'undefined' ? window.location.origin : 'https://cloud.hanzo.ai')
+// Browser: the console's own origin (the session-callable form). SSR/build fallback:
+// the ONE Hanzo API endpoint — never a per-service host.
+const originNow = (): string => (typeof window !== 'undefined' ? window.location.origin : 'https://api.hanzo.ai')
 
 /** A small labelled fact row (label left, value right / below). */
 function Fact({ label, value }: { label: string; value: string }) {
@@ -200,7 +202,7 @@ function TrySearchTab({ onProbe }: { onProbe: (r: { ok: boolean; results: number
           {shown.map((r) => (
             <Card key={r.url} borderWidth={1} borderColor="$borderColor" p="$3" gap="$1" hoverStyle={{ bg: '$color2' }}>
               <XStack items="center" gap="$2" justify="space-between">
-                <Text fontSize="$3" fontWeight="600" color="$blue10" numberOfLines={1} flex={1}>
+                <Text fontSize="$3" fontWeight="600" color="$color11" numberOfLines={1} flex={1}>
                   {r.title}
                 </Text>
                 <Button size="$1" chromeless icon={<ExternalLink size={13} />} onPress={() => openExternal(r.url)} aria-label="Open result">

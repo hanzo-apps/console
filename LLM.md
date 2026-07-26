@@ -3,7 +3,7 @@
 Unified admin console for **Hanzo Cloud** and all cloud products. Our code,
 BSD-3-Clause, built on **@hanzo/gui** (the Tamagui-based cross-platform UI).
 NOT an observability-console fork, NOT casibase — it is a clean client over the unified `/v1`
-backend (`hanzoai/cloud`, the casibase API at https://cloud.hanzo.ai/v1/*).
+backend (`hanzoai/cloud`), reached at the ONE Hanzo API endpoint https://api.hanzo.ai/v1/*.
 
 ## Base: Next.js 15 (app router) + @hanzo/gui
 
@@ -185,10 +185,13 @@ The nav shell, catalog home, favorites, and router still render from the one
 
 ### Job 3 — PaaS embedded natively under Deploy (NOT an iframe)
 
-`PlatformModule.tsx` is the embedded PaaS, wired to the REAL platform.hanzo.ai
-control plane. The browser calls console2's OWN origin under `/paas/*`; the
-server route `app/paas/[...path]/route.ts` forwards to `platform.hanzo.ai/v1/*`
-with the service token from **server-only** env `PAAS_SERVICE_TOKEN` (sourced via
+`PlatformModule.tsx` is the embedded PaaS, wired to the REAL PaaS control plane.
+The browser calls console2's OWN origin under `/paas/*`; the server route
+`app/paas/[...path]/route.ts` forwards to the ONE Hanzo API endpoint at
+`/v1/paas/*` (`CLOUD_API_URL`, default `https://api.hanzo.ai` — in-cluster in
+prod), never a second API host: `platform.hanzo.ai` serves no `/v1/paas/*` route
+and 401s every `/v1/*` path uniformly.
+It carries the service token from **server-only** env `PAAS_SERVICE_TOKEN` (sourced via
 KMS — never `NEXT_PUBLIC_`, never in the browser bundle, no CORS). It lists real
 apps across clusters with **declared vs running tag + drift** and a real
 health-gated **redeploy** (`POST /v1/apps/<id>/redeploy`). The six Deploy
@@ -3334,3 +3337,100 @@ and completes it.
   embedding `console@main`.
 - Verification: `tsc --noEmit` clean; `vitest` 2933/2933 (233 files); `next build` ✓;
   `npm run build:embed` ✓ (go:embed gate; restored 30 route handlers). → v8.4.152.
+
+## Block Storage — endpoint renamed; the REAL admin surface is the operator SPA (v8.4.153)
+
+Correction to the v8.4.151 note above (which wrongly said "ships to admin.hanzo.ai via
+console@main"). **admin.hanzo.ai is NOT this console** — it is `hanzoai/admin`
+`apps/operator` (a Vite/React/hanzogui SPA, image `ghcr.io/hanzoai/admin`), the Operator
+console, SEPARATE from console2. The docs elsewhere in this file claiming "admin.hanzo.ai
+= standalone console2" are STALE. This console (embedded in the slim cloud binary) serves
+**console.hanzo.ai / cloud.hanzo.ai** — the customer self-service surface; its `admin:true`
+boards (Block Storage included) are the SUPER-ADMIN TWIN a global admin sees there.
+
+- **Endpoint renamed** `/v1/admin/storage` → **`/v1/admin/block-storage`** (cloud
+  9a51bffbc): DO block-volumes + datastore fill is a DIFFERENT concern from the operator's
+  S3 object-buckets view, which keeps `/v1/admin/storage`. The console client
+  (`storage-fleet.ts`) + the `ADMIN_AGGREGATE_HEADS` / `ADMIN_V1_HEADS` allow-lists + the
+  e2e mock all moved to the `block-storage` head; the registry entry id was already
+  `block-storage`.
+- **The REAL admin.hanzo.ai page** is `hanzoai/admin` `apps/operator/src/pages/
+  BlockStorage.tsx` (commit 30822a0) — same shape over the same `/v1/admin/block-storage`,
+  built on `hanzogui` + `@hanzogui/admin` (SummaryCard/DataTable/Badge), route
+  `/infra/block-storage`, Operations nav. Ships on the next `ghcr.io/hanzoai/admin` build
+  (unblocked — separate repo). The cloud endpoint (the shared data source) ships on the
+  next `hanzoai/cloud` release; this console twin rides the same release embedding
+  `console@main`.
+- Verification: `tsc --noEmit` clean; the block-storage e2e passes (renders datastore /
+  fleet KPIs / near-full alert / honest "—"). → v8.4.153.
+
+## platform.hanzo.ai is a deploy platform — native OSS App Store (1000+ one-click apps) + deploy home (feat/platform-oss-store)
+
+platform.hanzo.ai was landing on the generic monochrome catalog home. The sibling
+`972dfdc5f7` gave it the `platform` shell face (host → `shell:'platform'`, `/` → `/platform`);
+this wave makes `/platform` a REAL deploy platform: a deploy HOME + a native OSS App Store
+that ports the retired Dokploy marketplace (the 1000+-app `templates.hanzo.ai` catalog) into
+the console, with one-click deploy over the console's OWN PaaS path and the maker "Earn 20%"
+hook. Purely ADDITIVE — the committed single-product platform shell is respected, untouched
+(no shell/registry-gate/test churn).
+
+- **App Store product (`store`, category Platform)** — `StoreModule` browses the LIVE
+  1000+-app catalog. `lib/api/oss-apps.ts` fetches `config.ossCatalogUrl`/meta.json
+  (`https://templates.hanzo.ai`, default) DIRECTLY from the browser — the CDN sends open CORS
+  (`access-control-allow-origin: *`, verified live), so it needs NO BFF and works in the
+  go:embed console (where the Next reverse-proxies are pruned). Defensive normalizers over the
+  exact live shape (`{id,name,description,version,logo,tags,links{github?,website?,docs?}}`;
+  the extra `dokploy_version` is dropped; ids de-duped). Cached per base (one ~500 KB fetch
+  shared by the store page + the home strip).
+- **Search-first, DOM-safe (1030 items)** — pure `store/logic.ts` (node-tested): literal
+  case-insensitive substring search (name/id/description/tags — ReDoS-safe, never a compiled
+  RegExp), OR tag filter, quick-filter chips (FEATURED_TAGS present, provenance tags hidden) +
+  an "All tags" reveal, and `slice(0, visibleCount)` "Load more" (PAGE_SIZE 48) so the mounted
+  DOM is capped. `StoreCard` = lazy `<img>` logo (`<base>/blueprints/<id>/<logo>`) → a monogram
+  fallback on 404 (never a broken image), version badge, tags, github/website/docs links.
+- **One-click deploy over the console's REAL path** — `DeployDialog` reuses `PaasApi`
+  (`/v1/platform/*`, the SAME container-app surface Compute › Applications drives; cloud
+  `clients/platform`): ensure a project (a fresh auto-named one, or an existing one the user
+  picks) → `createApp({source:'git', repo:{url: links.github}})` (Hanzo Cloud builds the repo
+  with BuildKit) → `deploy` → honest build/live status + a link into the project's deploy hub.
+  We do NOT rebuild the deploy backend; we drive it. An app with no buildable repo shows an
+  honest "View app" (never a dead Deploy). Every phase is real; a failure surfaces the
+  backend's own message.
+- **Maker "Earn 20%" hook** — derived from `links.github` (there is no author field in the
+  catalog) → `ownerRepo` → the IN-console OSS Author program (`/authors?claim=<owner/repo>`,
+  URL-safe). Per-card ("Maintainer? Earn 20% →") + a page payout banner. The canonical 20%.
+- **Platform deploy HOME** — `PlatformModule` '' now renders `platform-home/PlatformHome`
+  (was the bare project list): a deploy hero ("Deploy anything."), quick tiles (App Store ·
+  Containers · Functions · Usage), a FEATURED one-click-apps strip (the live catalog, curated
+  to well-known apps, reusing `StoreCard`/`DeployDialog` via the shared `AppsRow`), and the
+  org's real projects (the reused `PlatformList`, re-headed "Your projects" via new optional
+  `title`/`subtitle` props). `:name` → `PlatformDetail` unchanged. So platform.hanzo.ai boots
+  into a deploy platform, not a generic console.
+- **Home "Deploy OSS" tile → native `/store`** (was an external `window.open(templatesUrl)`) —
+  the marketplace is now native for every host. `config.ossCatalogUrl` added (env
+  `NEXT_PUBLIC_OSS_CATALOG_URL`, default `https://templates.hanzo.ai`).
+- **White-label**: all deploy/store copy reads `config.brandName` (a Lux console says "Lux
+  Cloud", never "Hanzo").
+- **RENDER-proven, not just mocked** (`e2e/platform-store.spec.ts`, mocked catalog + PaaS,
+  local dev): `/store` renders the grid, search narrows to Postgres (n8n disappears), the
+  Deploy dialog opens over the real PaaS path ("Deploy n8n" · `n8n-io/n8n` · New-project
+  selector), and the "Earn 20%" hook shows; `/platform` renders the deploy hero + App Store
+  tile + featured OSS strip + Your-projects. Screenshots `e2e-shots/{store-grid,store-deploy,
+  platform-home}.png`.
+- **Reachability (flagged, honest):** the catalog is LIVE (CORS `*`, 1030 apps) → the store
+  renders real apps today. Deploy hits cloud's `/v1/platform` (the live PaaS `PaasApi` used by
+  Applications) — a signed-in org's real create→build→deploy; honest error/empty states if a
+  repo doesn't build cleanly (the backend's own verdict, never fabricated). No new backend
+  endpoint — the catalog is a public CDN, deploy reuses the existing platform subsystem.
+- Verification: `tsc --noEmit` clean (0 errors); `vitest` **all green** (+24 new:
+  oss-apps normalizers/URL/ownerRepo/claim + store filter/paginate/tags/featured/slugify);
+  `next build` ✓; `npm run build:embed` ✓ (go:embed gate — the surface platform.hanzo.ai
+  serves; adds no routes/dynamic pages). ADDITIVE only — the committed `platform` shell
+  (single-product face) is untouched. NOTE (deploy): ships to platform.hanzo.ai/
+  console.hanzo.ai on the next `hanzoai/cloud` release embedding `console@main`
+  (`CONSOLE_REF=main`, go:embed) — no standalone console image reaches those hosts; the
+  release/merge agent bumps `package.json` + the cloud release embeds it. FOLLOW-UP (optional,
+  not done to respect the committed design): upgrade the `platform` face from single-product to
+  a MULTI-product category-scoped nav (Platform · Compute · Network) so the sidebar itself
+  leads with Projects/Containers/App Store/Functions/Usage — a shell.ts + registry-gate change,
+  a separate CTO call.

@@ -3,8 +3,9 @@
  *
  * It COMPOSES the three real backends the console already talks to (no new backend,
  * no fabrication) and adds the provisioning calls that ride the EXISTING `/paas`
- * proxy — which forwards ANY path to `platform.hanzo.ai/v1/*` with the service token
- * (server-only, KMS-sourced) behind the brand-admin gate + CSRF. So:
+ * proxy — which forwards ANY path to the ONE Hanzo API endpoint at `/v1/paas/*`
+ * with the service token (server-only, KMS-sourced) behind the brand-admin gate
+ * + CSRF. So:
  *
  *   REAL today (the platform serves these):
  *     - IAM orgs         → `IamAdminApi.organizations` (`/admin/iam`, global-admin gate) → the tenant list + brand.
@@ -152,7 +153,7 @@ const normalizeBrandConfig = (raw: unknown): TenantBrandConfig | null => {
 export const TenantsApi = {
   /**
    * The PACKAGE catalog — DATA, read from the platform (`GET /paas/packages` →
-   * `platform.hanzo.ai/v1/packages`). The catalog is NOT hardcoded in the console:
+   * `api.hanzo.ai/v1/paas/packages`). The catalog is NOT hardcoded in the console:
    * adding a package is a platform DB row (+ reseed from `platform-seed/packages.json`),
    * never a console code edit. HONEST-NOT-CONNECTED today: the platform has no
    * `package` table / `/v1/packages` route yet, so this 404s and the UI shows the

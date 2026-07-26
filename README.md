@@ -34,7 +34,7 @@ All config is `NEXT_PUBLIC_*` (browser app, cookie auth). See `.env.example`.
 
 | Var | Default | Meaning |
 | --- | --- | --- |
-| `NEXT_PUBLIC_CLOUD_URL` | `https://cloud.hanzo.ai` | Unified `/v1` backend base URL |
+| `NEXT_PUBLIC_CLOUD_URL` | same origin, else `https://api.hanzo.ai` | The ONE Hanzo API endpoint (unified `/v1` backend). Never a per-service API host. |
 | `NEXT_PUBLIC_IAM_URL` | `https://iam.hanzo.ai` | Hanzo IAM OIDC authority |
 | `NEXT_PUBLIC_IAM_APP_NAME` | `hanzo-console` | IAM application (`<org>-<app>`) |
 | `NEXT_PUBLIC_IAM_ORG_NAME` | `hanzo` | IAM organization |
