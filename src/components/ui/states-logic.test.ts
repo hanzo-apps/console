@@ -53,3 +53,30 @@ describe('honestError', () => {
     expect(generic.topUp).toBeUndefined()
   })
 })
+
+describe('402 — subscription vs balance are different asks', () => {
+  it('routes a paywall subscription_required to plans, not to credits', () => {
+    // The gate answers {"error":"subscription_required"}; the API clients surface
+    // that token as the message.
+    const s = honestError(new ApiError('subscription_required', 402))
+    expect(s.subscribe).toBe(true)
+    expect(s.topUp).toBeFalsy()
+    expect(s.reauth).toBeFalsy()
+    expect(s.title).toMatch(/subscribe/i)
+    // Never "Could not load" — a planless org is not a crash.
+    expect(s.title).not.toMatch(/could not load/i)
+  })
+
+  it('still treats a plain 402 as a top-up', () => {
+    const s = honestError(new ApiError('Insufficient balance. Please add credits to continue.', 402))
+    expect(s.topUp).toBe(true)
+    expect(s.subscribe).toBeFalsy()
+  })
+
+  it('does not offer credits to a planless org — they cannot be spent', () => {
+    // The regression this guards: buying credits does not satisfy the paywall, so
+    // the very next request 402s again and the user is stuck in a loop.
+    const s = honestError(new ApiError('subscription_required', 402))
+    expect(s.topUp).toBeFalsy()
+  })
+})
