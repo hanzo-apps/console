@@ -72,9 +72,28 @@ export function useSquareCard(cfg: PaymentConfig | null): SquareCardController {
         if (disposed) return
         const payments = sdk.payments(applicationId, locationId)
         const card = await payments.card({
-          // Legible on the console's dark surface; Square renders the actual
-          // (PCI-scoped) inputs inside its OWN iframe.
-          style: { input: { color: '#e8e8e8' }, '.input-container': { borderColor: '#3a3a3a' } },
+          // Match the console's monochrome dark surface — Square's card iframe defaults
+          // to a bright WHITE field that reads as an off-brand box on the dark console.
+          // Square renders the actual PCI-scoped inputs inside its OWN iframe; these are
+          // the only knobs it exposes, so we set the full set to a dark, on-brand theme:
+          // a near-black field (`$color1`), light legible text, muted placeholders, a
+          // neutral border that brightens on focus, and a monochrome-red error tone. The
+          // container the iframe mounts into is styled to match in BillingCredits.
+          style: {
+            input: {
+              backgroundColor: '#0a0a0a',
+              color: '#f2f2f2',
+              fontSize: '14px',
+            },
+            'input::placeholder': { color: '#6b6b6b' },
+            '.input-container': { borderColor: '#2a2a2a', borderRadius: '8px' },
+            '.input-container.is-focus': { borderColor: '#8a8a8a' },
+            '.input-container.is-error': { borderColor: '#b54a4a' },
+            '.message-text': { color: '#9a9a9a' },
+            '.message-icon': { color: '#9a9a9a' },
+            '.message-text.is-error': { color: '#e06a6a' },
+            '.message-icon.is-error': { color: '#e06a6a' },
+          },
         })
         if (disposed) {
           await card.destroy().catch(() => {})
