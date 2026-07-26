@@ -121,6 +121,49 @@ export type GuideEvent = {
   error?: string
 }
 
+/** The org's top-of-funnel (guide gtm.go Funnel) — the analytics lens suggest/chat ground on. */
+export type GuideFunnel = {
+  available: boolean
+  windowDays: number
+  pageviews: number
+  visitors: number
+  signups: number
+  orders: number
+  revenue: number
+}
+
+/** One dynamically-ranked next-best quest (guide suggest.go). */
+export type GuideSuggestion = {
+  stepId: string
+  title: string
+  why: string
+  /** the grounded reason this is a good next move (leverage + AI-ready). */
+  rationale: string
+  /** whether the Business AI can run this quest. */
+  automatable: boolean
+  /** how many downstream quests completing this immediately unblocks. */
+  unlocks: number
+}
+
+/** GET /v1/guide/suggest — the dynamic next-best quests + a grounded AI narrative. */
+export type GuideSuggest = {
+  /** the single best next step id ('' when the journey is complete). */
+  next: string
+  suggestions: GuideSuggestion[]
+  /** the Business AI's "what to do next" prose (best-effort; '' when the AI plane is down). */
+  narrative: string
+  funnel: GuideFunnel
+  /** the funnel-derived GTM recommendations (always present). */
+  recommendations: string[]
+}
+
+/** POST /v1/guide/chat — the Business AI's grounded reply + the current candidate quests. */
+export type GuideChat = {
+  reply: string
+  suggestions: GuideSuggestion[]
+  funnel: GuideFunnel
+}
+
 // ── Normalizers ─────────────────────────────────────────────────────────────
 
 const STATES: StepState[] = ['todo', 'in_progress', 'done', 'skipped']
@@ -178,6 +221,51 @@ function normalizeAction(raw: unknown): GuideAction {
   }
 }
 
+function normalizeFunnel(raw: unknown): GuideFunnel {
+  const r = asRecord(raw)
+  return {
+    available: bool(r.available),
+    windowDays: num(r.windowDays),
+    pageviews: num(r.pageviews),
+    visitors: num(r.visitors),
+    signups: num(r.signups),
+    orders: num(r.orders),
+    revenue: num(r.revenue),
+  }
+}
+
+function normalizeSuggestion(raw: unknown): GuideSuggestion {
+  const r = asRecord(raw)
+  return {
+    stepId: str(r.stepId),
+    title: str(r.title),
+    why: str(r.why),
+    rationale: str(r.rationale),
+    automatable: bool(r.automatable),
+    unlocks: num(r.unlocks),
+  }
+}
+
+export function normalizeSuggest(raw: unknown): GuideSuggest {
+  const r = asRecord(raw)
+  return {
+    next: str(r.next),
+    suggestions: arrayUnder(r.suggestions, ['suggestions', 'data']).map(normalizeSuggestion),
+    narrative: str(r.narrative),
+    funnel: normalizeFunnel(r.funnel),
+    recommendations: strArray(r.recommendations),
+  }
+}
+
+export function normalizeChat(raw: unknown): GuideChat {
+  const r = asRecord(raw)
+  return {
+    reply: str(r.reply),
+    suggestions: arrayUnder(r.suggestions, ['suggestions', 'data']).map(normalizeSuggestion),
+    funnel: normalizeFunnel(r.funnel),
+  }
+}
+
 // ── Client ──────────────────────────────────────────────────────────────────
 
 export const GuideApi = {
@@ -196,6 +284,22 @@ export const GuideApi = {
     const res = await restGet(originV1Url(`${BASE}/actions`))
     return arrayUnder(res, ['data', 'items', 'rows']).map(normalizeAction)
   },
+
+  /**
+   * The Business AI's DYNAMIC next-best quests, grounded in the org's real progress
+   * + analytics funnel (guide `suggest.go`). Read-only — surfacing a quest never runs
+   * it (the UI calls `do`/`streamDo` for that).
+   */
+  suggest: async (): Promise<GuideSuggest> => normalizeSuggest(await restGet(originV1Url(`${BASE}/suggest`))),
+
+  /**
+   * Ask the Business AI about the launch journey. Returns a grounded reply + the
+   * current candidate quests (so the UI can offer "Do it for me" on the AI-ready
+   * ones). Chat NEVER executes a step — the ONLY action path is `do`/`streamDo`,
+   * which is dependency-gated, audited, and metered server-side.
+   */
+  chat: async (message: string): Promise<GuideChat> =>
+    normalizeChat(await restPost(originV1Url(`${BASE}/chat`), { message })),
 
   /**
    * Replace the org's curriculum with a custom one. Takes a PARSED object (the
