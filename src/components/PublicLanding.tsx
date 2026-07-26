@@ -24,6 +24,31 @@ import { ConsoleFooter } from '~/components/ConsoleFooter'
  *  (the canonical surface aims them AT the console — a self-link from here). */
 const LANDING_SURFACE: HanzoSurface = landingSurface(findSurfaceByHost('cloud.hanzo.ai'))
 
+/**
+ * The house hero buttons — the same pill pair every Hanzo landing wears: a white
+ * primary carrying the weight, and a hairline secondary that is still visibly a
+ * button. Tamagui's default Button is a grey chip that reads as DISABLED next to
+ * the white sign-in pill in the header, and `chromeless` has no edge at all.
+ */
+const CTA_PRIMARY = {
+  rounded: 999,
+  bg: '$color12',
+  color: '$color1',
+  borderWidth: 0,
+  hoverStyle: { bg: '$color12', opacity: 0.85 },
+  pressStyle: { bg: '$color12', opacity: 0.7 },
+} as const
+
+const CTA_SECONDARY = {
+  rounded: 999,
+  bg: 'transparent',
+  color: '$color12',
+  borderWidth: 1,
+  borderColor: '$color6',
+  hoverStyle: { bg: '$color3', borderColor: '$color8' },
+  pressStyle: { bg: '$color4' },
+} as const
+
 export function PublicLanding() {
   const router = useRouter()
   const brand = getBrand()
@@ -71,6 +96,7 @@ export function PublicLanding() {
               the size token's own line-height is tuned for ONE line, so on a phone —
               where this always wraps — the two lines overprint without it. */}
           <Text
+            render="h1"
             className="hz-display"
             fontSize="$11"
             $md={{ fontSize: '$13' }}
@@ -85,10 +111,18 @@ export function PublicLanding() {
           </Text>
         </YStack>
         <XStack gap="$3" mt="$2" flexWrap="wrap" justify="center">
-          <Button size="$4" onPress={() => router.push('/signin')}>
+          <Button
+            size="$4"
+            {...CTA_PRIMARY}
+            onPress={() => router.push('/signin')}
+          >
             Get started
           </Button>
-          <Button size="$4" chromeless onPress={() => typeof window !== 'undefined' && window.open(brand.websiteUrl, '_blank', 'noopener')}>
+          <Button
+            size="$4"
+            {...CTA_SECONDARY}
+            onPress={() => typeof window !== 'undefined' && window.open(brand.websiteUrl, '_blank', 'noopener')}
+          >
             Learn more
           </Button>
         </XStack>
