@@ -21,7 +21,7 @@ import { EVENTS } from '@hanzo/event'
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { usePreferences } from '~/lib/products/preferences'
-import { HanzoMark } from '~/components/ui/HanzoMark'
+import { BrandMark } from '~/components/ui/BrandLogo'
 import { FadeIn } from '~/components/ui/FadeIn'
 import {
   ONBOARDING_STEPS,
@@ -111,7 +111,10 @@ export function OnboardingWizard({
       {/* Top bar: brand + dismiss */}
       <XStack px="$5" py="$3.5" items="center" justify="space-between" borderBottomWidth={1} borderColor="$borderColor">
         <XStack gap="$2.5" items="center">
-          <HanzoMark size={22} />
+          {/* Host-derived. The wizard sits beside "Set up {config.brandName}",
+              so a hardcoded Hanzo H put the wrong mark next to the right name on
+              every lux/zoo/pars host. Same mark SidebarBrand renders. */}
+          <BrandMark size={22} />
           <Text fontSize="$4" fontWeight="700" color="$color12">
             Set up {config.brandName}
           </Text>
