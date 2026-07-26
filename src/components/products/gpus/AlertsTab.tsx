@@ -13,9 +13,10 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { PlatformStateCard } from '../platform/state'
 import type { ComputeData } from './state'
+import { toneVar } from '~/components/ui/tone'
 
-const SEV: Record<string, string> = { critical: '#e5534b', error: '#e5534b', warning: '#f0a868', warn: '#f0a868', info: '#6ea8fe' }
-const sevColor = (s?: string) => SEV[(s ?? '').toLowerCase()] ?? '#6ea8fe'
+const SEV: Record<string, string> = { critical: toneVar('critical'), error: toneVar('critical'), warning: toneVar('warning'), warn: toneVar('warning'), info: toneVar('neutral') }
+const sevColor = (s?: string) => SEV[(s ?? '').toLowerCase()] ?? toneVar('neutral')
 const fmtTime = (s?: string) => {
   if (!s) return '—'
   const d = new Date(s)

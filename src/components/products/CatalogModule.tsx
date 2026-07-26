@@ -48,6 +48,7 @@ import {
   rowsToMetadata,
   specSummary,
 } from './catalog/logic'
+import { toneVar } from '~/components/ui/tone'
 
 const CATALOG_COPY: HonestCopy = {
   notFound:
@@ -492,7 +493,7 @@ function CatalogForm({
             onPress={onDelete}
             disabled={busy}
             ml="auto"
-            style={{ color: '#dc2626' }}
+            style={{ color: toneVar('critical') }}
           >
             Delete
           </Button>

@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.4.152",
+  "version": "8.5.27",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
@@ -25,7 +25,6 @@
     "@hanzo/finance-ui": "0.1.1",
     "@hanzo/gui": "7.3.0",
     "@hanzo/iam": "^0.13.6",
-    "@hanzo/iam-js-sdk": "0.19.1",
     "@hanzo/logo": "^1.0.13",
     "@hanzo/ui": "^8.0.6",
     "@hanzo/usage": "^0.1.6",
@@ -53,7 +52,8 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-native-web": "0.21.2",
-    "superjson": "2.2.2"
+    "superjson": "2.2.2",
+    "@hanzogui/shell": "^7.5.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

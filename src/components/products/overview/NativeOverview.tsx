@@ -45,6 +45,7 @@ import type { OverviewAction, OverviewSpec } from './spec'
 import { resolveSpec } from './resolve'
 import { o11yServiceFor } from '~/components/products/subpage/sources'
 import { ProductObservability } from '~/components/products/observability/ProductObservability'
+import { toneVar } from '~/components/ui/tone'
 
 /** Map a spec action's icon name to a real Lucide icon (kept out of the data layer). */
 const ACTION_ICON: Record<NonNullable<OverviewAction['icon']>, IconType> = {
@@ -75,7 +76,7 @@ function verdict(apps: PlatformApp[]): { tone: 'green' | 'yellow' | 'red'; label
   return { tone: 'green', label: 'Operational' }
 }
 
-const TONE_DOT = { green: '#3fb950', yellow: '#d29922', red: '#f85149' } as const
+const TONE_DOT = { green: toneVar('positive'), yellow: toneVar('warning'), red: toneVar('critical') } as const
 
 /** Live health band — real signal from the platform apps inventory, or honest states. */
 function HealthBand({ service, label }: { service: string; label: string }) {

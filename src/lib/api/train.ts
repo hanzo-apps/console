@@ -4,7 +4,7 @@
  * proxy (`app/training/[...path]/route.ts`), which forwards the session cookie +
  * active org. The browser holds no key and never calls the backend directly.
  *
- * Endpoints (verified live: `api.cloud.hanzo.ai/v1/train/jobs` and `/v1/ml/models`
+ * Endpoints (verified live: `api.hanzo.ai/v1/train/jobs` and `/v1/ml/models`
  * route before auth → real JSON, a fake sibling path 404s):
  *   - GET/POST /v1/train/jobs         — list / create training jobs. POST is
  *     billing-gated by the ResourceMeter → 402 on an unfunded org (surfaced honestly).

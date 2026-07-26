@@ -29,6 +29,7 @@
  */
 import { restGet, originV1Url } from './client'
 import { rangeStart, type RangeKey } from './aimetrics'
+import { RAMP, OTHER } from '~/lib/theme/ramp'
 
 // ── view-models (the contract, camelCased) ───────────────────────────────────
 
@@ -139,19 +140,25 @@ export function normalizeFunding(raw: unknown): FundingRow {
 /** The four known funding classes, in display order. */
 export const FUNDING_ORDER: FundingClass[] = ['credit', 'paid', 'paid_only', 'byo']
 
-/** Label + chart color + one-line meaning for each known funding class. */
+/**
+ * Label + chart color + one-line meaning for each known funding class.
+ *
+ * The console chrome is monochrome, so these four categories are separated by
+ * LIGHTNESS, not hue — every other step of the shared categorical scale
+ * (`lib/theme/ramp`), so no two adjacent classes read alike. Order is display order:
+ * the class we most want to see first reads brightest.
+ */
 export const FUNDING_META: Record<FundingClass, { label: string; color: string; hint: string }> = {
-  credit: { label: 'Our credit', color: '#23c562', hint: 'Drawn from provider credit we hold (free to us).' },
-  paid: { label: 'Paid', color: '#3aa0ff', hint: 'Hanzo pays the provider for this usage.' },
-  paid_only: { label: 'Paid-only', color: '#ff9f45', hint: 'Provider with no credit — billed directly.' },
-  byo: { label: 'BYO key', color: '#c084fc', hint: "Served on a customer's own provider key." },
+  credit: { label: 'Our credit', color: RAMP[0], hint: 'Drawn from provider credit we hold (free to us).' },
+  paid: { label: 'Paid', color: RAMP[2], hint: 'Hanzo pays the provider for this usage.' },
+  paid_only: { label: 'Paid-only', color: RAMP[4], hint: 'Provider with no credit — billed directly.' },
+  byo: { label: 'BYO key', color: RAMP[6], hint: "Served on a customer's own provider key." },
 }
 
-const OTHER_COLOR = '#64748b'
 /** Label for a funding value (known → its label; unknown → the raw value). */
 export const fundingLabel = (f: string): string => FUNDING_META[f as FundingClass]?.label ?? (f || 'Other')
 /** Chart color for a funding value (known → its color; unknown → neutral). */
-export const fundingColor = (f: string): string => FUNDING_META[f as FundingClass]?.color ?? OTHER_COLOR
+export const fundingColor = (f: string): string => FUNDING_META[f as FundingClass]?.color ?? OTHER
 
 // ── roll-ups (pure) ──────────────────────────────────────────────────────────
 

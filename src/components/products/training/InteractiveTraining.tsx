@@ -29,12 +29,13 @@ import { Panel } from '~/components/ui/Metric'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
+import { toneColor } from '~/components/ui/tone'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
 const POLL_MS = 2500
-const ERR = '#e5534b'
-const OK = '#7ee787'
+const ERR = toneColor('critical')
+const OK = toneColor('positive')
 
 const fmtInt = (n?: number) => (typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString() : '—')
 const fmtLoss = (n?: number) => (typeof n === 'number' && Number.isFinite(n) ? n.toFixed(4) : '—')

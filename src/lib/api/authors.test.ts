@@ -74,7 +74,7 @@ describe('Authors normalizers — real cloud JSON shape, defensive', () => {
   it('coerces missing/garbage fields to safe defaults (never throws)', () => {
     const o = normalizeOverview(null)
     expect(o).toMatchObject({ isAuthor: false, githubLogin: '', accruedCents: 0, pendingCents: 0, paidCents: 0, verified: false })
-    expect(o.defaultShareBps).toBe(500) // sensible fallback when absent
+    expect(o.defaultShareBps).toBe(2000) // sensible fallback when absent — the canonical 20%
     expect(o.badgeBase).toBe('https://hanzo.app') // sensible fallback when absent
     expect(o.verifyFile).toBe('hanzo.json') // the canonical file name
     expect(o.repos).toEqual([])

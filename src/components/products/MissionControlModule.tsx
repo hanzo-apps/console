@@ -57,13 +57,14 @@ import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { useToast } from '~/components/ui/Toast'
 import { useLiveSessions, type LiveState } from './mission-control/live'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
-// ── status tone palette (semantic → hex, alpha bg for the pill) ──────────────
+// ── status tone palette — the ONE map, as CSS values; the pill's bg is a shade ──
 const TONE: Record<ReturnType<typeof statusTone>, { fg: string; bg: string; label: string }> = {
-  live: { fg: '#16a34a', bg: '#16a34a22', label: 'Live' },
-  paused: { fg: '#d97706', bg: '#d9770622', label: 'Paused' },
-  ok: { fg: '#6b7280', bg: '#6b728022', label: 'Done' },
-  error: { fg: '#dc2626', bg: '#dc262622', label: 'Error' },
+  live: { fg: toneVar('positive'), bg: 'var(--color4)', label: 'Live' },
+  paused: { fg: toneVar('warning'), bg: 'var(--color4)', label: 'Paused' },
+  ok: { fg: toneVar('muted'), bg: 'var(--color3)', label: 'Done' },
+  error: { fg: toneVar('critical'), bg: 'var(--color5)', label: 'Error' },
 }
 
 function StatusPill({ status }: { status: Session['status'] }) {
@@ -194,17 +195,19 @@ function TerminalView({ events, empty }: { events: SessionEvent[]; empty: string
 }
 
 function kindColor(kind: string): string {
+  // Monochrome for non-semantic event kinds (design --neutral ladder); only the
+  // genuine states carry a WEIGHT off the one tone map, never a hue.
   switch (kind) {
     case 'tool-call':
-      return '#8b5cf6'
+      return toneVar('neutral')
     case 'spawn':
-      return '#0ea5e9'
+      return toneVar('muted')
     case 'status':
-      return '#d97706'
+      return toneVar('warning')
     case 'control':
-      return '#dc2626'
+      return toneVar('critical')
     case 'message':
-      return '#16a34a'
+      return toneVar('positive')
     default:
       return 'var(--color10)'
   }
@@ -357,7 +360,7 @@ function DeviceCard({ d, onRemove, onToggle }: { d: Device; onRemove: (id: strin
           </YStack>
         </XStack>
         <XStack items="center" gap="$1.5">
-          <YStack width={8} height={8} rounded="$10" bg={online ? '#16a34a' : '#9ca3af'} />
+          <YStack width={8} height={8} rounded="$10" bg={toneColor(online ? 'positive' : 'muted')} />
           <Text fontSize="$1" color="$color10">
             {d.running} live · {d.sessions.length}
           </Text>
@@ -553,9 +556,9 @@ export function MissionControlModule() {
       subtitle="See and drive every agent session — swipe between live terminals, from anywhere."
       actions={
         <XStack gap="$2" items="center" flexWrap="wrap">
-          <XStack items="center" gap="$1.5" px="$2.5" py="$1" rounded="$10" style={{ backgroundColor: live.live ? '#16a34a22' : 'var(--color3)' }}>
-            <YStack width={7} height={7} rounded="$10" bg={live.live ? '#16a34a' : '#9ca3af'} />
-            <Text fontSize="$1" style={{ color: live.live ? '#16a34a' : 'var(--color10)' }}>
+          <XStack items="center" gap="$1.5" px="$2.5" py="$1" rounded="$10" style={{ backgroundColor: live.live ? 'var(--color4)' : 'var(--color3)' }}>
+            <YStack width={7} height={7} rounded="$10" bg={toneColor(live.live ? 'positive' : 'muted')} />
+            <Text fontSize="$1" style={{ color: live.live ? toneVar('positive') : 'var(--color10)' }}>
               {live.live ? 'Live' : 'Polling'}
             </Text>
           </XStack>

@@ -8,6 +8,7 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { TrendingDown, TrendingUp } from '@hanzogui/lucide-icons-2'
+import { toneColor } from '~/components/ui/tone'
 
 /** Open an external URL in a new tab (SSR-guarded). */
 export function openExternal(href: string): void {
@@ -102,13 +103,13 @@ export function DeltaChip({ pct }: { pct: number | null }) {
   }
   const rounded = Math.round(pct)
   const up = rounded >= 0
-  const color = up ? '#23c562' : '#ff5d8f'
+  const color = toneColor(up ? 'positive' : 'critical')
   const Icon = up ? TrendingUp : TrendingDown
   const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : ''
   return (
     <XStack items="center" gap="$1">
       <Icon size={13} color={color} />
-      <Text fontSize="$1" fontWeight="700" style={{ color }}>
+      <Text fontSize="$1" fontWeight="700" color={color}>
         {sign}
         {Math.abs(rounded)}%
       </Text>

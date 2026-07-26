@@ -23,6 +23,7 @@ import { SelectMenu } from '~/components/ui/SelectMenu'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { AuditApi, type AuditEvent, type AuditPage, type AuditQuery } from '~/lib/api/audit'
 import { exportCSV } from '~/lib/csv'
+import { toneColor } from '~/components/ui/tone'
 
 const PAGE_SIZE = 50
 
@@ -50,8 +51,8 @@ const fmtTime = (v: string): string => {
   return isNaN(d.getTime()) ? v || '—' : d.toLocaleString()
 }
 
-const resultColor = (result: string): `#${string}` =>
-  result === 'success' ? '#7ee787' : result === 'deny' ? '#f0a868' : result === 'error' ? '#e5534b' : '#8b9bb4'
+const resultColor = (result: string) =>
+  toneColor(result === 'success' ? 'positive' : result === 'deny' ? 'warning' : result === 'error' ? 'critical' : 'muted')
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -205,7 +206,7 @@ export function AuditModule(_props: { params: Record<string, string> }) {
         onClose={() => setSelected(null)}
         title="Audit event"
         icon={ShieldCheck}
-        iconColor="#7ee787"
+        iconColor={toneColor('positive')}
         ariaLabel="Audit event detail"
         size={460}
       >

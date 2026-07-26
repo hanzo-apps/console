@@ -22,9 +22,11 @@ const STAGE_LABEL: Record<string, string> = {
   rejected: 'Rejected',
 }
 
+// Monochrome-leaning: the early, non-semantic stages read neutral (gray); the later
+// stages keep a restrained progression cue toward the terminal states.
 const STAGE_COLOR: Record<string, TagColor> = {
-  applied: 'blue',
-  screened: 'purple',
+  applied: 'gray',
+  screened: 'gray',
   qualified: 'teal',
   'credits-offered': 'amber',
   onboarded: 'green',

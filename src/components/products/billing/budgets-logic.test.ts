@@ -87,9 +87,16 @@ describe('spendPct', () => {
 })
 
 describe('meterColor', () => {
-  it('maps every verdict to a distinct color', () => {
-    const colors = new Set(['ok', 'warn', 'over', 'unlimited'].map((v) => meterColor(v as never)))
-    expect(colors.size).toBe(4)
+  // The chrome is monochrome, so a verdict is carried by WEIGHT + the label beside it,
+  // never by hue — two verdicts may legitimately share a token. What must hold is that
+  // every verdict draws from the greyscale ramp, and that over-cap is the loudest.
+  it('draws every verdict from the greyscale ramp', () => {
+    for (const v of ['ok', 'warn', 'over', 'unlimited'] as const)
+      expect(meterColor(v)).toMatch(/^var\(--color(9|10|11|12)\)$/)
+  })
+  it('emphasises over-cap above every other verdict', () => {
+    expect(meterColor('over')).toBe('var(--color12)')
+    for (const v of ['ok', 'warn', 'unlimited'] as const) expect(meterColor(v)).not.toBe(meterColor('over'))
   })
 })
 

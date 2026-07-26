@@ -43,7 +43,7 @@ async function mock(route: Route) {
   const req = route.request()
   if (req.resourceType() === 'document') return route.continue()
   const url = new URL(req.url())
-  if (/\/v1\/admin\/storage(\/|$|\?)/.test(url.pathname)) {
+  if (/\/v1\/admin\/block-storage(\/|$|\?)/.test(url.pathname)) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(SNAPSHOT) })
   }
   const sameOrigin = url.origin === new URL(BASE_URL).origin

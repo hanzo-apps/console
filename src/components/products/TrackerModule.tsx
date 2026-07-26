@@ -54,7 +54,7 @@ const STATUS_LABEL: Record<Status, string> = {
 }
 const STATUS_DOT = {
   backlog: '$color8',
-  todo: '$blue10',
+  todo: '$color11',
   in_progress: '$yellow10',
   done: '$green10',
   canceled: '$red10',
@@ -69,7 +69,7 @@ const PRIORITY_LABEL: Record<Priority, string> = {
 const PRIORITY_COLOR = {
   none: '$color9',
   urgent: '$red10',
-  high: '$orange10',
+  high: '$yellow10',
   medium: '$yellow10',
   low: '$color10',
 } as const

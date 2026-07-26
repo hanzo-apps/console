@@ -15,9 +15,9 @@ export function Donut({
   thickness = 18,
   centerValue,
   centerLabel,
-  trackColor = '#2a2d2e',
-  valueColor = '#ecedee',
-  labelColor = '#9ba1a6',
+  trackColor = 'var(--color4)',
+  valueColor = 'var(--color12)',
+  labelColor = 'var(--color9)',
 }: {
   segments: DonutSegment[]
   size?: number
@@ -26,7 +26,7 @@ export function Donut({
   centerValue?: string
   /** Caption under the center value. */
   centerLabel?: string
-  /** Unfilled-ring color (explicit hex so it never depends on theme var names). */
+  /** Unfilled-ring color — the greyscale ramp token, so the ring follows the theme. */
   trackColor?: string
   valueColor?: string
   labelColor?: string

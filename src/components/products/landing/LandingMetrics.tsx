@@ -13,12 +13,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 
-import { CHART_PALETTE, Sparkline } from '~/components/ui/Charts'
+import { Sparkline } from '~/components/ui/Charts'
+import { RAMP } from '~/lib/theme/ramp'
 import { useCountUp, usePoll, useReducedMotion } from '~/components/products/overview/living/hooks'
 import { DeltaChip } from './parts'
 import type { LandingMetric, ProductLandingConfig } from './types'
 
-const ACCENT = CHART_PALETTE[0]
+const ACCENT = RAMP[0]
 
 export function LandingMetrics({ config }: { config: ProductLandingConfig }) {
   const reduced = useReducedMotion()

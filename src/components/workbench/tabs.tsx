@@ -11,8 +11,8 @@
  *    developer-resource links (docs · API reference · SDKs · CLI).
  *  - Logs      — the recent charged API calls, filterable, row → JSON detail.
  *  - Events    — the platform-event stream projected from the same real ledger.
- *  - Webhooks  — event destinations (forward-compatible: real rows when the
- *    endpoint API is live, else the honest create-first-destination state).
+ *  - Webhooks  — a read-only live glance at the org's endpoints that deep-links into
+ *    the full Webhooks product (which owns config/security/test/logs CRUD).
  *  - Health    — Alerts · Errors · Insights from the o11y runtime (honest
  *    RuntimeNotice when o11y isn't routed for the org).
  *  - Inspector — fetch any object by id (agent_… / fn_… / a resource path) → JSON.
@@ -34,7 +34,6 @@ import {
   ExternalLink,
   KeyRound,
   Lightbulb,
-  Plus,
   Search,
   Webhook,
 } from '@hanzogui/lucide-icons-2'
@@ -53,6 +52,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { RuntimeNotice } from '~/components/products/observability/RuntimeNotice'
 import { TracesModule } from '~/components/products/TracesModule'
 import { curlFor, eventsFrom, hanzoCli, inspectorRoute, parseCommand, renderOutput, type PlatformEvent } from './logic'
+import { toneColor } from '~/components/ui/tone'
 
 const usd = (cents: number, dp = 2): string => `$${(cents / 100).toFixed(dp)}`
 const timeOf = (ms: number | null): string =>
@@ -133,6 +133,10 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
   const errRate = totals.requests ? (errors / totals.requests) * 100 : 0
   const [key, setKey] = useState<KeyStatus | null>(null)
   const [keyLoading, setKeyLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [newKey, setNewKey] = useState<string | null>(null)
+  const [keyErr, setKeyErr] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -144,6 +148,23 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
       alive = false
     }
   }, [])
+
+  // Mint (or rotate) the account's real hk- Cloud API key. The secret is returned
+  // ONCE by create() and shown once here (copy affordance); status() then reflects
+  // the new key's public prefix. Honest error on failure — never a fake key.
+  const createKey = async () => {
+    setCreating(true)
+    setKeyErr(null)
+    try {
+      const r = await KeysApi.create()
+      setNewKey(r.accessKey)
+      setKey(await KeysApi.status())
+    } catch (e) {
+      setKeyErr(e instanceof Error ? e.message : 'Could not create the key.')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const docs = `${config.docsUrl}/docs`
 
@@ -157,14 +178,26 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
           <MetricCard icon={<Activity size={15} />} label="Spend" value={usd(totals.cents)} caption="Charged, last 24h" />
         </XStack>
 
-        {/* API keys summary — the account's real hk- credential (never the secret). */}
+        {/* API keys — the account's real hk- credential. Create/rotate the key INLINE
+            (the secret shows ONCE, copy it), or Manage in the full API Keys product. */}
         <Card p="$3" gap="$2" borderWidth={1} borderColor="$borderColor" bg="$color2">
-          <XStack items="center" gap="$2">
+          <XStack items="center" gap="$2" flexWrap="wrap">
             <KeyRound size={14} color="$color10" />
             <Text fontSize="$2" fontWeight="600" color="$color12">
               API keys
             </Text>
-            <XStack flex={1} />
+            <XStack flex={1} minW={8} />
+            <Button
+              size="$1"
+              bg="$color5"
+              disabled={creating}
+              onPress={() => void createKey()}
+              aria-label={key?.hasKey ? 'Create a new API key' : 'Create an API key'}
+            >
+              <Text fontSize="$1" color="$color12" fontWeight="700">
+                {creating ? 'Creating…' : key?.hasKey ? 'New key' : 'Create key'}
+              </Text>
+            </Button>
             <Button size="$1" chromeless iconAfter={<ChevronRight size={12} />} onPress={() => onGo('/api-keys')}>
               <Text fontSize="$1" color="$color11">
                 Manage
@@ -178,6 +211,39 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
                 ? `Cloud API key active · ${key.keyPrefix ? `${key.keyPrefix}…` : 'hk-…'}`
                 : 'No Cloud API key yet — create one to call the gateway as Bearer hk-…'}
           </Text>
+          {newKey ? (
+            <YStack gap="$1" p="$2" rounded="$3" borderWidth={1} borderColor="$color7" bg="$color1">
+              <Text fontSize="$1" color="$color11" fontWeight="700">
+                Your new key — copy it now, it is shown only once:
+              </Text>
+              <XStack gap="$2" items="center">
+                <Text flex={1} fontSize="$1" color="$color12" className="hz-mono" numberOfLines={1}>
+                  {newKey}
+                </Text>
+                <Button
+                  size="$1"
+                  onPress={() => {
+                    try {
+                      void navigator.clipboard?.writeText(newKey)
+                    } catch {
+                      /* clipboard unavailable — the key text is selectable */
+                    }
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 1500)
+                  }}
+                >
+                  <Text fontSize="$1" fontWeight="700">
+                    {copied ? 'Copied' : 'Copy'}
+                  </Text>
+                </Button>
+              </XStack>
+            </YStack>
+          ) : null}
+          {keyErr ? (
+            <Text fontSize="$1" color={toneColor('critical')}>
+              {keyErr}
+            </Text>
+          ) : null}
           <Text fontSize="$1" color="$color9">
             hk- (cloud key) · sk- (provider key) · pk- (publishable) — presented as Authorization: Bearer to api.hanzo.ai.
           </Text>
@@ -359,7 +425,7 @@ export function EventsTab({ records }: { records: UsageRecord[] }) {
                   fontSize="$1"
                   numberOfLines={1}
                   className="hz-mono"
-                  color={e.status !== '' && e.status !== 'success' ? '#e5534b' : '$color11'}
+                  color={e.status !== '' && e.status !== 'success' ? toneColor('critical') : '$color11'}
                 >
                   {e.type}
                 </Text>
@@ -392,16 +458,21 @@ function normalizeDestination(r: unknown, i: number): Destination {
   }
 }
 
-export function WebhooksTab() {
+/**
+ * The dock's Webhooks tab is a READ-ONLY compact glance that deep-links into the
+ * full Webhooks product (`/webhooks`). The real config/enable/security/test/logs
+ * CRUD now lives in `WebhooksModule`, so — per "one way to do everything" — the dock
+ * does NOT duplicate it: it shows a live snapshot of the org's endpoints and every
+ * affordance ("Manage in Webhooks", a row tap) navigates to the product. A 404 (API
+ * not routed yet) stays the honest "coming" state, never an error card.
+ */
+export function WebhooksTab({ onGo }: { onGo: (path: string) => void }) {
   const [rows, setRows] = useState<Destination[] | null>(null)
   const [available, setAvailable] = useState(true)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
-    // Forward-compatible: read the real endpoint-config API if this deployment
-    // serves one. A 404/not-routed is the HONEST "not available yet" state — never
-    // an error card, never a fabricated destination.
     restGet<unknown>(cloudProxyV1Url('webhooks'))
       .then((body) => {
         if (!alive) return
@@ -437,21 +508,21 @@ export function WebhooksTab() {
       <Center>
         <Webhook size={22} color="$color9" />
         <Text fontSize="$3" fontWeight="600" color="$color12">
-          {available ? 'No event destinations yet' : 'Event destinations are coming'}
+          {available ? 'No webhook endpoints yet' : 'Webhooks are coming'}
         </Text>
         <Text fontSize="$2" color="$color10" style={{ textAlign: 'center', maxWidth: 460 }}>
           {available
-            ? 'Add an endpoint to receive platform events (usage, billing, agent, and webhook events) as they happen.'
-            : 'Outbound webhook delivery is not wired on this deployment yet. When it lands you can register endpoints here; until then, subscribe to your event stream in the Events tab.'}
+            ? 'Deliver platform events (usage, billing, agent, and webhook events) to your own HTTPS endpoints — signed, retried, and logged.'
+            : 'Outbound webhook delivery is not wired on this deployment yet. When it lands, register and manage endpoints in the Webhooks product; until then, subscribe to your event stream in the Events tab.'}
         </Text>
         <Button
           size="$2"
           bg="$color5"
-          icon={<Plus size={14} />}
+          iconAfter={<ChevronRight size={14} />}
           disabled={!available}
-          onPress={() => openExternal(`${config.docsUrl}/docs/webhooks`)}
+          onPress={() => onGo('/webhooks')}
         >
-          {available ? 'Add destination' : 'Read the docs'}
+          {available ? 'Open Webhooks' : 'Learn more'}
         </Button>
       </Center>
     )
@@ -462,11 +533,11 @@ export function WebhooksTab() {
       <YStack px="$3" py="$2" gap="$1">
         <XStack items="center" gap="$2" pb="$1">
           <Text fontSize="$2" fontWeight="600" color="$color12" flex={1}>
-            Event destinations
+            Webhook endpoints
           </Text>
-          <Button size="$1" chromeless icon={<Plus size={12} />} onPress={() => openExternal(`${config.docsUrl}/docs/webhooks`)}>
+          <Button size="$1" chromeless iconAfter={<ChevronRight size={12} />} onPress={() => onGo('/webhooks')}>
             <Text fontSize="$1" color="$color11">
-              Add
+              Manage in Webhooks
             </Text>
           </Button>
         </XStack>
@@ -476,7 +547,14 @@ export function WebhooksTab() {
           <Cell w={80} dim>Status</Cell>
         </XStack>
         {(rows ?? []).map((d) => (
-          <XStack key={d.id} gap="$3" py={3}>
+          <XStack
+            key={d.id}
+            gap="$3"
+            py={3}
+            cursor="pointer"
+            hoverStyle={{ bg: '$color3' }}
+            onPress={() => onGo(`/webhooks/${encodeURIComponent(d.id)}`)}
+          >
             <Cell flex={1}>{d.url || '—'}</Cell>
             <Cell w={140} dim>{d.events}</Cell>
             <Cell w={80} dim>{d.status}</Cell>
@@ -536,7 +614,7 @@ function AlertsView() {
           <XStack key={a.id} gap="$3" py={3} items="center">
             <Cell flex={1}>{a.name}</Cell>
             <Cell w={90} dim>{a.severity || '—'}</Cell>
-            <Text width={90} fontSize="$1" className="hz-mono" color={a.state === 'firing' ? '#e5534b' : '$color10'}>
+            <Text width={90} fontSize="$1" className="hz-mono" color={a.state === 'firing' ? toneColor('critical') : '$color10'}>
               {a.state}
             </Text>
           </XStack>
@@ -652,7 +730,7 @@ function InsightsView() {
           degraded.map((h) => (
             <Card key={h.service} p="$3" gap="$1" borderWidth={1} borderColor="$borderColor" bg="$color2">
               <XStack items="center" gap="$2">
-                <AlertTriangle size={13} color={h.tone === 'red' ? '#e5534b' : '#f0a868'} />
+                <AlertTriangle size={13} color={toneColor(h.tone === 'red' ? 'critical' : 'warning')} />
                 <Text fontSize="$2" fontWeight="600" color="$color12">
                   {h.service}
                 </Text>
@@ -787,7 +865,7 @@ export function InspectorTab({ records }: { records: UsageRecord[] }) {
                   {result.ok ? <CopyBtn value={curlFor(result.path)} label="curl" /> : null}
                 </XStack>
               ) : null}
-              <Text fontSize="$1" color={result.ok ? '$color12' : '#e5534b'} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+              <Text fontSize="$1" color={result.ok ? '$color12' : toneColor('critical')} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
                 {result.output}
               </Text>
               {related.length > 0 ? (
@@ -909,7 +987,7 @@ export function ShellTab() {
                   </>
                 ) : null}
               </XStack>
-              <Text fontSize="$1" color={e.ok ? '$color12' : '#e5534b'} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+              <Text fontSize="$1" color={e.ok ? '$color12' : toneColor('critical')} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
                 {e.output}
               </Text>
             </YStack>

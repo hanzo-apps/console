@@ -1,0 +1,37 @@
+# ~7-line canonical caller — all real config lives in /hanzo.yml.
+# Builds + pushes BOTH console images (the embed artifact cloud go:embeds, and
+# the Next.js server image admin.hanzo.ai runs); auto-mirrors to registry.hanzo.ai.
+#
+# It replaces `.hanzo/workflows/deploy.yml`, which built the server image a
+# SECOND time by hand and could not: `buildctl-daemonless.sh` is not in the image
+# this fleet serves for `hanzo-build-linux-amd64` (every label in that pool maps
+# to catthehacker/ubuntu:act-24.04 — universe:infra/k8s/git-runner/statefulset.yaml),
+# and its `secrets.GIT_CLONE_TOKEN` exists on neither the repo nor the org. Its
+# `kubectl patch app` was futile too: cd.hanzo.ai's selfHeal restores the CR from
+# the universe pin on the next poll. Rollout is a reviewed tag pin in
+# hanzoai/universe, never a CI side effect.
+name: CI/CD
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # A hand-cut v* tag must produce its image, or the tag is a receipt for
+    # nothing — the exact drift the retired build-image.yml existed to prevent.
+    tags: ['v*']
+    # One tag at a time, never a bulk replay. The forge resolves workflows from
+    # the PUSHED REF's OWN tree (app.ini WORKFLOW_DIRS = .hanzo,.github,.gitea),
+    # so main's tree is NOT consulted for a tag push and nothing edited here can
+    # gate one. This repo's history is a minio/console fork, and its old trees
+    # still carry tag-triggered upstream CI. Parsed over the 646 tags reachable
+    # locally (the forge holds 692): pipeline.yml 559, release.yml 547,
+    # codespell.yml 263, build-image.yml 36, build-and-push.yml 21, cicd.yml 3
+    # = 1429 runs, i.e. 2-3 per tag, onto the SHARED runner queue. That is what
+    # starved every other repo. The only lever is to close the door first:
+    #   PATCH /api/v1/repos/hanzoai/console {"has_actions":false}
+    #   ...push the tags, confirm they landed, then set it back to true.
+    # Tags already on the forge never re-fire; a push event needs a ref to CHANGE.
+  pull_request:
+jobs:
+  cicd:
+    uses: hanzoai/ci/.github/workflows/build.yml@v1
+    secrets: inherit

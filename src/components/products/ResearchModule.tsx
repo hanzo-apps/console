@@ -27,6 +27,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { fmtValue, fmtDate, rowKeyOf } from './research-fmt'
+import { toneVar } from '~/components/ui/tone'
 
 type State = { loading: boolean; error: unknown; totals: Totals | null; experiments: Experiment[] }
 
@@ -35,14 +36,15 @@ const fmtCount = (n: number): string => (Number.isFinite(n) ? n.toLocaleString()
 const fmtUsd = (n: number): string => (!Number.isFinite(n) ? '—' : n >= 100 ? `$${Math.round(n).toLocaleString()}` : `$${n.toFixed(2)}`)
 
 // ── verdict pill — the console's tinted-chip grammar, verdict-aware tones ──
-// A refutation is DELIBERATELY not error-red: indigo reads as ruled-out knowledge, the
-// whole point of an evidentiary layer. Hexes are the console's theme-neutral house set.
+// A refutation is DELIBERATELY not dressed as a failure: it reads as ruled-out
+// knowledge (the point of an evidentiary layer), so it takes the INFORMATIONAL tone,
+// never the critical one. Emphasis + the word carry the verdict — the chrome has no hue.
 const VERDICT_STYLE: Record<Exclude<Verdict, ''>, { fg: string; bg: string }> = {
-  proven: { fg: '#3fb950', bg: 'rgba(63,185,80,0.16)' },
-  refuted: { fg: '#a371f7', bg: 'rgba(163,113,247,0.16)' },
-  inconclusive: { fg: '#f0a868', bg: 'rgba(240,168,104,0.16)' },
+  proven: { fg: toneVar('positive'), bg: 'var(--color4)' },
+  refuted: { fg: toneVar('neutral'), bg: 'var(--color4)' },
+  inconclusive: { fg: toneVar('warning'), bg: 'var(--color3)' },
 }
-const NEUTRAL = { fg: '#8b9bb4', bg: 'rgba(139,155,180,0.16)' }
+const NEUTRAL = { fg: toneVar('muted'), bg: 'var(--color3)' }
 
 /** The verdict as a colored pill; a hypothesis-free run shows its neutral run status so
  *  the column never blanks and never fabricates a verdict. */
@@ -138,7 +140,7 @@ export function ResearchModule() {
           {/* Refutation highlight — the "don't re-chase" knowledge, reasoning inline. */}
           <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
             <XStack items="center" gap="$2">
-              <CircleSlash size={15} color="#a371f7" />
+              <CircleSlash size={15} color="$color11" />
               <Text fontSize="$4" fontWeight="700">
                 Refutations
               </Text>
@@ -151,7 +153,7 @@ export function ResearchModule() {
             ) : refutations.length ? (
               <YStack gap="$2.5">
                 {refutations.map((e) => (
-                  <YStack key={e.id} gap="$1" borderLeftWidth={2} borderColor="#a371f7" pl="$3">
+                  <YStack key={e.id} gap="$1" borderLeftWidth={2} borderColor="$color11" pl="$3">
                     <XStack items="center" gap="$2" flexWrap="wrap">
                       <Text fontSize="$3" fontWeight="600">{e.subject}</Text>
                       <Text fontSize="$2" color="$color10" className="hz-mono">{e.task}</Text>

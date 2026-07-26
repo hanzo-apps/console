@@ -20,6 +20,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { FieldRow, FieldSelect } from '~/components/ui/Field'
 import { PlatformStateCard } from '../platform/state'
 import type { ComputeData } from './state'
+import { toneColor } from '~/components/ui/tone'
 
 const NODE_SIZES = [...GPU_NODE_SIZES, ...DOKS_NODE_SIZES]
 
@@ -85,7 +86,7 @@ export function ClustersTab({ data }: { data: ComputeData }) {
 
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={480}>
         <Text fontSize="$5" fontWeight="700">Provision GPU cluster</Text>
-        {error ? <Text color="#e5534b" fontSize="$2">{error}</Text> : null}
+        {error ? <Text color={toneColor('critical')} fontSize="$2">{error}</Text> : null}
         <FieldRow label="Region">
           <FieldSelect value={region} options={[...DOKS_REGIONS]} onChange={setRegion} />
         </FieldRow>

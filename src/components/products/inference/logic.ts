@@ -31,6 +31,7 @@ import {
 } from '~/lib/api/aimetrics'
 import type { CatalogModel } from '~/lib/api/models-catalog'
 import type { RawMlEndpoint } from '~/lib/api/inference'
+import { toneVar } from '~/components/ui/tone'
 
 // ── the unified endpoint view-model ──────────────────────────────────────────
 
@@ -492,12 +493,12 @@ export function statusSummary(list: Endpoint[]): StatusSummary {
   )
 }
 
-/** Dot color for a phase (the ONE mapping shared by the list + status board). */
+/** Dot weight for a phase — the ONE console tone map, as a CSS value (list + status board). */
 export const PHASE_DOT: Record<EndpointPhase, string> = {
-  available: '#23c562',
-  ready: '#23c562',
-  provisioning: '#f0a868',
-  failed: '#ff5d8f',
-  disabled: '#64748b',
-  unknown: '#64748b',
+  available: toneVar('positive'),
+  ready: toneVar('positive'),
+  provisioning: toneVar('warning'),
+  failed: toneVar('critical'),
+  disabled: toneVar('muted'),
+  unknown: toneVar('muted'),
 }

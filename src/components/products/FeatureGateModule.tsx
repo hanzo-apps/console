@@ -146,8 +146,8 @@ export function FeatureGateModule() {
                       <Text fontWeight="600">{svc.displayName}</Text>
                       {svc.waitlistMode ? (
                         <XStack items="center" gap="$1">
-                          <Lock size={14} color="$orange10" />
-                          <Text fontSize="$2" color="$orange10">Waitlist</Text>
+                          <Lock size={14} color="$yellow10" />
+                          <Text fontSize="$2" color="$yellow10">Waitlist</Text>
                         </XStack>
                       ) : (
                         <XStack items="center" gap="$1">

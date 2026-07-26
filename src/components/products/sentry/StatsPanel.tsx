@@ -17,6 +17,7 @@ import { LineChart, BarChart } from '~/components/ui/Charts'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker } from './parts'
 import { statsToPoints, statsTotal, fmtCount } from './logic'
+import { toneColor, toneVar } from '~/components/ui/tone'
 
 type State =
   | { phase: 'loading' }
@@ -74,14 +75,14 @@ export function StatsPanel({ projects }: { projects: SentryProject[] }) {
       ) : (
         <>
           <XStack gap="$3" flexWrap="wrap">
-            <MetricCard icon={<Activity size={16} color="#6ea8fe" />} label="Events" value={fmtCount(totalEvents)} spark={events.map((p) => p.value)} sparkColor="#6ea8fe" />
-            <MetricCard icon={<AlertTriangle size={16} color="#e5534b" />} label="Errors" value={fmtCount(totalErrors)} spark={errors.map((p) => p.value)} sparkColor="#e5534b" />
-            <MetricCard icon={<Percent size={16} color="#f0a868" />} label="Error rate" value={totalEvents > 0 ? `${rate.toFixed(2)}%` : '—'} />
+            <MetricCard icon={<Activity size={16} color={toneColor('neutral')} />} label="Events" value={fmtCount(totalEvents)} spark={events.map((p) => p.value)} sparkColor={toneVar('neutral')} />
+            <MetricCard icon={<AlertTriangle size={16} color={toneColor('critical')} />} label="Errors" value={fmtCount(totalErrors)} spark={errors.map((p) => p.value)} sparkColor={toneVar('critical')} />
+            <MetricCard icon={<Percent size={16} color={toneColor('warning')} />} label="Error rate" value={totalEvents > 0 ? `${rate.toFixed(2)}%` : '—'} />
           </XStack>
 
           <Panel title="Events received" grow={false}>
             {eventPts.length >= 2 ? (
-              <LineChart data={eventPts} height={210} color="#6ea8fe" formatValue={(v) => fmtCount(v)} />
+              <LineChart data={eventPts} height={210} color={toneVar('neutral')} formatValue={(v) => fmtCount(v)} />
             ) : (
               <EmptyChart loading={state.phase === 'loading'} />
             )}
@@ -89,7 +90,7 @@ export function StatsPanel({ projects }: { projects: SentryProject[] }) {
 
           <Panel title="Errors" grow={false}>
             {errorPts.length >= 2 ? (
-              <BarChart data={errorPts} height={210} color="#e5534b" formatValue={(v) => fmtCount(v)} />
+              <BarChart data={errorPts} height={210} color={toneVar('critical')} formatValue={(v) => fmtCount(v)} />
             ) : (
               <EmptyChart loading={state.phase === 'loading'} />
             )}

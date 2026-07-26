@@ -15,12 +15,13 @@
  * marks and product tiles read as one family.
  *
  * The knock-out is the same technique the color-swatch button uses (a raw-hex
- * `backgroundColor` fill + a `#ffffff` glyph) so an arbitrary product accent tints
+ * `backgroundColor` fill + a contrast-picked glyph) so an arbitrary product accent tints
  * cleanly outside Gui's token palette, in the ONE sanctioned place.
  */
 import { XStack } from '@hanzo/gui'
 
 import { asColor, type IconLike } from './color'
+import { contrastText } from '~/lib/theme/accent'
 
 export function ProductIcon({
   icon: Icon,
@@ -28,7 +29,7 @@ export function ProductIcon({
   size = 24,
 }: {
   icon: IconLike
-  /** The product's resolved accent hex (e.g. `#5E6AD2`). Omit for the neutral chip. */
+  /** The product's resolved accent hex. Omit for the neutral chip. */
   color?: string
   size?: number
 }) {
@@ -47,7 +48,7 @@ export function ProductIcon({
         rounded={radius}
         style={{ backgroundColor: color }}
       >
-        <Icon size={glyph} color={asColor('#ffffff')} />
+        <Icon size={glyph} color={asColor(contrastText(color))} />
       </XStack>
     )
   }
