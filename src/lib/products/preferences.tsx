@@ -1,17 +1,25 @@
 'use client'
 
 /**
- * User preferences — the ONE account-backed store for every console/product
+ * User preferences — the ONE cross-product store for every console/product
  * customization (pinned favorites, layout, and anything added later).
  *
- * Source of truth is the signed-in user's IAM account (`properties` →
- * `hanzo.preferences`), so customizations follow the user across every product
- * and every device/login. localStorage is used ONLY as a fast-paint cache to
- * avoid a flash before the account loads — it is never authoritative.
+ * Source of truth is cloud `/v1/prefs` (`clients/prefs`), a per-USER document
+ * keyed on the identity the server derives from the validated token, so
+ * customizations follow the person across every product and every device.
+ * localStorage is ONLY a fast-paint cache to avoid a flash before the account
+ * loads — it is never authoritative.
+ *
+ * PREVIOUSLY THIS DID NOT PERSIST. The write POSTed `/v1/update-preferences`, an
+ * IAM endpoint that is not served, and the read recovered prefs from the IAM
+ * account's `properties['hanzo.preferences']` blob — which nothing was writing.
+ * Both sides of the loop were dead: a preference lived exactly as long as the
+ * localStorage cache in front of it and never reached a second device. The
+ * layer's design was right; it was pointed at an endpoint that did not exist.
  *
  * Writes are optimistic + write-through: the local view updates immediately and
- * `update-preferences` persists to the account (self-scoped, shallow-merged
- * server-side so concurrent products/devices don't clobber each other).
+ * the PATCH merges server-side, so two surfaces (or two tabs) saving DIFFERENT
+ * keys both survive instead of the later one clobbering the earlier.
  */
 import {
   createContext,
@@ -23,11 +31,8 @@ import {
   type ReactNode,
 } from 'react'
 
-import { AccountApi } from '~/lib/api'
+import { PrefsApi } from '~/lib/api/prefs'
 import { useSession } from '~/lib/auth/session'
-
-/** Must match the backend `preferencesKey` (controllers/account.go). */
-const PREFS_PROPERTY = 'hanzo.preferences'
 
 export type Preferences = Record<string, unknown>
 
@@ -67,13 +72,30 @@ export function Preferences({ children }: { children: ReactNode }) {
       setPrefs(parsePrefs(window.localStorage.getItem(cacheKey(name))))
       return
     }
-    // …then the account becomes the source of truth once it arrives.
-    const fromAccount = parsePrefs(account?.properties?.[PREFS_PROPERTY])
-    setPrefs(fromAccount)
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(cacheKey(name), JSON.stringify(fromAccount))
+    if (!account) return
+
+    // …then the server becomes the source of truth once we have an identity to
+    // read as. A failure LEAVES the cached view rather than blanking it: losing
+    // the network should not look like losing your settings, and the next load
+    // reconciles. Guarded against a late resolve landing after a user switch.
+    let live = true
+    void PrefsApi.get()
+      .then((server) => {
+        if (!live) return
+        setPrefs(server)
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(cacheKey(name), JSON.stringify(server))
+        }
+      })
+      .catch(() => {
+        /* keep the cached view */
+      })
+      .finally(() => {
+        if (live) setReady(true)
+      })
+    return () => {
+      live = false
     }
-    setReady(Boolean(account))
   }, [account, name])
 
   const set = useCallback(
@@ -83,9 +105,20 @@ export function Preferences({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(cacheKey(name), JSON.stringify(next))
         }
-        // Write-through to the account (self-scoped server-side). Optimistic:
-        // a failure leaves the local + cache view; the next load reconciles.
-        void AccountApi.updatePreferences({ [key]: value }).catch(() => {})
+        // Write-through to the server (self-scoped there). Optimistic: a failure
+        // leaves the local + cache view and the next load reconciles. The PATCH
+        // returns the MERGED document, so a key another surface or device wrote
+        // meanwhile lands here instead of being invisible until reload.
+        void PrefsApi.merge({ [key]: value })
+          .then((merged) => {
+            setPrefs(merged)
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(cacheKey(name), JSON.stringify(merged))
+            }
+          })
+          .catch(() => {
+            /* keep the optimistic view */
+          })
         return next
       })
     },

@@ -100,17 +100,4 @@ export const AccountApi = {
     }
   },
 
-  /**
-   * Persist a partial set of cross-product user preferences onto the account.
-   * Self-scoped on the backend (writes ONLY the caller's own IAM-user
-   * properties, derived from the token — never the body). Top-level keys are
-   * shallow-merged server-side. Returns the merged preferences object so other
-   * products' keys are preserved in the local view.
-   */
-  updatePreferences: async (
-    partial: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> => {
-    const r = await post<Record<string, unknown>>('update-preferences', partial)
-    return r.data ?? {}
-  },
 }

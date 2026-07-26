@@ -5,7 +5,7 @@
  * behaves correctly REGARDLESS of the account-preference write path.
  *
  * The canonical persistence for "onboarding_completed" is the account preference
- * (`useOnboarding` → `AccountApi.updatePreferences`), which follows the user across
+ * (`usePreferences` → `PrefsApi.merge`), which follows the user across
  * devices. But that write currently rides `POST /v1/iam/update-preferences`, an
  * endpoint the IAM backend does not yet serve (flagged as a backend gap) — the
  * console's optimistic write swallows the failure, so on that backend the account
