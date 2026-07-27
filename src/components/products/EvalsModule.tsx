@@ -8,40 +8,20 @@
  * Routing: `/evals` opens Run; `/evals/scores` opens Scores. Both render honest
  * states (loading / backend-unavailable / empty) — never fabricated results.
  */
-import { useRouter } from 'next/navigation'
-import { Button, XStack } from '@hanzo/gui'
-
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { EvalRunView } from './evals/EvalRunView'
 import { EvalScoresView } from './evals/EvalScoresView'
 
-const TABS = [
-  { id: 'run', label: 'Run', path: '/evals' },
-  { id: 'scores', label: 'Scores', path: '/evals/scores' },
-] as const
-
 export function EvalsModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
-  const tab = params.tab === 'scores' ? 'scores' : 'run'
+  const tab = productSubpageSlug('evals', params.tab)
 
   return (
     <>
       <PageHeader title="Evals" subtitle="Evaluate model and agent outputs with scored runs." />
 
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.path)}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="evals" />
 
       {tab === 'scores' ? <EvalScoresView /> : <EvalRunView />}
     </>

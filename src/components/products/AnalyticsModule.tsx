@@ -19,8 +19,9 @@
  */
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, BarChart3, DollarSign, Sparkles, Server, TriangleAlert, Zap } from '@hanzogui/lucide-icons-2'
 
@@ -43,55 +44,18 @@ import { MetricCard } from './functions/parts'
 
 const fmtPct = (n: number): string => (Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '—')
 
-const TABS = [
-  { id: '', label: 'Overview', icon: BarChart3 },
-  { id: 'llm', label: 'LLM', icon: Sparkles },
-] as const
-
 export function AnalyticsModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
-  const tab = useMemo(() => {
-    const t = params.tab ?? ''
-    return TABS.some((x) => x.id === t) ? t : ''
-  }, [params.tab])
+  const tab = productSubpageSlug('analytics', params.tab)
 
   return (
     <YStack gap="$5">
       <PageHeader
         title="Analytics"
         subtitle="Per-org LLM, web, and commerce analytics over the unified warehouse."
-        actions={
-          <XStack gap="$1" flexWrap="wrap">
-            {TABS.map((t) => (
-              <TabButton key={t.id || 'overview'} active={t.id === tab} label={t.label} Icon={t.icon}
-                onPress={() => router.push(t.id ? `/analytics/${t.id}` : '/analytics')} />
-            ))}
-          </XStack>
-        }
       />
+      <SubNav id="analytics" />
       {tab === 'llm' ? <LlmTab /> : <OverviewTab />}
     </YStack>
-  )
-}
-
-function TabButton({ active, label, Icon, onPress }: { active: boolean; label: string; Icon: typeof BarChart3; onPress: () => void }) {
-  return (
-    <XStack
-      onPress={onPress}
-      cursor="pointer"
-      items="center"
-      gap="$1.5"
-      px="$3"
-      height={34}
-      rounded="$3"
-      borderWidth={1}
-      borderColor="$borderColor"
-      bg={active ? '$color5' : 'transparent'}
-      hoverStyle={{ bg: '$color3' }}
-    >
-      <Icon size={15} />
-      <Text fontSize="$3" fontWeight="600" color="$color12">{label}</Text>
-    </XStack>
   )
 }
 

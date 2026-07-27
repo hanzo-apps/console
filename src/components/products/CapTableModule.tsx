@@ -17,8 +17,9 @@
  * BackendStateCard on failure, and real empty states — it never fabricates a holder or
  * a certificate.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
+import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Coins, Layers, Percent, Plus, RefreshCw, ScrollText, Table as TableIcon, Trash2,
@@ -70,13 +71,6 @@ import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
 import { toneColor } from '~/components/ui/tone'
 
 type Tab = 'summary' | 'stakeholders' | 'shares' | 'classes' | 'fundraising'
-const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
-  { id: 'summary', label: 'Summary', icon: Percent },
-  { id: 'stakeholders', label: 'Stakeholders', icon: Users },
-  { id: 'shares', label: 'Shares', icon: ScrollText },
-  { id: 'classes', label: 'Classes', icon: Layers },
-  { id: 'fundraising', label: 'Fundraising', icon: TrendingUp },
-]
 const tabPath = (id: Tab): string => (id === 'summary' ? '/captable' : `/captable/${id}`)
 
 const enumOpts = (xs: readonly string[]) => xs.map((v) => ({ value: v, label: enumLabel(v) }))
@@ -428,10 +422,7 @@ const DIALOG_TITLE: Record<Dialog['kind'], string> = {
 // ── Module ───────────────────────────────────────────────────────────────────
 
 export function CapTableModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
-  const active: Tab = (['summary', 'stakeholders', 'shares', 'classes', 'fundraising'] as Tab[]).includes(params.tab as Tab)
-    ? (params.tab as Tab)
-    : 'summary'
+  const active: Tab = (productSubpageSlug('captable', params.tab) || 'summary') as Tab
   const [dialog, setDialog] = useState<Dialog>({ kind: 'none' })
 
   // Stakeholders + classes are loaded always — the forms' reference pickers need them.
@@ -453,16 +444,6 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
     setDialog({ kind: 'none' })
     refreshAll()
   }, [refreshAll])
-
-  const nav = useMemo(
-    () =>
-      TABS.map(({ id, label, icon: Icon }) => (
-        <Button key={id} size="$2" theme={active === id ? 'light' : undefined} icon={<Icon size={15} />} onPress={() => router.push(tabPath(id))}>
-          {label}
-        </Button>
-      )),
-    [active, router],
-  )
 
   const stakeholderCols: Column<Stakeholder>[] = [
     { key: 'name', header: 'Name', render: (s) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{s.name || '—'}</Text> },
@@ -519,12 +500,12 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
         subtitle="Your capitalization ledger — stakeholders, share classes, issued equity, SAFEs, and rounds. Ownership is computed server-side."
         actions={
           <XStack gap="$2" flexWrap="wrap">
-            {nav}
             <Button onPress={refreshAll} icon={<RefreshCw size={16} />}>Refresh</Button>
             {pa ? <PrimaryButton onPress={() => setDialog({ kind: pa.open } as Dialog)} icon={<Plus size={16} />}>{pa.label}</PrimaryButton> : null}
           </XStack>
         }
       />
+      <SubNav id="captable" />
 
       {active === 'summary' ? (
         summary.phase === 'loading' ? <Loader label="Computing your cap table…" />

@@ -20,8 +20,9 @@
  * Every table sorts on every column through the shared `DataTable` sort props + the pure
  * `sortRows` comparator; nothing here re-implements ordering, filtering, or formatting.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Ban, CircleAlert, HardDrive, Layers, Network, RefreshCw, Server, ShieldAlert, Trash2 } from '@hanzogui/lucide-icons-2'
 
@@ -70,16 +71,6 @@ import {
   type Sort,
   type VolumeFilter,
 } from './logic'
-
-/** The board's tabs, in display order. `id` matches the registry sub-page slug. */
-const TABS: { id: string; label: string }[] = [
-  { id: '', label: 'Overview' },
-  { id: 'clusters', label: 'Clusters' },
-  { id: 'nodes', label: 'Nodes' },
-  { id: 'volumes', label: 'Volumes' },
-  { id: 'load-balancers', label: 'Load balancers' },
-  { id: 'audit', label: 'Audit' },
-]
 
 const EMPTY: InfraSnapshot = {
   at: '',
@@ -134,9 +125,8 @@ function Fact({ label, value }: { label: string; value: ReactNode }) {
 const ALL_OPT = <T extends string>(vals: string[]): Option<T>[] => [{ label: 'All', value: 'all' as T }, ...vals.map((v) => ({ label: v, value: v as T }))]
 
 export function InfraModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
   const toast = useToast()
-  const tab = useMemo(() => (TABS.some((t) => t.id === params.tab) ? params.tab ?? '' : ''), [params.tab])
+  const tab = productSubpageSlug('infra', params.tab)
 
   const [snap, setSnap] = useState<InfraSnapshot | null>(null)
   const [err, setErr] = useState<ApiError | null>(null)
@@ -180,20 +170,7 @@ export function InfraModule({ params }: { params: Record<string, string> }) {
         }
       />
 
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'overview'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.id ? `/infra/${t.id}` : '/infra')}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="infra" />
 
       {!err && !data.complete ? <ScanBanner data={data} /> : null}
       {body}

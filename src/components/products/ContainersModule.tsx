@@ -15,6 +15,8 @@
  *    PROVISIONED CPU/RAM from its node pools) + Quick Actions (real routes — Create
  *    Deployment → /pipelines, View Logs). Nothing is fabricated.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -36,15 +38,6 @@ import {
   NAMESPACES_COLUMNS,
   EVENTS_COLUMNS,
 } from './containers/resource'
-
-const TABS = [
-  { id: '', label: 'Workloads' },
-  { id: 'pods', label: 'Pods' },
-  { id: 'containers', label: 'Containers' },
-  { id: 'images', label: 'Images' },
-  { id: 'namespaces', label: 'Namespaces' },
-  { id: 'events', label: 'Events' },
-] as const
 
 function SidebarRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -99,7 +92,7 @@ function ClusterSidebar({
 export function ContainersModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const search = useSearchParams() ?? new URLSearchParams()
-  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+  const tab = productSubpageSlug('containers', params.tab)
 
   const [apps, setApps] = useState<PlatformApp[]>([])
   const [clusters, setClusters] = useState<Cluster[]>([])
@@ -135,7 +128,9 @@ export function ContainersModule({ params }: { params: Record<string, string> })
   const scopedApps = useMemo(() => apps.filter((a) => a.cluster === active), [apps, active])
   const doks = useMemo(() => clusters.find((c) => c.name === active) ?? null, [clusters, active])
 
-  const go = (id: string) => router.push(`/containers${id ? `/${id}` : ''}${active ? `?cluster=${encodeURIComponent(active)}` : ''}`)
+  // Every tab keeps the selected cluster — SubNav renders the registry's nav, this
+  // builds its hrefs.
+  const go = (id: string): string => `/containers${id ? `/${id}` : ''}${active ? `?cluster=${encodeURIComponent(active)}` : ''}`
 
   return (
     <>
@@ -145,27 +140,13 @@ export function ContainersModule({ params }: { params: Record<string, string> })
         actions={<Button icon={<RefreshCw size={16} />} onPress={load}>Refresh</Button>}
       />
 
-      <XStack gap="$3" items="center" flexWrap="wrap">
-        <XStack width={260} items="center" gap="$2">
-          <Text fontSize="$2" color="$color11">Cluster</Text>
-          <YStack flex={1}>
-            <FieldSelect value={active} options={options.length ? options : ['—']} onChange={setCluster} />
-          </YStack>
-        </XStack>
-        <XStack gap="$1" flexWrap="wrap">
-          {TABS.map((t) => (
-            <Button
-              key={t.id || 'workloads'}
-              size="$2"
-              bg={t.id === tab ? '$color5' : 'transparent'}
-              borderWidth={1}
-              borderColor="$borderColor"
-              onPress={() => go(t.id)}
-            >
-              {t.label}
-            </Button>
-          ))}
-        </XStack>
+      <SubNav id="containers" href={go} />
+
+      <XStack width={260} items="center" gap="$2">
+        <Text fontSize="$2" color="$color11">Cluster</Text>
+        <YStack flex={1}>
+          <FieldSelect value={active} options={options.length ? options : ['—']} onChange={setCluster} />
+        </YStack>
       </XStack>
 
       <XStack gap="$4" flexWrap="wrap" items="flex-start">
