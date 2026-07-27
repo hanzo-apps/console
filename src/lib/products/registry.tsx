@@ -112,7 +112,6 @@ import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
 import { ProvidersBillingModule } from '~/components/products/admin/ProvidersBillingModule'
-import { StorageFleetModule } from '~/components/products/admin/StorageFleetModule'
 import { GrowthModule } from '~/components/products/admin/GrowthModule'
 import { UsageCapsPromoModule } from '~/components/products/admin/UsageCapsPromoModule'
 import { AiEconomicsModule } from '~/components/products/admin/AiEconomicsModule'
@@ -132,6 +131,7 @@ import { BotModule } from '~/components/products/BotModule'
 import { BotsConsole } from '~/components/products/BotsConsole'
 import { AdminO11yModule } from '~/components/products/AdminO11yModule'
 import { ResearchModule } from '~/components/products/ResearchModule'
+import { InfraModule } from '~/components/products/admin/infra/InfraModule'
 import { SaasModule } from '~/components/products/SaasModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { SearchModule } from '~/components/products/SearchModule'
@@ -713,6 +713,44 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: ResearchModule }],
   },
   {
+    // admin.hanzo.ai INFRASTRUCTURE board — the DigitalOcean FLEET cockpit: droplets,
+    // block-storage volumes, DOKS clusters and load balancers, what each costs per
+    // month, and what is reclaimable. GLOBAL-ADMIN ONLY (`admin: true` hides it from
+    // every customer; the `/v1/admin/infra` aggregate is server-gated by getAdminGate).
+    //
+    // This is INFRASTRUCTURE — the machines we rent from DigitalOcean. It is DISTINCT
+    // from the compute-worker "Fleet" entries (`fleet-o11y` telemetry, `bots`/`vms`
+    // compute-analytics), which lens the datastore's per-org compute events. Different
+    // nouns, different backends: do not merge them.
+    //
+    // It SUBSUMES the former `block-storage` board, which listed the same DO volumes
+    // with fill % beside this one's inventory of them — one noun, two boards. The two
+    // backends answer different questions about the same object (this one knows what
+    // is REFERENCED and therefore safe to delete; block-storage knows how FULL it is),
+    // so the volumes tab reads both and shows one row with a Fill column.
+    id: 'infra',
+    label: 'Infrastructure',
+    icon: Server,
+    description: 'DigitalOcean fleet — droplets, block-storage volumes (with fill % and near-full warnings), DOKS clusters and load balancers, with monthly cost and what is safely reclaimable.',
+    gcp: 'Compute Engine / Persistent Disk',
+    category: 'Platform',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [
+      { path: '', component: InfraModule },
+      { path: ':tab', component: InfraModule },
+    ],
+    subpages: [
+      { slug: 'clusters', label: 'Clusters' },
+      { slug: 'nodes', label: 'Nodes' },
+      { slug: 'volumes', label: 'Volumes' },
+      { slug: 'load-balancers', label: 'Load balancers' },
+      { slug: 'audit', label: 'Audit' },
+    ],
+  },
+  {
     // admin.hanzo.ai SAAS METRICS board — the whole-business money god view: MRR/ARR,
     // MRR by plan category, subscription mix (per plan, trials, seats, recent
     // create/cancel events), metered pay-as-you-go revenue, and top customers by
@@ -1071,19 +1109,6 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: ProvidersBillingModule }],
-  },
-  {
-    id: 'block-storage',
-    label: 'Block Storage',
-    icon: HardDrive,
-    description: 'Realtime DO block-storage fleet — the analytics datastore + every volume, fill % and near-full alerts, so we scale DO storage before it runs out.',
-    gcp: 'Persistent Disk',
-    category: 'Observe',
-    status: 'enabled',
-    admin: true,
-    repo: 'hanzoai/cloud',
-    kind: 'module',
-    routes: [{ path: '', component: StorageFleetModule }],
   },
   {
     // admin.hanzo.ai GROWTH cockpit — the SuperAdmin operator view of the Zen-of-Hanzo
