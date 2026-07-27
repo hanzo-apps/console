@@ -164,7 +164,7 @@ function StatusError({ status, message, onRetry }: { status: number; message: st
         : 'Could not reach the telemetry store'
   const body =
     status === 501
-      ? 'This console is wired to VictoriaMetrics, but the telemetry store URL (VM_URL) is not set on this deployment yet. Once it is, live service health appears here — no fabricated status is shown.'
+      ? 'This console is wired to the telemetry store, but its URL (VM_URL) is not set on this deployment yet. Once it is, live service health appears here — no fabricated status is shown.'
       : status === 401
         ? 'Platform status is available to signed-in users. Please sign in.'
         : message

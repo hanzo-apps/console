@@ -30,10 +30,10 @@ const SNAPSHOT = {
   datastore: { name: 'datastore-data-datastore-0', mount: '/var/lib/hanzo-datastore', sizeGiB: 200, usedGiB: 13.5, pct: 7 },
   volumes: [
     { id: 'vol-1', name: 'pvc-datastore', region: 'sfo3', sizeGiB: 200, usedGiB: 13.5, pct: 7, attached: true, service: 'datastore-0' },
-    { id: 'vol-2', name: 'pvc-signoz', region: 'sfo3', sizeGiB: 100, usedGiB: 91, pct: 91, attached: true, service: 'signoz' },
+    { id: 'vol-2', name: 'pvc-o11y', region: 'sfo3', sizeGiB: 100, usedGiB: 91, pct: 91, attached: true, service: 'o11y' },
     { id: 'vol-3', name: 'pvc-detached', region: 'sfo3', sizeGiB: 50, usedGiB: null, pct: null, attached: false, service: null },
   ],
-  alerts: [{ volume: 'signoz', pct: 91, level: 'critical' }],
+  alerts: [{ volume: 'o11y', pct: 91, level: 'critical' }],
 }
 
 const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
