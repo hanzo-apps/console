@@ -6,7 +6,7 @@
  * code-exchange / durable-console-session path any more — the IAM PKCE token is the
  * single credential (the API client carries it as a Bearer on every `/v1` call).
  */
-import { post } from './client'
+import { patch, post } from './client'
 import {
   iamValidAccessToken,
   iamUserInfo,
@@ -110,7 +110,7 @@ export const AccountApi = {
   updatePreferences: async (
     partial: Record<string, unknown>,
   ): Promise<Record<string, unknown>> => {
-    const r = await post<Record<string, unknown>>('update-preferences', partial)
+    const r = await patch<Record<string, unknown>>('ai/preferences', partial)
     return r.data ?? {}
   },
 }

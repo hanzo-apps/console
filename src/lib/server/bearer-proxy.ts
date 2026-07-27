@@ -5,7 +5,7 @@
  * The trust boundary: the browser holds NO credential. It calls console2's OWN
  * origin (e.g. `/v1/vector`, `/v1/vm/regions`) with just its first-party
  * session cookie. This handler resolves WHO the caller is from that cookie
- * (`resolveUser` → cloud `/v1/get-account`), mints a SHORT-LIVED, user-bound IAM
+ * (`resolveUser` → cloud `/v1/ai/account`), mints a SHORT-LIVED, user-bound IAM
  * token as the confidential `hanzo-console` client (`adminBearer`, cached per user
  * in `identity.ts` — ONE cache shared by every proxy), and forwards to the target
  * with `Authorization: Bearer <token>`. The backend resolves the ORG from the
