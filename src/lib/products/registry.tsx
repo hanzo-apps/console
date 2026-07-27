@@ -347,7 +347,7 @@ export type ProductSubpage = {
 
 /**
  * The canonical Hanzo Cloud category axis — the top-level nav sections, in exact
- * order. The console nav, catalog overview, app launcher, and discover screens all
+ * order. The console nav, catalog overview, command palette, and discover screens all
  * read this one taxonomy; `catalogByCategory` skips empty groups.
  *
  * Canonical axis (2-level nav, category → product → sub-pages):
@@ -415,12 +415,6 @@ type CatalogBase = {
   status: ProductStatus
   /** Source repo for the product, e.g. 'hanzoai/vector'. Only set where it exists. */
   repo?: string
-  /**
-   * Upstream open-source project this product is forked from — for honest
-   * attribution + license compliance. OMIT for original Hanzo products; set it
-   * only where the repo is a verified fork of the named upstream.
-   */
-  upstream?: { name: string; url: string; license: string }
   /** Canonical docs deep link (docs.hanzo.ai/<slug>); falls back to the docs root. */
   docs?: string
   /** Admin-gated surface (shown with a lock hint; access enforced server-side). */
@@ -1527,7 +1521,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/vector',
-    upstream: { name: 'Qdrant', url: 'https://qdrant.tech', license: 'Apache-2.0' },
     docs: `${DOCS}/vector`,
     kind: 'module',
     routes: resourceRoutes({ kind: 'vector', productLabel: 'Hanzo Vector', connectionHint: 'Point a Vector client at host:port using the connection string.' }),
@@ -1553,7 +1546,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/kv',
-    upstream: { name: 'Valkey', url: 'https://valkey.io', license: 'BSD-3-Clause' },
     docs: `${DOCS}/kv`,
     kind: 'module',
     routes: resourceRoutes({ kind: 'kv', productLabel: 'Hanzo KV', connectionHint: 'Connect with any KV client using the connection string.' }),
@@ -1572,7 +1564,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/s3',
-    upstream: { name: 'SeaweedFS', url: 'https://github.com/seaweedfs/seaweedfs', license: 'Apache-2.0' },
     docs: `${DOCS}/storage`,
     kind: 'module',
     routes: [{ path: '', component: StorageModule }],
@@ -1599,7 +1590,6 @@ export const catalog: CatalogEntry[] = [
     label: 'Base',
     icon: Boxes,
     description: 'Realtime backends for your org — spin up a Base with content types, records, and auth.',
-    upstream: { name: 'PocketBase', url: 'https://pocketbase.io', license: 'MIT' },
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/base',
@@ -1624,7 +1614,6 @@ export const catalog: CatalogEntry[] = [
     label: 'Records',
     icon: Boxes,
     description: 'Browse and edit any Base collection as a CRM/CMS — from its own schema.',
-    upstream: { name: 'PocketBase', url: 'https://pocketbase.io', license: 'MIT' },
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/base',
@@ -1645,7 +1634,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/docdb',
-    upstream: { name: 'FerretDB', url: 'https://www.ferretdb.com', license: 'Apache-2.0' },
     docs: `${DOCS}/docdb`,
     kind: 'module',
     routes: resourceRoutes({ kind: 'docdb', productLabel: 'Hanzo DocDB', connectionHint: 'Connect with any DocDB driver using the connection string.' }),
@@ -1661,7 +1649,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Network',
     status: 'enabled',
     repo: 'hanzoai/gateway',
-    upstream: { name: 'KrakenD', url: 'https://www.krakend.io', license: 'Apache-2.0' },
     docs: `${DOCS}/gateway`,
     kind: 'module',
     routes: overviewRoutes('gateway'),
@@ -1778,7 +1765,6 @@ export const catalog: CatalogEntry[] = [
     label: 'IAM',
     icon: Shield,
     description: 'Organizations, users, and roles (RBAC) — Hanzo IAM.',
-    upstream: { name: 'Casdoor', url: 'https://casdoor.org', license: 'Apache-2.0' },
     category: 'Security',
     status: 'enabled',
     admin: true,
@@ -3209,7 +3195,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/search',
-    upstream: { name: 'Meilisearch', url: 'https://www.meilisearch.com', license: 'MIT' },
     docs: `${DOCS}/search`,
     kind: 'module',
     routes: resourceRoutes({ kind: 'search', productLabel: 'Hanzo Search', connectionHint: 'Use the Search host + key from the connection string.' }),
@@ -3281,7 +3266,6 @@ export const catalog: CatalogEntry[] = [
     category: 'Apps',
     status: 'enabled',
     repo: 'hanzoai/studio',
-    upstream: { name: 'ComfyUI', url: 'https://www.comfy.org', license: 'GPL-3.0' },
     docs: `${DOCS}/ai-studio`,
     kind: 'module',
     // The FULL Studio app, embedded (same-site iframe) — every capability
@@ -3789,4 +3773,3 @@ export const visibleCatalogByCategory = (
     .map((category) => ({ category, entries: visible.filter((e) => e.category === category) }))
     .filter((g) => g.entries.length > 0)
 }
-

@@ -1,6 +1,6 @@
 // Pure nav-ordering helper — the ONE way the console orders a product list within
 // its scope. Dependency-free (no React, no registry import) so it is unit-testable
-// and reused by BOTH the sidebar nav and the app launcher (DRY).
+// and reused by the sidebar wherever product lists need a selected-first order.
 //
 // Directive (#58 §2.2): items are CONTINUOUS ALPHABETICAL; when an item is selected
 // it is PINNED to the front (emphasized/highlighted, kept visible) and the rest stay
