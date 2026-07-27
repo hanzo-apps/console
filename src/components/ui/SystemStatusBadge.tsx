@@ -17,6 +17,7 @@ import { Button, Popover, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUpRight } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
+import { paper } from '~/components/ui/paper'
 
 type Overall = 'operational' | 'degraded' | 'down' | 'unknown'
 type DownComponent = { name: string; group: string }
@@ -108,7 +109,7 @@ export function SystemStatusBadge() {
           </XStack>
         </Button>
       </Popover.Trigger>
-      <Popover.Content bordered elevate p="$2" width={280} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$2" width={280}>
         <YStack gap="$1.5">
           <XStack items="center" gap="$2" px="$2" py="$1">
             <YStack width={8} height={8} rounded={999} bg={dot} />

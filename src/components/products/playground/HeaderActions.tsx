@@ -17,6 +17,7 @@ import { RequestPreview } from './RequestPreview'
 import { encodeShare, SHARE_PARAM } from './share'
 import { saveSaved, type SavedPrompt } from './prompts'
 import type { Composer } from './useComposer'
+import { paper } from '~/components/ui/paper'
 
 export function HeaderActions({
   composer,
@@ -73,7 +74,7 @@ export function HeaderActions({
             </Text>
           </Button>
         </Popover.Trigger>
-        <Popover.Content bordered elevate p="$3" bg="$color2" borderColor="$borderColor" minW={280}>
+        <Popover.Content {...paper} p="$3" minW={280}>
           <YStack gap="$2" minW={260}>
             <Text fontSize="$3" fontWeight="700">
               Save prompt
@@ -104,7 +105,7 @@ export function HeaderActions({
         <Popover.Trigger asChild>
           <Button size="$2" icon={<Code2 size={15} />} borderWidth={1} borderColor="$borderColor" />
         </Popover.Trigger>
-        <Popover.Content bordered elevate p="$3" bg="$color2" borderColor="$borderColor">
+        <Popover.Content {...paper} p="$3">
           <RequestPreview curl={curl} json={json} />
         </Popover.Content>
       </Popover>

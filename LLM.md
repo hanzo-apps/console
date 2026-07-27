@@ -3513,3 +3513,40 @@ inferred:
   after v8.5.30, preserving the unified app search and category accents.
 - Verified the combined tree: strict typecheck, 3,044 tests, and the production
   Next.js build all pass.
+
+## One paper, one leading — overlay elevation and display type (v8.5.32)
+
+Two rendering contracts were silently not applying. Both were found by measuring
+computed styles in a real browser, not by reading code.
+
+**The product-guide headline had a 1px line box.** `PitchHero` set
+`style={{ lineHeight: 1.12 }}` — a correct, idiomatic ratio in plain React, because
+React DOM's unitless allow-list includes `lineHeight`. React Native Web's does NOT
+(`StyleSheet/compiler/unitlessNumbers.js`), so under @hanzo/gui it compiled to
+`line-height: 1.12px`: a 30px/900 headline in a 1px box, a 29px overflow that dropped
+its descenders into the subhead and clipped the GET STARTED eyebrow above it. It now
+wears `hz-display`, the class this app already uses for exactly this (PublicLanding,
+v8.5.24) — one way, one rule, every size token and breakpoint. Measured after: 30px
+type on 33px leading at desktop, clean two-line wrap at 390px.
+
+`e2e/leading.spec.ts` pins the INVARIANT rather than the call site: no visible text
+node on /models, /agents or /playground may compute a `line-height` smaller than its
+own `font-size`. That catches the next numeric `lineHeight` anyone writes without
+their having to know about RNW's allow-list. It fails on the unfixed tree.
+
+**No overlay was wearing the elevation ladder.** Gui compiles its shadow props to an
+atomic rule it injects at runtime as `:root ._bxsh-…` — specificity (0,2,0). The
+design-token utilities were plain `.hz-paper` (0,1,0) and lost, so the command
+palette, app launcher, floating chat and three menus rendered Gui's
+`0 12px 24px rgba(0,0,0,.33)` instead of ring + top highlight + `--hz-elevation-3`.
+On the true-black canvas that shadow is nearly invisible — the sheets did not lift off
+the page. The utilities are now `:root .hz-x.hz-x` (0,3,0): deterministic in either
+stylesheet order, no `!important`.
+
+**And every anchored overlay now wears ONE surface.** Eleven `Popover.Content` call
+sites passed Gui's `elevate` while three wore `hz-paper` — one concept, two depths,
+plus the same `bordered`/`bg`/`borderColor` triple repeated fourteen times. All
+fourteen now spread `~/components/ui/paper`, which holds the surface, the token
+elevation and the opacity-only `hz-menu-in` entrance in one place. Verified rendering
+on the scope switcher, the network picker, the model selector, the save-prompt
+popover and the ⌘K palette: opaque, correctly anchored, ring visible, nothing occluded.

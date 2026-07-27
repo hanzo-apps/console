@@ -17,6 +17,7 @@ import { Button, Input, Popover, Spinner, Text, XStack, YStack } from '@hanzo/gu
 import { Check, ChevronDown, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { filterOptions, type ComboOption } from './combobox/filter'
+import { paper } from './paper'
 
 export type { ComboOption } from './combobox/filter'
 
@@ -83,7 +84,7 @@ export function ComboBox({
         </Popover.Trigger>
       </XStack>
 
-      <Popover.Content className="hz-paper hz-menu-in" bordered p="$1.5" minW={minWidth} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$1.5" minW={minWidth}>
         <YStack gap="$0.5" minW={minWidth} maxH={300} overflow="scroll">
           {loading ? (
             <XStack items="center" gap="$2" px="$2.5" py="$2">

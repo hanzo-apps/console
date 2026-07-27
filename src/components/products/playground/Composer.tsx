@@ -18,6 +18,7 @@ import { ModelSelector } from '~/components/products/ModelSelector'
 import { VariablesEditor } from './VariablesEditor'
 import type { Composer as ComposerState } from './useComposer'
 import type { CatalogEntry } from '~/lib/api/aicatalog'
+import { paper } from '~/components/ui/paper'
 
 const SYSTEM_MAX = 2048
 const USER_MAX = 16384
@@ -282,7 +283,7 @@ export function Composer({
                 </Text>
               </Button>
             </Popover.Trigger>
-            <Popover.Content bordered elevate p="$3" bg="$color2" borderColor="$borderColor">
+            <Popover.Content {...paper} p="$3">
               <VariablesEditor names={composer.varNames} values={composer.vars} onChange={composer.setVar} />
             </Popover.Content>
           </Popover>
@@ -324,7 +325,7 @@ export function Composer({
                 icon={<ChevronDown size={15} color={running ? undefined : '$color1'} />}
               />
             </Popover.Trigger>
-            <Popover.Content bordered elevate p="$1.5" bg="$color2" borderColor="$borderColor" minW={200}>
+            <Popover.Content {...paper} p="$1.5" minW={200}>
               <YStack gap="$0.5" minW={200}>
                 <MenuRow label="Copy request as cURL" onPress={() => copyText(curl)} />
                 <MenuRow label="Copy request as JSON" onPress={() => copyText(json)} />

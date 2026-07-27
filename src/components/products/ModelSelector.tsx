@@ -33,6 +33,7 @@ import {
   type CatalogEntry,
 } from '~/lib/api/aicatalog'
 import { groupModelsByFamily, filterFamilies, totalModels } from '~/lib/api/families'
+import { paper } from '~/components/ui/paper'
 
 /** The contract's entry type — the rich catalog entry (`@hanzo/ui/models` `ModelCatalogEntry`). */
 export type ModelCatalogEntry = CatalogEntry
@@ -195,7 +196,7 @@ export function ModelSelector({
           </XStack>
         </Button>
       </Popover.Trigger>
-      <Popover.Content bordered elevate p="$0" width={420} maxW="92vw" bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$0" width={420} maxW="92vw">
         <YStack width="100%">
           {/* Search */}
           <XStack p="$2" borderBottomWidth={1} borderColor="$borderColor" items="center" gap="$2">
