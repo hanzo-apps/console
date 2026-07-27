@@ -8,7 +8,9 @@
     ],
     "paths": {
       "~/*": ["./src/*"],
-      "react-native": ["react-native-web"]
+      "react-native": [
+        "./react-native-web"
+      ]
     },
     "strict": true,
     "allowJs": false,
