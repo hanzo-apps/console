@@ -1,9 +1,9 @@
 # hanzoai/console — the EMBED artifact.
 #
-# Builds the console SPA static export (`npm run build:embed` → out/) ONCE, as a
+# Builds the console SPA static export (`pnpm build:embed` → out/) ONCE, as a
 # versioned immutable image whose rootfs is just the bundle at /dist. hanzoai/cloud
 # then does `FROM registry.hanzo.ai/hanzoai/console-embed:<ver> AS console` +
-# `COPY --from=console /dist/ webui/dist/` instead of re-running npm+Next export on
+# `COPY --from=console /dist/ webui/dist/` instead of re-running the install+Next export on
 # EVERY cloud release (the ~15-min cache-busted long pole). Console changes far less
 # often than cloud ships, so this moves the build to console's own cadence and turns
 # a cloud rebuild into a registry pull.
@@ -21,10 +21,10 @@ ENV NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=8192
 ARG NEXT_PUBLIC_ANALYTICS_WEBSITE_ID=7dce54ee-41f6-4751-96bf-fe005067c7c7
 ENV NEXT_PUBLIC_ANALYTICS_WEBSITE_ID=$NEXT_PUBLIC_ANALYTICS_WEBSITE_ID
 COPY . .
-RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-timeout=120000
+RUN corepack enable && pnpm install --frozen-lockfile
 # FAIL-HARD: the export MUST emit a real bundle (non-empty out/index.html + out/_next/),
 # never a placeholder shell — same invariant cloud's console stage enforced.
-RUN npm run build:embed && [ -s out/index.html ] && [ -d out/_next ] \
+RUN pnpm build:embed && [ -s out/index.html ] && [ -d out/_next ] \
     && echo ">> embedded REAL console bundle: $(wc -c < out/index.html)-byte index.html, $(du -sh out/_next | cut -f1) _next/"
 FROM scratch
 COPY --from=build /console/out/ /dist/

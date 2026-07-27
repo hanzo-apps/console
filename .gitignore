@@ -3,10 +3,12 @@ node_modules
 out/
 dist/
 
-# npm is the one package manager here — package-lock.json is the tracked lockfile
-# (the Dockerfile runs `npm install`). A pnpm/yarn lockfile would silently drift.
-pnpm-lock.yaml
+# pnpm is the one package manager here — pnpm-lock.yaml is the tracked lockfile and
+# `packageManager` in package.json pins the version corepack installs. A lockfile
+# from any other manager is a second source of truth that silently drifts.
+package-lock.json
 yarn.lock
+bun.lockb
 
 # build artifacts
 *.tsbuildinfo
