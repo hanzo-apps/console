@@ -24,6 +24,7 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import type { Ref, RefList } from '~/lib/api/git'
+import { paper } from '~/components/ui/paper'
 
 /** Copy a value to the clipboard, showing a transient check. ONE control, DRY. */
 export function CopyButton({
@@ -165,7 +166,7 @@ export function RefSelector({
           </Text>
         </Button>
       </Popover.Trigger>
-      <Popover.Content className="hz-paper hz-menu-in" bordered p="$1.5" minW={240} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$1.5" minW={240}>
         <YStack gap="$1.5" minW={240} maxH={380}>
           <XStack
             items="center"

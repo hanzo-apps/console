@@ -12,6 +12,7 @@ import { ArrowDownRight, ArrowUpRight } from '@hanzogui/lucide-icons-2'
 
 import type { ProductIcon } from '~/lib/products/registry'
 import { toneColor } from '~/components/ui/tone'
+import { paper } from '~/components/ui/paper'
 
 /**
  * The honest engine badge. `hanzoai/functions` is a **Fission** fork (the design
@@ -120,7 +121,7 @@ export function DisabledAction({
           {label}
         </Button>
       </Popover.Trigger>
-      <Popover.Content bordered elevate p="$3" maxW={300} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$3" maxW={300}>
         <Text fontSize="$2" color="$color11">
           {reason}
         </Text>

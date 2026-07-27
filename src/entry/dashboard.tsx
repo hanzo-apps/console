@@ -110,6 +110,7 @@ import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
 import { voiceSupported } from '~/lib/voice'
 import { WorkbenchDock } from '~/components/workbench/Workbench'
+import { paper } from '~/components/ui/paper'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
@@ -505,7 +506,7 @@ function SidebarAccount({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   }
 
   const menu = (
-    <Popover.Content bordered elevate p="$2" width={252} bg="$color2" borderColor="$borderColor">
+    <Popover.Content {...paper} p="$2" width={252}>
       <YStack gap="$1">
         <XStack items="center" gap="$2.5" px="$2" py="$2">
           <IdentityAvatar src={account?.avatar} label={name} size={34} />

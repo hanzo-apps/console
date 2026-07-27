@@ -21,6 +21,7 @@ import { useScope } from '~/lib/scope-context'
 import { STOCK_ENVIRONMENTS } from '~/lib/scope'
 import { isStockNetwork, parseCustomNetwork, type Network } from '~/lib/network'
 import { FieldText } from '~/components/ui/Field'
+import { paper } from '~/components/ui/paper'
 
 /** A small dot keyed to the network tier. Monochrome by default; only the genuine
  *  states carry a hue — mainnet is live (green), testnet is a caution (amber). Every
@@ -52,7 +53,7 @@ function ProjectPicker() {
           {label}
         </Button>
       </Popover.Trigger>
-      <Popover.Content bordered elevate p="$2" width={260} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$2" width={260}>
         <YStack gap="$0.5">
           <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
             Project
@@ -176,7 +177,7 @@ function NetworkPicker() {
           </XStack>
         </Button>
       </Popover.Trigger>
-      <Popover.Content bordered elevate p="$2" width={300} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$2" width={300}>
         <YStack gap="$0.5">
           <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
             Network

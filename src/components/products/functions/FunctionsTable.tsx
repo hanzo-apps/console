@@ -24,6 +24,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { Pager } from '~/components/products/observability/Pager'
 import { FieldSelect } from '~/components/ui/Field'
+import { paper } from '~/components/ui/paper'
 
 const PAGE_SIZE = 10
 
@@ -39,7 +40,7 @@ function RowMenu({ fn, onSelect, onDelete }: { fn: ServerlessFunction; onSelect:
       <Popover.Trigger asChild>
         <Button size="$2" chromeless icon={<MoreHorizontal size={16} />} aria-label="Row menu" />
       </Popover.Trigger>
-      <Popover.Content bordered elevate p="$1.5" width={208} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$1.5" width={208}>
         <YStack gap="$0.5">
           <Button size="$2" justify="flex-start" chromeless icon={<ChevronRight size={14} />} onPress={close(onSelect)}>
             View detail
