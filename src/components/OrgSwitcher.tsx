@@ -19,6 +19,8 @@
  */
 import { OrgSwitcher as Switcher, type Org, type OrgScope } from '@hanzo/ui/product'
 
+import { useOrgIdentity } from '~/components/ui/BrandLogo'
+
 import {
   currentOrg,
   enterOrg,
@@ -67,11 +69,16 @@ export function OrgSwitcher() {
   // The admin-gated cross-tenant list fires ONLY for a super admin — a regular
   // user (who would 403 it) gets no loader and sees their current org alone.
   const isSuperAdmin = useIsSuperAdmin()
+  // The SAME resolved org the chrome's top-left mark wears (one cached read), so
+  // the two identity slots can never disagree — and a regular user, who has no
+  // cross-tenant list to draw the current row from, still gets their own logo.
+  const current = useOrgIdentity()
   return (
     <Switcher
       scope={scope}
       orgs={isSuperAdmin ? orgPage : undefined}
       pageSize={ORG_PAGE_SIZE}
+      current={current}
       create={createOrg}
       picker
     />

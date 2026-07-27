@@ -474,10 +474,13 @@ function MenuItem({ icon: Icon, label, onPress }: { icon: ComponentType<{ size?:
  */
 function SidebarWorkspace({ collapsed }: { collapsed: boolean }) {
   if (collapsed) return null
+  // A COLUMN, so the switcher stretches the sidebar's width exactly as the account
+  // row below does — the two are peers, and a row container would have shrunk this
+  // one to its text.
   return (
-    <XStack px="$1" pb="$1" mb="$1" items="center" borderBottomWidth={1} borderColor="$borderColor">
+    <YStack pb="$1" mb="$1" borderBottomWidth={1} borderColor="$borderColor">
       <OrgSwitcher />
-    </XStack>
+    </YStack>
   )
 }
 
