@@ -50,7 +50,7 @@ function scoreEntry(q: string, e: CatalogEntry): number {
  * The catalog ranked for `query`. Empty query → the visible catalog in natural
  * order. Sourced from `visibleCatalog(true)` so brand scope AND billing-only shell
  * mode apply (admin entries are kept for callers to gate) — one scoping rule shared
- * with the sidebar/home/launcher, so ⌘K never offers a product the shell hides.
+ * with the sidebar/home, so ⌘K never offers a product the shell hides.
  */
 export function searchCatalog(query: string): CatalogEntry[] {
   const scope = visibleCatalog(true)

@@ -15,7 +15,7 @@
  * (`user.Owner == conf.AdminOrg`). No claim is read: IAM derives its `isSuperAdmin`
  * claim from this very equality, so reading it too would be two signals for one fact.
  *
- * The nav/launcher/palette use this to HIDE admin-only surfaces (cross-tenant IAM /
+ * The nav/palette use this to HIDE admin-only surfaces (cross-tenant IAM /
  * KMS / provider + routing config) from customers, and the catch-all uses it to
  * render a graceful "managed by Hanzo" notice instead of a hostile 403 red error
  * if a customer reaches an admin URL directly. Access is ALWAYS enforced

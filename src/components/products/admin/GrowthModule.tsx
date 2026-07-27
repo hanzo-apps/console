@@ -10,7 +10,7 @@
  * form, one live enable/disable lever (PATCH) + inline edit per item.
  *
  * GLOBAL-ADMIN ONLY. The catalog entry is `admin: true` (hidden from every customer's
- * nav/launcher/palette) and this module additionally gates on `useIsSuperAdmin()` — the
+ * nav/palette) and this module additionally gates on `useIsSuperAdmin()` — the
  * matching UI gate over the authoritative server-side SuperAdmin gate (a non-admin sees
  * the honest OperatorAccessRequired panel, never a 403 crash). Every read is REAL over
  * the `/v1` user-bearer BFF; honest loading/empty/error states throughout, no fabrication.

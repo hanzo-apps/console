@@ -2,7 +2,7 @@
  * Entitlements — the ONE place the console decides which products a customer org
  * has enabled (out-of-box each org assembles its own backend from the catalog).
  *
- * A normal customer's sidebar/launcher/palette show ONLY the products the org is
+ * A normal customer's sidebar/palette show ONLY the products the org is
  * entitled to (the always-on essentials + whatever it has enabled/paid for); an
  * "Add product" flow enables more. A super admin bypasses this entirely (sees the
  * whole catalog — the gating is a customer concern).
@@ -65,7 +65,7 @@ export function entitledSet(enabled: string[] | null | undefined): Set<string> |
  * Keep only the entries a viewer may see. A super admin sees EVERYTHING
  * (`showAdmin`); an ungated set (`null`) shows everything (endpoint not landed);
  * otherwise keep the always-on + enabled ids. Pure, generic over `{ id }` so the
- * catalog, launcher, and command palette all gate through this ONE predicate.
+ * catalog and command palette all gate through this ONE predicate.
  */
 export function filterEntitled<T extends { id: string }>(
   entries: readonly T[],

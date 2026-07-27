@@ -16,7 +16,7 @@
  * an honest partial rather than blanking the board.
  *
  * Gated twice: the registry entry is `admin: true` (hidden from every customer's
- * nav/launcher/palette) and this module renders `OperatorAccessRequired` for a
+ * nav/palette) and this module renders `OperatorAccessRequired` for a
  * non-global-admin client. Honest by construction — every figure is a real aggregate
  * or an em-dash; not-instrumented signals (upgrades/downgrades, per-model latency)
  * render honestly, never fabricated.
