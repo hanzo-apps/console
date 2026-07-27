@@ -232,6 +232,11 @@ export const RESOURCE_SPECS: Record<ResourceKind, ResourceSpec> = {
     ],
     tool: { id: 'query', label: 'Query', icon: 'Terminal', blurb: 'Run analytical SQL from the console' },
     connectHint: 'Connect over the Datastore HTTP/native protocol using the connection string.',
+    // Names the client the user can actually install. The native protocol is
+    // unchanged, so upstream clickhouse-client connects to a datastore instance
+    // as-is; our own datastore-client package has no published repo yet
+    // (packages.hanzo.ai/{deb,rpm} 404). Switch this to `datastore-client` only
+    // once that repo serves it, or users get a command they cannot install.
     connectCmd: (host) => `clickhouse-client --host ${host.split(':')[0]} --secure --password PASSWORD`,
     repo: 'hanzoai/datastore',
   },
