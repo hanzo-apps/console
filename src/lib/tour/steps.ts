@@ -10,6 +10,8 @@
  * target (or whose target isn't on the current page) renders centered.
  */
 
+import type { GuideSignals } from '~/lib/guide/signals'
+
 /** Where a step's tooltip sits relative to its target (centered when no target). */
 export type TourPlacement = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
@@ -20,6 +22,12 @@ export type TourStep = {
   title: string
   body: string
   placement?: TourPlacement
+  /**
+   * Personalization: include the step only when this holds (default: always). Lets a
+   * tour adapt to the user's real state — e.g. skip the "get your API key" step for a
+   * user who already has one. Filtered by `resolveTour` in `lib/guide/spec.ts`.
+   */
+  when?: (s: GuideSignals) => boolean
 }
 
 /**
@@ -43,10 +51,13 @@ export const CONSOLE_TOUR: TourStep[] = [
   },
   {
     id: 'api-key',
-    target: '[data-tour="api-key"]',
+    // The get-your-key affordance now lives in the home getting-started panel.
+    target: '[data-tour="guide-overview-api-key"]',
     title: 'Get your API key',
     body: 'Create a personal key to call the models from your apps, SDKs, and CLI. It is the fastest way to start building.',
     placement: 'bottom',
+    // Personalized: a user who already holds a key skips straight past this step.
+    when: (s) => s.hasApiKey !== true,
   },
   {
     id: 'metrics',
