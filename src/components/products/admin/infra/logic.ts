@@ -3,72 +3,25 @@
  * and delete gate is unit-tested in the node env and `InfraModule.tsx` stays thin.
  * No React / Gui / registry imports (vitest runs `environment: 'node'`).
  *
- * ONE generic comparator serves every table (string / number / boolean / array-length),
- * so adding a sortable column is declaring `sortable: true` — never another sort
- * function. ONE `searchRows` serves every filter; the per-table filters differ only in
- * their state predicate and which fields they read.
+ * ORDERING AND SEARCH ARE NOT DEFINED HERE. The generic comparator, the header-click
+ * reducer and the substring predicate this board introduced were promoted verbatim to
+ * `~/lib/list/core`, which is now the ONE definition every list in the console shares
+ * (a table of clusters and a catalog of models order the same way for the same reason).
+ * They are re-exported below so this board's own call sites and tests keep reading
+ * `./logic` — one implementation, one import path per consumer.
  *
- * The delete gate lives here too: `canDelete` is the single predicate the volumes table
- * consults, and it trusts ONLY the backend's own `deletable` flag (`complete &&
- * state === 'unreferenced'`) — the console never re-derives deletability from `state`,
- * because that would offer deletes on an incomplete scan that the server will refuse.
+ * What stays here is what is genuinely THIS board's: the per-table filter predicates,
+ * the money/size formatting, and the delete gate — `canDelete` is the single predicate
+ * the volumes table consults, and it trusts ONLY the backend's own `deletable` flag
+ * (`complete && state === 'unreferenced'`); the console never re-derives deletability
+ * from `state`, because that would offer deletes on an incomplete scan the server will
+ * refuse.
  */
 import type { FindingSeverity, InfraFinding, InfraNode, InfraVolume, VolumeState } from '~/lib/api/admin-infra'
 
-// ── sorting ───────────────────────────────────────────────────────────────────
+export { distinctValues, nextSort, searchRows, sortRows, type Sort, type SortDir } from '~/lib/list/core'
 
-export type SortDir = 'asc' | 'desc'
-export type Sort = { key: string; dir: SortDir }
-
-/**
- * The ONE comparable projection of a cell: numbers/booleans/array-lengths compare
- * numerically, everything else as a string. Absent → '' (sorts first ascending), so a
- * missing datum never crashes the sort and never fabricates a rank.
- */
-function cmpValue(v: unknown): string | number {
-  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
-  if (typeof v === 'boolean') return v ? 1 : 0
-  if (Array.isArray(v)) return v.length
-  if (v == null) return ''
-  return String(v)
-}
-
-/**
- * Sort a copy of `rows` by `key`. Numeric-ish cells compare numerically; strings use a
- * numeric-aware, case-insensitive collation so `node-2` precedes `node-10`. Stable
- * (Array#sort is), so equal cells keep the backend's own order.
- */
-export function sortRows<T>(rows: T[], key: string, dir: SortDir): T[] {
-  const sign = dir === 'asc' ? 1 : -1
-  return [...rows].sort((a, b) => {
-    const x = cmpValue((a as Record<string, unknown>)[key])
-    const y = cmpValue((b as Record<string, unknown>)[key])
-    if (typeof x === 'number' && typeof y === 'number') return (x - y) * sign
-    return String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: 'base' }) * sign
-  })
-}
-
-/** Header-click reducer: the same key flips direction, a new key starts ascending. */
-export function nextSort(cur: Sort, key: string): Sort {
-  return cur.key === key ? { key, dir: cur.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
-}
-
-// ── filtering ─────────────────────────────────────────────────────────────────
-
-/**
- * Literal, case-insensitive substring match over the fields `haystack` exposes — never
- * a compiled RegExp of user input (no ReDoS, no accidental metacharacters).
- */
-export function searchRows<T>(rows: T[], q: string, haystack: (row: T) => string): T[] {
-  const needle = q.trim().toLowerCase()
-  if (!needle) return rows
-  return rows.filter((r) => haystack(r).toLowerCase().includes(needle))
-}
-
-/** The distinct non-empty values of a field, sorted — so a filter offers REAL options only. */
-export function distinctValues<T>(rows: T[], pick: (row: T) => string): string[] {
-  return Array.from(new Set(rows.map(pick).filter(Boolean))).sort()
-}
+import { searchRows } from '~/lib/list/core'
 
 /** Search + an exact match on one status-ish field (`'all'` passes everything). */
 export function filterByStatus<T>(rows: T[], q: string, status: string, pick: (row: T) => string, haystack: (row: T) => string): T[] {
