@@ -16,6 +16,9 @@
  * Tabs map to the registry `:tab` route (`/functions/:tab`), the same pattern as GPUs
  * and Models. Style props use the v5 shorthand set (bg/p/px/py/gap/rounded/items/...).
  */
+import { livingOverviewModule } from './overview/living/LivingOverviewModule'
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack } from '@hanzo/gui'
@@ -27,18 +30,8 @@ import { FunctionsApi, type ServerlessFunction } from '~/lib/api/functions'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
 import { EngineBadge } from './functions/parts'
-import { OverviewTab } from './functions/OverviewTab'
 import { FunctionsBrowser } from './functions/FunctionsBrowser'
 import { DeploymentsTab, TriggersTab, SecretsTab, SettingsTab } from './functions/tabs'
-
-const TABS = [
-  { id: '', label: 'Overview' },
-  { id: 'functions', label: 'Functions' },
-  { id: 'deployments', label: 'Deployments' },
-  { id: 'triggers', label: 'Triggers' },
-  { id: 'secrets', label: 'Secrets' },
-  { id: 'settings', label: 'Settings' },
-] as const
 
 const openExternal = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
@@ -78,10 +71,13 @@ function useInventory() {
   return { functions, loading, error, live, reload, setFunctions }
 }
 
+/** The index board — the ONE Functions overview (real inventory + metrics). */
+const FunctionsLiving = livingOverviewModule('functions')
+
 export function FunctionsModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const inv = useInventory()
-  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+  const tab = productSubpageSlug('functions', params.tab)
   const docsHref = config.docsUrl + '/docs/functions'
 
   const hint = 'endpoint · GET /v1/functions'
@@ -133,33 +129,14 @@ export function FunctionsModule({ params }: { params: Record<string, string> }) 
       </XStack>
 
       {/* Tab strip */}
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'overview'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.id ? `/functions/${t.id}` : '/functions')}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="functions" />
 
       {/* A hard backend failure on the inventory is surfaced honestly on the tabs
           that depend on it; the per-tab reads and Settings render their own states. */}
       {inv.error && inventoryTab ? (
         <BackendStateCard state={inv.error} onRetry={() => void inv.reload()} hint={hint} />
       ) : tab === '' ? (
-        <OverviewTab
-          functions={inv.functions}
-          loading={inv.loading}
-          live={inv.live}
-          docsHref={docsHref}
-          onAfterDelete={onAfterDelete}
-        />
+        <FunctionsLiving params={{}} />
       ) : tab === 'functions' ? (
         <FunctionsBrowser
           functions={inv.functions}

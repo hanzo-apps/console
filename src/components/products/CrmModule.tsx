@@ -18,9 +18,10 @@
  * selection. Views are read-only over live data (no `/v1/crm` update endpoint yet)
  * — honest by construction; every state is loading / BackendStateCard / empty.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { Building2, Plus, RefreshCw, Target, Trash2, Users } from '@hanzogui/lucide-icons-2'
 import { RecordsView, RecordDetail, type FieldDefinition, type SelectOption } from '@hanzo/data'
 
@@ -47,11 +48,6 @@ type Async<T> =
   | { phase: 'ready'; data: T }
 
 type Tab = 'companies' | 'contacts' | 'opportunities'
-const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
-  { id: 'companies', label: 'Companies', icon: Building2 },
-  { id: 'contacts', label: 'Contacts', icon: Users },
-  { id: 'opportunities', label: 'Opportunities', icon: Target },
-]
 
 /** The per-org summary bar (real `/v1/crm/summary` counts). */
 function SummaryBar({ summary }: { summary: Summary | null }) {
@@ -344,8 +340,7 @@ function OpportunityForm({ onDone }: { onDone: () => void }) {
 // ── Module ───────────────────────────────────────────────────────────────────
 
 export function CrmModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
-  const active: Tab = (['companies', 'contacts', 'opportunities'] as Tab[]).includes(params.tab as Tab) ? (params.tab as Tab) : 'companies'
+  const active: Tab = (productSubpageSlug('crm', params.tab) || 'companies') as Tab
   const [summary, setSummary] = useState<Summary | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
 
@@ -355,29 +350,13 @@ export function CrmModule({ params }: { params: Record<string, string> }) {
   }, [])
   useEffect(() => { loadSummary() }, [loadSummary])
 
-  const nav = useMemo(
-    () =>
-      TABS.map(({ id, label, icon: Icon }) => (
-        <Button
-          key={id}
-          size="$2"
-          theme={active === id ? 'light' : undefined}
-          icon={<Icon size={15} />}
-          onPress={() => router.push(id === 'companies' ? '/crm' : `/crm/${id}`)}
-        >
-          {label}
-        </Button>
-      )),
-    [active, router],
-  )
-
   return (
     <>
       <PageHeader
         title="CRM"
         subtitle="Companies, contacts, and opportunities — a curated set of Base views. Switch Table ⇆ Board, filter, sort, group."
-        actions={<XStack gap="$2">{nav}</XStack>}
       />
+      <SubNav id="crm" />
       <SummaryBar summary={summary} />
       {active === 'companies' ? <CompaniesView onChanged={loadSummary} /> : null}
       {active === 'contacts' ? <ContactsView companies={companies} onChanged={loadSummary} /> : null}

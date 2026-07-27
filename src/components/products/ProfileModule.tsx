@@ -9,8 +9,9 @@
  * here). The API Keys tab embeds the shared per-user `hk-` credential surface.
  * Reached from the footer wallet's user row; also carries Sign out.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Avatar, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, Copy, ExternalLink, KeyRound, LogOut, ShieldCheck } from '@hanzogui/lucide-icons-2'
 
@@ -246,15 +247,8 @@ function SecurityTab() {
   )
 }
 
-const TABS = [
-  { id: '', label: 'Account' },
-  { id: 'security', label: 'Security' },
-  { id: 'keys', label: 'API Keys' },
-] as const
-
 export function ProfileModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
-  const tab = params.tab ?? ''
+  const tab = productSubpageSlug('profile', params.tab)
 
   const body =
     tab === 'security' ? <SecurityTab /> : tab === 'keys' ? <ApiKeysView /> : <AccountTab />
@@ -262,20 +256,7 @@ export function ProfileModule({ params }: { params: Record<string, string> }) {
   return (
     <>
       <PageHeader title="Profile" subtitle="Your account, security, and personal API keys." />
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'account'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.id ? `/profile/${t.id}` : '/profile')}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="profile" />
       {body}
     </>
   )

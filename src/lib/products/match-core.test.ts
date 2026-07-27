@@ -11,6 +11,9 @@ import {
   canonicalSlug,
   SLUG_ALIASES,
   BASE_SUBPAGES,
+  subpageSlug,
+  subpageHref,
+  activeSubpage,
 } from './match-core'
 import type { CatalogEntry, ProductModule } from './registry'
 
@@ -201,6 +204,44 @@ describe('productSubpages — Overview + specifics + uniform base set', () => {
   })
   it('BASE_SUBPAGES is exactly Settings · Status · Logs · Metrics', () => {
     expect(BASE_SUBPAGES.map((s) => s.slug)).toEqual(['settings', 'status', 'logs', 'metrics'])
+  })
+})
+
+describe('the ONE level-2 nav — one declaration, read by both the rail and the strip', () => {
+  it('names the index after the product when it owns one (Models is a Catalog)', () => {
+    const named = mod('models2', { indexLabel: 'Catalog', subpages: [{ slug: 'blend', label: 'Blend' }] })
+    expect(productSubpages(named).map((s) => s.label)).toEqual([
+      'Catalog', 'Blend', 'Settings', 'Status', 'Logs', 'Metrics',
+    ])
+  })
+  it('falls back to Overview when the product does not name its index', () => {
+    expect(productSubpages(vpc)[0].label).toBe('Overview')
+  })
+
+  it('validates a URL segment against the declaration — an unknown tab is the index', () => {
+    expect(subpageSlug(models, 'routing')).toBe('routing')
+    expect(subpageSlug(models, 'bogus')).toBe('')
+    expect(subpageSlug(models, undefined)).toBe('')
+  })
+  it('refuses an admin-only tab for a customer, so the module cannot light it', () => {
+    expect(subpageSlug(models, 'routing', false)).toBe('')
+  })
+  it('accepts a base sub-page (the shared Status/Logs/Metrics/Settings views)', () => {
+    expect(subpageSlug(vpc, 'metrics')).toBe('metrics')
+  })
+
+  it('builds one URL per screen — the index has no trailing segment', () => {
+    expect(subpageHref('models', '')).toBe('/models')
+    expect(subpageHref('models', 'blend')).toBe('/models/blend')
+  })
+
+  it('reads the level back OUT of the URL, so reload and Back agree', () => {
+    expect(activeSubpage('/models', 'models')).toBe('')
+    expect(activeSubpage('/models/blend', 'models')).toBe('blend')
+    // A deeper route still reports its level-2 parent (routing/<name> → routing).
+    expect(activeSubpage('/models/routing/new', 'models')).toBe('routing')
+    // Another product's path never lights this product's nav.
+    expect(activeSubpage('/tasks/queues', 'models')).toBe('')
   })
 })
 

@@ -112,6 +112,11 @@ export function canonicalSlug(slug: string[]): string[] {
 /** The product index — the implicit Overview sub-page (never declared). */
 export const OVERVIEW_SUBPAGE: ProductSubpage = { slug: '', label: 'Overview' }
 
+/** The index sub-page for a product: its own `indexLabel` when it names its index
+ *  (Models → Catalog, Tasks → Workflows), else the uniform "Overview". */
+export const indexSubpage = (entry: CatalogEntry): ProductSubpage =>
+  entry.indexLabel ? { ...OVERVIEW_SUBPAGE, label: entry.indexLabel } : OVERVIEW_SUBPAGE
+
 /**
  * The uniform base sub-page set every product gets, in exact order, so no
  * product is a snowflake. Overview ('') is prepended separately; a product's own
@@ -137,9 +142,34 @@ export function productSubpages(entry: CatalogEntry, showAdmin = true): ProductS
   if (entry.kind !== 'module') return []
   const specifics = (entry.subpages ?? []).filter((s) => s.slug !== '' && (showAdmin || !s.admin))
   const seen = new Set(specifics.map((s) => s.slug))
-  const out: ProductSubpage[] = [OVERVIEW_SUBPAGE, ...specifics]
+  const out: ProductSubpage[] = [indexSubpage(entry), ...specifics]
   for (const b of BASE_SUBPAGES) if (!seen.has(b.slug)) out.push(b)
   return out
+}
+
+/**
+ * The level-2 slug a URL segment selects within a product — the segment itself
+ * when it is one of the product's own sub-pages, else '' (the index). ONE
+ * validator: the nav highlights and the module switches on the same answer, so a
+ * hand-typed `/tasks/bogus` can never light a tab the module doesn't render.
+ */
+export function subpageSlug(entry: CatalogEntry, seg: string | undefined, showAdmin = true): string {
+  if (!seg) return ''
+  return productSubpages(entry, showAdmin).some((s) => s.slug === seg) ? seg : ''
+}
+
+/** The URL for a product's sub-page — `/id` for the index, `/id/slug` otherwise. */
+export const subpageHref = (id: string, slug: string): string => (slug ? `/${id}/${slug}` : `/${id}`)
+
+/**
+ * The sub-page slug the CURRENT path is on within a product ('' = index; '' when
+ * the path is elsewhere entirely). Level 2 is carried by the URL — nothing else —
+ * so a reload, a deep link, and Back all resolve to the same nav state.
+ */
+export function activeSubpage(pathname: string, id: string): string {
+  const segs = pathname.split('/').filter(Boolean)
+  if (segs[0] !== id) return ''
+  return segs[1] ?? ''
 }
 
 /**

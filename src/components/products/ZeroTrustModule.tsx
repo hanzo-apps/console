@@ -18,6 +18,8 @@
  * owns the routing. Registry: `''` → Overview, `:tab` → overview|services|
  * identities|routers|policies|sessions.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { Fragment } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -58,15 +60,6 @@ import {
   liveCount,
 } from '~/components/products/zt/logic'
 import { toneVar } from '~/components/ui/tone'
-
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'services', label: 'Services' },
-  { id: 'identities', label: 'Identities' },
-  { id: 'routers', label: 'Routers' },
-  { id: 'policies', label: 'Policies' },
-  { id: 'sessions', label: 'Sessions' },
-] as const
 
 type LucideIcon = typeof Waypoints
 
@@ -316,7 +309,7 @@ function ZtOverview() {
 
 export function ZeroTrustModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
-  const active = params.tab && TABS.some((t) => t.id === params.tab) ? params.tab : 'overview'
+  const active = productSubpageSlug('zero-trust', params.tab) || 'overview'
   const detail = zeroTrustSurfaces.find((surface) => surface.id === active)
 
   return (
@@ -330,20 +323,7 @@ export function ZeroTrustModule({ params }: { params: Record<string, string> }) 
           </Button>
         }
       />
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id}
-            size="$2"
-            bg={t.id === active ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.id === 'overview' ? '/zero-trust' : `/zero-trust/${t.id}`)}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="zero-trust" />
       {active === 'overview' ? <ZtOverview /> : detail ? <ForwardSurface surface={detail} /> : null}
     </>
   )

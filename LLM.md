@@ -3550,3 +3550,70 @@ fourteen now spread `~/components/ui/paper`, which holds the surface, the token
 elevation and the opacity-only `hz-menu-in` entrance in one place. Verified rendering
 on the scope switcher, the network picker, the model selector, the save-prompt
 popover and the ⌘K palette: opaque, correctly anchored, ring visible, nothing occluded.
+
+## ONE level-2 nav — the registry declares it, the sidebar renders it (feat/one-second-level-nav)
+
+Clicking into a product revealed its options TWICE. The sidebar drilled into the
+product and rendered its sub-nav from the registry (`productSubpages`), and the
+module ALSO rendered a private `const TABS` strip in the content column. The two
+lists were written independently and disagreed: `/models` showed eight rows in the
+rail and four tabs in the content, and they did not even agree on what the index is
+called — the rail said "Overview", the module said "Catalog". Eight products
+(Containers, Fine-tuning, Tasks, Team, Settings, Zero Trust, Evals, Analytics)
+declared NO sub-pages at all, so their real tabs existed only in the content strip
+and the rail hid them.
+
+- **The registry is the one source.** `CatalogEntry` gains `indexLabel` — what a
+  product calls its own index when it is a named surface rather than a summary
+  (Models → Catalog, Tasks → Workflows, Team → Members, CRM → Companies, Cap Table →
+  Summary, Evals → Run, Containers → Workloads, Fine-tuning → Jobs, Automations →
+  Flows, Profile → Account, Settings → General). `productSubpages` reads it, so the
+  rail, `SubNav`, and ⌘K all say the same word. The eight products missing `subpages`
+  now declare them; the icons the strips were carrying moved onto the declarations.
+- **`components/ui/SubNav.tsx` is the ONE strip**, rendered from `productSubpages` and
+  hidden at `lg+` (`$lg={{ display: 'none' }}`) because the sidebar's `DrillNav` owns
+  level 2 there. One declaration, two mounts — never two navs painting at once. It
+  takes an optional `href` for a product whose tabs carry URL state (Containers keeps
+  its `?cluster=` selection across tabs). `subpageIcon` moved here and `dashboard.tsx`
+  imports it, so the sub-page icon defaults exist once.
+- **Level is the URL and nothing else.** New pure `activeSubpage(pathname, id)` (the
+  level the URL is on, `''` = index) + `subpageHref(id, slug)` (one URL per screen) +
+  `subpageSlug(entry, seg, showAdmin)` — the validator that replaced every module's
+  `TABS.some(...)`, so a hand-typed `/tasks/bogus` cannot light a tab the module does
+  not render, and an admin-only sub-page (Models › Routing) cannot be offered to a
+  customer. Bound to the live registry as `productSubpageSlug` in `match.ts`.
+- **18 modules lost their private `TABS`** (Models, Evals, AI Accounts, Containers,
+  Analytics, Fine-tuning, Team, Automations, Embeddings, Tasks, Functions, Profile,
+  Router, Settings, Zero Trust, Billing, Cap Table, CRM, Infrastructure) — plus their
+  bespoke `TabButton`/`TabBar`/`nav`/`path`/`tabPath` helpers. Net −200 lines.
+- **Functions had two indexes.** Its `''` route pointed at a `livingOverviewModule`
+  while `FunctionsModule` carried a second, older `OverviewTab` reachable only via a
+  bogus URL — and because the index was not the module, `/functions` had no level-2
+  nav at all on a phone. Now ONE component owns the product at every level and renders
+  the living-overview board as its index; the dead `functions/OverviewTab.tsx` is gone.
+- **`/crm/companies` was a duplicate URL** for the screen `/crm` already renders. The
+  index IS Companies now (one URL per screen); the old path still resolves.
+- **One placement, measured.** The strip renders under the page header, never inside
+  `PageHeader`'s actions slot: a View is `flex-shrink: 0` with `min-width: auto`, so
+  in a row it held its max-content width, its own `flex-wrap` never engaged, and at
+  390px the last tabs painted past the right edge (the same bug `ConsoleFooter` had).
+  It carries `style={{ flexShrink: 1 }}` + `minW={0}` for the same reason.
+- **Not converted, and why:** Playground, Machines, Kubeflow, Cloudflare, Growth,
+  Providers-Explore and the Errors status filter keep local-state tab strips. Those
+  are NOT a second level-2 nav — they are in-page view switches the URL never carried,
+  so converting them changes routing behaviour per product rather than removing a
+  duplicate. They are the honest follow-up: their level does not survive a reload.
+- Verification: `tsc --noEmit` adds zero errors (the one reported, `src/lib/event.ts`
+  `dsn`, is pre-existing local dep drift — `@hanzo/event` 0.3.1 installed against
+  `^0.3.4` — and reproduces on a clean origin/main tree); `vitest` **3093 passed**
+  (+9 level-2 nav: indexLabel, the validator incl. the admin gate, one-URL-per-screen,
+  and the URL→level read); `next build` compiles (its type step stops on that same
+  pre-existing drift). RENDER-proven in a browser, `e2e/level-2-nav.spec.ts`, 5/5
+  against a local server: at 1440 the rail is drilled and the content strip's
+  COMPUTED `display` is `none` (a hidden element leaves the accessibility tree, so it
+  is located by test id — `getByRole` cannot see it, which is the whole point); at 390
+  the strip is the one nav, lists the same labels, every tab has a painted box ≥28px
+  tall inside the viewport, and the body does not scroll sideways; a reload of
+  `/models/blend` lands on Blend; Back moves the LEVEL without dropping the rail's
+  drill or the account-backed pins; and a sweep asserts all 18 converted products
+  paint no second nav. Screenshots `e2e-shots/level2-{desktop,mobile}-models.png`.

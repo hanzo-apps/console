@@ -15,6 +15,11 @@
  * Overview navigates directly (no drill). Sub-pages with no backend yet are dimmed
  * and open an honest placeholder (never a dead link).
  *
+ * Level 2 is DECLARED once, in the registry (`subpages` + `indexLabel`), and read
+ * here and by `SubNav` (the same nav, for the viewports where this sidebar is a
+ * drawer). No module carries its own tab list. The level itself is carried by the
+ * URL and nothing else, so a reload, a deep link and Back all agree.
+ *
  * The WHOLE sidebar collapses to an icon RAIL (the topbar panel toggle, persisted).
  * When collapsed, HOVER reveals the full sidebar as an OVERLAY flyout (it doesn't
  * push the content) — the classic rail + flyout. On phones the sidebar is a LEFT
@@ -40,7 +45,6 @@ import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Input, Popover, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
-  Activity,
   ArrowLeft,
   BarChart3,
   Bell,
@@ -79,7 +83,8 @@ import {
   type ProductCategory,
   type ProductSubpage,
 } from '~/lib/products/registry'
-import { productSubpages, subpageWired } from '~/lib/products/match'
+import { productSubpages, subpageWired, activeSubpage } from '~/lib/products/match'
+import { subpageIcon } from '~/components/ui/SubNav'
 import { ProductGuidePanel } from '~/components/guide/ProductGuidePanel'
 import { ConsoleFooter } from '~/components/ConsoleFooter'
 import { openProduct } from '~/lib/products/open'
@@ -122,16 +127,6 @@ const CONTENT_MAX = 1680
 /** Collapsed-rail icon size — large enough to be a comfortable hit target. */
 const ICON = 20
 
-/** Default icon for a level-2 sub-page (base slugs get a real one; others a dot). */
-const SUBPAGE_ICON: Record<string, ComponentType<{ size?: number }>> = {
-  '': House,
-  settings: SlidersHorizontal,
-  status: Activity,
-  logs: ScrollText,
-  metrics: BarChart3,
-}
-const subpageIcon = (slug: string): ComponentType<{ size?: number }> => SUBPAGE_ICON[slug] ?? Circle
-
 /** Icons for the Billing Center tabs — used by the billing-only shell nav. */
 const BILLING_SUBPAGE_ICON: Record<string, ComponentType<{ size?: number }>> = {
   '': House,
@@ -150,13 +145,6 @@ function activeModuleId(pathname: string): string | null {
   if (!seg) return null
   const e = findEntry(seg)
   return e && e.kind === 'module' ? e.id : null
-}
-
-/** The active sub-page slug within a product ('' = Overview), or '' when elsewhere. */
-function activeSubpageSlug(pathname: string, id: string): string {
-  const segs = pathname.split('/').filter(Boolean)
-  if (segs[0] !== id) return ''
-  return segs[1] ?? ''
 }
 
 /** A small round color dot — the "customize this product" affordance on a pin. */
@@ -303,7 +291,7 @@ function DrillNav({
   onBack: () => void
   onGo: (path: string) => void
 }) {
-  const activeSlug = activeSubpageSlug(pathname, entry.id)
+  const activeSlug = activeSubpage(pathname, entry.id)
   const Icon = entry.icon
   return (
     <>
@@ -713,7 +701,7 @@ function SidebarNav({
       root && root.kind === 'module'
         ? [{ slug: '', label: shell.indexLabel }, ...(root.subpages ?? []).filter((s) => showAdmin || !s.admin)]
         : []
-    const activeSlug = root ? activeSubpageSlug(pathname, root.id) : ''
+    const activeSlug = root ? activeSubpage(pathname, root.id) : ''
     return (
       <>
         {shell.wordmark && !collapsed ? (
