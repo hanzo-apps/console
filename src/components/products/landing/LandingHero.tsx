@@ -42,7 +42,7 @@ export function LandingHero({ config: c }: { config: ProductLandingConfig }) {
         <YStack flex={1} minW={280} gap="$2.5">
           <XStack items="center" gap="$2">
             {Icon ? <Icon size={16} color={asColor(ACCENT)} /> : null}
-            <Text fontSize="$1" color="$color11" fontWeight="700" style={{ letterSpacing: 0.4, textTransform: 'uppercase' }}>
+            <Text fontSize="$1" color="$color11" fontWeight="700">
               {config.brandName || 'Hanzo Cloud'}
             </Text>
           </XStack>

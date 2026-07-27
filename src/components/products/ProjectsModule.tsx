@@ -93,7 +93,7 @@ export function ProjectsModule(_props: { params: Record<string, string> }) {
           {scope.project === p.name ? (
             <XStack items="center" gap="$1" px="$1.5" py={1} rounded="$10" bg="$green4">
               <Check size={11} />
-              <Text fontSize={10} fontWeight="800" color="$green11">
+              <Text fontSize="$1" fontWeight="800" color="$green11">
                 ACTIVE
               </Text>
             </XStack>

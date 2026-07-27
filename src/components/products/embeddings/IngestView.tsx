@@ -112,11 +112,11 @@ export function IngestView({ owner }: { owner: string }) {
   }
 
   const columns: Column<FileRow>[] = [
-    { key: 'name', header: 'FILE', render: (f) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{f.name || '—'}</Text> },
-    { key: 'store', header: 'COLLECTION', width: 160, render: (f) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{f.store || '—'}</Text> },
+    { key: 'name', header: 'File', render: (f) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{f.name || '—'}</Text> },
+    { key: 'store', header: 'Collection', width: 160, render: (f) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{f.store || '—'}</Text> },
     {
       key: 'status',
-      header: 'STATUS',
+      header: 'Status',
       width: 120,
       render: (f) => (
         <XStack items="center" gap="$1.5">
@@ -125,8 +125,8 @@ export function IngestView({ owner }: { owner: string }) {
         </XStack>
       ),
     },
-    { key: 'tokenCount', header: 'TOKENS', width: 90, render: (f) => <Text fontSize="$3" color="$color11">{f.tokenCount != null ? f.tokenCount.toLocaleString() : '—'}</Text> },
-    { key: 'createdTime', header: 'CREATED', width: 170, render: (f) => <Text fontSize="$3" color="$color11">{fmtDate(f.createdTime)}</Text> },
+    { key: 'tokenCount', header: 'Tokens', width: 90, render: (f) => <Text fontSize="$3" color="$color11">{f.tokenCount != null ? f.tokenCount.toLocaleString() : '—'}</Text> },
+    { key: 'createdTime', header: 'Created', width: 170, render: (f) => <Text fontSize="$3" color="$color11">{fmtDate(f.createdTime)}</Text> },
   ]
 
   const names = collections.map((c) => c.name)

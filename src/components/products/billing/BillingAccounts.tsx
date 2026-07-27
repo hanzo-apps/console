@@ -105,7 +105,7 @@ function ChainRow({
     <Card borderWidth={1} borderColor="$borderColor" p="$3" gap="$2">
       <XStack items="center" gap="$3" flexWrap="wrap">
         {/* Charge position — 1 pays first. */}
-        <YStack width={26} height={26} rounded={999} bg="$color4" items="center" justify="center">
+        <YStack width={26} height={26} rounded="$10" bg="$color4" items="center" justify="center">
           <Text fontSize="$2" fontWeight="700">
             {index + 1}
           </Text>

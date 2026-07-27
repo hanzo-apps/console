@@ -43,7 +43,7 @@ function Fact({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
     <YStack gap="$0.5">
-      <Text fontSize="$1" color="$color10" textTransform="uppercase" letterSpacing={0.6}>
+      <Text fontSize="$1" color="$color10">
         {label}
       </Text>
       <Text fontSize="$2">{value}</Text>
@@ -298,7 +298,7 @@ export function StoreDetail({ params }: { params: Record<string, string> }) {
             <Fact label="Source" value={repo} />
             {app.tags.length ? (
               <YStack gap="$1.5">
-                <Text fontSize="$1" color="$color10" textTransform="uppercase" letterSpacing={0.6}>
+                <Text fontSize="$1" color="$color10">
                   Tags
                 </Text>
                 <XStack gap="$1.5" flexWrap="wrap">

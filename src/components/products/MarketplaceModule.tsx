@@ -188,7 +188,7 @@ function FeaturedShelf({ items, onOpen }: { items: CatalogEntry[]; onOpen: (m: C
   if (items.length === 0) return null
   return (
     <YStack gap="$2">
-      <Text fontSize="$2" color="$color11" fontWeight="700" textTransform="uppercase">
+      <Text fontSize="$2" color="$color11" fontWeight="500">
         Featured
       </Text>
       <XStack gap="$3" flexWrap="wrap">
@@ -279,7 +279,7 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
           {/* Category tiles */}
           {categories.length > 0 ? (
             <YStack gap="$2">
-              <Text fontSize="$2" color="$color11" fontWeight="700" textTransform="uppercase">
+              <Text fontSize="$2" color="$color11" fontWeight="500">
                 Categories
               </Text>
               <XStack gap="$2.5" flexWrap="wrap">

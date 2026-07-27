@@ -111,6 +111,7 @@ import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
 import { voiceSupported } from '~/lib/voice'
 import { WorkbenchDock } from '~/components/workbench/Workbench'
+import { Z } from '~/lib/z'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
@@ -302,7 +303,7 @@ function DrillNav({
         hoverStyle={{ bg: '$color3' }}
         aria-label="Back to all products"
       >
-        <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+        <Text fontSize="$1" color="$color10" fontWeight="500">
           {entry.category}
         </Text>
       </Button>
@@ -383,10 +384,10 @@ function CategorySection({
         <XStack flex={1} items="center" gap="$2">
           {/* Flush-left label — calm neutral tint (per-product COLOR lives on the icons
               within). The count + the collapse chevron sit at the far RIGHT. */}
-          <Text flex={1} fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+          <Text flex={1} fontSize="$1" color="$color10" fontWeight="500">
             {category}
           </Text>
-          <Text fontSize={10} fontWeight="700" color="$color9">
+          <Text fontSize="$1" fontWeight="700" color="$color9">
             {count}
           </Text>
           {/* The OPTIONAL collapse affordance — a chevron that rotates ▸→▾. Wrapped in a
@@ -735,7 +736,7 @@ function SidebarNav({
           {!filtering && pinnedGroups.length > 0 ? (
             <YStack gap="$1.5">
               <XStack items="center" justify="space-between" px="$2.5">
-                <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+                <Text fontSize="$1" color="$color10" fontWeight="500">
                   Pinned
                 </Text>
                 <Button size="$1" chromeless onPress={manage} aria-label="Manage pins">
@@ -996,7 +997,7 @@ export function Dashboard({ children }: { children: ReactNode }) {
               className="hz-elevation-4"
               // A flyout is a menu: the ladder's dropdown rung, so the account
               // control it contains (a popover) still paints above it.
-              style={{ zIndex: 'var(--z-dropdown, 400)' }}
+              style={{ zIndex: Z.dropdown }}
             >
               <SidebarNav collapsed={false} onNavigate={() => setFlyout(false)} />
             </YStack>

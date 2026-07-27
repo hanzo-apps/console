@@ -146,7 +146,7 @@ function Answer({ text }: { text: string }) {
       </YStack>
       {urls.length > 0 ? (
         <YStack gap="$1" borderTopWidth={1} borderColor="$borderColor" pt="$2">
-          <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+          <Text fontSize="$1" color="$color10" fontWeight="500">
             Links
           </Text>
           {urls.map((u) => (
@@ -347,7 +347,7 @@ function ActionRow({
 /** A small uppercase section label inside the palette result list. */
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <Text px="$3" pt="$2" pb="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+    <Text px="$3" pt="$2" pb="$1" fontSize="$1" color="$color10" fontWeight="500">
       {children}
     </Text>
   )

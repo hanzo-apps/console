@@ -20,6 +20,7 @@ import { Text, XStack, useTheme } from '@hanzo/gui'
 
 import { normalizeBrand, brandForModel, BRANDS, providerInitials } from './brand'
 import { BRAND_MARK, type BrandMark } from './brand-marks'
+import { tileRadius } from './color'
 
 export { providerInitials } from './brand'
 
@@ -97,12 +98,16 @@ function GitHubMark({ size, color }: { size: number; color: string }) {
  */
 function Tile({ size, bg, borderColor, children }: { size: number; bg: string; borderColor?: string; children: React.ReactNode }) {
   return (
+    // `data-monogram` marks this as a GRAPHIC, not app text: the initials inside
+    // scale with the tile (a fixed 11px monogram in a 40px circle reads broken),
+    // so the design gate exempts it from the type scale. One marker, one meaning.
     <XStack
+      data-monogram
       width={size}
       height={size}
       items="center"
       justify="center"
-      rounded={Math.round(size * 0.28)}
+      rounded={tileRadius(size)}
       style={{ flexShrink: 0, backgroundColor: bg, ...(borderColor ? { borderWidth: 1, borderColor } : {}) }}
     >
       {children}

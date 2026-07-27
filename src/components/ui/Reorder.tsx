@@ -15,6 +15,7 @@
  */
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { YStack } from '@hanzo/gui'
+import { Z } from '~/lib/z'
 
 /** Final index for a drag: start + rounded rows travelled, clamped. PURE. */
 export function targetIndex(from: number, dy: number, rowH: number, count: number): number {
@@ -97,7 +98,7 @@ export function Reorder<T>({
             className="hz-drag-item"
             style={{
               transform: `translateY(${shift}px)`,
-              zIndex: dragging ? 2 : 1,
+              zIndex: dragging ? Z.raised : undefined,
               ...(dragging ? { transition: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.28)' } : null),
             }}
           >
