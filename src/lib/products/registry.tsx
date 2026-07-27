@@ -467,7 +467,7 @@ type CatalogBase = {
  *                 resolveProductView, destinationsFor, isAdminView, productModules)
  *                 fails closed so it never manufactures a dead in-console route.
  *
- * Both share `CatalogBase`, so the nav / launcher / ⌘K / category pages render and
+ * Both share `CatalogBase`, so the nav / ⌘K / category pages render and
  * open either uniformly. The discriminant keeps consumers exhaustive.
  */
 export type CatalogEntry =
@@ -555,7 +555,7 @@ export const catalog: CatalogEntry[] = [
     // admin.hanzo.ai OVERLORD board — the top-level god-view of EVERYTHING: every
     // Hanzo product's live health across the WHOLE platform (all orgs), tenant count,
     // and platform-wide usage/spend/top-models. GLOBAL-ADMIN ONLY (`admin: true` hides
-    // it from every customer's nav/launcher/palette; the loader is an all-orgs god view
+    // it from every customer's nav/palette; the loader is an all-orgs god view
     // over the operator inventory + the server-gated `/v1/admin/overview` aggregate,
     // with an honest fallback to the real usage ledger — never blank, never fabricated).
     // The operational god-view; Business/Finance are the P&L lenses. Reuses the ONE
@@ -576,7 +576,7 @@ export const catalog: CatalogEntry[] = [
     // admin.hanzo.ai BUSINESS board — the SaaS control surface for running the
     // business (MRR/revenue, usage & cost, active orgs/customers, top agents/bots
     // by cost, plan mix, fleet health). GLOBAL-ADMIN ONLY (`admin: true` hides it
-    // from every customer's nav/launcher/palette; the loader is an all-orgs god
+    // from every customer's nav/palette; the loader is an all-orgs god
     // view and `/v1/admin/overview` is server-gated). Reuses the ONE LivingOverview.
     id: 'business',
     label: 'Business',
@@ -594,7 +594,7 @@ export const catalog: CatalogEntry[] = [
     // admin.hanzo.ai FINANCE board — the SaaS profitability hero: DigitalOcean
     // credit burn-down (our primary ~$40k venue), month-to-date spend, MRR, total
     // revenue, gross margin %, runway, and a health verdict. GLOBAL-ADMIN ONLY
-    // (`admin: true` hides it from every customer's nav/launcher/palette + the
+    // (`admin: true` hides it from every customer's nav/palette + the
     // catch-all renders a managed notice for a non-admin; the `/v1/admin/finance`
     // aggregate is server-gated by `getAdminGate`, so financial data never reaches a
     // customer). Reuses the ONE LivingOverview — this is a config, not a new surface.
@@ -657,7 +657,7 @@ export const catalog: CatalogEntry[] = [
     // a time) + a Pending-Users approval queue (approve/reject off the waitlist,
     // reusing IAM iam#104). ONE registry (cloud `clients/featuregate`), ONE approval
     // API — no per-app duplication. GLOBAL-ADMIN ONLY (`admin: true` hides it from
-    // every customer's nav/launcher/palette; `/v1/admin/services*` is server-gated
+    // every customer's nav/palette; `/v1/admin/services*` is server-gated
     // by getAdminGate and the pending queue rides the global-admin /admin/iam proxy,
     // so access control never reaches a customer).
     id: 'launch-control',
@@ -677,7 +677,7 @@ export const catalog: CatalogEntry[] = [
     // fleet requests/tokens/cost/latency/errors + log volume, usage & log
     // timeseries, and top orgs/models/services leaderboards, all aggregated across
     // EVERY tenant from the ONE datastore. GLOBAL-ADMIN ONLY (`admin: true` hides it
-    // from every customer's nav/launcher/palette; the `/v1/admin/o11y` aggregate is
+    // from every customer's nav/palette; the `/v1/admin/o11y` aggregate is
     // server-gated by getAdminGate, so cross-tenant telemetry never reaches a
     // customer). The un-org-scoped twin of the per-org console o11y.
     id: 'fleet-o11y',
@@ -698,7 +698,7 @@ export const catalog: CatalogEntry[] = [
     // training, ablation, policy-eval) with first-class proofs AND refutations — a totals
     // band, a per-kind facet, the verdict ledger, and the "don't re-chase" refutation
     // highlight. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/
-    // launcher/palette); the `research` head is org-scoped by the Bearer owner, so a
+    // palette); the `research` head is org-scoped by the Bearer owner, so a
     // customer only ever reaches their OWN corpus, never Hanzo's platform R&D.
     id: 'research',
     label: 'Research',
@@ -737,7 +737,7 @@ export const catalog: CatalogEntry[] = [
     // the single plan PROMO (percent-off applied to paid plans, over `/v1/admin/promos`)
     // and cross-tenant CAP oversight/override (list/create/edit/delete any org's usage
     // caps over `/v1/admin/spend-caps?org=<slug>`). GLOBAL-ADMIN ONLY (`admin: true` hides
-    // it from every customer's nav/launcher/palette; both surfaces are server-gated by
+    // it from every customer's nav/palette; both surfaces are server-gated by
     // getAdminGate behind `/admin/aggregate`). A config surface (not money-moving) — the
     // caps model reuses the tenant SpendAlert primitive, so `budgets-logic` is shared, no fork.
     id: 'usage-caps-promo',
@@ -871,7 +871,7 @@ export const catalog: CatalogEntry[] = [
     // admin.hanzo.ai BOTS board — the SaaS operator view of every @hanzo/bot agent
     // booted across the platform (kind='bot'), and its spend, grouped
     // org → app → project. GLOBAL-ADMIN ONLY (`admin: true` hides it from every
-    // customer's nav/launcher/palette; the `/v1/admin/compute` datastore aggregate is
+    // customer's nav/palette; the `/v1/admin/compute` datastore aggregate is
     // server-gated by `getAdminGate`). Reads ONLY the unified datastore —
     // one cross-tenant GROUP BY, never a per-tenant fan-out (the tenant-data-hierarchy
     // invariant). Honest-empty until the compute-events emitter lands.
@@ -1030,7 +1030,7 @@ export const catalog: CatalogEntry[] = [
     // for the shared-gateway upstream providers (do-ai, openrouter, fireworks,
     // openai-direct, zen): enable/disable each, set the single primary, and see model
     // count + key-present + derived health. GLOBAL-ADMIN ONLY (`admin: true` hides it
-    // from every customer's nav/launcher/palette; the catch-all renders a managed
+    // from every customer's nav/palette; the catch-all renders a managed
     // notice for a non-admin, and `/v1/admin/providers` is server-gated by
     // `getAdminGate`). DISTINCT from the customer `providers` entry above (the model
     // catalog browser + BYOK per-org CRUD) — this one flips backend Provider State/
@@ -1055,7 +1055,7 @@ export const catalog: CatalogEntry[] = [
     // routing board above: per-provider credit balance + burn + runway_days (has-credit vs
     // paid-only), and the credit-vs-paid-vs-BYO usage split (tokens/cost/requests) over a
     // selectable range. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/
-    // launcher/palette; the catch-all renders a managed notice for a non-admin). The reads
+    // palette; the catch-all renders a managed notice for a non-admin). The reads
     // `/v1/admin/providers/credit` + `/v1/admin/usage/funding` ride the SAME `getAdminGate`
     // the sibling `provider-admin` board uses (`providers`/`usage` are already allow-listed
     // admin-aggregate heads). DISTINCT from routing: this is "how much credit remains and how
@@ -1092,7 +1092,7 @@ export const catalog: CatalogEntry[] = [
     // tactics), and the org's OWN live growth read (stage · signals · key metrics · ranked
     // next-best moves). Every blueprint item carries a live enable/disable lever (PATCH) +
     // inline edit, and "Publish version" snapshots the whole blueprint (versioned).
-    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/launcher/palette;
+    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/palette;
     // the module also gates on useIsSuperAdmin, and the /v1/guide blueprint routes are
     // SuperAdmin-gated server-side). Reads ride the `guide` head on the /v1 user-bearer BFF
     // (allow-listed in proxy-allow.ts). This is the "see and modify the guide backend" surface.
@@ -1115,7 +1115,7 @@ export const catalog: CatalogEntry[] = [
     // completion content and nothing harvests traffic — the only training data is the
     // user-curated eval dataset registry), recent eval runs, and how that eval signal
     // folds into the enso router (offline ridge profile + online per-user LinUCB).
-    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/launcher/
+    // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer's nav/
     // palette). COMPOSES the existing admin reads — model mix from `/v1/admin/usage/
     // funding`, margin from `/v1/admin/finance`, credit from `/v1/admin/providers/credit`,
     // evals from `/v1/evals/*` — it forks none of them.
@@ -2060,7 +2060,7 @@ export const catalog: CatalogEntry[] = [
   {
     // Deploy — the native ArgoCD replacement, rendered as a Railway-grade fleet MAP
     // (the surface cd.hanzo.ai serves). A PLATFORM surface (admin: true → hidden from
-    // every customer's nav/launcher/palette today; the org-scoped projection opens it
+    // every customer's nav/palette today; the org-scoped projection opens it
     // per-org) that reads the live operator App CRs through cloud's /v1/deploy/* — the
     // console holds NO cluster credentials; cloud holds the k8s client and enforces
     // authz server-side. Every CR is a live node: its declared image, folded health +
@@ -2112,7 +2112,7 @@ export const catalog: CatalogEntry[] = [
   {
     // White-label TENANTS board — the operator surface for launching, branding,
     // domain-binding, and managing white-label tenants + resold sub-orgs. GLOBAL-ADMIN
-    // ONLY (`admin: true` hides it from every customer's nav/launcher/palette). It
+    // ONLY (`admin: true` hides it from every customer's nav/palette). It
     // COMPOSES real backends: the IAM org list (/admin/iam, global-admin gated) is the
     // tenant set + brand; the admin cockpit (/v1/admin/customers) is plan/wallet/status;
     // the platform (/paas) provisions clusters + (follow-up) domains/packages. The '' route
@@ -2613,7 +2613,7 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: ReferralsModule }],
   },
   {
-    // Global-admin operator board (hidden from every customer nav/launcher/palette).
+    // Global-admin operator board (hidden from every customer nav/palette).
     id: 'referrals-admin',
     label: 'Referrals',
     icon: Gift,
@@ -2639,7 +2639,7 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AffiliatesModule }],
   },
   {
-    // Global-admin operator board (hidden from every customer nav/launcher/palette).
+    // Global-admin operator board (hidden from every customer nav/palette).
     id: 'affiliates-admin',
     label: 'Affiliates',
     icon: Handshake,
@@ -2668,7 +2668,7 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: AuthorsModule }],
   },
   {
-    // Global-admin operator board (hidden from every customer nav/launcher/palette).
+    // Global-admin operator board (hidden from every customer nav/palette).
     id: 'authors-admin',
     label: 'Authors',
     icon: BookOpen,
@@ -2682,7 +2682,7 @@ export const catalog: CatalogEntry[] = [
   },
   {
     // Super-admin per-org entitlements editor (hidden from every customer nav/
-    // launcher/palette). Masquerade into an org, then toggle which products its
+    // palette). Masquerade into an org, then toggle which products its
     // console shows — the admin half of the out-of-box "assemble your own backend"
     // flow. Reads/writes /v1/orgs/{org}/entitlements (org-scoped server-side).
     id: 'entitlements',
@@ -2697,7 +2697,7 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: EntitlementsAdminModule }],
   },
   {
-    // Global-admin reserve-fund board (hidden from every customer nav/launcher/palette).
+    // Global-admin reserve-fund board (hidden from every customer nav/palette).
     id: 'treasury',
     label: 'Treasury',
     icon: Landmark,
@@ -3662,7 +3662,7 @@ export type ProductModule = {
  * products — one `ProductModule` with one `:slug` `ProductRoute`, matched by the
  * same `resolveRoute` and rendered by the same catch-all. It is deliberately NOT a
  * `catalog` entry: a category is a GROUPING of products, not a product, so it
- * never shows up as a card in the nav / home / launcher. `CategoryOverview`
+ * never shows up as a card in the nav / home. `CategoryOverview`
  * derives its whole content from the catalog (`visibleCatalogByCategory`).
  */
 export const CATEGORY_ROUTE_ID = 'category'

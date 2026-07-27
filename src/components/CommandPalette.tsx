@@ -16,8 +16,8 @@
  * same query, so ⌘K is ONE surface for "go somewhere" and "do something".
  *
  * Everything composes existing pieces: the catalog registry (`searchCatalog` +
- * `openProduct`), the AI client (`AiApi`), the chrome hooks (theme/launcher/
- * session/org-scope), and the honest backend-state mapper. Nothing is fabricated —
+ * `openProduct`), the AI client (`AiApi`), the chrome hooks (theme/session/
+ * org-scope), and the honest backend-state mapper. Nothing is fabricated —
  * AI/RAG failures degrade to a truthful state card.
  *
  * Keyboard is handled on `window`: ⌘K toggles from anywhere; while open, ↑/↓ move
@@ -329,7 +329,7 @@ function PaletteDialog({
   }, [open, showAdmin])
 
   // Every command the palette can RUN (verbs + per-org switches). Composed from the
-  // same pieces the chrome uses (router, launcher, theme, session, org scope) — no
+  // same pieces the chrome uses (router, theme, session, org scope) — no
   // dead entries: each `run` is wired.
   const actions = useMemo<PaletteAction[]>(() => {
     const cur = currentOrg()

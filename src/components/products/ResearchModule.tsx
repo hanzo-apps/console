@@ -8,7 +8,7 @@
  * "don't re-chase" knowledge, where a REFUTATION is a first-class result, never an error.
  *
  * Gated twice, exactly like the Fleet Observability board: the registry entry is
- * `admin: true` (hidden from every customer's nav/launcher/palette) and this module
+ * `admin: true` (hidden from every customer's nav/palette) and this module
  * renders `OperatorAccessRequired` for a non-super-admin client. The read is
  * org-scoped server-side (the `research` head resolves the org from the Bearer owner),
  * so a customer only ever reaches their OWN corpus — never Hanzo's platform R&D.

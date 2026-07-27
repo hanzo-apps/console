@@ -9,7 +9,7 @@
  * request BEFORE any cross-tenant row is read).
  *
  * Gated twice: the registry entry is `admin: true` (hidden from every customer's
- * nav/launcher/palette) and this module renders `OperatorAccessRequired` for a
+ * nav/palette) and this module renders `OperatorAccessRequired` for a
  * non-global-admin client. Honest by construction — every KPI is a real aggregate
  * or an em-dash, near-empty signals (o11y AI generations) render honest-empty,
  * and a failed fetch shows the honest error/access state, never a fabricated fleet.
