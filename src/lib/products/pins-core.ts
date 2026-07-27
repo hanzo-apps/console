@@ -174,6 +174,31 @@ export function removeGroup(m: PinModel, name: string): PinModel {
   return groupSort({ pins, groups: m.groups.filter((g) => g !== name) })
 }
 
+/**
+ * Float the pinned items of any list to the front, in the user's own PIN order,
+ * leaving everything else in the order it arrived. Generic over the item, because
+ * "pinned first" is one rule that must read the same in the sidebar, in search
+ * results and in a product grid — a second implementation is a second answer.
+ *
+ * Stable in both partitions: search relevance still decides the tail's order, and
+ * the head reads exactly like the user's own Pinned section. An id that is pinned
+ * but absent from `items` is simply not there — this reorders, it never injects.
+ */
+export function pinnedFirst<T>(items: T[], id: (item: T) => string, pinned: string[]): T[] {
+  if (pinned.length === 0) return items
+  const rank = new Map(pinned.map((p, i) => [p, i]))
+  const head: { item: T; r: number }[] = []
+  const tail: T[] = []
+  for (const item of items) {
+    const r = rank.get(id(item))
+    if (r === undefined) tail.push(item)
+    else head.push({ item, r })
+  }
+  if (head.length === 0) return items
+  head.sort((a, b) => a.r - b.r)
+  return [...head.map((h) => h.item), ...tail]
+}
+
 /** Rename a named group, preserving its order and its pins (no-op on collisions). */
 export function renameGroup(m: PinModel, from: string, to: string): PinModel {
   const t = to.trim()
