@@ -466,7 +466,7 @@ html:root.t_light {
    animation's duration — detaching the menu from its trigger. So anchored menus
    (SelectMenu / ComboBox Popover.Content) fade in with NO transform, keeping the
    floating-ui anchor exact. The transform-based hz-pop-in stays for the centered
-   Dialog surfaces (CommandPalette / AppLauncher / FloatingChat), which are NOT
+   Dialog surfaces (CommandPalette / FloatingChat), which are NOT
    floating-ui-positioned. Reduced-motion → snap. */
 @keyframes hz-menu-in {
   from {
