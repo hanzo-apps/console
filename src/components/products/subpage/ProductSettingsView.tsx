@@ -24,7 +24,7 @@ import type { CatalogEntry } from '~/lib/products/registry'
 import { config } from '~/config'
 import { githubUrl } from '~/lib/oss-program'
 import { PlatformApi, type PlatformApp } from '~/lib/api/platform'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 import { settingsConfigFor, subpageSourcesFor } from './sources'
 
 const openExternal = (href: string) => {

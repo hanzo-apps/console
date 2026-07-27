@@ -27,12 +27,12 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { AdminTreasuryApi, type AnchorStatus, type JournalEntry, type TreasuryView } from '~/lib/api/admin-treasury'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldText } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { FieldText } from '@hanzo/ui/product'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 

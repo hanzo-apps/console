@@ -14,8 +14,8 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { X } from '@hanzogui/lucide-icons-2'
 
 import { TasksApi, type HistoryEvent, type WorkflowDetail } from '~/lib/api'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { statusOf } from './status'
 
 const SUBTABS = ['Overview', 'Timeline', 'Graph', 'Events', 'Activities', 'Logs', 'Signals', 'Queries'] as const

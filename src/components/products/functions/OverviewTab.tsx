@@ -42,8 +42,8 @@ import {
   type MetricsRange,
   type ServerlessFunction,
 } from '~/lib/api/functions'
-import { LineChart, Sparkline, Donut, CHART_PALETTE, type ChartPoint, type Slice } from '~/components/ui/Charts'
-import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { LineChart, Sparkline, Donut, CHART_PALETTE, type ChartPoint, type Slice } from '@hanzo/ui/product'
+import { classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { MetricCard, Delta } from './parts'
 import { FunctionsBrowser } from './FunctionsBrowser'
 

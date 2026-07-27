@@ -11,8 +11,8 @@ import {
   FieldTextArea,
   FieldSelect,
   FieldSwitch,
-} from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
+} from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
 import { SPLIT_OPTIONS, SEARCH_OPTIONS, STATE_OPTIONS } from './logic'
 
 /** Store editor. Loaded by owner/name. Mirrors StoreEditPage.js core fields. */

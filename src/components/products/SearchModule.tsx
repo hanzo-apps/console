@@ -25,9 +25,9 @@ import { BookOpen, ExternalLink, Globe, Search as SearchIcon } from '@hanzogui/l
 
 import { config } from '~/config'
 import { WebSearchApi, WEBSEARCH_ENDPOINTS, SEARXNG_ENGINES, type SearchResult, type WebSearchEndpoint } from '~/lib/api/websearch'
-import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { classifyBackend, BackendStateCard, type BackendState } from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
 import {
   SEARCH_TABS,
   resolveTab,

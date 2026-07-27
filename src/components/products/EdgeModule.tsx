@@ -15,10 +15,10 @@ import { RefreshCw, Radio } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { restGet, originV1Url } from '~/lib/api/client'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
 type EdgeNode = {

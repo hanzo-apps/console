@@ -25,9 +25,9 @@ import { RecordsView } from '@hanzo/data'
 
 import { StartupsApi, STARTUP_STAGES, type Application } from '~/lib/api/startups'
 import { STARTUP_FIELDS, STARTUP_STAGE_OPTIONS, applicationRecord } from './startups/collections'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { SlideOver } from '~/components/ui/SlideOver'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { SlideOver } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

@@ -33,8 +33,8 @@ import {
   utilForWorker,
   workerOnline,
 } from '~/lib/api/fleet'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { UtilBar } from './charts'
 import { JobStatusPill, CancelJobButton, FreshnessNote } from './job-ui'
 import { PlatformStateCard } from '../platform/state'

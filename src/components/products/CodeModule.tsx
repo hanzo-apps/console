@@ -34,9 +34,9 @@ import {
   type Span,
 } from '~/lib/api/code'
 import { productColorHex } from '~/lib/products/colors'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { useDetailPane } from '~/components/DetailPane'
 import { CitationRow, KindBadge, Panel, RefButton, ScoreBar, SnippetLine, SpanDetail, TierBadge } from './code/parts'
 

@@ -22,10 +22,10 @@ import { Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, PlatformApi, DOKS_REGIONS, DOKS_NODE_SIZES, type Cluster, type NodePool } from '~/lib/api'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldSelect } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { FieldRow, FieldSelect } from '@hanzo/ui/product'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
 const KindTag = ({ kind }: { kind?: string }) => (

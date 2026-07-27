@@ -17,9 +17,9 @@ import { Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { EmbeddingsApi } from '~/lib/api/embeddings'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { Donut, BarRows } from '~/components/ui/Charts'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { Donut, BarRows } from '@hanzo/ui/product'
 import { ProductLanding, apiBaseFromDocs, type LandingMetric, type ProductLandingConfig } from '~/components/products/landing'
 import {
   defaultEmbeddingModel,

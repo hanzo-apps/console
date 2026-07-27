@@ -13,10 +13,10 @@ import { RefreshCw, Download } from '@hanzogui/lucide-icons-2'
 
 import { BillingApi, type Invoice } from '~/lib/api/billing'
 import { billingProxyV1Url } from '~/lib/api/client'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 

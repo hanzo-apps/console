@@ -20,7 +20,7 @@ import type { ComponentType } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { MessageSquare, FileText, Binary, AudioLines, ScanEye, Image as ImageIcon, Clapperboard } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 import { ChatPlayground } from './playground/ChatPlayground'
 import { EmbeddingsPlayground } from './playground/EmbeddingsPlayground'
 import { AudioPlayground } from './playground/AudioPlayground'

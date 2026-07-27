@@ -12,7 +12,7 @@ import { GitCommit } from '@hanzogui/lucide-icons-2'
 
 import { GitApi, type Commit } from '~/lib/api/git'
 import { fmtRelative } from '~/lib/api/agents'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { CopyButton } from './parts'
 
 type Load<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }

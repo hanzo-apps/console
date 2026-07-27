@@ -38,8 +38,8 @@ import {
   type AgentResourceUsage,
   type AgentStatus,
 } from '~/lib/api/agents'
-import { Donut, BarRows, type Slice } from '~/components/ui/Charts'
-import { asColor } from '~/components/ui/color'
+import { Donut, BarRows, type Slice } from '@hanzo/ui/product'
+import { asColor } from '@hanzo/ui/product'
 
 /** Status → hex — one source of truth for the pill dot + the health donut. */
 export const STATUS_HEX: Record<AgentStatus, string> = {

@@ -10,7 +10,7 @@ import { Spinner, Text, YStack, XStack } from '@hanzo/gui'
 import { Cpu } from '@hanzogui/lucide-icons-2'
 
 import { fmtInt, type Gpu, type GpuCluster, type GpuSummary } from '~/lib/api/compute'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { EmptyState } from '@hanzo/ui/product'
 import { PlatformStateCard } from '../platform/state'
 import { GpuTable } from './GpuTable'
 import type { Async } from './state'

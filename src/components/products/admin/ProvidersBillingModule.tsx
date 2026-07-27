@@ -38,10 +38,10 @@ import {
   fundingColor,
 } from '~/lib/api/provider-billing'
 import type { RangeKey } from '~/lib/api/aimetrics'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { Donut } from '~/components/ui/Charts'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { Donut } from '@hanzo/ui/product'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 

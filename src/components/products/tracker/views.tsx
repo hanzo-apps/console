@@ -21,11 +21,11 @@ import {
   type Project,
   type NewProject,
 } from '~/lib/api/tracker'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { useToast } from '~/components/ui/Toast'
+import { PageHeader } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldTextArea } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { useToast } from '@hanzo/ui/product'
 import { asApiError } from '~/components/ui/States'
 import {
   type GroupBy,

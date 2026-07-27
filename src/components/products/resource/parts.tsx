@@ -21,8 +21,8 @@ import {
   Terminal,
 } from '@hanzogui/lucide-icons-2'
 
-import { Donut } from '~/components/ui/Charts'
-import type { Slice } from '~/components/ui/Charts'
+import { Donut } from '@hanzo/ui/product'
+import type { Slice } from '@hanzo/ui/product'
 import type { ProductIcon } from '~/lib/products/registry'
 import type { Snippet } from './logic'
 

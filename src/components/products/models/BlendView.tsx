@@ -53,8 +53,8 @@ import {
 } from '~/lib/models/blend'
 import { currentOrg } from '~/lib/org-scope'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { PageHeader } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import type { ApiError } from '~/lib/api'
 

@@ -24,15 +24,15 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Blocks, ListChecks, Play, Plus, Power, RefreshCw, Trash2, Workflow } from '@hanzogui/lucide-icons-2'
 
 import { AutomationsApi, type AutomationFlow, type FlowRun, type Piece } from '~/lib/api/automations'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldSelect, FieldText } from '~/components/ui/Field'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { FieldSelect, FieldText } from '@hanzo/ui/product'
 import { Loader } from '~/components/ui/Loader'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { SlideOver } from '~/components/ui/SlideOver'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { PageHeader } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { SlideOver } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
 import {
   authLabel,
   capabilitySummary,

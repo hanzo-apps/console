@@ -50,12 +50,12 @@ import {
   type SessionEvent,
   type TargetKind,
 } from '~/lib/api/mission-control'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend } from '~/components/ui/BackendState'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
-import { SlideOver } from '~/components/ui/SlideOver'
-import { useToast } from '~/components/ui/Toast'
+import { PageHeader } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldSelect } from '@hanzo/ui/product'
+import { SlideOver } from '@hanzo/ui/product'
+import { useToast } from '@hanzo/ui/product'
 import { useLiveSessions, type LiveState } from './mission-control/live'
 
 // ── status tone palette (semantic → hex, alpha bg for the pill) ──────────────

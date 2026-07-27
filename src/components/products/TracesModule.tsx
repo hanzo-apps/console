@@ -22,8 +22,8 @@ import {
   type Trace,
   type TraceDetail,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { Badge, DetailRow, JsonCard, Tags } from './observability/parts'

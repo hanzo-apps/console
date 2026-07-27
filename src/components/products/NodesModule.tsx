@@ -16,10 +16,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { DataTable, type FieldDefinition } from '@hanzo/data'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import {
   NodesApi,
   fmtHeight,

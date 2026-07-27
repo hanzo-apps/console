@@ -22,10 +22,10 @@ import { CalendarClock, Check, ExternalLink, RefreshCw, RotateCcw, XCircle } fro
 
 import { config } from '~/config'
 import { BillingApi, type Subscription } from '~/lib/api/billing'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const usd = (cents?: number): string => (cents != null ? `$${(cents / 100).toFixed(2)}` : '—')
 

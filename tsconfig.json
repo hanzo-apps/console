@@ -5,7 +5,14 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
-      "react-native": ["react-native-web"]
+      "react-native": ["react-native-web"],
+      // @hanzo/ui is consumed from SOURCE (a workspace link), so its files resolve
+      // `@hanzo/gui` from ITS node_modules — a second, un-augmented copy whose theme
+      // token types differ from ours (`gui.d.ts` augments only this one). Pin both to
+      // the console's copy so there is ONE @hanzo/gui in the program, as at runtime.
+      "@hanzo/gui": ["./node_modules/@hanzo/gui"],
+      "@hanzo/gui/*": ["./node_modules/@hanzo/gui/*"],
+      "@hanzogui/*": ["./node_modules/@hanzogui/*"]
     },
     "strict": true,
     "allowJs": false,

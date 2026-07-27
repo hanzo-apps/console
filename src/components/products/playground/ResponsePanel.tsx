@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Copy, Check, ThumbsUp, ThumbsDown, Square } from '@hanzogui/lucide-icons-2'
 
-import { BackendStateCard } from '~/components/ui/BackendState'
+import { BackendStateCard } from '@hanzo/ui/product'
 import { MarkdownView } from './MarkdownView'
 import { costOf, formatLatency, formatTokens, formatUsd, tokensPerSecond } from './cost'
 import type { ChatRun } from './useChatRun'

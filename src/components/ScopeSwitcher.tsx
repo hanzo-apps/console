@@ -20,7 +20,7 @@ import { Check, ChevronsUpDown, FolderGit2, Layers, Plus, Trash } from '@hanzogu
 import { useScope } from '~/lib/scope-context'
 import { STOCK_ENVIRONMENTS } from '~/lib/scope'
 import { isStockNetwork, parseCustomNetwork, type Network } from '~/lib/network'
-import { FieldText } from '~/components/ui/Field'
+import { FieldText } from '@hanzo/ui/product'
 
 /** A small colored dot keyed to the network tier. */
 type DotColor = '$green10' | '$yellow10' | '$blue10' | '$purple10' | '$orange10'

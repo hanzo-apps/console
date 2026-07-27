@@ -46,8 +46,8 @@ import {
   type FamilyGroup,
 } from '~/lib/api/families'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FadeIn } from '~/components/ui/FadeIn'
+import { PageHeader } from '@hanzo/ui/product'
+import { FadeIn } from '@hanzo/ui/product'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { playgroundPathForModel } from './playground/share'
 import type { ApiError } from '~/lib/api'

@@ -21,7 +21,7 @@ import { ArrowUp, Check, Copy, RefreshCw, Share2, Terminal, Users } from '@hanzo
 
 import { branding, isAdminHost } from '~/config'
 import { HanzoMark, Loader } from '~/components/ui/Loader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { PrimaryButton } from '@hanzo/ui/product'
 import { isSuperAdminAccount } from '~/lib/auth/admin'
 import { useSession } from '~/lib/auth/session'
 import { useWaitlist, type WaitlistStatus } from '~/lib/auth/waitlist'

@@ -11,7 +11,7 @@
 import { useRouter } from 'next/navigation'
 import { Button, XStack } from '@hanzo/gui'
 
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 import { EvalRunView } from './evals/EvalRunView'
 import { EvalScoresView } from './evals/EvalScoresView'
 

@@ -12,7 +12,7 @@
 import { useCallback, useRef, useState } from 'react'
 
 import { ApiError, type ChatUsage } from '~/lib/api'
-import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { runColumn, type RunInput } from './runner'
 import type { RunPhase, RunResult } from './types'
 

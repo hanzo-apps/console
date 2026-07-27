@@ -36,7 +36,7 @@ import { categorize, featured, applyFilters, marketStats, listingTitle } from '.
 import { playgroundPathForModel } from './playground/share'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { brandForModel, brandLabel } from '~/components/ui/brand'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
 import type { ApiError } from '~/lib/api'

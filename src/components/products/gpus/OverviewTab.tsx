@@ -35,7 +35,7 @@ import {
   usd,
   type Gpu,
 } from '~/lib/api/compute'
-import { BackendStateCard } from '~/components/ui/BackendState'
+import { BackendStateCard } from '@hanzo/ui/product'
 import { PlatformStateCard } from '../platform/state'
 import { GpuInventory } from './GpuInventory'
 import {

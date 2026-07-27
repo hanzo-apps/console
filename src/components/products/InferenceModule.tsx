@@ -23,7 +23,7 @@ import { XStack, YStack } from '@hanzo/gui'
 import { Plus } from '@hanzogui/lucide-icons-2'
 
 import { useDetailPane } from '~/components/DetailPane'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 import { useInferenceData } from './inference/data'
 import { AccentButton } from './inference/parts'
 import { HeroCard } from './inference/HeroCard'

@@ -6,7 +6,7 @@ import { Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ChatApi, MessageApi, type Chat, type Message } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 import { Markdown } from './markdown'
 
 /** The sparkle medallion marking an AI turn (matches the live conversation). */

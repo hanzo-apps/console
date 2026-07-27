@@ -15,7 +15,7 @@ import { ArrowLeft, CircleDot, GitBranch, GitPullRequest, Play, Rocket } from '@
 
 import { GitApi, type RefList, type Repo } from '~/lib/api/git'
 import { fmtBytes } from '~/lib/api/agents'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import {
   ClonePanel,
   ComingSoonTab,

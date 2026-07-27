@@ -45,14 +45,14 @@ import {
   type ResourceKind,
 } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText } from '~/components/ui/Field'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { useToast } from '~/components/ui/Toast'
+import { PageHeader } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldRow, FieldText } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { useToast } from '@hanzo/ui/product'
 import { slugError } from '~/lib/slug'
 
 import {

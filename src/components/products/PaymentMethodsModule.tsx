@@ -25,9 +25,9 @@ import { config } from '~/config'
 import { BillingApi, type PaymentConfig, type PaymentMethod } from '~/lib/api/billing'
 import { isLiveSquareEnv } from '~/lib/billing/square'
 import { useSquareCard } from '~/lib/billing/use-square-card'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

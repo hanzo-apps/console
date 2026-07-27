@@ -14,11 +14,11 @@ import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { FileStack, Github, Globe, Upload } from '@hanzogui/lucide-icons-2'
 
 import { EmbeddingsApi, type FileRow, type IngestStats } from '~/lib/api/embeddings'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldSelect, FieldText, FieldTextArea } from '~/components/ui/Field'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { FieldRow, FieldSelect, FieldText, FieldTextArea } from '@hanzo/ui/product'
 import type { Collection } from './logic'
 
 const fmtDate = (s?: string) => {

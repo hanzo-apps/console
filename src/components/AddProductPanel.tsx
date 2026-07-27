@@ -23,8 +23,8 @@ import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { usePins, useProductColors } from '~/lib/products/pins'
 import { fetchUsageRecords } from '~/lib/api/aimetrics'
 import { inUseProductIds } from '~/lib/products/product-usage'
-import { asColor } from '~/components/ui/color'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { asColor } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 
 /** The list narrowing controls at the top. */
 type Filter = 'all' | 'inuse' | 'pinned'

@@ -16,11 +16,11 @@ import { trackedProviderIds } from '@hanzo/usage'
 
 import { AiAccountsApi, type PublicAccount } from '~/lib/api/ai-accounts'
 import { AI_PROVIDERS, COMING_SOON, MODE_LABEL, type AiProvider, type ConnectMode } from '~/lib/products/ai-accounts'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldSelect } from '@hanzo/ui/product'
 import { Loader } from '~/components/ui/Loader'
-import { useToast } from '~/components/ui/Toast'
+import { useToast } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

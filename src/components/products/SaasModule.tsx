@@ -27,8 +27,8 @@ import { TrendingUp, Coins, Users, Layers, Repeat, Activity, AlertTriangle, Gaug
 
 import { SaasApi, type SaaSMetrics, type SaasWindow } from '~/lib/api/saas'
 import { AdminO11yApi, type FleetO11y, type O11yRange } from '~/lib/api/admin-o11y'
-import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { MetricCard } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
 import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { formatMetric } from '~/components/products/overview/living/logic'

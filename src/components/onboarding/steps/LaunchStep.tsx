@@ -12,7 +12,7 @@ import { EVENTS } from '@hanzo/event'
 
 import { config } from '~/config'
 import { StepShell, ChoiceCard } from '~/components/onboarding/parts'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { PrimaryButton } from '@hanzo/ui/product'
 import type { StepProps } from '~/components/onboarding/types'
 
 const TILES: { icon: typeof MessageSquare; title: string; description: string; to: string }[] = [

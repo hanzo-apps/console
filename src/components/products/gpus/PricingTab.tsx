@@ -10,7 +10,7 @@
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Tag } from '@hanzogui/lucide-icons-2'
 
-import { EmptyState } from '~/components/ui/EmptyState'
+import { EmptyState } from '@hanzo/ui/product'
 
 const MODELS = ['H100', 'A100', 'L40S', 'RTX 4090']
 

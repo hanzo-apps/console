@@ -22,7 +22,7 @@ import { EVENTS } from '@hanzo/event'
 import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 import { ErrorState } from '~/components/ui/States'
 
 // The docs site serves everything under the `/docs` base path (a bare

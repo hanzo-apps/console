@@ -19,9 +19,9 @@ import { Activity, RefreshCw, TrendingUp, UserPlus, Users } from '@hanzogui/luci
 
 import { ApiError } from '~/lib/api'
 import { AdminCockpitApi, type AnalyticsData } from '~/lib/api/admin-cockpit'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { LineChart, BarChart, type ChartPoint } from '~/components/ui/Charts'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { LineChart, BarChart, type ChartPoint } from '@hanzo/ui/product'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 
 type Range = '7d' | '30d' | '90d' | 'all'

@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Star, Lock, ArrowRight, BookOpen, KeyRound } from '@hanzogui/lucide-icons-2'
+import { Star, Lock, ArrowRight, BookOpen } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { shellFor } from '~/lib/products/shell'
@@ -21,9 +21,8 @@ import { ProductRoute } from '~/components/ProductRoute'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FadeIn } from '~/components/ui/FadeIn'
+import { PageHeader } from '@hanzo/ui/product'
+import { FadeIn } from '@hanzo/ui/product'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 import { ResourceOverview } from '~/components/products/overview/ResourceOverview'
 import { ProductObservability } from '~/components/products/observability/ProductObservability'
@@ -104,37 +103,6 @@ function ProductCard({
   )
 }
 
-/**
- * Prominent, always-visible "Get API key" call-to-action at the top of the home.
- * A cold customer must reach "New key" in one obvious click from landing — the
- * api-keys page is otherwise buried in the collapsed Dev nav group. Routes to the
- * real ApiKeysModule (`/api-keys`), where the `hk-` key is created/copied/rotated.
- */
-function GetApiKeyCta({ onOpen }: { onOpen: () => void }) {
-  return (
-    <Card borderWidth={1} borderColor="$borderColor" bg="$color2" p="$4" data-tour="api-key">
-      <XStack items="center" justify="space-between" gap="$4" flexWrap="wrap">
-        <XStack items="center" gap="$3" flex={1} minW={240}>
-          <YStack bg="$color5" rounded="$4" p="$2.5" items="center" justify="center">
-            <KeyRound size={20} />
-          </YStack>
-          <YStack flex={1} minW={180}>
-            <Text fontSize="$5" fontWeight="800">
-              Get your API key
-            </Text>
-            <Text fontSize="$3" color="$color11">
-              Call {config.brandName} models from your apps, SDKs, and CLI with a personal key.
-            </Text>
-          </YStack>
-        </XStack>
-        <PrimaryButton size="$4" iconAfter={<ArrowRight size={16} />} onPress={onOpen}>
-          Get API key
-        </PrimaryButton>
-      </XStack>
-    </Card>
-  )
-}
-
 export default function DashboardHome() {
   const router = useRouter()
   const pathname = usePathname()
@@ -182,7 +150,6 @@ export default function DashboardHome() {
 
   return (
     <YStack gap="$7">
-      <GetApiKeyCta onOpen={() => push('/api-keys')} />
       <OverviewDashboard params={{}} />
 
       {/* Observability, front-and-center — the platform's live LLM signals (RED

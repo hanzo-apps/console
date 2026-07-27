@@ -6,8 +6,8 @@ import { Trash, ArrowLeft } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ChatApi, type Chat } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
 
 export function ChatListView({ onOpen, onBack }: { onOpen: (c: Chat) => void; onBack?: () => void }) {
   const { account } = useSession()

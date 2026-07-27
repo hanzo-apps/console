@@ -16,9 +16,9 @@ import type { DetailPaneApi } from '~/components/DetailPane'
 import { InferenceApi } from '~/lib/api/inference'
 import { ApiError } from '~/lib/api'
 import type { UsageRecord } from '~/lib/api/aimetrics'
-import { LineChart } from '~/components/ui/Charts'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { LineChart } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
 import { AccentButton, StatusDot } from './parts'
 import {
   endpointDailyRequests,

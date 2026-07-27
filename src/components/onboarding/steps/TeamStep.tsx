@@ -16,7 +16,7 @@ import { currentOrg } from '~/lib/org-scope'
 import { TeamApi } from '~/lib/api/team'
 import type { Organization } from '~/lib/api/admin'
 import { ApiError } from '~/lib/api/client'
-import { useToast } from '~/components/ui/Toast'
+import { useToast } from '@hanzo/ui/product'
 import { StepShell, StepActions } from '~/components/onboarding/parts'
 import type { StepProps } from '~/components/onboarding/types'
 

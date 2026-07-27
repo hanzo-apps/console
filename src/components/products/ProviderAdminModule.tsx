@@ -35,9 +35,9 @@ import { CheckCircle2, RefreshCw, Star, XCircle } from '@hanzogui/lucide-icons-2
 import { ApiError } from '~/lib/api'
 import { ProviderAdminApi, deriveHealth, type AdminProvider, type ProviderHealth } from '~/lib/api/provider-admin'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldSwitch } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldSwitch } from '@hanzo/ui/product'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
 

@@ -19,10 +19,10 @@ import { useOrganizations } from '@hanzo/iam/react'
 import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Boxes, Database, Table2 } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { BaseDataApi } from '~/lib/base-data/api'
 
 /** The org's Base is served natively same-origin by the cloud binary at /v1/base

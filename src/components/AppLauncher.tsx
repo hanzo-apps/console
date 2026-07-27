@@ -27,7 +27,7 @@ import { findEntry, visibleCatalogByCategory, type CatalogEntry } from '~/lib/pr
 import { orderEntries } from '~/lib/products/order'
 import { searchCatalog } from '~/lib/products/search'
 import { useProductColors } from '~/lib/products/pins'
-import { asColor } from '~/components/ui/color'
+import { asColor } from '@hanzo/ui/product'
 import { openProduct } from '~/lib/products/open'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 

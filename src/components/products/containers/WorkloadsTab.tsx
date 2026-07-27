@@ -14,8 +14,8 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import type { PlatformApp } from '~/lib/api'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
 import { fmtAge } from './resource'
 
 function DriftBadge({ app }: { app: PlatformApp }) {

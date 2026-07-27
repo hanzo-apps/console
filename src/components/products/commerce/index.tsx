@@ -30,11 +30,11 @@ import type {
   CommerceStore,
 } from '~/lib/api/commerce'
 import { fmtUsd, fmtInt, fmtAbs } from '~/lib/api/functions'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText } from '~/components/ui/Field'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldRow, FieldText } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { CommerceResource } from './CommerceResource'
 import { discountValue, humanizeStatus } from './logic'
 

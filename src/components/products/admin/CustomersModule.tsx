@@ -18,10 +18,10 @@ import { ArrowLeft, Ban, Building2, CheckCircle2, CreditCard, RefreshCw, Users }
 
 import { ApiError } from '~/lib/api'
 import { AdminCockpitApi, type CustomerDetail, type CustomerRow, type GrantSource } from '~/lib/api/admin-cockpit'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 
 const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

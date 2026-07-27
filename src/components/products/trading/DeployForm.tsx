@@ -10,10 +10,10 @@
 import { useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { FieldRow, FieldText, FieldSelect } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
 import { PaasApi } from '~/lib/api/paas'
 import {
   type BotTemplate,

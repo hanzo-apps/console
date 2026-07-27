@@ -34,10 +34,10 @@ import {
   type ServiceHealth,
 } from '~/lib/api'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard, Panel } from '~/components/ui/Metric'
-import { LineChart, type ChartPoint } from '~/components/ui/Charts'
-import { Donut, type DonutSegment } from '~/components/ui/Donut'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard, Panel } from '@hanzo/ui/product'
+import { LineChart, type ChartPoint } from '@hanzo/ui/product'
+import { DonutRing as Donut, type DonutSegment } from '@hanzo/ui/product'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 
 // The customer-facing Metrics view = the org's OWN usage board (requests/tokens/

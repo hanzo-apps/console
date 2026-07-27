@@ -28,10 +28,10 @@ import {
   type FunctionInvocation,
 } from '~/lib/api/functions'
 import { ApiError } from '~/lib/api'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { useToast } from '~/components/ui/Toast'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { useToast } from '@hanzo/ui/product'
 import { DetailRow, Badge } from '~/components/products/observability/parts'
 import { DisabledAction } from './parts'
 

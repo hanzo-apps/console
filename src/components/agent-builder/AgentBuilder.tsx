@@ -34,9 +34,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Bot, Plus, Terminal, X } from '@hanzogui/lucide-icons-2'
 
-import { ComboBox, type ComboOption } from '~/components/ui/ComboBox'
-import { FieldRow, FieldSelect, FieldSlider, FieldSwitch, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { SelectMenu, type SelectOption } from '~/components/ui/SelectMenu'
+import { ComboBox, type ComboOption } from '@hanzo/ui/product'
+import { FieldRow, FieldSelect, FieldSlider, FieldSwitch, FieldText, FieldTextArea } from '@hanzo/ui/product'
+import { SelectMenu, type SelectOption } from '@hanzo/ui/product'
 import {
   canSubmit,
   classifyBuilderError,

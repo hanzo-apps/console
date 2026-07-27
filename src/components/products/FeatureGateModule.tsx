@@ -23,11 +23,11 @@ import { BadgeCheck, DoorOpen, Lock, ShieldCheck, UserCheck, UserX, Users } from
 
 import { FeatureGateApi, type FeatureService } from '~/lib/api/admin-featuregate'
 import { IamAdminApi, type IamUser } from '~/lib/api/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldSwitch } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { FieldSwitch } from '@hanzo/ui/product'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 

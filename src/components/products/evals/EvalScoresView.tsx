@@ -12,8 +12,8 @@ import { Button, Text, XStack } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { EvalsApi, type EvalScore } from '~/lib/api'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type State =
   | { phase: 'loading' }

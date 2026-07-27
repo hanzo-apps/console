@@ -21,9 +21,9 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { FileUp, Network, RefreshCw, Upload } from '@hanzogui/lucide-icons-2'
 
 import { KnowledgeApi, type ImportResult } from '~/lib/api/knowledge'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import {
   degreeOf,
   edgeColor,

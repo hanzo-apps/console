@@ -32,21 +32,5 @@ export function defaultSpec(entry: CatalogEntry): OverviewSpec {
 
 /** The native-overview spec for an entry: registered content, or the derived default. */
 export function resolveSpec(entry: CatalogEntry): OverviewSpec {
-  const spec = OVERVIEW_SPECS[entry.id] ?? defaultSpec(entry)
-  // Honest upstream attribution: fork products surface the OSS project they are
-  // built on (name + SPDX license) as a key fact, on bespoke and derived specs alike.
-  if (entry.upstream && !spec.facts.some((f) => f.label === 'Upstream')) {
-    return {
-      ...spec,
-      facts: [
-        ...spec.facts,
-        {
-          label: 'Upstream',
-          value: entry.upstream.name,
-          hint: `Forked from ${entry.upstream.name} · ${entry.upstream.license}`,
-        },
-      ],
-    }
-  }
-  return spec
+  return OVERVIEW_SPECS[entry.id] ?? defaultSpec(entry)
 }

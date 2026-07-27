@@ -20,9 +20,9 @@ import { CreditCard, TrendingUp, RefreshCw, Plus, ArrowRight, CalendarClock } fr
 import { fetchUsageRecords, type UsageRecord, type RangeKey } from '~/lib/api/aimetrics'
 import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
 import { useTimedOut } from '~/lib/use-timed-out'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { BarChart } from '~/components/ui/Charts'
+import { PageHeader } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { BarChart } from '@hanzo/ui/product'
 import { monthToDate, dailySpend, groupSpend, tileView, TILE_LOAD_TIMEOUT_MS } from './logic'
 import { RangeTabs } from './RangeTabs'
 

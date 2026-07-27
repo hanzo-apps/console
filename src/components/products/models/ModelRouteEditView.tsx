@@ -5,8 +5,8 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError, ModelRouteApi, type ModelRoute } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { FieldRow, FieldText, FieldSwitch } from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { FieldRow, FieldText, FieldSwitch } from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
 import { newModelRoute } from './logic'
 
 /**

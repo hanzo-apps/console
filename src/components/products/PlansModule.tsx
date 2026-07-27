@@ -20,8 +20,8 @@ import { EVENTS } from '@hanzo/event'
 
 import { PlansApi, type Plan } from '~/lib/api'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** Open the brand billing portal (Square checkout) — the ONE money surface; the console
  *  LINKS here, never reimplements it. `#pricing` lands on the portal's checkout section,

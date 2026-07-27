@@ -21,8 +21,8 @@ import {
   type AnnotationQueueItem,
   type O11yPageMeta,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { fmtDate } from './observability/format'

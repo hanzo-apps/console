@@ -26,8 +26,8 @@ import {
   type Gpu,
   type GpuFilter,
 } from '~/lib/api/compute'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldSelect } from '~/components/ui/Field'
+import { StatusTag } from '@hanzo/ui/product'
+import { FieldSelect } from '@hanzo/ui/product'
 import { HintButton, UtilBar, utilColor } from './charts'
 
 const COLS = [

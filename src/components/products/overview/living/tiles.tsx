@@ -24,7 +24,7 @@ import {
   Sparkline,
   type ChartPoint,
   type Slice,
-} from '~/components/ui/Charts'
+} from '@hanzo/ui/product'
 import { useCountUp, useReducedMotion } from './hooks'
 import {
   ago,

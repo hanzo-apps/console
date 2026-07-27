@@ -62,11 +62,11 @@ import {
   type MetricsRange,
 } from '~/lib/api/agents'
 import { productColorHex } from '~/lib/products/colors'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { LineChart, Sparkline, type ChartPoint } from '~/components/ui/Charts'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { LineChart, Sparkline, type ChartPoint } from '@hanzo/ui/product'
 import { useDetailPane } from '~/components/DetailPane'
 import { MetricCard, Delta } from './functions/parts'
 import {

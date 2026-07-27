@@ -11,7 +11,7 @@
 import { Button, XStack, YStack } from '@hanzo/gui'
 import { Plus, Trash2 } from '@hanzogui/lucide-icons-2'
 
-import { FieldText } from '~/components/ui/Field'
+import { FieldText } from '@hanzo/ui/product'
 import { type MetadataRow } from '~/components/products/catalog/logic'
 
 export function MetadataEditor({ rows, onChange }: { rows: MetadataRow[]; onChange: (rows: MetadataRow[]) => void }) {

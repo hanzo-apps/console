@@ -15,7 +15,7 @@
  * degrades to "—" until then.
  */
 import type { Store } from '~/lib/api/types'
-import type { Slice } from '~/components/ui/Charts'
+import type { Slice } from '@hanzo/ui/product'
 
 /** Honest lifecycle of a collection's index. */
 export type CollectionStatus = 'Healthy' | 'Rebuilding' | 'Paused' | 'Unknown'

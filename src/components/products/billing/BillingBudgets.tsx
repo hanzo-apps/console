@@ -37,11 +37,11 @@ import {
 
 import { BillingApi, type SpendAlert } from '~/lib/api/billing'
 import { fmtInt, fmtUsd } from '~/lib/api/functions'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { MetricCard } from '~/components/ui/Metric'
-import { FieldSelect, FieldSwitch } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { FieldSelect, FieldSwitch } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import {
   capVerdict,
   deriveBudgetsSummary,

@@ -14,7 +14,7 @@ import { ChevronUp, Code as CodeIcon, Eye, FileText } from '@hanzogui/lucide-ico
 
 import { GitApi, type Blob, type Readme, type TreeEntry } from '~/lib/api/git'
 import { fmtBytes } from '~/lib/api/agents'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { MarkdownView } from '~/components/products/playground/MarkdownView'
 import { CopyButton, EntryIcon } from './parts'
 import {

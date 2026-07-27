@@ -22,7 +22,7 @@ import { Building2, ArrowRight, Sparkles } from '@hanzogui/lucide-icons-2'
 import { useSession } from '~/lib/auth/session'
 import { slugifyOrg, validateOrgName } from '~/lib/server/onboarding'
 import { v1Url } from '~/lib/api/client'
-import { FadeIn } from '~/components/ui/FadeIn'
+import { FadeIn } from '@hanzo/ui/product'
 
 type Phase = 'form' | 'done'
 

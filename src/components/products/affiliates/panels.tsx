@@ -19,10 +19,10 @@ import {
   type Leaderboard,
   type LinksView,
 } from '~/lib/api/affiliates'
-import { LineChart, type ChartPoint } from '~/components/ui/Charts'
-import { FieldRow, FieldText } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { LineChart, type ChartPoint } from '@hanzo/ui/product'
+import { FieldRow, FieldText } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { monthLabel, ratePct, usd } from './logic'
 
 type Async<T> =

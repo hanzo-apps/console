@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Text, XStack, YStack } from '@hanzo/gui'
 
 import { PaasApi } from '~/lib/api/paas'
-import { useContainerWidth } from '~/components/ui/Charts'
+import { useContainerWidth } from '@hanzo/ui/product'
 import { usePoll, useReducedMotion } from '~/components/products/overview/living/hooks'
 import {
   isTerminalPhase,

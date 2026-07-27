@@ -24,8 +24,8 @@ import { ServiceDetailDrawer, type DrawerTab, type ServiceEdgeData, type Service
 
 import { PaasApi, type PaasAppWithProject } from '~/lib/api/paas'
 import { ProvisioningApi, type ResourceKind } from '~/lib/api/provisioning'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { PageHeader } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
 import { usePoll, useReducedMotion } from '~/components/products/overview/living/hooks'

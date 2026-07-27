@@ -28,10 +28,10 @@ import {
   type ServiceRow,
   type TopOperation,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard, Panel } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { SlideOver } from '~/components/ui/SlideOver'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard, Panel } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { SlideOver } from '@hanzo/ui/product'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { DetailRow } from './observability/parts'
 import { fmtNs, fmtRate, fmtPct, fmtCount, errorTone } from './observability/apm-format'

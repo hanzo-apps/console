@@ -17,7 +17,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { CloudModelApi } from '~/lib/api/models-catalog'
 import { InferenceApi } from '~/lib/api/inference'
 import { fetchUsageRecords, type UsageRecord } from '~/lib/api/aimetrics'
-import { classifyRead, type BackendState } from '~/components/ui/BackendState'
+import { classifyRead, type BackendState } from '@hanzo/ui/product'
 import { fromCatalogModel, fromMlEndpoint, mergeEndpoints, type Endpoint } from './logic'
 
 export type InferenceData = {

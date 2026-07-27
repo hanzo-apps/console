@@ -16,10 +16,10 @@ import { ArrowLeft, BookOpen, ExternalLink, Github, KeyRound, LayoutDashboard, R
 
 import { ApiError, ProvisioningApi, type Resource, type ResourceKind } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { useToast } from '~/components/ui/Toast'
+import { PageHeader } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { useToast } from '@hanzo/ui/product'
 
 import { connectSnippet, docsUrl, endpoint, provisionSnippet, repoUrl, specFor } from './logic'
 import { DetailRow, openHref, SectionCard, SnippetBlock, TabBar, type TabDef } from './parts'

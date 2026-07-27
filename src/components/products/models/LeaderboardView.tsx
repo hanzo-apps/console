@@ -38,9 +38,9 @@ import {
   type Ranked,
   type SourceClass,
 } from '~/lib/api/benchmarks'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { DataTable, type Column } from '@hanzo/ui/product'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 
 const TNUM = 'hz-tnum'
 

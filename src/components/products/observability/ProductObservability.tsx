@@ -20,8 +20,8 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, ArrowUpRight, ScrollText, Waypoints } from '@hanzogui/lucide-icons-2'
 
 import { ApmApi, apmWindow, type LogRow, type ServiceHealth, type TraceSpan } from '~/lib/api/apm'
-import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { MetricCard } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
 import { RuntimeNotice } from '~/components/products/observability/RuntimeNotice'
 import { formatMetric } from '~/components/products/overview/living/logic'
 

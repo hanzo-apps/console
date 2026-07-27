@@ -22,7 +22,7 @@ import { UsagePanel } from '@hanzo/usage/panel'
 import { ConnectedUsage } from '@hanzo/usage/connected'
 import type { CloudUsageOverview, ProviderUsage, UsageRange } from '@hanzo/usage'
 
-import { classifyBackend } from '~/components/ui/BackendState'
+import { classifyBackend } from '@hanzo/ui/product'
 import { CloudUsageApi } from '~/lib/api/cloud-usage'
 import { AiConnectionsApi } from '~/lib/api/ai-connections'
 

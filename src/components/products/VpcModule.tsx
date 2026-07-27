@@ -20,10 +20,10 @@ import { Network, Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { restGet, restPost, restDelete, cloudProxyV1Url } from '~/lib/api/client'
 import { DOKS_REGIONS } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldSelect } from '@hanzo/ui/product'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 
 const enc = encodeURIComponent

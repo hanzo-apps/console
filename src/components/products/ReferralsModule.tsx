@@ -14,9 +14,9 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, CircleCheck, Coins, Copy, Gift, RefreshCw, Users } from '@hanzogui/lucide-icons-2'
 
 import { ReferralsApi, type ReferralOverview } from '~/lib/api/referrals'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { progressCaption, shortDate, statusLabel, statusTone, usd } from './referrals/logic'
 
 type Async<T> =

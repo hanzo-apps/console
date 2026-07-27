@@ -13,10 +13,10 @@ import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Boxes, Plus, RefreshCw, Search, Trash } from '@hanzogui/lucide-icons-2'
 
 import { EmbeddingsApi } from '~/lib/api/embeddings'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldSelect } from '~/components/ui/Field'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldSelect } from '@hanzo/ui/product'
 import type { Collection, CollectionStatus } from './logic'
 
 const PAGE_SIZE = 8

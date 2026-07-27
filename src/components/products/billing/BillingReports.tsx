@@ -22,10 +22,10 @@ import { RefreshCw, Search, X, Download } from '@hanzogui/lucide-icons-2'
 import { fetchUsageRecords, withinRange, type UsageRecord, type RangeKey } from '~/lib/api/aimetrics'
 import { exportCSV } from '~/lib/csv'
 import { findEntry } from '~/lib/products/registry'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { BarChart, Donut, CHART_PALETTE, CHART_OTHER, type Slice } from '~/components/ui/Charts'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { BarChart, Donut, CHART_PALETTE, CHART_OTHER, type Slice } from '@hanzo/ui/product'
 import {
   groupSpend,
   filterGroups,

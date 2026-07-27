@@ -32,9 +32,9 @@ import {
   type Opportunity,
   type Summary,
 } from '~/lib/api/crm'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldSelect } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import {
   COMPANY_FIELDS, CONTACT_FIELDS, OPPORTUNITY_FIELDS,
   companyRecord, contactRecord, opportunityRecord,

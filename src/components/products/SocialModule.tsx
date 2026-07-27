@@ -30,14 +30,14 @@ import {
   type ProviderCapability,
   type Summary,
 } from '~/lib/api/social'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldRow, FieldText, FieldTextArea, FieldSelect } from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { SlideOver } from '~/components/ui/SlideOver'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldTextArea, FieldSelect } from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { SlideOver } from '@hanzo/ui/product'
 
 /** Compose intents → the (status, scheduleAt) the backend stores. */
 const COMPOSE_MODES = ['draft', 'schedule', 'now'] as const

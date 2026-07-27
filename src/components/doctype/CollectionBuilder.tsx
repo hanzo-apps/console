@@ -16,9 +16,9 @@ import { useCallback, useMemo, useState, type CSSProperties } from 'react'
 import { Button, Card, Input, Label, Text, XStack, YStack } from '@hanzo/gui'
 import { GripVertical, Plus, Trash2, TriangleAlert, ArrowUp, ArrowDown } from '@hanzogui/lucide-icons-2'
 
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldSwitch } from '~/components/ui/Field'
-import { classifyBackend } from '~/components/ui/BackendState'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { FieldSwitch } from '@hanzo/ui/product'
+import { classifyBackend } from '@hanzo/ui/product'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType, Fieldtype } from '~/lib/framework/types'
 import {

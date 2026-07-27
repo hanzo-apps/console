@@ -9,8 +9,8 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { Bell, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import type { GpuAlert } from '~/lib/api/compute'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { PlatformStateCard } from '../platform/state'
 import type { ComputeData } from './state'
 

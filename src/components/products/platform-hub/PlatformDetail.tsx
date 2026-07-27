@@ -34,14 +34,14 @@ import {
 import { crossSurfaceLinks } from '~/lib/products/cross-surface'
 import { fmtBytes, fmtWhen, latestDeployment, siteSlugForProject } from './logic'
 import { DeployDropzone } from './DeployDropzone'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldSelect, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { BackendStateCard, classifyRead } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldRow, FieldSelect, FieldText, FieldTextArea } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { BackendStateCard, classifyRead } from '@hanzo/ui/product'
 import { asApiError } from '~/components/ui/States'
-import { useToast } from '~/components/ui/Toast'
+import { useToast } from '@hanzo/ui/product'
 
 const openExt = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')

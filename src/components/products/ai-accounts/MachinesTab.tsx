@@ -35,10 +35,10 @@ import {
   summarize,
   usd,
 } from './links-logic'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { MetricCard, UtilBar } from '~/components/ui/Metric'
+import { PageHeader } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { MetricCard, UtilBar } from '@hanzo/ui/product'
 import { Loader } from '~/components/ui/Loader'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }

@@ -23,9 +23,9 @@ import {
 } from '~/lib/api/admin'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldRow, FieldText } from '@hanzo/ui/product'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
 
 /** IAM-specific guidance for the honest 404 / unauthorized states. */

@@ -20,7 +20,7 @@ import {
   type CatalogEntry,
 } from '~/lib/api/aicatalog'
 import { useModelCatalog } from '~/components/products/useModelCatalog'
-import type { BackendState } from '~/components/ui/BackendState'
+import type { BackendState } from '@hanzo/ui/product'
 import type { ModelPricing } from '~/lib/api'
 
 /** A pickable model with the facts the composer needs. */

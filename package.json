@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.4.148",
+  "version": "8.4.149",
   "private": true,
   "license": "BSD-3-Clause",
   "author": "Hanzo AI <dev@hanzo.ai>",
@@ -27,7 +27,7 @@
     "@hanzo/iam": "^0.13.6",
     "@hanzo/iam-js-sdk": "0.19.1",
     "@hanzo/logo": "^1.0.13",
-    "@hanzo/ui": "^8.0.6",
+    "@hanzo/ui": "file:../ui/pkg/ui",
     "@hanzo/usage": "^0.1.6",
     "@hanzogui/config": "7.3.0",
     "@hanzogui/core": "7.3.0",
@@ -60,9 +60,9 @@
     "@types/node": "22.20.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "patch-package": "^8.0.0",
     "react-native": "0.83.9",
     "typescript": "5.9.3",
-    "vitest": "3.2.4",
-    "patch-package": "^8.0.0"
+    "vitest": "3.2.4"
   }
 }

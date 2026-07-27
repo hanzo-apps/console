@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 
-import { CHART_PALETTE, Sparkline } from '~/components/ui/Charts'
+import { CHART_PALETTE, Sparkline } from '@hanzo/ui/product'
 import { useCountUp, usePoll, useReducedMotion } from '~/components/products/overview/living/hooks'
 import { DeltaChip } from './parts'
 import type { LandingMetric, ProductLandingConfig } from './types'

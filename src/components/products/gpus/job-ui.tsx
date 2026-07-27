@@ -20,7 +20,7 @@ import {
   type FleetJob,
   type JobTone,
 } from '~/lib/api/fleet'
-import { useToast } from '~/components/ui/Toast'
+import { useToast } from '@hanzo/ui/product'
 
 /** run = in-flight (blue), ok = done (green), down = failed (red), idle = queued/canceled (neutral). */
 export const JOB_TONE_COLOR: Record<JobTone, string> = {

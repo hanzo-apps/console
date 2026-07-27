@@ -18,8 +18,8 @@ import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { ApiError } from '~/lib/api'
 import { MfaApi, type MfaSetup } from '~/lib/api/mfa'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldRow } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { FieldRow } from '@hanzo/ui/product'
 import { ApiKeysView } from './ApiKeysModule'
 
 /** A labeled read-only value row; dim em-dash when empty. */

@@ -21,9 +21,9 @@ import {
   type FunctionTrigger,
   type ServerlessFunction,
 } from '~/lib/api/functions'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { DetailRow, Badge } from '~/components/products/observability/parts'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }

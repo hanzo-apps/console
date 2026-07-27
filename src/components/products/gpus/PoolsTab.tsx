@@ -10,9 +10,9 @@ import { Button, Spinner, Text, XStack } from '@hanzo/gui'
 import { Layers, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { ComputeApi, fmtInt, type GpuPool } from '~/lib/api/compute'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
 
 type State = { phase: 'loading' } | { phase: 'error'; error: PlatformError } | { phase: 'ready'; pools: GpuPool[] }

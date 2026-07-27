@@ -18,12 +18,12 @@ import { EVENTS } from '@hanzo/event'
 
 import { ProjectApi, projectEnvironments, type Project } from '~/lib/api/projects'
 import { useScope } from '~/lib/scope-context'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldTextArea } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
 import { ErrorState, asApiError } from '~/components/ui/States'
-import { useToast } from '~/components/ui/Toast'
+import { useToast } from '@hanzo/ui/product'
 
 const fmt = (iso?: string) => {
   if (!iso) return '—'

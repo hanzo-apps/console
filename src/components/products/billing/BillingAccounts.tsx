@@ -33,9 +33,9 @@ import { ArrowDown, ArrowUp, Building2, FolderGit2, Plus, RefreshCw, Trash2 } fr
 import { BillingAccountApi, type BillingAccount, type ChainLink } from '~/lib/api/billing-accounts'
 import { fmtUsd } from '~/lib/api/functions'
 import { useScope } from '~/lib/scope-context'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import {
   accountLabel,
   appendPriority,

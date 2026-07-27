@@ -5,7 +5,7 @@
  * `PlatformError`, the `/v1` usage ledger to `BackendState`.
  */
 import type { PlatformError } from '../platform/state'
-import type { BackendState } from '~/components/ui/BackendState'
+import type { BackendState } from '@hanzo/ui/product'
 import type { Cluster } from '~/lib/api'
 import type { Usage } from '~/lib/api/billing'
 import type { Gpu, GpuAlert, UsageLedger } from '~/lib/api/compute'

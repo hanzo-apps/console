@@ -14,8 +14,8 @@ import { RefreshCw, ToggleLeft } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { EnablementApi, type AdminEnablementItem, type EnablementState } from '~/lib/api/admin-cockpit'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { PageHeader } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 
 const STATES: EnablementState[] = ['off', 'beta', 'ga']

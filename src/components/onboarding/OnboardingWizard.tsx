@@ -20,7 +20,7 @@ import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { usePreferences } from '~/lib/products/preferences'
 import { HanzoMark } from '~/components/ui/HanzoMark'
-import { FadeIn } from '~/components/ui/FadeIn'
+import { FadeIn } from '@hanzo/ui/product'
 import {
   ONBOARDING_STEPS,
   LAST_INDEX,

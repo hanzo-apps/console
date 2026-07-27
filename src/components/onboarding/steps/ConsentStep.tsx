@@ -12,7 +12,7 @@ import { FileText, Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
-import { FieldSwitch } from '~/components/ui/Field'
+import { FieldSwitch } from '@hanzo/ui/product'
 import { StepShell, StepActions, InlineLink } from '~/components/onboarding/parts'
 import type { StepProps } from '~/components/onboarding/types'
 

@@ -8,8 +8,8 @@
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 
 import { config } from '~/config'
-import { CHART_PALETTE } from '~/components/ui/Charts'
-import { asColor } from '~/components/ui/color'
+import { CHART_PALETTE } from '@hanzo/ui/product'
+import { asColor } from '@hanzo/ui/product'
 import { AccentButton, HeroGraphic } from '../inference/parts'
 import { openExternal } from './parts'
 import type { LandingAction, ProductLandingConfig } from './types'

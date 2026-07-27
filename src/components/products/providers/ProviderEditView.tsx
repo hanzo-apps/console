@@ -11,8 +11,8 @@ import {
   FieldSelect,
   FieldSwitch,
   FieldSlider,
-} from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
+} from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
 import {
   CATEGORY_OPTIONS,
   CURRENCY_OPTIONS,

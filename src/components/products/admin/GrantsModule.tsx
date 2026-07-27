@@ -13,9 +13,9 @@ import { Coins, Gift, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { AdminGrantsApi, type AdminGrant, type GrantSource } from '~/lib/api/admin-grants'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 
 const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

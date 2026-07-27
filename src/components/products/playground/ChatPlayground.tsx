@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { XStack, YStack } from '@hanzo/gui'
 
-import { BackendStateCard } from '~/components/ui/BackendState'
+import { BackendStateCard } from '@hanzo/ui/product'
 import { useSession } from '~/lib/auth/session'
 import { useComposer } from './useComposer'
 import { useModels, pricingOf, defaultModelId } from './useModels'

@@ -31,11 +31,11 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { AuthorsApi, type AuthorOverview } from '~/lib/api/authors'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldText } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { FieldRow, FieldText } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { payoutMethodLabel, sharePct, shortDate, statusLabel, statusTone, usd, verifyMethodLabel } from './authors/logic'
 
 type Async<T> =

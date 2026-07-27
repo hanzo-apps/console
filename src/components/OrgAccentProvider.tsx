@@ -17,7 +17,7 @@ import { useEffect } from 'react'
 import { TeamApi } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
-import { setOrgAccent } from '~/lib/theme/accent'
+import { setOrgAccent } from '@hanzo/ui/product'
 
 export function OrgAccentProvider() {
   const { account } = useSession()

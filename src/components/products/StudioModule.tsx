@@ -22,7 +22,7 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ExternalLink, Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { studioUrl } from '~/config'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { EmptyState } from '@hanzo/ui/product'
 
 type StudioView = 'home' | 'editor'
 

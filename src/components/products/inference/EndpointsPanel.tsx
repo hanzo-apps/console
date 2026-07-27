@@ -15,10 +15,10 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { LayoutGrid, List as ListIcon, MoreVertical, Zap } from '@hanzogui/lucide-icons-2'
 
 import { useDetailPane } from '~/components/DetailPane'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard } from '~/components/ui/BackendState'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
 import type { InferenceData } from './data'
 import {
   PHASE_DOT,

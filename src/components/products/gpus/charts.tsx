@@ -17,14 +17,15 @@ export {
   SERIES,
   colorForIndex,
   utilColor,
-  Sparkline,
+  // Metric's own spark mark (`points`) — the barrel aliases it away from Charts'.
+  MetricSparkline as Sparkline,
   MiniBars,
   UtilBar,
   LegendDot,
   MetricCard,
   HintButton,
   Panel,
-} from '~/components/ui/Metric'
+} from '@hanzo/ui/product'
 
 const TRACK = 'rgba(128,128,128,0.18)'
 

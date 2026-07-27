@@ -24,10 +24,10 @@ import {
   type Priority,
   type NewIssue,
 } from '~/lib/api/tracker'
-import { FieldRow, FieldText, FieldTextArea, FieldSelect } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { FieldRow, FieldText, FieldTextArea, FieldSelect } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
 import { asApiError } from '~/components/ui/States'
-import { useToast } from '~/components/ui/Toast'
+import { useToast } from '@hanzo/ui/product'
 import {
   STATUS_LABEL,
   PRIORITY_LABEL,

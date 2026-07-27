@@ -19,7 +19,7 @@
  * kinds look and behave the same, and a new managed kind is one spec entry.
  */
 import type { Resource, ResourceKind } from '~/lib/api'
-import type { Slice } from '~/components/ui/Charts'
+import type { Slice } from '@hanzo/ui/product'
 
 // ── Lifecycle classification (mirrors ui/StatusTag toneOf, one truth) ─────────
 

@@ -10,10 +10,11 @@ import { NextThemeProvider, useRootTheme } from '@hanzogui/next-theme'
 import { registerDefaultFields, registerField } from '@hanzo/data'
 import { AnalyticsProvider } from '@hanzo/event/react'
 import { IamProvider } from '@hanzo/iam/react'
+import { HostProvider } from '@hanzo/ui/product'
 
 import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
-import { iamConfig } from '~/lib/auth/iam'
+import { iamConfig, startReauth } from '~/lib/auth/iam'
 import { EntitlementsProvider } from '~/lib/entitlements-context'
 import { AnalyticsBridge } from './Analytics'
 import { OrgAccentProvider } from './OrgAccentProvider'
@@ -55,9 +56,12 @@ export function Provider({ children }: { children: ReactNode }) {
   // OrgAccentProvider lives INSIDE SessionProvider (it reads the session to resolve the
   // org's accent) and applies it at the document root — so every accent surface picks
   // up the org's brand color on load, DRY.
+  // @hanzo/ui/product is presentational — it never imports a router or an auth
+  // module. Its honest-state cards get the console's two effects from here, once.
   const tree = useMemo(
     () => (
       <IamProvider config={iamConfig()}>
+      <HostProvider actions={{ signIn: startReauth, addCredits: () => { window.location.href = '/billing/credits' } }}>
       <SessionProvider>
         <OrgAccentProvider />
         {/* Entitlements live inside the session (they read the signed-in account +
@@ -73,6 +77,7 @@ export function Provider({ children }: { children: ReactNode }) {
           </AnalyticsProvider>
         </EntitlementsProvider>
       </SessionProvider>
+      </HostProvider>
       </IamProvider>
     ),
     [children],

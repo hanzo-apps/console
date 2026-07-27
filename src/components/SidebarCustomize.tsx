@@ -22,8 +22,8 @@ import { COLOR_SWATCHES } from '~/lib/products/colors'
 import { DEFAULT_GROUP, DEFAULT_GROUP_LABEL, type PinGroupView } from '~/lib/products/pins-core'
 import { usePins, useProductColors } from '~/lib/products/pins'
 import { findEntry } from '~/lib/products/registry'
-import { Reorder } from '~/components/ui/Reorder'
-import { asColor } from '~/components/ui/color'
+import { Reorder } from '@hanzo/ui/product'
+import { asColor } from '@hanzo/ui/product'
 
 /** A round color swatch button; ringed + checked when selected. */
 function SwatchButton({ hex, selected, onPress }: { hex: string; selected: boolean; onPress: () => void }) {

@@ -97,7 +97,7 @@ const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images'
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
 // which is method-agnostic (Next matches on the URL), so POST is covered without a
 // second entry. Keep this in sync with `admin-aggregate.ts` ADMIN_AGGREGATE_HEADS.
-const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'spend-caps']
+const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'spend-caps', 'infra']
 /**
  * DEV-ONLY: proxy the client's direct-cloud `/v1/{iam,o11y}/*` calls (get-account,
  * annotation-queues/users) to a real cloud backend so `npm run dev` renders the
@@ -207,6 +207,11 @@ const nextConfig = {
     esmExternals: true,
   },
   webpack(config) {
+    // @hanzo/ui is consumed from SOURCE via a workspace link. Keep the symlinked path
+    // so its own imports (@hanzo/gui, @hanzogui/*) walk up into the CONSOLE's
+    // node_modules — one Tamagui instance, as the tsconfig `paths` already pin for
+    // types. Resolving the realpath would load a second copy and break theme context.
+    config.resolve.symlinks = false
     config.resolve.alias = {
       ...config.resolve.alias,
       'react-native$': 'react-native-web',

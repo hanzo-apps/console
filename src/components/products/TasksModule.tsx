@@ -31,12 +31,12 @@ import {
   type Worker,
   type ActivityInfo,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldSelect } from '~/components/ui/Field'
-import { MetricCard, Panel } from '~/components/ui/Metric'
-import { LineChart, BarRows, type ChartPoint } from '~/components/ui/Charts'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldSelect } from '@hanzo/ui/product'
+import { MetricCard, Panel } from '@hanzo/ui/product'
+import { LineChart, BarRows, type ChartPoint } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { statusOf, statusStyle, type Bucket } from './tasks/status'
 import { WorkflowDetailPanel } from './tasks/detail'
 

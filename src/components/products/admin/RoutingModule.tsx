@@ -34,9 +34,9 @@ import {
   type RoutingState,
 } from '~/lib/api/org-settings'
 import { getBrand } from '~/lib/branding/brands'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { PageHeader } from '@hanzo/ui/product'
+import { MetricCard } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 
 const STATES: RoutingState[] = ['inherit', 'enabled', 'disabled']

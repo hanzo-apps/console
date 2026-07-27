@@ -13,7 +13,7 @@
 import { useRouter } from 'next/navigation'
 import { Button, XStack } from '@hanzo/gui'
 
-import { useAccent } from '~/lib/theme/accent'
+import { useAccent } from '@hanzo/ui/product'
 
 /** The GPU sub-tabs, in order. `id` matches the registry `:tab` segment; `path` is the
  *  absolute console route the tab navigates to. Overview is the empty `id`. */

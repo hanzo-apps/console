@@ -13,7 +13,7 @@ import { ShieldCheck, KeyRound, Copy } from '@hanzogui/lucide-icons-2'
 import { useSession } from '~/lib/auth/session'
 import { ApiError } from '~/lib/api/client'
 import { MfaApi, type MfaSetup } from '~/lib/api/mfa'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { PrimaryButton } from '@hanzo/ui/product'
 import { StepShell, StepActions } from '~/components/onboarding/parts'
 import type { StepProps } from '~/components/onboarding/types'
 

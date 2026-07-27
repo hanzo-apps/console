@@ -21,14 +21,14 @@ import { Text, XStack, YStack } from '@hanzo/gui'
 import { Target, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { PLATFORMS, STATUSES, AdsApi, type Campaign, type Summary } from '~/lib/api/ads'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { SlideOver } from '~/components/ui/SlideOver'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldSelect } from '@hanzo/ui/product'
+import { PageHeader } from '@hanzo/ui/product'
+import { PrimaryButton } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { SlideOver } from '@hanzo/ui/product'
 
 /** cents (int64 minor units from the backend) → a $ label. */
 function money(cents: number): string {

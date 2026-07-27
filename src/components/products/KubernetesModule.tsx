@@ -27,13 +27,13 @@ import { Activity, Boxes, Cable, Check, ChevronRight, Copy, Cpu, HardDrive, Netw
 
 import { ApiError, PlatformApi, type Cluster } from '~/lib/api'
 import { VisorApi, type VisorMachine } from '~/lib/api/visor'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldText, FieldTextArea, FieldSwitch } from '~/components/ui/Field'
-import { MetricCard, HintButton } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyRead, type BackendState } from '~/components/ui/BackendState'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { FieldRow, FieldText, FieldTextArea, FieldSwitch } from '@hanzo/ui/product'
+import { MetricCard, HintButton } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
+import { BackendStateCard, classifyRead, type BackendState } from '@hanzo/ui/product'
 import {
   summarizeFleet,
   byoBoxes,

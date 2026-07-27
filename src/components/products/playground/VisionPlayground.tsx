@@ -11,8 +11,8 @@ import { Button, Card, Separator, Spinner, Text, XStack, YStack } from '@hanzo/g
 import { Play, Square, Coins, Zap, Clock, Binary } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, type ChatUsage } from '~/lib/api'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { FieldRow, FieldText, FieldTextArea } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { ModelSelect } from './ModelSelect'
 import { useCatalog, defaultModels } from './useCatalog'
 import { runColumn } from './runner'

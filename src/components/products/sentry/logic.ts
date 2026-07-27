@@ -3,7 +3,7 @@
 // imports (types are erased), so every helper unit-tests in a plain-node suite
 // (logic.test.ts) and the panels stay thin views over real `/v1/sentry` data.
 import type { SentryIssue, StatPoint, Period } from '~/lib/api/sentry'
-import type { Slice, ChartPoint } from '~/components/ui/Charts'
+import type { Slice, ChartPoint } from '@hanzo/ui/product'
 
 // ── Level → tone (severity color, theme-neutral) ──────────────────────────────
 

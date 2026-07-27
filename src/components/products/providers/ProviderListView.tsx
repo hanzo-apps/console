@@ -6,8 +6,8 @@ import { Plus, Trash } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ProviderApi, type Provider } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
 import { newProvider } from './logic'
 
 type ProviderRow = Provider & { _builtin?: boolean }

@@ -14,9 +14,9 @@ import { Layers } from '@hanzogui/lucide-icons-2'
 
 import { fmtInt, type GpuPool } from '~/lib/api/compute'
 import type { Cluster } from '~/lib/api'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { StatusTag } from '@hanzo/ui/product'
+import { EmptyState } from '@hanzo/ui/product'
 import { gpuPoolsFromClusters } from './customer-logic'
 import type { Async } from './state'
 

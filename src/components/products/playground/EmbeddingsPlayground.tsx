@@ -11,8 +11,8 @@ import { Button, Card, Separator, Spinner, Text, XStack, YStack } from '@hanzo/g
 import { Play, Binary, Clock, Layers } from '@hanzogui/lucide-icons-2'
 
 import { PlaygroundApi, type EmbeddingsResponse } from '~/lib/api'
-import { FieldRow, FieldTextArea } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { FieldRow, FieldTextArea } from '@hanzo/ui/product'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 import { ModelSelect } from './ModelSelect'
 import { useCatalog, defaultModels } from './useCatalog'
 import { formatLatency, formatTokens } from './cost'

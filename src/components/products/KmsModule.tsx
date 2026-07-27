@@ -20,9 +20,9 @@ import { Eye, EyeOff, Plus, RefreshCw, ShieldCheck, Trash2 } from '@hanzogui/luc
 import { ApiError, KmsAdminApi, type KmsSecretMeta } from '~/lib/api'
 import { currentOrg, isScopedAway } from '~/lib/org-scope'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText } from '~/components/ui/Field'
+import { PageHeader } from '@hanzo/ui/product'
+import { DataTable, type Column } from '@hanzo/ui/product'
+import { FieldRow, FieldText } from '@hanzo/ui/product'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
 
 /** KMS-specific guidance for the honest 404 / unauthorized states. */
