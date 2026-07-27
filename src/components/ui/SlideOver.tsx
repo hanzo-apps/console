@@ -64,7 +64,7 @@ export type SlideOverProps = {
   /** Accessible label when no visible title is given. */
   ariaLabel?: string
   /** z-index for stacking (a pane opened over a drawer passes a higher value). */
-  zIndex?: number
+  zIndex?: number | string
   children: ReactNode
 }
 
@@ -78,7 +78,11 @@ export function SlideOver({
   iconColor,
   headerRight,
   ariaLabel,
-  zIndex = 1000,
+  // The ladder's own rung for a sheet (`app/design/z.css`), not a literal. It sits
+  // BELOW `--z-popover` deliberately: a popover anchored inside a sheet — the
+  // account control in the phone's account drawer — must paint over it, which a
+  // hardcoded 1000 made impossible.
+  zIndex = 'var(--z-modal, 600)',
   children,
 }: SlideOverProps) {
   const panelRef = useRef<HTMLElement | null>(null)
