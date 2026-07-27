@@ -3506,3 +3506,10 @@ inferred:
 - Integrated the concurrent category-accent restoration: one accent per category,
   neutral chrome, user overrides still win. Removed its duplicated swatch array and
   updated the color contract tests.
+
+## Canonical main convergence (v8.5.31)
+
+- Merged the newer forge guide, pitch, signal, and route work into the same main
+  after v8.5.30, preserving the unified app search and category accents.
+- Verified the combined tree: strict typecheck, 3,044 tests, and the production
+  Next.js build all pass.
