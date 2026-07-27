@@ -193,7 +193,7 @@ export function GitOpsModule({ params }: { params: Record<string, string> }) {
     <YStack gap="$4" p="$4">
       <PageHeader
         title="Deploy"
-        subtitle="The fleet on one live map — every operator App CR, its reconciled health, sync, resource topology, logs, and one-click rollback. No ArgoCD; the Hanzo operator reconciles."
+        subtitle="The fleet on one live map — every operator App CR, its reconciled health, sync, resource topology, logs, and one-click rollback. The Hanzo operator reconciles."
         actions={
           <XStack gap="$2" items="center" flexWrap="wrap">
             {envOptions.length > 1 ? (
@@ -240,7 +240,7 @@ export function GitOpsModule({ params }: { params: Record<string, string> }) {
           description="Every operator App CR shows up here as a live service node on the deploy map — its declared image, reconciled health, resource topology, logs, and one-click rollback. Deploy via the native pipeline (git push → image → CR) and it appears here."
           bullets={[
             'Source: the live operator CRs, read server-side by cloud (GET /v1/deploy/applications) — the console holds no cluster credentials.',
-            'Rollback pins the CR image tag to a prior clean-semver release; the operator reconciles. No kubectl, no ArgoCD.',
+            'Rollback pins the CR image tag to a prior clean-semver release; the operator reconciles. No kubectl.',
           ]}
         />
       ) : (

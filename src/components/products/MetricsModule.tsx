@@ -257,7 +257,7 @@ function MetricsError({ status, message, onRetry }: { status: number; message: s
         : 'Could not reach the telemetry store'
   const body =
     status === 501
-      ? 'This console reads metrics from VictoriaMetrics, but the telemetry store URL (VM_URL) is not set on this deployment yet. Once it is, live infrastructure metrics appear here — no fabricated data is shown.'
+      ? 'This console reads metrics from the telemetry store, but its URL (VM_URL) is not set on this deployment yet. Once it is, live infrastructure metrics appear here — no fabricated data is shown.'
       : status === 401
         ? 'Platform metrics are available to signed-in users. Please sign in.'
         : message

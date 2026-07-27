@@ -404,7 +404,7 @@ function LuxError({ status, message, onRetry }: { status: number; message: strin
         : 'Could not reach the telemetry store'
   const body =
     status === 501
-      ? 'This console reads Lux telemetry from VictoriaMetrics, but the telemetry store URL is not set on this deployment yet. Once it is, live validator and infrastructure metrics appear here — no fabricated data is shown.'
+      ? 'This console reads Lux telemetry from the telemetry store, but its URL is not set on this deployment yet. Once it is, live validator and infrastructure metrics appear here — no fabricated data is shown.'
       : status === 401 || status === 403
         ? 'The Lux Network board is a platform-operator surface. Sign in with an operator account to view it.'
         : message
