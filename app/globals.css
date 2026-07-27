@@ -428,18 +428,27 @@ html:root.t_light {
    from the per-theme --hz-elevation-* tokens (light AND dark aware). Brand-neutral:
    the shadow is monochrome and color stays token-driven, so lux/zoo/pars theme
    cleanly. One place defines the ladder; an overlay wears a class. `className`
-   forwards to the DOM node on web, so a Gui surface can wear these. */
-.hz-elevation-1 { box-shadow: var(--hz-elevation-1); }
-.hz-elevation-2 { box-shadow: var(--hz-elevation-2); }
-.hz-elevation-3 { box-shadow: var(--hz-elevation-3); }
-.hz-elevation-4 { box-shadow: var(--hz-elevation-4); }
-.hz-elevation-5 { box-shadow: var(--hz-elevation-5); }
+   forwards to the DOM node on web, so a Gui surface can wear these.
+
+   Each selector is written `:root .hz-x.hz-x` on purpose. @hanzo/gui (Tamagui)
+   compiles its own shadow props to an atomic rule it injects at RUNTIME as
+   `:root ._bxsh-…` — specificity (0,2,0). A plain `.hz-paper` is (0,1,0) and loses;
+   `.hz-paper.hz-paper` merely TIES, and a tie is settled by stylesheet order, which
+   runtime injection makes nondeterministic. It lost in practice: an overlay wearing
+   `hz-paper` rendered Tamagui's `0 12px 24px rgba(0,0,0,.33)` instead of this ladder,
+   and on the true-black canvas that shadow is nearly invisible — the sheet did not
+   lift off the page. (0,3,0) wins outright, in either order, with no `!important`. */
+:root .hz-elevation-1.hz-elevation-1 { box-shadow: var(--hz-elevation-1); }
+:root .hz-elevation-2.hz-elevation-2 { box-shadow: var(--hz-elevation-2); }
+:root .hz-elevation-3.hz-elevation-3 { box-shadow: var(--hz-elevation-3); }
+:root .hz-elevation-4.hz-elevation-4 { box-shadow: var(--hz-elevation-4); }
+:root .hz-elevation-5.hz-elevation-5 { box-shadow: var(--hz-elevation-5); }
 
 /* Paper = an elevated sheet: hairline ring + top highlight + a mid cast shadow, so
    a menu/palette/dialog reads as a physical sheet floating above the page. */
-.hz-paper { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-3); }
-.hz-paper-4 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-4); }
-.hz-paper-5 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-5); }
+:root .hz-paper.hz-paper { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-3); }
+:root .hz-paper-4.hz-paper-4 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-4); }
+:root .hz-paper-5.hz-paper-5 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-5); }
 
 /* Overlay entrance — a fast, physical scale-fade from the origin (menus, palette,
    dialog, support sheet). 180ms ease-out enter; the overlay's own unmount handles

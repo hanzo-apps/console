@@ -11,6 +11,7 @@ import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { Button, Popover, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronDown, Check } from '@hanzogui/lucide-icons-2'
+import { paper } from './paper'
 
 export type SelectOption<T extends string> = { key: T; label: string }
 
@@ -58,7 +59,7 @@ export function SelectMenu<T extends string>({
           </Text>
         </Button>
       </Popover.Trigger>
-      <Popover.Content className="hz-paper hz-menu-in" bordered p="$1.5" minW={minWidth} bg="$color2" borderColor="$borderColor">
+      <Popover.Content {...paper} p="$1.5" minW={minWidth}>
         <YStack gap="$0.5" minW={minWidth} maxH={320} overflow="scroll">
           <Row label={allLabel} active={value === null} onPress={() => pick(null)} />
           {options.map((o) => (

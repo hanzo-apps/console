@@ -129,7 +129,13 @@ export function PitchHero({ guide }: { guide: ProductGuide }) {
             <Text fontSize="$1" color="$color10" fontWeight="700" letterSpacing={1}>
               GET STARTED
             </Text>
-            <Text fontSize="$8" $md={{ fontSize: '$9' }} fontWeight="900" color="$color12" style={{ lineHeight: 1.12 }}>
+            {/* `hz-display` — the ONE way this app sets display leading (globals.css,
+                same as PublicLanding). It was `style={{ lineHeight: 1.12 }}`, which is a
+                correct ratio in plain React but NOT under @hanzo/gui: react-native-web
+                appends `px` to any numeric style value absent from its unitless list, and
+                `lineHeight` is absent — so it compiled to `line-height: 1.12px`, a 1px box
+                for a 30px headline whose descenders then fell into the subhead. */}
+            <Text className="hz-display" fontSize="$8" $md={{ fontSize: '$9' }} fontWeight="900" color="$color12">
               {pitch.headline}
             </Text>
             <Text fontSize="$4" color="$color11" maxW={720}>
