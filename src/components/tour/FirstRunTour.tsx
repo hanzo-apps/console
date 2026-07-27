@@ -18,11 +18,14 @@ import { usePathname } from 'next/navigation'
 import { useSession } from '~/lib/auth/session'
 import { isLocallyComplete, isDismissedForSession } from '~/lib/onboarding/guard'
 import { CONSOLE_TOUR, hasSeenTour, markTourSeen } from '~/lib/tour/steps'
+import { useGuideSignals } from '~/lib/guide/use-signals'
+import { resolveTour } from '~/lib/guide/spec'
 import { GuidedTour } from './GuidedTour'
 
 export function FirstRunTour() {
   const { account } = useSession()
   const pathname = usePathname()
+  const { signals } = useGuideSignals()
   const owner = account?.owner ?? ''
 
   const [mounted, setMounted] = useState(false)
@@ -55,6 +58,8 @@ export function FirstRunTour() {
   }
 
   if (!open) return null
-  return <GuidedTour steps={CONSOLE_TOUR} open={open} onClose={close} onFinish={close} />
+  // Personalized: drop steps that don't apply to this user (e.g. the API-key step
+  // once they hold a key) before spotlighting.
+  return <GuidedTour steps={resolveTour(CONSOLE_TOUR, signals)} open={open} onClose={close} onFinish={close} />
 }
 
