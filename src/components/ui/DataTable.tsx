@@ -9,9 +9,16 @@
  * loading paints SKELETON ROWS in the real column layout (an honest "loading",
  * never a spinner void); numeric columns opt into right-aligned Geist Mono
  * tabular figures so amounts/counts/IDs read as precise, column-aligned data.
+ *
+ * SORTING is opt-in and caller-owned: a column marks itself `sortable`, the caller
+ * passes the current `sort` + an `onSortChange`, and the table only reports the
+ * clicked key (it never reorders `rows` itself — the caller's own pure comparator
+ * stays the one source of order). Omit all three and the table behaves exactly as
+ * before, so every existing consumer is unchanged.
  */
 import type { ReactNode } from 'react'
 import { Text, XStack, YStack } from '@hanzo/gui'
+import { ChevronDown, ChevronsUpDown, ChevronUp } from '@hanzogui/lucide-icons-2'
 
 export type Column<T> = {
   key: string
@@ -24,7 +31,12 @@ export type Column<T> = {
   align?: 'left' | 'right'
   /** Typeset the default cell + header as Geist Mono tabular (counts, amounts, IDs). */
   mono?: boolean
+  /** Clickable header that reports `onSortChange(key)` (needs both table props). */
+  sortable?: boolean
 }
+
+/** The active sort — which column key, which direction. */
+export type SortState = { key: string; dir: 'asc' | 'desc' }
 
 /** Skeleton rows in the real column layout — an honest "loading", never a void. */
 function SkeletonRows<T>({ columns, count = 6 }: { columns: Column<T>[]; count?: number }) {
@@ -56,6 +68,8 @@ export function DataTable<T>({
   onRowPress,
   isRowExpanded,
   renderExpanded,
+  sort,
+  onSortChange,
 }: {
   columns: Column<T>[]
   rows: T[]
@@ -67,6 +81,10 @@ export function DataTable<T>({
   isRowExpanded?: (row: T) => boolean
   /** Full-width detail panel rendered under an expanded row (master-detail accordion). */
   renderExpanded?: (row: T) => ReactNode
+  /** The active sort, for the header caret + `aria-sort`. */
+  sort?: SortState
+  /** Called with the clicked column key; the caller owns the reordering. */
+  onSortChange?: (key: string) => void
 }) {
   // Natural min-width of the table: the sum of the declared column widths, with a
   // sensible floor for flex columns, plus row padding + inter-column gaps. On a
@@ -82,22 +100,42 @@ export function DataTable<T>({
         <YStack minW={minTableW}>
           {/* Header — quiet, uppercase-free, Medium. A hairline under it separates
               the head from the body without a heavy fill. */}
-          <XStack bg="$color1" py="$2.5" px="$3" gap="$3" borderBottomWidth={1} borderColor="$borderColor">
-            {columns.map((c) => (
-              <Text
-                key={c.key}
-                width={c.width}
-                flex={c.width ? undefined : 1}
-                minW={c.width ? undefined : FLEX_MIN_COL_W}
-                fontSize="$1"
-                fontWeight="500"
-                color="$color10"
-                text={c.align === 'right' ? 'right' : 'left'}
-                className={c.mono ? 'hz-tnum' : undefined}
-              >
-                {c.header}
-              </Text>
-            ))}
+          <XStack bg="$color1" py="$2.5" px="$3" gap="$3" borderBottomWidth={1} borderColor="$borderColor" role="row">
+            {columns.map((c) => {
+              // Sortable needs BOTH the column opt-in and a caller handler — a column
+              // can never look clickable with nothing listening.
+              const sortable = c.sortable === true && !!onSortChange
+              const active = sortable && sort?.key === c.key
+              const Caret = !sortable ? null : !active ? ChevronsUpDown : sort?.dir === 'asc' ? ChevronUp : ChevronDown
+              return (
+                <XStack
+                  key={c.key}
+                  width={c.width}
+                  flex={c.width ? undefined : 1}
+                  minW={c.width ? undefined : FLEX_MIN_COL_W}
+                  items="center"
+                  gap="$1"
+                  justify={c.align === 'right' ? 'flex-end' : 'flex-start'}
+                  role="columnheader"
+                  aria-sort={sortable ? (active ? (sort?.dir === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
+                  aria-label={sortable ? `Sort by ${c.header}` : undefined}
+                  cursor={sortable ? 'pointer' : undefined}
+                  hoverStyle={sortable ? { opacity: 0.75 } : undefined}
+                  onPress={sortable ? () => onSortChange?.(c.key) : undefined}
+                >
+                  <Text
+                    fontSize="$1"
+                    fontWeight="500"
+                    color={active ? '$color12' : '$color10'}
+                    text={c.align === 'right' ? 'right' : 'left'}
+                    className={c.mono ? 'hz-tnum' : undefined}
+                  >
+                    {c.header}
+                  </Text>
+                  {Caret ? <Caret size={12} color={active ? '$color12' : '$color9'} /> : null}
+                </XStack>
+              )
+            })}
           </XStack>
 
           {loading ? (
