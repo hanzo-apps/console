@@ -18,6 +18,7 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, ArrowRight, Check, X } from '@hanzogui/lucide-icons-2'
 
 import { isLast, nextIndex, prevIndex, type TourStep } from '~/lib/tour/steps'
+import { Z } from '~/lib/z'
 
 type Rect = { top: number; left: number; width: number; height: number }
 
@@ -43,9 +44,9 @@ function tooltipStyle(rect: Rect | null, placement: TourStep['placement']): CSSP
   const vw = typeof window === 'undefined' ? 1200 : window.innerWidth
   const vh = typeof window === 'undefined' ? 800 : window.innerHeight
   if (!rect || placement === 'center' || !placement) {
-    return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: CARD_W, maxWidth: '92vw', zIndex: 100002 }
+    return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: CARD_W, maxWidth: '92vw', zIndex: Z.popover }
   }
-  const base: CSSProperties = { position: 'fixed', width: CARD_W, maxWidth: '92vw', zIndex: 100002 }
+  const base: CSSProperties = { position: 'fixed', width: CARD_W, maxWidth: '92vw', zIndex: Z.popover }
   const leftClamped = clamp(rect.left, GAP, Math.max(GAP, vw - CARD_W - GAP))
   switch (placement) {
     case 'bottom':
@@ -129,7 +130,7 @@ export function GuidedTour({
         boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
         border: '2px solid rgba(255,255,255,0.9)',
         pointerEvents: 'none',
-        zIndex: 100001,
+        zIndex: Z.modal,
       }
     : null
 
@@ -142,7 +143,7 @@ export function GuidedTour({
         style={{
           position: 'fixed',
           inset: 0,
-          zIndex: 100000,
+          zIndex: Z.modal,
           background: rect ? 'transparent' : 'rgba(0,0,0,0.55)',
         }}
       />

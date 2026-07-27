@@ -152,7 +152,7 @@ export function CodeBlock({ code, title }: { code: string; title?: string }) {
 export function Pill({ label, tone }: { label: string; tone: string }) {
   return (
     <XStack borderWidth={1} borderColor="$borderColor" rounded="$10" px="$2.5" py="$1" items="center" gap="$1.5">
-      <YStack width={7} height={7} rounded={99} style={{ backgroundColor: tone }} />
+      <YStack width={7} height={7} rounded="$10" style={{ backgroundColor: tone }} />
       <Text fontSize="$1" color="$color11">
         {label}
       </Text>

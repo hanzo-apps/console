@@ -74,7 +74,7 @@ const opt = <T extends string>(xs: { value: T; label: string }[]) => xs.map((o) 
 function StepDot({ status }: { status: 'done' | 'current' | 'upcoming' }) {
   if (status === 'done')
     return (
-      <XStack width={26} height={26} rounded={999} items="center" justify="center" style={{ backgroundColor: toneVar('positive') }}>
+      <XStack width={26} height={26} rounded="$10" items="center" justify="center" style={{ backgroundColor: toneVar('positive') }}>
         <Check size={15} color="$color1" />
       </XStack>
     )
@@ -82,13 +82,13 @@ function StepDot({ status }: { status: 'done' | 'current' | 'upcoming' }) {
     <XStack
       width={26}
       height={26}
-      rounded={999}
+      rounded="$10"
       items="center"
       justify="center"
       borderWidth={2}
       borderColor={status === 'current' ? '$color12' : '$color7'}
     >
-      <XStack width={8} height={8} rounded={999} bg={status === 'current' ? '$color12' : 'transparent'} />
+      <XStack width={8} height={8} rounded="$10" bg={status === 'current' ? '$color12' : 'transparent'} />
     </XStack>
   )
 }

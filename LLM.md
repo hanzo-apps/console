@@ -3617,3 +3617,71 @@ and the rail hid them.
   `/models/blend` lands on Blend; Back moves the LEVEL without dropping the rail's
   drill or the account-backed pins; and a sweep asserts all 18 converted products
   paint no second nav. Screenshots `e2e-shots/level2-{desktop,mobile}-models.png`.
+## Find and do — one list view, pins that survive, a palette you can act in
+
+The interaction half of the admin redesign: pin, sort, filter, search, act. Almost
+none of it was missing; it was duplicated, unpersisted, or quietly broken. Every
+claim below was measured in a browser on computed style and geometry
+(`e2e/find-and-do.spec.ts`, 7 tests), not inferred.
+
+**[BUG, measured] Every preference was lost on reload.** Pin a product, reload, and
+it was gone — and with it pin groups, product colours, the nav's open sections, and
+the workbench state. `Preferences` treated the account as authoritative for keys it
+had *never mentioned*: on each account load it replaced both state and the
+localStorage cache with `parsePrefs(account.properties['hanzo.preferences'])`. But
+the account is projected from the IAM access token's claims, and a preference
+written after sign-in is not in a token minted before it — so that value is `{}`,
+and the write-through cache was destroyed on every load. Only preferences rewritten
+each session (e.g. `guide.used`) appeared to persist. Fix: the account wins for
+every key it CARRIES; the cache fills the rest (`preferences-core.mergePrefs`, pure,
+7 tests). Stated limit, not papered over: while the account does carry a key it
+wins, so clearing it on one device can be re-asserted by a stale token — closing
+that needs a read-back of stored preferences (a fresh account read, or properties
+riding a refreshed token), which is a session/backend concern.
+
+**ONE list view, persisted per user** (`src/lib/list/`). `useList(id)` holds a
+list's search, column order and facets under `list.<id>` in the SAME account-backed
+store as pins — so a list narrowed once is found narrowed on the next visit and the
+next device. The comparator, header-click reducer and substring predicate are NOT
+new: they were promoted verbatim out of the private copy inside `admin/infra/`,
+which now re-exports them, so there is one implementation (its 30 tests pass
+unchanged). `nextSort` is a strict superset of the shipped reducer — it only also
+accepts `null` as "no sort yet" — so no shipped board changes behaviour. `Filters`
+(in `ui/Filters`, beside its own atoms) is the one bar: search, facets, and a Reset
+that exists only while something is narrowed. A facet is stored only when it
+narrows something; "All"/"off" is the ABSENCE of a facet, never a stored sentinel.
+Adopted by Models and Marketplace, which between them lose two bespoke search boxes
+and four `useState`s. Scope, flagged not decided: preferences are per USER, so a
+SuperAdmin masquerading keeps their own sorts — right, I think (they are YOUR
+tools), but it is a product call.
+
+**Pins are first-class in search.** `pinnedFirst` (pure, in `pins-core`) is the one
+"pinned leads" rule, shared by the sidebar and the palette. Every ⌘K result carries
+a pin at its right edge — invisible until the row is reached, lit while pinned, a
+26px hit target, `aria-pressed` — and `⌥↵` pins the selection WITHOUT closing, so
+curating is repeatable. The default view collects pins under one leading "Pinned"
+heading.
+
+**[BUG I introduced, then caught] Pins must not outrank what you typed.** Applying
+`pinnedFirst` to the RANKED list meant a barely-matching pinned product beat an
+exact name match: typing "billing" and pressing ↵ opened Models. Pins now order the
+DEFAULT view only; the moment you type, relevance decides. Locked by a test that
+asserts on where you LAND (`agents`→/agents, `billing`→/billing, `vector`→/vector),
+not on DOM order.
+
+**[BUG] The resting pin painted at full strength.** `.hz-pin { opacity: 0 }` lost to
+Gui's compiled `:root ._ops-…` (0,2,0) — the same specificity trap `.hz-paper` hit.
+Fixed by dropping the inline `opacity` prop and doubling the selector
+(`:root .hz-pin.hz-pin`). A broken CSS comment then silently killed the whole rule;
+only the computed-style assertion caught it. Both are now pinned by a test that
+reads `getComputedStyle().opacity` at rest, on hover, and while selected.
+
+Verification: `tsc --noEmit` clean; `vitest` **3121 passed** (+35: list core 22,
+preferences-core 7, pinnedFirst 6); `e2e/find-and-do.spec.ts` 7/7 against a local
+fixture with screenshots (`palette-pin`, `palette-pinned-first`, `palette-keyboard`,
+`list-narrowed`, `list-bar-mobile`), including 4.5:1 contrast and zero horizontal
+body scroll at 390px. NOT verified against live admin.hanzo.ai — it is auth-gated
+and I will not type a password; one SuperAdmin session re-running this spec closes
+that. Untouched and flagged for the caps pass: `MarketplaceModule`'s "CATEGORIES"
+and the palette's own uppercased section labels are `textTransform` sites that
+belong to that lane, not this one.

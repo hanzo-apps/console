@@ -47,6 +47,7 @@ import type {
   TimeseriesTile,
 } from './config'
 import { toneVar } from '~/components/ui/tone'
+import { Panel } from '~/components/ui/Panel'
 
 const UP = toneVar('positive')
 const DOWN = toneVar('critical')
@@ -61,20 +62,6 @@ const fmtAxis = (iso: string, interval: string): string => {
 }
 
 /** A titled panel shell (matches the console's Panel idiom). */
-function Panel({ title, right, children, minW = 320, flex }: { title: string; right?: ReactNode; children: ReactNode; minW?: number; flex?: number }) {
-  return (
-    <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" flex={flex} minW={minW}>
-      <XStack items="center" justify="space-between" gap="$2">
-        <Text fontSize="$4" fontWeight="500" color="$color12">
-          {title}
-        </Text>
-        {right}
-      </XStack>
-      {children}
-    </Card>
-  )
-}
-
 // ── Metric tile (count-up + live sparkline + delta) ──────────────────────────
 
 export function MetricTileView({ tile, data, loading, live, index }: { tile: MetricTile; data: OverviewData | null; loading: boolean; live: boolean; index: number }) {
@@ -166,7 +153,7 @@ export function TimeseriesTileView({ tile, data, loading }: { tile: TimeseriesTi
   const total = points.reduce((s, p) => s + p.value, 0)
 
   return (
-    <Panel title={tile.title} flex={1} right={points.length ? <Text fontSize="$2" color="$color10" className="hz-tnum">{fmt(total)}</Text> : undefined}>
+    <Panel title={tile.title} actions={points.length ? <Text fontSize="$2" color="$color10" className="hz-tnum">{fmt(total)}</Text> : undefined}>
       {loading && series === undefined ? (
         <SkeletonBar w="100%" h={200} />
       ) : points.length < 2 ? (
@@ -191,7 +178,7 @@ export function DistributionTileView({ tile, data, loading }: { tile: Distributi
   const fmt = (v: number) => formatMetric(v, tile.unit)
 
   return (
-    <Panel title={tile.title} flex={1} minW={340}>
+    <Panel title={tile.title} minW={340}>
       {loading && raw.length === 0 ? (
         <XStack p="$4" justify="center">
           <SkeletonBar w={160} h={160} rounded />
@@ -261,7 +248,7 @@ export function ActivityTileView({ tile, data, loading }: { tile: ActivityTile; 
   const win = useMemo(() => windowRows(rows, scrollTop, ROW_H, VIEWPORT_H), [rows, scrollTop])
 
   return (
-    <Panel title={tile.title ?? 'Live activity'} right={<LiveDot on={!loading && rows.length > 0} />}>
+    <Panel title={tile.title ?? 'Live activity'} actions={<LiveDot on={!loading && rows.length > 0} />}>
       {loading && rows.length === 0 ? (
         <YStack gap="$2">
           {[0, 1, 2, 3].map((i) => (
@@ -365,7 +352,7 @@ export function HealthTileView({ tile, data, loading }: { tile: HealthTile; data
   return (
     <Panel
       title={tile.title ?? 'System health'}
-      right={
+      actions={
         total > 0 ? (
           <XStack items="center" gap="$2">
             <YStack width={9} height={9} rounded="$10" style={{ backgroundColor: headColor }} />

@@ -27,7 +27,7 @@ export function HeroCard() {
         <YStack flex={1} minW={300} gap="$2.5">
           <XStack items="center" gap="$2">
             <StatusDot color={toneVar('positive')} />
-            <Text fontSize="$1" color="$color11" fontWeight="700" style={{ letterSpacing: 0.4, textTransform: 'uppercase' }}>
+            <Text fontSize="$1" color="$color11" fontWeight="700">
               Managed · Connected
             </Text>
           </XStack>

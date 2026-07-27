@@ -17,8 +17,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Search, X, Boxes, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
+import { Button, Text, XStack, YStack } from '@hanzo/gui'
+import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Boxes, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import {
   fetchCatalog,
@@ -47,6 +47,8 @@ import {
 } from '~/lib/api/families'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { Filters } from '~/components/ui/Filters'
+import { useList } from '~/lib/list'
 import { FadeIn } from '~/components/ui/FadeIn'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { playgroundPathForModel } from './playground/share'
@@ -348,7 +350,7 @@ const Stat = ({ label, value, divider }: { label: string; value: string; divider
     <Text className={TNUM} fontSize="$7" fontWeight="800" color="$color12" letterSpacing={-0.5}>
       {value}
     </Text>
-    <Text fontSize="$1" color="$color10" textTransform="uppercase" letterSpacing={0.4}>
+    <Text fontSize="$1" color="$color10">
       {label}
     </Text>
   </YStack>
@@ -399,7 +401,12 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [plans, setPlans] = useState<Plan[]>([])
   const [selected, setSelected] = useState<CatalogEntry | null>(null)
-  const [query, setQuery] = useState('')
+  // The user's own view of this catalog, persisted with the rest of their
+  // preferences — 85+ models across a dozen families is a list you narrow once and
+  // want to find narrowed the same way, on any device. It is never hidden state:
+  // the bar renders the query and offers Reset the moment anything is active.
+  const list = useList('models')
+  const query = list.q
 
   const run = useCallback(() => {
     setState({ phase: 'loading' })
@@ -457,32 +464,8 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
         />
       ) : (
         <>
-          {/* Search across all families */}
-          <XStack
-            items="center"
-            gap="$2"
-            px="$2.5"
-            py="$1.5"
-            rounded="$3"
-            borderWidth={1}
-            borderColor="$borderColor"
-            bg="$color1"
-          >
-            <Search size={14} opacity={0.6} />
-            <Input
-              flex={1}
-              size="$2"
-              borderWidth={0}
-              bg="transparent"
-              placeholder="Search models across every family…"
-              value={query}
-              onChangeText={setQuery}
-              autoCapitalize="none"
-            />
-            {query ? (
-              <Button size="$1" chromeless circular icon={<X size={13} />} onPress={() => setQuery('')} />
-            ) : null}
-          </XStack>
+          {/* Search across all families — the ONE list bar, not a fourth search box. */}
+          <Filters list={list} placeholder="Search models across every family…" />
 
           {state.phase === 'loading' ? (
             <CatalogSkeleton />

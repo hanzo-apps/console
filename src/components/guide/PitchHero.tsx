@@ -126,8 +126,8 @@ export function PitchHero({ guide }: { guide: ProductGuide }) {
         {/* Headline + subhead, with tour + dismiss controls */}
         <XStack justify="space-between" items="flex-start" gap="$3" flexWrap="wrap">
           <YStack flex={1} minW={260} gap="$2">
-            <Text fontSize="$1" color="$color10" fontWeight="700" letterSpacing={1}>
-              GET STARTED
+            <Text fontSize="$1" color="$color10" fontWeight="500">
+              Get started
             </Text>
             {/* `hz-display` — the ONE way this app sets display leading (globals.css,
                 same as PublicLanding). It was `style={{ lineHeight: 1.12 }}`, which is a
@@ -208,12 +208,12 @@ export function PitchHero({ guide }: { guide: ProductGuide }) {
                 rounded="$10"
                 items="center"
                 justify="center"
-                {...(r.done ? { style: { backgroundColor: '#2ea043' } } : { bg: r.active ? '$color9' : '$color4' })}
+                {...(r.done ? { style: { backgroundColor: '#2ea043' } } : { bg: r.active ? '$color12' : '$color4' })}
               >
                 {r.done ? (
                   <Check size={15} color="#fff" />
                 ) : (
-                  <Text fontSize="$2" fontWeight="800" color={r.active ? '#fff' : '$color11'}>
+                  <Text fontSize="$2" fontWeight="800" color={r.active ? '$color1' : '$color11'}>
                     {i + 1}
                   </Text>
                 )}

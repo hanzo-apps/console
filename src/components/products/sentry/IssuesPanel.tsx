@@ -71,7 +71,7 @@ export function IssuesPanel({ projects }: { projects: SentryProject[] }) {
         render: (r) => (
           <YStack gap="$0.5" minW={0}>
             <XStack gap="$2" items="center">
-              <YStack width={7} height={7} rounded={99} style={{ backgroundColor: statusTone(r.status) }} />
+              <YStack width={7} height={7} rounded="$10" style={{ backgroundColor: statusTone(r.status) }} />
               <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
                 {r.type || 'Error'}
               </Text>

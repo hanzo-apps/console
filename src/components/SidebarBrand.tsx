@@ -32,6 +32,7 @@ import { BookOpen, Globe, Info, SlidersHorizontal } from '@hanzogui/lucide-icons
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
 import { useOrgIdentity } from '~/components/ui/BrandLogo'
+import { Z } from '~/lib/z'
 
 type MenuItem = {
   icon: typeof SlidersHorizontal
@@ -64,7 +65,7 @@ function BrandMenu({ x, y, items, onClose }: { x: number; y: number; items: Menu
   const top = typeof window !== 'undefined' ? Math.min(y, window.innerHeight - 200) : y
 
   return (
-    <div ref={ref} role="menu" style={{ position: 'fixed', left, top, zIndex: 9999 }}>
+    <div ref={ref} role="menu" style={{ position: 'fixed', left, top, zIndex: Z.dropdown }}>
       <YStack
         className="hz-paper hz-menu-in"
         minW={184}
@@ -161,8 +162,16 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
         }}
       >
         {/* A logo may be a wordmark, so it is allowed to run wide; the monogram
-            stays the square tile the account avatar wears. */}
-        <OrgMark org={org} size={24} maxW={140} />
+            stays the square tile the account avatar wears.
+
+            `data-monogram`: OrgMark is a DISTRIBUTED component that sizes its
+            monogram glyph proportionally to its tile, so it paints text off the
+            app type scale by design — correct for a mark, wrong to police. The
+            marker declares that here, at our call site, rather than teaching the
+            design gate a library's class names. */}
+        <span data-monogram style={{ display: 'contents' }}>
+          <OrgMark org={org} size={24} maxW={140} />
+        </span>
       </div>
       {menu ? <BrandMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} /> : null}
     </>

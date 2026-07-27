@@ -102,7 +102,7 @@ export function SystemStatusBadge() {
           hoverStyle={{ bg: '$color4' }}
         >
           <XStack items="center" gap="$2">
-            <YStack width={8} height={8} rounded={999} bg={dot} />
+            <YStack width={8} height={8} rounded="$10" bg={dot} />
             <Text fontSize="$2" color="$color11">
               {label}
             </Text>
@@ -112,7 +112,7 @@ export function SystemStatusBadge() {
       <Popover.Content {...paper} p="$2" width={280}>
         <YStack gap="$1.5">
           <XStack items="center" gap="$2" px="$2" py="$1">
-            <YStack width={8} height={8} rounded={999} bg={dot} />
+            <YStack width={8} height={8} rounded="$10" bg={dot} />
             <Text fontSize="$2" color="$color12" fontWeight="700">
               {label}
             </Text>
@@ -120,7 +120,7 @@ export function SystemStatusBadge() {
 
           {data && data.down.length > 0 ? (
             <YStack gap="$0.5">
-              <Text px="$2" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+              <Text px="$2" fontSize="$1" color="$color10" fontWeight="500">
                 Affected
               </Text>
               {data.down.map((c) => (

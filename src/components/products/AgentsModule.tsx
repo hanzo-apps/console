@@ -474,7 +474,7 @@ export function AgentsModule(props: { params: Record<string, string> }) {
         )}
 
         {showStatus && (
-        <Panel title="Agent health" flex={1} minW={240}>
+        <Panel title="Agent health" minW={240}>
           <HealthDonut breakdown={health} />
         </Panel>
         )}
@@ -532,17 +532,17 @@ export function AgentsModule(props: { params: Record<string, string> }) {
       {(showLogs || showMetrics) && (
       <XStack flexWrap="wrap" gap="$3" items="stretch">
         {showLogs && (
-        <Panel title="Recent activity" flex={1} minW={280}>
+        <Panel title="Recent activity" minW={280}>
           <ActivityFeed events={activity} now={now} />
         </Panel>
         )}
         {showMetrics && (
-        <Panel title="Top agents by invocations" flex={1} minW={280}>
+        <Panel title="Top agents by invocations" minW={280}>
           <TopAgents agents={top} />
         </Panel>
         )}
         {showMetrics && (
-        <Panel title="Resource usage · 30d" flex={1} minW={260}>
+        <Panel title="Resource usage · 30d" minW={260}>
           <ResourceUsagePanel
             usage={metrics?.resource ?? { cpuVcpuHours: null, memGbHours: null, storageIoBytes: null, costCents: null }}
             connected={metricsConnected}

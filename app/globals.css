@@ -10,6 +10,14 @@ body {
   background-color: var(--background, #000000);
   color: var(--color, #ededf1);
   font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  /* The base of the ONE type scale. Without this the body inherits the browser's
+     16px root, and every element that does not name a size token — a Gui <Button>
+     label, a bare <span>, anything the ladder does not reach — renders at a size
+     that belongs to no scale. That was the single largest source of type drift in
+     the console: hundreds of nodes painting the retired 16px base beside a 14px
+     one. `--text-base` is the same 14px the Gui `$3` token resolves to
+     (gui.config.ts), so the inherited size and the named size agree. */
+  font-size: var(--text-base, 0.875rem);
   /* Calm type rendering — crisp, low-glare, comfortable rhythm for a full workday. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -390,6 +398,36 @@ html:root.t_light {
   }
 }
 
+/* Row-edge pin — the quiet affordance on a search result. It is a REAL, focusable
+   control at all times (opacity, never `display:none`), so the keyboard and a
+   screen reader always reach it; it is simply not drawn until the pointer reaches
+   its row. A pinned or keyboard-selected row opts out of the class entirely, so
+   its pin stays lit — the lit ones are STATE, not chrome.
+   Touch has no hover, so `hover:none` pointers keep it visible: on a phone an
+   invisible control is an absent one.
+   Doubled selector (`:root .hz-pin.hz-pin`, specificity 0,3,0) for the same reason
+   `.hz-paper` is doubled above: Gui injects its compiled style props at `:root ._x-…`
+   (0,2,0), so a plain `.hz-pin` loses and the pin paints at full strength forever. */
+:root .hz-pin.hz-pin {
+  opacity: 0;
+  transition: opacity 140ms ease-out;
+}
+:root .hz-row-pin:hover .hz-pin.hz-pin,
+:root .hz-pin.hz-pin:focus-within,
+:root .hz-pin.hz-pin:hover {
+  opacity: 1;
+}
+@media (hover: none) {
+  :root .hz-pin.hz-pin {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .hz-pin.hz-pin {
+    transition: none;
+  }
+}
+
 /* ── Touch targets — WCAG 2.5.5 (AAA) / Apple HIG ≥44px ──────────────────────
    On phones/tablets (<lg) every control inside the mobile nav drawer must be at
    least 44px tall to tap reliably. Scoped to `.hz-touch-target` (set on the drawer
@@ -415,7 +453,7 @@ html:root.t_light {
   .hz-chat-dock {
     position: sticky;
     bottom: 0;
-    z-index: 5;
+    z-index: var(--z-raised);
     /* Clear the iOS home indicator when Safari's bottom bar hides (viewport-fit=cover
        exposes the inset; 0 on devices without one, so no effect elsewhere). */
     padding-bottom: env(safe-area-inset-bottom);

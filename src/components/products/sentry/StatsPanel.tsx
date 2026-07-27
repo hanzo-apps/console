@@ -12,7 +12,8 @@ import { Activity, AlertTriangle, Percent, RefreshCw } from '@hanzogui/lucide-ic
 
 import { SentryApi, type Period, type StatPoint, type SentryProject } from '~/lib/api/sentry'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard, Panel } from '~/components/ui/Metric'
+import { MetricCard } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { LineChart, BarChart } from '~/components/ui/Charts'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker } from './parts'

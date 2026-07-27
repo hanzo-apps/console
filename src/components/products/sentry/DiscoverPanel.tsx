@@ -15,7 +15,7 @@ import { SentryApi, type DiscoverFilter, type DiscoverResult, type DiscoverRow, 
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart } from '~/components/ui/Charts'
-import { Panel } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { FieldSelect, FieldText } from '~/components/ui/Field'
 import { PeriodPicker, ProjectPicker } from './parts'
