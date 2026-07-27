@@ -8,7 +8,7 @@ WORKDIR /app
 ARG SOURCE_COMMIT=""
 ENV SOURCE_COMMIT=$SOURCE_COMMIT
 # Copy ALL source FIRST, then install — order matters under Kaniko --single-snapshot:
-# a `COPY` that FOLLOWS `RUN npm install` in the same stage drops the RUN's freshly
+# a `COPY` that FOLLOWS the install in the same stage drops that RUN's freshly
 # created node_modules (the 'next not found' cause — the install's own `test -f next`
 # passed, then `COPY . .` wiped node_modules before the build RUN). Putting COPY
 # before install means node_modules is created by the LAST RUNs and nothing clobbers
@@ -16,18 +16,21 @@ ENV SOURCE_COMMIT=$SOURCE_COMMIT
 COPY . .
 # public/ may be empty (git doesn't track empty dirs) — ensure it exists for the runner COPY.
 RUN mkdir -p public
-# npm install (not ci): @hanzo/gui pulls a react-native dep tree whose platform/
-# optional packages resolve differently across npm versions, so a lockfile generated
-# by one npm fails `npm ci` under another. install reconciles the tree for the
-# build platform; retry-hardened against registry throttling.
-RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-timeout=120000
+# corepack installs the exact pnpm from package.json's `packageManager`, so the
+# builder and a laptop resolve identically. --frozen-lockfile is the whole reason
+# this repo is on pnpm: the old `npm install` here could not be `npm ci`, because
+# @hanzo/gui's react-native tree resolves its platform/optional packages differently
+# across npm versions and a lockfile written by one npm failed under another. pnpm
+# records every platform in the lockfile, so the build installs exactly what is
+# committed and fails loudly instead of quietly resolving something else.
+RUN corepack enable && pnpm install --frozen-lockfile
 # ONE brand-agnostic image: brand (IAM org/issuer/app + wordmark) is resolved at
 # RUNTIME from the request hostname (src/config/index.ts), and /v1 is same-origin
 # per host. Baking NEXT_PUBLIC_* here would inline a single brand and break that.
 # Next 15 + @hanzo/gui (large RN dep tree) overflows Node's default heap → OOMKill
 # (exit 137); cap the heap generously (chat uses 4096).
 ENV NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=6144
-RUN npm run build
+RUN pnpm build
 
 FROM public.ecr.aws/docker/library/node:24-alpine AS runner
 WORKDIR /app
