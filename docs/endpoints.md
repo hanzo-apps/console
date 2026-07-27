@@ -1,7 +1,7 @@
 # Unified `/v1` backend endpoints
 
-The console talks to the unified Hanzo Cloud backend (`hanzoai/cloud`, the
-casibase API). Base URL: `${NEXT_PUBLIC_CLOUD_URL}/v1`. All requests send cookie
+The console talks to the unified Hanzo Cloud backend (`hanzoai/cloud`).
+Base URL: `${NEXT_PUBLIC_CLOUD_URL}/v1`. All requests send cookie
 credentials; responses are the envelope `{ status, msg, data, data2 }` (`data2`
 is the total row count on list endpoints).
 
