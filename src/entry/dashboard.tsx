@@ -93,7 +93,6 @@ import { useEntitlements } from '~/lib/entitlements-context'
 import { AddProductPanel } from '~/components/AddProductPanel'
 import { SidebarWallet } from '~/components/SidebarWallet'
 import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
-import { useAppLauncher } from '~/components/AppLauncher'
 import { useDetailPane } from '~/components/DetailPane'
 import { ProductCustomize, ManagePins } from '~/components/SidebarCustomize'
 import { SlideOver } from '~/components/ui/SlideOver'
@@ -975,7 +974,6 @@ function SidebarNav({
  *  at the top (the command surface, reachable on mobile). */
 function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const palette = useCommandPalette()
-  const launcher = useAppLauncher()
   return (
     <SlideOver open={open} onClose={() => onOpenChange(false)} side="left" size={320} ariaLabel="Navigation">
       {/* `hz-touch-target` raises every control in the drawer to a ≥44px tap target
@@ -1010,7 +1008,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
             icon={<LayoutGrid size={18} />}
             onPress={() => {
               onOpenChange(false)
-              launcher.open()
+              palette.open()
             }}
             borderWidth={1}
             borderColor="$borderColor"
@@ -1063,7 +1061,7 @@ export function Dashboard({ children }: { children: ReactNode }) {
   const router = useRouter()
   const { signOut } = useSession()
   const { get, set } = usePreferences()
-  const launcher = useAppLauncher()
+  const palette = useCommandPalette()
   // The assistant: `docked` reserves the right column; `openChat` (the small brand-H)
   // opens it as the right sidebar; `startVoice` (the mic) opens it AND starts listening.
   const { docked, openChat, startVoice } = useFloatingChat()
@@ -1181,7 +1179,7 @@ export function Dashboard({ children }: { children: ReactNode }) {
           <Button
             size="$3"
             icon={<LayoutGrid size={18} />}
-            onPress={launcher.open}
+            onPress={palette.open}
             borderWidth={1}
             borderColor="$borderColor"
             aria-label="Apps"

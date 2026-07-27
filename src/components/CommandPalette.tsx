@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Command palette — ONE command surface for the whole console (⌘K / Ctrl+K).
+ * App search and command palette — ONE surface for Apps and ⌘K / Ctrl+K.
  *
  * It is one widget with modes, not four. The query string selects the mode:
  *   - default     fuzzy-filters the product catalog; ↵ jumps to the product
@@ -11,7 +11,7 @@
  *   - `?` prefix  asks the docs knowledge store (RAG, store=`docs`) and shows the
  *                 grounded answer with any links it cites.
  *
- * Beyond navigation it also runs ACTIONS — toggle theme, browse all apps, open
+ * Beyond navigation it also runs ACTIONS — toggle theme, show all apps, open
  * settings, switch organization, ask AI / search docs, sign out — ranked by the
  * same query, so ⌘K is ONE surface for "go somewhere" and "do something".
  *
@@ -22,7 +22,7 @@
  *
  * Keyboard is handled on `window`: ⌘K toggles from anywhere; while open, ↑/↓ move
  * the selection (over actions then products), ↵ activates, Esc closes. The header
- * search box opens it; type `>` for AI, `?` for docs.
+ * search box and Apps buttons open it; type `>` for AI, `?` for docs.
  */
 import {
   createContext,
@@ -75,7 +75,6 @@ import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { useAppLauncher } from '~/components/AppLauncher'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -296,7 +295,6 @@ function PaletteDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const router = useRouter()
-  const launcher = useAppLauncher()
   const { signOut } = useSession()
   const showAdmin = useIsSuperAdmin()
   const { colorOf } = useProductColors()
@@ -337,7 +335,7 @@ function PaletteDialog({
     const cur = currentOrg()
     const verbs: PaletteAction[] = [
       { id: 'home', label: 'Go to Overview', hint: 'Dashboard home', keywords: 'home start dashboard root overview', icon: House, run: () => { onOpenChange(false); router.push('/') } },
-      { id: 'apps', label: 'Browse all apps', hint: 'Open the app launcher', keywords: 'launcher grid all products everything apps', icon: LayoutGrid, run: () => { onOpenChange(false); launcher.open() } },
+      { id: 'apps', label: 'Show all apps', hint: 'Browse every product', keywords: 'browse grid all products everything apps', icon: LayoutGrid, run: () => setQuery('') },
       { id: 'settings', label: 'Open Settings', hint: 'Account, organization, branding', keywords: 'preferences account profile settings', icon: SlidersHorizontal, run: () => { onOpenChange(false); router.push('/settings') } },
       { id: 'theme', label: isDark ? 'Switch to light theme' : 'Switch to dark theme', hint: 'Toggle appearance', keywords: 'dark light appearance theme mode color', icon: isDark ? Sun : Moon, run: () => setTheme(isDark ? 'light' : 'dark') },
       { id: 'ai', label: 'Ask AI', hint: 'Find or do something with AI', keywords: 'assistant zen gpt ask question ai', icon: Sparkles, run: () => setQuery('> ') },
@@ -355,16 +353,17 @@ function PaletteDialog({
         run: () => switchOrg(o.name),
       }))
     return [...verbs, ...orgVerbs]
-  }, [isDark, orgs, router, launcher, signOut, setTheme, onOpenChange])
+  }, [isDark, orgs, router, signOut, setTheme, onOpenChange])
 
   // Every jump target — products AND deep sub-pages ("queues" → Tasks › Queues).
   // ⌘K is a DISCOVERY surface: it jumps to the WHOLE catalog (admin-gated only), NOT
   // the org's entitled scope — entitlement governs the sidebar + product use, never
   // what you can find/jump to. Admin-only operator surfaces stay gated by `showAdmin`.
-  const destResults = useMemo(
-    () => (mode === 'catalog' ? searchDestinations(query, showAdmin, null).slice(0, 50) : []),
-    [mode, query, showAdmin],
-  )
+  const destResults = useMemo(() => {
+    if (mode !== 'catalog') return []
+    const found = searchDestinations(query, showAdmin, null)
+    return sub ? found.slice(0, 50) : found
+  }, [mode, query, sub, showAdmin])
 
   const matchedActions = useMemo(
     () => (mode === 'catalog' && sub ? actions.filter((a) => actionMatches(a, sub.toLowerCase())) : []),
@@ -380,6 +379,20 @@ function PaletteDialog({
     ],
     [matchedActions, destResults],
   )
+
+  // Empty query is the Apps browse state: the same destinations, grouped for scan
+  // speed. Typing switches to one ranked list without opening a second overlay.
+  const browseGroups = useMemo(() => {
+    if (mode !== 'catalog' || sub) return []
+    const groups: { category: string; rows: { dest: Destination; index: number }[] }[] = []
+    destResults.forEach((dest, index) => {
+      const category = dest.entry.category
+      const last = groups[groups.length - 1]
+      if (last?.category === category) last.rows.push({ dest, index })
+      else groups.push({ category, rows: [{ dest, index }] })
+    })
+    return groups
+  }, [mode, sub, destResults])
 
   // Seed the query each time the palette opens.
   useEffect(() => {
@@ -482,7 +495,7 @@ function PaletteDialog({
       ? 'Ask AI to find or do something…'
       : mode === 'help'
         ? 'Ask the docs…'
-        : 'Search products, or type > for AI, ? for docs'
+        : 'Search apps and commands…'
 
   return (
     <Dialog modal open={open} onOpenChange={onOpenChange}>
@@ -504,7 +517,7 @@ function PaletteDialog({
           overflow="hidden"
         >
           <VisuallyHidden>
-            <Dialog.Title>Command palette</Dialog.Title>
+            <Dialog.Title>Apps and commands</Dialog.Title>
           </VisuallyHidden>
 
           {/* Query row */}
@@ -544,25 +557,47 @@ function PaletteDialog({
                 </YStack>
               ) : (
                 <ScrollView flex={1} p="$2" showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
-                  <YStack gap="$0.5">
-                    {matchedActions.length > 0 ? <SectionLabel>Actions</SectionLabel> : null}
-                    {matchedActions.map((action, i) => (
-                      <ActionRow key={`action-${action.id}`} action={action} active={i === sel} onPress={action.run} />
-                    ))}
-                    {destResults.length > 0 && matchedActions.length > 0 ? <SectionLabel>Go to</SectionLabel> : null}
-                    {destResults.map((dest, j) => {
-                      const i = matchedActions.length + j
-                      return (
-                        <DestinationRow
-                          key={destKey(dest)}
-                          dest={dest}
-                          active={i === sel}
-                          colorOf={colorOf}
-                          onPress={() => activateDest(dest)}
-                        />
-                      )
-                    })}
-                  </YStack>
+                  {browseGroups.length > 0 ? (
+                    <YStack gap="$2">
+                      {browseGroups.map((group) => (
+                        <YStack key={group.category} gap="$0.5">
+                          <SectionLabel>{group.category}</SectionLabel>
+                          <XStack flexWrap="wrap">
+                            {group.rows.map(({ dest, index }) => (
+                              <YStack key={destKey(dest)} width="100%" $lg={{ width: '50%' }} px="$0.5">
+                                <DestinationRow
+                                  dest={dest}
+                                  active={index === sel}
+                                  colorOf={colorOf}
+                                  onPress={() => activateDest(dest)}
+                                />
+                              </YStack>
+                            ))}
+                          </XStack>
+                        </YStack>
+                      ))}
+                    </YStack>
+                  ) : (
+                    <YStack gap="$0.5">
+                      {matchedActions.length > 0 ? <SectionLabel>Actions</SectionLabel> : null}
+                      {matchedActions.map((action, i) => (
+                        <ActionRow key={`action-${action.id}`} action={action} active={i === sel} onPress={action.run} />
+                      ))}
+                      {destResults.length > 0 && matchedActions.length > 0 ? <SectionLabel>Go to</SectionLabel> : null}
+                      {destResults.map((dest, j) => {
+                        const i = matchedActions.length + j
+                        return (
+                          <DestinationRow
+                            key={destKey(dest)}
+                            dest={dest}
+                            active={i === sel}
+                            colorOf={colorOf}
+                            onPress={() => activateDest(dest)}
+                          />
+                        )
+                      })}
+                    </YStack>
+                  )}
                 </ScrollView>
               )
             ) : (
@@ -610,10 +645,7 @@ function PaletteDialog({
             <Legend keys="?" label="docs" />
             <XStack flex={1} />
             <XStack
-              onPress={() => {
-                onOpenChange(false)
-                launcher.open()
-              }}
+              onPress={() => setQuery('')}
               cursor="pointer"
               items="center"
               gap="$1.5"
@@ -622,7 +654,7 @@ function PaletteDialog({
             >
               <LayoutGrid size={13} />
               <Text fontSize="$1" color="$color11" fontWeight="600">
-                Browse all apps
+                {sub ? 'All apps' : `${destResults.length} apps`}
               </Text>
             </XStack>
           </XStack>

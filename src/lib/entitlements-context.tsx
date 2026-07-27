@@ -2,7 +2,7 @@
 
 /**
  * Entitlements context — the ONE shared fetch of the active org's enabled products,
- * so the sidebar, app launcher, command palette, and category pages all gate from a
+ * so the sidebar, command palette, and category pages all gate from a
  * single source (no duplicate requests, no drift).
  *
  * A super admin bypasses gating entirely (`enabled = null` = ungated → the whole

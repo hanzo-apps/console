@@ -346,7 +346,7 @@ export type ProductSubpage = {
 
 /**
  * The canonical Hanzo Cloud category axis — the top-level nav sections, in exact
- * order. The console nav, catalog overview, app launcher, and discover screens all
+ * order. The console nav, catalog overview, command palette, and discover screens all
  * read this one taxonomy; `catalogByCategory` skips empty groups.
  *
  * Canonical axis (2-level nav, category → product → sub-pages):
@@ -3780,4 +3780,3 @@ export const visibleCatalogByCategory = (
     .map((category) => ({ category, entries: visible.filter((e) => e.category === category) }))
     .filter((g) => g.entries.length > 0)
 }
-
