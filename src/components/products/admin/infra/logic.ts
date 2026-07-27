@@ -1,79 +1,25 @@
 /**
- * Infrastructure board — the PURE decisions, so every ordering, filter, money figure
- * and delete gate is unit-tested in the node env and `InfraModule.tsx` stays thin.
- * No React / Gui / registry imports (vitest runs `environment: 'node'`).
+ * Infrastructure board — the INFRA-SPECIFIC decisions: which rows each tab shows, the
+ * delete gate, the confirmation copy, and the audit grouping. `InfraModule.tsx` stays
+ * thin and every decision is unit-tested in the node env.
  *
- * ONE generic comparator serves every table (string / number / boolean / array-length),
- * so adding a sortable column is declaring `sortable: true` — never another sort
- * function. ONE `searchRows` serves every filter; the per-table filters differ only in
- * their state predicate and which fields they read.
+ * Ordering, filtering and formatting are NOT infra concerns — they live in `~/lib/table`
+ * and `~/lib/format`, the ONE implementation every board shares, and are re-exported
+ * here so this module's importers keep their single import path.
  *
- * The delete gate lives here too: `canDelete` is the single predicate the volumes table
+ * The delete gate lives here: `canDelete` is the single predicate the volumes table
  * consults, and it trusts ONLY the backend's own `deletable` flag (`complete &&
  * state === 'unreferenced'`) — the console never re-derives deletability from `state`,
  * because that would offer deletes on an incomplete scan that the server will refuse.
  */
 import type { FindingSeverity, InfraFinding, InfraNode, InfraVolume, VolumeState } from '~/lib/api/admin-infra'
+import { distinctValues, filterByStatus, nextSort, searchRows, sortRows, type Sort, type SortDir } from '~/lib/table'
+import { gib, usd } from '~/lib/format'
 
-// ── sorting ───────────────────────────────────────────────────────────────────
-
-export type SortDir = 'asc' | 'desc'
-export type Sort = { key: string; dir: SortDir }
-
-/**
- * The ONE comparable projection of a cell: numbers/booleans/array-lengths compare
- * numerically, everything else as a string. Absent → '' (sorts first ascending), so a
- * missing datum never crashes the sort and never fabricates a rank.
- */
-function cmpValue(v: unknown): string | number {
-  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
-  if (typeof v === 'boolean') return v ? 1 : 0
-  if (Array.isArray(v)) return v.length
-  if (v == null) return ''
-  return String(v)
-}
-
-/**
- * Sort a copy of `rows` by `key`. Numeric-ish cells compare numerically; strings use a
- * numeric-aware, case-insensitive collation so `node-2` precedes `node-10`. Stable
- * (Array#sort is), so equal cells keep the backend's own order.
- */
-export function sortRows<T>(rows: T[], key: string, dir: SortDir): T[] {
-  const sign = dir === 'asc' ? 1 : -1
-  return [...rows].sort((a, b) => {
-    const x = cmpValue((a as Record<string, unknown>)[key])
-    const y = cmpValue((b as Record<string, unknown>)[key])
-    if (typeof x === 'number' && typeof y === 'number') return (x - y) * sign
-    return String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: 'base' }) * sign
-  })
-}
-
-/** Header-click reducer: the same key flips direction, a new key starts ascending. */
-export function nextSort(cur: Sort, key: string): Sort {
-  return cur.key === key ? { key, dir: cur.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
-}
+export { distinctValues, filterByStatus, nextSort, searchRows, sortRows, type Sort, type SortDir }
+export { gib, usd }
 
 // ── filtering ─────────────────────────────────────────────────────────────────
-
-/**
- * Literal, case-insensitive substring match over the fields `haystack` exposes — never
- * a compiled RegExp of user input (no ReDoS, no accidental metacharacters).
- */
-export function searchRows<T>(rows: T[], q: string, haystack: (row: T) => string): T[] {
-  const needle = q.trim().toLowerCase()
-  if (!needle) return rows
-  return rows.filter((r) => haystack(r).toLowerCase().includes(needle))
-}
-
-/** The distinct non-empty values of a field, sorted — so a filter offers REAL options only. */
-export function distinctValues<T>(rows: T[], pick: (row: T) => string): string[] {
-  return Array.from(new Set(rows.map(pick).filter(Boolean))).sort()
-}
-
-/** Search + an exact match on one status-ish field (`'all'` passes everything). */
-export function filterByStatus<T>(rows: T[], q: string, status: string, pick: (row: T) => string, haystack: (row: T) => string): T[] {
-  return searchRows(status === 'all' ? rows : rows.filter((r) => pick(r) === status), q, haystack)
-}
 
 /** Volume state filter values — the contract's four states plus the `all` pass-through. */
 export type VolumeFilter = 'all' | VolumeState
@@ -103,21 +49,6 @@ export type FindingFilter = 'all' | FindingSeverity
 export function filterFindings(rows: InfraFinding[], q: string, sev: FindingFilter): InfraFinding[] {
   const scoped = sev === 'all' ? rows : rows.filter((f) => f.severity === sev)
   return searchRows(scoped, q, (f) => `${f.title} ${f.detail} ${f.kind} ${f.resource} ${f.cluster}`)
-}
-
-// ── formatting ────────────────────────────────────────────────────────────────
-
-/** Integer cents → USD. `$50.00`, `$1,234.56`. */
-export function usd(cents: number): string {
-  const v = Number.isFinite(cents) ? cents / 100 : 0
-  return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-/** GiB count → `500 GiB` / `12.5 TiB` (thousands-grouped, never a bare number). */
-export function gib(n: number): string {
-  if (!Number.isFinite(n) || n < 0) return '—'
-  if (n >= 1024) return `${(n / 1024).toLocaleString('en-US', { maximumFractionDigits: 1 })} TiB`
-  return `${Math.round(n).toLocaleString('en-US')} GiB`
 }
 
 // ── tone + copy ───────────────────────────────────────────────────────────────

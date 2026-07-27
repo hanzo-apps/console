@@ -6,10 +6,12 @@
  * `format.ts` (latency in seconds, cost in USD). Keeping these separate is
  * separation of concerns: one module per unit system. No data is fabricated —
  * missing / non-finite values render as an em dash.
+ *
+ * Units the WHOLE console shares (bytes, "how long ago") are not o11y-specific: they
+ * live in `~/lib/format` and are aliased here, so there is one implementation.
  */
 import { toneVar } from '~/components/ui/tone'
-
-const DASH = '—'
+import { DASH, ago, bytes } from '~/lib/format'
 
 /** Nanosecond latency → "450ms" / "1.23s" / "820µs"; em dash for missing/negative. */
 export const fmtNs = (ns?: number | null): string => {
@@ -43,14 +45,7 @@ export const fmtCount = (n?: number | null): string =>
   typeof n === 'number' && Number.isFinite(n) ? Math.round(n).toLocaleString() : DASH
 
 /** Bytes → "1.5 GB" / "820 MB"; em dash for missing/negative. Base-1024. */
-export const fmtBytes = (bytes?: number | null): string => {
-  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return DASH
-  if (bytes === 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
-  const v = bytes / Math.pow(1024, i)
-  return `${v.toFixed(v >= 100 || i === 0 ? 0 : 1)} ${units[i]}`
-}
+export const fmtBytes = bytes
 
 /**
  * A CPU utilization fraction → "0.42 cores" when it looks like an absolute core
@@ -64,18 +59,7 @@ export const fmtCores = (v?: number | null): string => {
 }
 
 /** A short "how long ago" for a timestamp (e.g. "3m ago", "2h ago"); em dash if absent. */
-export const fmtAgo = (iso?: string | null): string => {
-  if (!iso) return DASH
-  const t = new Date(iso).getTime()
-  if (!Number.isFinite(t)) return DASH
-  const s = Math.max(0, Math.round((Date.now() - t) / 1000))
-  if (s < 60) return `${s}s ago`
-  const m = Math.round(s / 60)
-  if (m < 60) return `${m}m ago`
-  const h = Math.round(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.round(h / 24)}d ago`
-}
+export const fmtAgo = ago
 
 /** The weight an error rate (0..1 or 0..100) carries — calm, warn, hot. Greyscale by design. */
 export const errorTone = (rate?: number | null): string => {

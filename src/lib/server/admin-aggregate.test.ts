@@ -1,6 +1,33 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, it, expect } from 'vitest'
 
 import { allowAdminSurface, ADMIN_AGGREGATE_HEADS } from './admin-aggregate'
+
+/**
+ * A head needs BOTH a rewrite (next.config.mjs) and an authorization (this module) or
+ * every call to it fails: missing here → 403, missing there → 404. They were two
+ * hand-maintained arrays and 'infra' had drifted into only one. They now read ONE JSON
+ * file; this pins that, so re-inlining a literal array fails loudly instead of shipping
+ * a module whose every request is refused.
+ */
+describe('admin head allowlist — one list, both consumers', () => {
+  it('authorizes exactly the shared list', () => {
+    const shared = JSON.parse(readFileSync(join(process.cwd(), 'src/lib/server/admin-heads.json'), 'utf8'))
+    expect([...ADMIN_AGGREGATE_HEADS]).toEqual(shared)
+  })
+
+  it('next.config.mjs derives its rewrite heads from that same file, not a literal', () => {
+    const cfg = readFileSync(join(process.cwd(), 'next.config.mjs'), 'utf8')
+    expect(cfg).toContain('src/lib/server/admin-heads.json')
+    expect(cfg).not.toMatch(/const ADMIN_V1_HEADS\s*=\s*\[/)
+  })
+
+  it('covers the boards that ship in this build', () => {
+    for (const h of ['infra', 'subsystems', 'money']) expect(ADMIN_AGGREGATE_HEADS).toContain(h)
+  })
+})
 
 /**
  * The admin aggregate proxy is the console-side server gate for the cross-tenant

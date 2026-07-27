@@ -55,23 +55,25 @@ import {
   datasetStats,
   recentRuns,
   fmtScore,
-  type ModelMix,
   type ModelMixRow,
 } from '~/lib/api/ai-economics'
 import {
   ProviderBillingApi,
-  usd,
   compactNumber,
   runwayLabel,
   runwayTone,
   type ProviderCredit,
 } from '~/lib/api/provider-billing'
-import { FinanceApi, type Finance } from '~/lib/api/finance'
+import { FinanceApi } from '~/lib/api/finance'
 import { EvalsApi, type EvalDataset, type EvalDatasetRun, type EvalEvaluator } from '~/lib/api/evals'
 import type { RangeKey } from '~/lib/api/aimetrics'
+import { DASH, shortDate, usd } from '~/lib/format'
+import { searchRows, useSort } from '~/lib/table'
+import { useAdminResource } from '~/lib/hooks/useAdminResource'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { SearchInput } from '~/components/ui/Filters'
 import { Donut } from '~/components/ui/Charts'
 import { RAMP, OTHER } from '~/lib/theme/ramp'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
@@ -157,14 +159,6 @@ function StepFact({ label, value }: { label: string; value: string }) {
   )
 }
 
-/** Short date for a run timestamp; '—' when absent/unparseable. */
-function shortWhen(iso?: string): string {
-  if (!iso) return '—'
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return '—'
-  return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 /** A model-mix table row, plus the synthetic totals row appended at the bottom. */
 type MixDisplayRow = ModelMixRow & { _total?: boolean }
 
@@ -172,51 +166,32 @@ type MixDisplayRow = ModelMixRow & { _total?: boolean }
 
 export function AiEconomicsModule() {
   const [range, setRange] = useState<RangeKey>('7d')
-  const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState('')
 
-  const [mix, setMix] = useState<ModelMix | null>(null)
-  const [mixErr, setMixErr] = useState<ApiError | null>(null)
-  const [finance, setFinance] = useState<Finance | null>(null)
-  const [financeErr, setFinanceErr] = useState<ApiError | null>(null)
-  const [credit, setCredit] = useState<ProviderCredit[] | null>(null)
-  const [creditErr, setCreditErr] = useState<ApiError | null>(null)
+  // The three admin-aggregate reads, each independent: one failing never blanks the
+  // others. The mix fetcher closes over `range`, so the range tab IS the reload.
+  const { data: mix, loading: mixLoading, err: mixErr, reload: reloadMix } =
+    useAdminResource(useCallback(() => AiEconomicsApi.modelMix(range), [range]))
+  const { data: finance, err: financeErr, reload: reloadFinance } =
+    useAdminResource(useCallback(() => FinanceApi.finance(), []))
+  const { data: credit, loading: creditLoading, err: creditErr, reload: reloadCredit } =
+    useAdminResource(useCallback(() => ProviderBillingApi.credit(), []))
 
   const [datasets, setDatasets] = useState<EvalDataset[] | null>(null)
   const [datasetsErr, setDatasetsErr] = useState<ApiError | null>(null)
   const [runs, setRuns] = useState<EvalDatasetRun[] | null>(null)
   const [runsErr, setRunsErr] = useState<ApiError | null>(null)
   const [evaluators, setEvaluators] = useState<EvalEvaluator[] | null>(null)
+  const [runsLoading, setRunsLoading] = useState(true)
 
-  const loadMix = useCallback(async (r: RangeKey) => {
-    setMixErr(null)
-    try {
-      setMix(await AiEconomicsApi.modelMix(r))
-    } catch (e) {
-      setMixErr(asApiError(e))
-    }
-  }, [])
-
-  const loadFinance = useCallback(async () => {
-    setFinanceErr(null)
-    try {
-      setFinance(await FinanceApi.finance())
-    } catch (e) {
-      setFinanceErr(asApiError(e))
-    }
-  }, [])
-
-  const loadCredit = useCallback(async () => {
-    setCreditErr(null)
-    try {
-      setCredit(await ProviderBillingApi.credit())
-    } catch (e) {
-      setCreditErr(asApiError(e))
-    }
-  }, [])
+  const mixSort = useSort('requests', 'desc')
+  const creditSort = useSort('remainingCents', 'desc')
+  const runSort = useSort('createdAt', 'desc')
 
   const loadEvals = useCallback(async () => {
     setDatasetsErr(null)
     setRunsErr(null)
+    setRunsLoading(true)
     // Evals reads are org-scoped `/v1/evals/*` (a DISTINCT gate from the admin
     // aggregate) — settle each independently so one empty/unrouted read never blanks
     // the others.
@@ -227,39 +202,33 @@ export function AiEconomicsModule() {
     else setRunsErr(asApiError(r.reason))
     if (e.status === 'fulfilled') setEvaluators(e.value)
     else setEvaluators([])
+    setRunsLoading(false)
   }, [])
-
-  const loadAll = useCallback(async () => {
-    setLoading(true)
-    await Promise.allSettled([loadMix(range), loadFinance(), loadCredit(), loadEvals()])
-    setLoading(false)
-  }, [loadMix, loadFinance, loadCredit, loadEvals, range])
 
   useEffect(() => {
-    void loadAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    void loadEvals()
+  }, [loadEvals])
 
-  const onRange = useCallback(
-    (r: RangeKey) => {
-      setRange(r)
-      void loadMix(r)
-    },
-    [loadMix],
-  )
+  const loadAll = useCallback(() => {
+    void Promise.all([reloadMix(), reloadFinance(), reloadCredit(), loadEvals()])
+  }, [reloadMix, reloadFinance, reloadCredit, loadEvals])
 
   const ds = useMemo(() => datasetStats(datasets ?? []), [datasets])
-  const runsRecent = useMemo(() => recentRuns(runs ?? [], 10), [runs])
+  const runsRecent = useMemo(() => runSort.apply(recentRuns(runs ?? [], 10)), [runs, runSort])
   const derived = finance?.derived
   const revenue = finance?.revenue
   const cost = finance?.cost
 
-  // Model-mix rows + the appended totals row.
+  // Model-mix rows, sorted/filtered, with the window totals PINNED last. The totals
+  // row is appended after the sort so it can never float into the middle, and only
+  // when nothing is filtered out — a total over rows you cannot see would be a lie.
   const mixRows: MixDisplayRow[] = useMemo(() => {
     if (!mix) return []
-    const rows: MixDisplayRow[] = mix.rows.map((r) => ({ ...r }))
-    if (mix.rows.length > 0) {
-      rows.push({
+    const shown = mixSort.apply(searchRows(mix.rows, q, (r) => `${r.provider} ${r.model}`))
+    if (shown.length === 0 || shown.length !== mix.rows.length) return shown
+    return [
+      ...shown,
+      {
         provider: '',
         model: 'All models',
         requests: mix.total.requests,
@@ -267,10 +236,9 @@ export function AiEconomicsModule() {
         costCents: mix.total.costCents,
         requestShare: 1,
         _total: true,
-      })
-    }
-    return rows
-  }, [mix])
+      },
+    ]
+  }, [mix, q, mixSort])
 
   const mixSlices = useMemo(() => {
     if (!mix) return []
@@ -282,102 +250,68 @@ export function AiEconomicsModule() {
   }, [mix])
 
   const mixCols: Column<MixDisplayRow>[] = [
-    {
-      key: 'provider',
-      header: 'Provider',
-      render: (r) => (
-        <Text fontSize="$2" color="$color11" numberOfLines={1}>
-          {r._total ? '' : r.provider || '—'}
-        </Text>
-      ),
-    },
+    { key: 'provider', header: 'Provider', sortable: true, render: (r) => (r._total ? '' : r.provider || DASH) },
     {
       key: 'model',
       header: 'Model',
+      sortable: true,
       render: (r) => (
         <Text fontSize="$3" color="$color12" fontWeight={r._total ? '700' : '400'} numberOfLines={1}>
-          {r.model || '—'}
+          {r.model || DASH}
         </Text>
       ),
     },
+    { key: 'requests', header: 'Requests', align: 'right', mono: true, sortable: true, render: (r) => compactNumber(r.requests) },
     {
-      key: 'requests',
-      header: 'Requests',
-      align: 'right',
-      mono: true,
-      render: (r) => (
-        <Text className="hz-mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12">
-          {compactNumber(r.requests)}
-        </Text>
-      ),
-    },
-    {
-      key: 'share',
+      key: 'requestShare',
       header: 'Share',
       align: 'right',
+      mono: true,
+      sortable: true,
+      width: 128,
+      // Composite cell (bar + figure): it typesets its own tabular figure, since the
+      // column-level `mono` only reaches a cell that renders a bare value.
       render: (r) => (
         <XStack items="center" gap="$2" justify="flex-end">
           <ShareBar share={r.requestShare} />
-          <Text className="hz-mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12" width={46} text="right">
+          <Text className="hz-mono" fontSize="$2" color="$color12" width={46} text="right">
             {(r.requestShare * 100).toFixed(r.requestShare < 0.1 && !r._total ? 1 : 0)}%
           </Text>
         </XStack>
       ),
-      width: 128,
     },
-    {
-      key: 'tokens',
-      header: 'Tokens',
-      align: 'right',
-      mono: true,
-      render: (r) => (
-        <Text className="hz-mono" fontSize="$2" color="$color11">
-          {compactNumber(r.tokens)}
-        </Text>
-      ),
-    },
-    {
-      key: 'costCents',
-      header: 'Cost',
-      align: 'right',
-      mono: true,
-      render: (r) => (
-        <Text className="hz-mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12">
-          {usd(r.costCents)}
-        </Text>
-      ),
-    },
+    { key: 'tokens', header: 'Tokens', align: 'right', mono: true, sortable: true, render: (r) => compactNumber(r.tokens) },
+    { key: 'costCents', header: 'Cost', align: 'right', mono: true, sortable: true, render: (r) => usd(r.costCents) },
   ]
 
-  const creditRows = useMemo(
-    () => [...(credit ?? [])].sort((a, b) => b.remainingCents - a.remainingCents),
-    [credit],
-  )
+  const creditRows = useMemo(() => creditSort.apply(credit ?? []), [credit, creditSort])
   const creditCols: Column<ProviderCredit>[] = [
-    { key: 'provider', header: 'Provider', render: (c) => <Text fontSize="$3" color="$color12">{c.provider || '—'}</Text> },
-    { key: 'remainingCents', header: 'Remaining', align: 'right', mono: true, render: (c) => <Text className="hz-mono" fontSize="$2" color={c.hasCredit ? toneColor('positive') : '$color11'}>{usd(c.remainingCents)}</Text> },
-    { key: 'burnCents', header: 'Burn / day', align: 'right', mono: true, render: (c) => <Text className="hz-mono" fontSize="$2" color="$color11">{usd(c.burnCents)}</Text> },
-    { key: 'runwayDays', header: 'Runway', align: 'right', render: (c) => <Text className="hz-mono" fontSize="$2" style={RUNWAY_COLOR[runwayTone(c.runwayDays)] ? { color: RUNWAY_COLOR[runwayTone(c.runwayDays)] } : undefined} color="$color11">{runwayLabel(c.runwayDays)}</Text> },
+    { key: 'provider', header: 'Provider', sortable: true, render: (c) => c.provider || DASH },
+    { key: 'remainingCents', header: 'Remaining', align: 'right', mono: true, sortable: true, render: (c) => usd(c.remainingCents) },
+    { key: 'burnCents', header: 'Burn / day', align: 'right', mono: true, sortable: true, render: (c) => usd(c.burnCents) },
+    { key: 'runwayDays', header: 'Runway', align: 'right', mono: true, sortable: true, render: (c) => <Text className="hz-mono" fontSize="$2" style={RUNWAY_COLOR[runwayTone(c.runwayDays)] ? { color: RUNWAY_COLOR[runwayTone(c.runwayDays)] } : undefined} color="$color11">{runwayLabel(c.runwayDays)}</Text> },
   ]
 
   const runCols: Column<EvalDatasetRun>[] = [
-    { key: 'runName', header: 'Run', render: (r) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{r.runName || '—'}</Text> },
-    { key: 'dataset', header: 'Dataset', render: (r) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{r.dataset || '—'}</Text> },
-    { key: 'judgeModel', header: 'Evaluator', render: (r) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{r.judgeModel || r.model || '—'}</Text> },
+    { key: 'runName', header: 'Run', sortable: true, render: (r) => r.runName || DASH },
+    { key: 'dataset', header: 'Dataset', sortable: true, render: (r) => r.dataset || DASH },
+    { key: 'judgeModel', header: 'Evaluator', sortable: true, render: (r) => r.judgeModel || r.model || DASH },
     {
       key: 'avgScore',
       header: 'Score',
       align: 'right',
       mono: true,
+      sortable: true,
+      width: 132,
+      // Composite cell (score + scored/items): typesets its own tabular figure.
       render: (r) => (
         <XStack items="center" gap="$2" justify="flex-end">
           <Text className="hz-mono" fontSize="$2" color="$color12" fontWeight="600">{fmtScore(r.avgScore)}</Text>
           <Text fontSize="$1" color="$color10">{`${compactNumber(r.scored ?? 0)}/${compactNumber(r.items ?? 0)}`}</Text>
         </XStack>
       ),
-      width: 132,
     },
-    { key: 'createdAt', header: 'When', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color10">{shortWhen(r.createdAt)}</Text>, width: 84 },
+    { key: 'createdAt', header: 'When', align: 'right', mono: true, sortable: true, width: 110, render: (r) => shortDate(r.createdAt) },
   ]
 
   const marginPct = derived?.grossMarginPct ?? 0
@@ -405,7 +339,7 @@ export function AiEconomicsModule() {
         subtitle="The model request mix, unit economics, and the eval → training flywheel across the fleet. Global-admin only."
         actions={
           <XStack items="center" gap="$2">
-            <RangeTabs value={range} onChange={onRange} />
+            <RangeTabs value={range} onChange={setRange} />
             <Button size="$3" icon={<RefreshCw size={15} />} onPress={loadAll}>
               Refresh
             </Button>
@@ -418,14 +352,14 @@ export function AiEconomicsModule() {
         <SectionHead title="Model mix" sub="How many requests hit each model, and its share, tokens, and cost over the window." />
 
         <XStack gap="$3" flexWrap="wrap">
-          <MetricCard icon={<Activity size={16} />} label="Requests" value={mix ? compactNumber(mix.total.requests) : '—'} caption={mix ? `across ${mix.models} model${mix.models === 1 ? '' : 's'}` : 'loading'} />
-          <MetricCard icon={<Cpu size={16} />} label="Tokens" value={mix ? compactNumber(mix.total.tokens) : '—'} caption="total in window" />
-          <MetricCard icon={<Coins size={16} />} label="Spend" value={mix ? usd(mix.total.costCents) : '—'} caption="upstream inference cost" />
-          <MetricCard icon={<Boxes size={16} />} label="Providers" value={mix ? String(mix.providers) : '—'} caption="distinct upstreams" />
+          <MetricCard icon={<Activity size={16} />} label="Requests" value={mix ? compactNumber(mix.total.requests) : DASH} caption={mix ? `across ${mix.models} model${mix.models === 1 ? '' : 's'}` : 'loading'} />
+          <MetricCard icon={<Cpu size={16} />} label="Tokens" value={mix ? compactNumber(mix.total.tokens) : DASH} caption="total in window" />
+          <MetricCard icon={<Coins size={16} />} label="Spend" value={usd(mix?.total.costCents)} caption="upstream inference cost" />
+          <MetricCard icon={<Boxes size={16} />} label="Providers" value={mix ? String(mix.providers) : DASH} caption="distinct upstreams" />
         </XStack>
 
         {mixErr && !mix ? (
-          <ErrorState err={mixErr} onRetry={() => loadMix(range)} />
+          <ErrorState err={mixErr} onRetry={reloadMix} />
         ) : noMix ? (
           <NoteCard title="No model traffic in this window">
             <Text fontSize="$2" color="$color10">
@@ -449,7 +383,7 @@ export function AiEconomicsModule() {
                       requests
                     </Text>
                     <Text className="hz-mono" fontSize="$4" fontWeight="700" color="$color12">
-                      {mix ? compactNumber(mix.total.requests) : '—'}
+                      {mix ? compactNumber(mix.total.requests) : DASH}
                     </Text>
                   </YStack>
                 }
@@ -459,12 +393,15 @@ export function AiEconomicsModule() {
               <Text fontSize="$3" color="$color11">
                 Requests, share, tokens &amp; cost by model
               </Text>
+              <SearchInput value={q} onChange={setQ} placeholder="Search providers, models…" />
               <DataTable<MixDisplayRow>
                 columns={mixCols}
                 rows={mixRows}
-                loading={loading && !mix}
-                empty="No model usage."
+                loading={mixLoading}
+                empty={q ? 'No models match.' : 'No model usage.'}
                 rowKey={(r) => (r._total ? '__total__' : `${r.provider}/${r.model}`)}
+                sort={mixSort.sort}
+                onSortChange={mixSort.onSortChange}
               />
             </YStack>
           </XStack>
@@ -484,19 +421,19 @@ export function AiEconomicsModule() {
         />
 
         {financeErr && !finance ? (
-          <ErrorState err={financeErr} onRetry={loadFinance} />
+          <ErrorState err={financeErr} onRetry={reloadFinance} />
         ) : (
           <XStack gap="$3" flexWrap="wrap" testID="margin-card">
-            <MetricCard icon={<TrendingUp size={16} />} label="MRR" value={revenue ? usd(revenue.mrrCents) : '—'} caption="monthly recurring" />
-            <MetricCard icon={<Wallet size={16} />} label="Revenue" value={revenue ? usd(revenue.totalRevenueCents) : '—'} caption="total to date" />
-            <MetricCard icon={<Flame size={16} />} label="Upstream cost" value={cost ? usd(cost.totalCents) : '—'} caption="what we pay vendors (COGS)" />
+            <MetricCard icon={<TrendingUp size={16} />} label="MRR" value={usd(revenue?.mrrCents)} caption="monthly recurring" />
+            <MetricCard icon={<Wallet size={16} />} label="Revenue" value={usd(revenue?.totalRevenueCents)} caption="total to date" />
+            <MetricCard icon={<Flame size={16} />} label="Upstream cost" value={usd(cost?.totalCents)} caption="what we pay vendors (COGS)" />
             <MetricCard
               icon={<Scale size={16} />}
               label="Gross margin"
-              value={derived ? usd(derived.grossMarginCents) : '—'}
+              value={usd(derived?.grossMarginCents)}
               caption={derived ? `${marginPctLabel(marginPct)} margin` : 'loading'}
             />
-            <MetricCard icon={<Gauge size={16} />} label="Runway" value={derived ? runwayLabel(derived.runwayDays) : '—'} caption="at current burn" />
+            <MetricCard icon={<Gauge size={16} />} label="Runway" value={derived ? runwayLabel(derived.runwayDays) : DASH} caption="at current burn" />
           </XStack>
         )}
 
@@ -505,7 +442,7 @@ export function AiEconomicsModule() {
             Provider credit position
           </Text>
           {creditErr && !credit ? (
-            <ErrorState err={creditErr} onRetry={loadCredit} />
+            <ErrorState err={creditErr} onRetry={reloadCredit} />
           ) : credit && credit.length === 0 ? (
             <NoteCard title="No provider credit reported">
               <Text fontSize="$2" color="$color10">
@@ -516,9 +453,11 @@ export function AiEconomicsModule() {
             <DataTable<ProviderCredit>
               columns={creditCols}
               rows={creditRows}
-              loading={loading && !credit}
+              loading={creditLoading}
               empty="No provider credit."
               rowKey={(c) => c.provider || Math.random().toString()}
+              sort={creditSort.sort}
+              onSortChange={creditSort.onSortChange}
             />
           )}
         </YStack>
@@ -529,8 +468,8 @@ export function AiEconomicsModule() {
         <SectionHead title="Training data" sub="What training data the platform actually holds — honestly." />
 
         <XStack gap="$3" flexWrap="wrap">
-          <MetricCard icon={<Database size={16} />} label="Eval datasets" value={datasets ? String(ds.datasets) : '—'} caption="user-curated" />
-          <MetricCard icon={<ScrollText size={16} />} label="Dataset items" value={datasets ? compactNumber(ds.items) : '—'} caption="input / expected pairs" />
+          <MetricCard icon={<Database size={16} />} label="Eval datasets" value={datasets ? String(ds.datasets) : DASH} caption="user-curated" />
+          <MetricCard icon={<ScrollText size={16} />} label="Dataset items" value={datasets ? compactNumber(ds.items) : DASH} caption="input / expected pairs" />
         </XStack>
 
         <NoteCard title="No traffic is harvested for training" testid="training-collection-card">
@@ -583,9 +522,9 @@ export function AiEconomicsModule() {
           sub="Recent LLM-as-judge dataset runs — the quality signal the router learns from."
           right={
             <XStack gap="$4" items="center">
-              <StepFact label="Datasets" value={datasets ? String(ds.datasets) : '—'} />
-              <StepFact label="Evaluators" value={evaluators ? String(evaluators.length) : '—'} />
-              <StepFact label="Runs" value={runs ? String(runs.length) : '—'} />
+              <StepFact label="Datasets" value={datasets ? String(ds.datasets) : DASH} />
+              <StepFact label="Evaluators" value={evaluators ? String(evaluators.length) : DASH} />
+              <StepFact label="Runs" value={runs ? String(runs.length) : DASH} />
             </XStack>
           }
         />
@@ -603,9 +542,11 @@ export function AiEconomicsModule() {
           <DataTable<EvalDatasetRun>
             columns={runCols}
             rows={runsRecent}
-            loading={loading && !runs}
+            loading={runsLoading}
             empty="No eval runs."
             rowKey={(r) => `${r.dataset ?? ''}/${r.runName ?? ''}/${r.createdAt ?? ''}`}
+            sort={runSort.sort}
+            onSortChange={runSort.onSortChange}
           />
         )}
       </YStack>
@@ -637,10 +578,10 @@ export function AiEconomicsModule() {
           </XStack>
 
           <XStack gap="$5" flexWrap="wrap" borderTopWidth={1} borderColor="$borderColor" pt="$3">
-            <StepFact label="Datasets" value={datasets ? String(ds.datasets) : '—'} />
-            <StepFact label="Dataset items" value={datasets ? compactNumber(ds.items) : '—'} />
-            <StepFact label="Evaluators" value={evaluators ? String(evaluators.length) : '—'} />
-            <StepFact label="Runs scored" value={runs ? String(runs.length) : '—'} />
+            <StepFact label="Datasets" value={datasets ? String(ds.datasets) : DASH} />
+            <StepFact label="Dataset items" value={datasets ? compactNumber(ds.items) : DASH} />
+            <StepFact label="Evaluators" value={evaluators ? String(evaluators.length) : DASH} />
+            <StepFact label="Runs scored" value={runs ? String(runs.length) : DASH} />
           </XStack>
 
           <XStack style={{ backgroundColor: TONE.warn.bg }} p="$3" rounded="$4" gap="$2" items="flex-start">

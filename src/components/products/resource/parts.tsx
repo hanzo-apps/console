@@ -10,8 +10,6 @@ import { useState, type ReactElement, type ReactNode } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Boxes,
-  Check,
-  Copy,
   Database,
   FileText,
   HardDrive,
@@ -21,6 +19,7 @@ import {
   Terminal,
 } from '@hanzogui/lucide-icons-2'
 
+import { CopyButton } from '~/components/ui/CopyButton'
 import { Donut } from '~/components/ui/Charts'
 import type { Slice } from '~/components/ui/Charts'
 import type { ProductIcon } from '~/lib/products/registry'
@@ -48,24 +47,6 @@ export const openHref = (href: string): void => {
 export function iconFor(key: string, size = 16): ReactElement {
   const Icon = iconComponent(key)
   return <Icon size={size} />
-}
-
-/** Clipboard copy with a brief "Copied" acknowledgement. */
-function useCopy(): { copied: boolean; copy: (v: string) => void } {
-  const [copied, setCopied] = useState(false)
-  const copy = (v: string) => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) return
-    void navigator.clipboard
-      .writeText(v)
-      .then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
-      })
-      .catch(() => {
-        /* clipboard blocked — value stays selectable */
-      })
-  }
-  return { copied, copy }
 }
 
 /**
@@ -186,7 +167,6 @@ export function TabBar({
 /** A monospace-ish value box with copy, and optional masked reveal for secrets. */
 export function CopyField({ label, value, secret }: { label: string; value: string; secret?: boolean }) {
   const [shown, setShown] = useState(!secret)
-  const { copied, copy } = useCopy()
   const masked = '•'.repeat(Math.min(value.length, 32))
   return (
     <YStack gap="$1.5">
@@ -212,9 +192,7 @@ export function CopyField({ label, value, secret }: { label: string; value: stri
             {shown ? 'Hide' : 'Show'}
           </Button>
         ) : null}
-        <Button size="$2" icon={copied ? <Check size={14} /> : <Copy size={14} />} onPress={() => copy(value)}>
-          {copied ? 'Copied' : 'Copy'}
-        </Button>
+        <CopyButton value={value} size="$2" chromeless={false} ariaLabel={`Copy ${label}`} />
       </XStack>
     </YStack>
   )
@@ -222,21 +200,13 @@ export function CopyField({ label, value, secret }: { label: string; value: stri
 
 /** A copy-pastable quick-start snippet (title + code). Real contract text only. */
 export function SnippetBlock({ snippet }: { snippet: Snippet }) {
-  const { copied, copy } = useCopy()
   return (
     <YStack gap="$2">
       <XStack justify="space-between" items="center">
         <Text fontSize="$2" fontWeight="700" color="$color11">
           {snippet.title}
         </Text>
-        <Button
-          size="$1"
-          chromeless
-          icon={copied ? <Check size={13} /> : <Copy size={13} />}
-          onPress={() => copy(snippet.code)}
-        >
-          {copied ? 'Copied' : 'Copy'}
-        </Button>
+        <CopyButton value={snippet.code} size="$1" ariaLabel={`Copy ${snippet.title}`} />
       </XStack>
       <YStack px="$3" py="$2.5" bg="$color2" rounded="$3" borderWidth={1} borderColor="$borderColor">
         <Text fontSize="$2" color="$color12" selectable style={{ fontFamily: 'monospace' }}>

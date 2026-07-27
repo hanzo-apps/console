@@ -12,17 +12,22 @@
  *                 grounded answer with any links it cites.
  *
  * Beyond navigation it also runs ACTIONS — toggle theme, show all apps, open
- * settings, switch organization, ask AI / search docs, sign out — ranked by the
- * same query, so ⌘K is ONE surface for "go somewhere" and "do something".
+ * settings, switch organization, ask AI / search docs, sign out — AND whatever the
+ * MOUNTED modules contribute to `lib/palette/registry` (live rows: an org, a volume,
+ * a subsystem verb), all ranked by the same query. So ⌘K is ONE surface for "go
+ * somewhere", "do something" and "find that thing".
  *
  * Everything composes existing pieces: the catalog registry (`searchCatalog` +
- * `openProduct`), the AI client (`AiApi`), the chrome hooks (theme/session/
- * org-scope), and the honest backend-state mapper. Nothing is fabricated —
- * AI/RAG failures degrade to a truthful state card.
+ * `openProduct`), the palette registry, the AI client (`AiApi`), the chrome hooks
+ * (theme/session/org-scope), Toast, and the honest backend-state mapper. Nothing is
+ * fabricated — AI/RAG failures degrade to a truthful state card.
  *
- * Keyboard is handled on `window`: ⌘K toggles from anywhere; while open, ↑/↓ move
- * the selection (over actions then products), ↵ activates, Esc closes. The header
- * search box and Apps buttons open it; type `>` for AI, `?` for docs.
+ * While open, ↑/↓ move the selection over ONE flat index (actions → contributed
+ * items → destinations), ↵ activates, Esc closes. A `destructive` contributed item
+ * never runs on the first ↵ — it arms an inline CONFIRM row first. ⌘K itself is a
+ * registered hotkey (`lib/hooks/useHotkeys`), not a listener of its own: one
+ * keyboard layer, one cheatsheet. The header search box and Apps buttons open it;
+ * type `>` for AI, `?` for docs.
  */
 import {
   createContext,
@@ -48,7 +53,9 @@ import {
   YStack,
 } from '@hanzo/gui'
 import {
+  AlertTriangle,
   ArrowRight,
+  Boxes,
   Building2,
   Command,
   CornerDownLeft,
@@ -61,6 +68,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Sun,
+  Trash2,
   Zap,
 } from '@hanzogui/lucide-icons-2'
 
@@ -68,6 +76,8 @@ import { AiApi, IamAdminApi, type Organization } from '~/lib/api'
 import { findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { commandBarSystemPrompt, hanzoAssistantSystemPrompt } from '~/lib/assistant'
 import { searchDestinations, type Destination } from '~/lib/products/search'
+import { rank, rankGrouped } from '~/lib/palette/match'
+import { usePaletteRegistry, type PaletteItem } from '~/lib/palette/registry'
 import { useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
 import { ProductIcon } from '~/components/ui/ProductIcon'
@@ -75,6 +85,8 @@ import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useToast } from '~/components/ui/Toast'
+import { toneColor } from '~/components/ui/tone'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -93,12 +105,6 @@ type PaletteAction = {
   icon: ComponentType<{ size?: number }>
   /** Runs on activate. Closing the palette (if wanted) is the action's own job. */
   run: () => void
-}
-
-/** Substring match over an action's label + synonyms (lowercased query). */
-function actionMatches(a: PaletteAction, q: string): boolean {
-  if (!q) return false
-  return `${a.label} ${a.keywords}`.toLowerCase().includes(q)
 }
 
 type Mode = 'catalog' | 'ai' | 'help'
@@ -276,6 +282,68 @@ function ActionRow({
   )
 }
 
+/**
+ * A registry row — a live resource or verb a mounted module contributed.
+ *
+ * A `destructive` item never runs on the first ↵: the row turns into an explicit
+ * CONFIRM control showing the consequence, and only the next ↵ (or a press) runs
+ * it. Keyboard speed must not make destruction one keystroke.
+ */
+function ItemRow({
+  item,
+  active,
+  confirming,
+  onPress,
+}: {
+  item: PaletteItem
+  active: boolean
+  confirming: boolean
+  onPress: () => void
+}) {
+  const Icon = item.destructive ? Trash2 : Boxes
+  return (
+    <XStack
+      onPress={onPress}
+      cursor="pointer"
+      items="center"
+      gap="$3"
+      px="$3"
+      py="$2.5"
+      rounded="$3"
+      id={active ? 'cmdk-active' : undefined}
+      bg={active ? '$color5' : 'transparent'}
+      hoverStyle={{ bg: active ? '$color5' : '$color3' }}
+    >
+      <Icon size={17} />
+      <YStack flex={1}>
+        <Text fontSize="$3" fontWeight="600" color="$color12">
+          {item.label}
+        </Text>
+        {confirming ? (
+          <Text fontSize="$1" color={toneColor('critical')} fontWeight="700">
+            {item.confirm ?? `${item.label}?`}
+          </Text>
+        ) : item.sublabel ? (
+          <Text fontSize="$1" color="$color10">
+            {item.sublabel}
+          </Text>
+        ) : null}
+      </YStack>
+      {confirming ? (
+        <XStack items="center" gap="$1.5">
+          <AlertTriangle size={13} />
+          <Text fontSize="$2" fontWeight="700" color={toneColor('critical')}>
+            Confirm
+          </Text>
+          <CornerDownLeft size={13} opacity={0.8} />
+        </XStack>
+      ) : (
+        <CornerDownLeft size={13} opacity={active ? 0.8 : 0.3} />
+      )}
+    </XStack>
+  )
+}
+
 /** A small uppercase section label inside the palette result list. */
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
@@ -298,12 +366,16 @@ function PaletteDialog({
   const { signOut } = useSession()
   const showAdmin = useIsSuperAdmin()
   const { colorOf } = useProductColors()
+  const toast = useToast()
+  const contributed = usePaletteRegistry()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
   const isDark = (resolvedTheme ?? current ?? 'dark') !== 'light'
   const [query, setQuery] = useState(seed)
   const [sel, setSel] = useState(0)
   const [run, setRun] = useState<RunState>({ status: 'idle' })
   const [orgs, setOrgs] = useState<Organization[]>([])
+  /** The destructive item awaiting its second ↵, by id. */
+  const [confirming, setConfirming] = useState<string | null>(null)
 
   const mode: Mode = query.startsWith('>') ? 'ai' : query.startsWith('?') ? 'help' : 'catalog'
   const sub = (mode === 'catalog' ? query : query.slice(1)).trim()
@@ -366,19 +438,44 @@ function PaletteDialog({
   }, [mode, query, sub, showAdmin])
 
   const matchedActions = useMemo(
-    () => (mode === 'catalog' && sub ? actions.filter((a) => actionMatches(a, sub.toLowerCase())) : []),
+    () => (mode === 'catalog' && sub ? rank(sub, actions) : []),
     [mode, sub, actions],
   )
 
-  // One ordered list (actions first, then destinations) so ↑/↓/↵ traverse both.
-  type Item = { kind: 'action'; action: PaletteAction } | { kind: 'dest'; dest: Destination }
+  // What the MOUNTED modules contribute right now — live rows and verbs (an org, a
+  // volume, "Restart subsystem"). Grouped so each section prints one heading.
+  const matchedItems = useMemo(
+    () => (mode === 'catalog' && sub ? rankGrouped(sub, contributed) : []),
+    [mode, sub, contributed],
+  )
+
+  // ONE ordered list (actions → contributed items → destinations) so ↑/↓/↵ traverse
+  // everything over a single index, whatever the row happens to be.
+  type Item =
+    | { kind: 'action'; action: PaletteAction }
+    | { kind: 'item'; item: PaletteItem }
+    | { kind: 'dest'; dest: Destination }
   const items = useMemo<Item[]>(
     () => [
       ...matchedActions.map((action) => ({ kind: 'action' as const, action })),
+      ...matchedItems.map((item) => ({ kind: 'item' as const, item })),
       ...destResults.map((dest) => ({ kind: 'dest' as const, dest })),
     ],
-    [matchedActions, destResults],
+    [matchedActions, matchedItems, destResults],
   )
+
+  // Contiguous runs of the same heading — 'Actions', each item's own `group`, then
+  // 'Go to' — so grouping is a view of the one indexed list, not a second list.
+  const sections = useMemo(() => {
+    const out: { title: string; rows: { it: Item; index: number }[] }[] = []
+    items.forEach((it, index) => {
+      const title = it.kind === 'action' ? 'Actions' : it.kind === 'item' ? it.item.group : 'Go to'
+      const last = out[out.length - 1]
+      if (last?.title === title) last.rows.push({ it, index })
+      else out.push({ title, rows: [{ it, index }] })
+    })
+    return out
+  }, [items])
 
   // Empty query is the Apps browse state: the same destinations, grouped for scan
   // speed. Typing switches to one ranked list without opening a second overlay.
@@ -399,10 +496,11 @@ function PaletteDialog({
     if (open) setQuery(seed)
   }, [open, seed])
 
-  // A new query resets selection + any prior AI run.
+  // A new query resets selection, any prior AI run, and any armed confirmation.
   useEffect(() => {
     setSel(0)
     setRun({ status: 'idle' })
+    setConfirming(null)
   }, [query])
 
   const activate = useCallback(
@@ -421,6 +519,33 @@ function PaletteDialog({
       else openProduct(dest.entry, (p) => router.push(p))
     },
     [onOpenChange, router],
+  )
+
+  /**
+   * Activate a contributed item. Destructive items arm a confirmation instead of
+   * running; the caller's promise (if any) reports through the ONE toast surface,
+   * so the palette closes immediately and the outcome is still honest.
+   */
+  const activateItem = useCallback(
+    (item: PaletteItem) => {
+      if (item.destructive && confirming !== item.id) {
+        setConfirming(item.id)
+        return
+      }
+      onOpenChange(false)
+      void (async () => {
+        try {
+          const result = item.run()
+          if (result instanceof Promise) {
+            await result
+            toast.success(item.label)
+          }
+        } catch (e) {
+          toast.error(item.label, e instanceof Error ? e.message : undefined)
+        }
+      })()
+    },
+    [confirming, onOpenChange, toast],
   )
 
   const submit = useCallback(async () => {
@@ -454,21 +579,27 @@ function PaletteDialog({
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onOpenChange(false)
+        // Esc first disarms a pending confirmation — backing out of a delete must
+        // not also dismiss the palette.
+        if (confirming) setConfirming(null)
+        else onOpenChange(false)
         return
       }
       if (mode === 'catalog') {
         if (e.key === 'ArrowDown') {
           e.preventDefault()
+          setConfirming(null)
           setSel((s) => Math.min(s + 1, Math.max(items.length - 1, 0)))
         } else if (e.key === 'ArrowUp') {
           e.preventDefault()
+          setConfirming(null)
           setSel((s) => Math.max(s - 1, 0))
         } else if (e.key === 'Enter') {
           e.preventDefault()
           const it = items[sel]
           if (it) {
             if (it.kind === 'action') it.action.run()
+            else if (it.kind === 'item') activateItem(it.item)
             else activateDest(it.dest)
           }
         }
@@ -481,7 +612,7 @@ function PaletteDialog({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, mode, items, sel, run, submit, activate, activateDest, onOpenChange])
+  }, [open, mode, items, sel, run, submit, activate, activateDest, activateItem, confirming, onOpenChange])
 
   // Keep the ↑/↓-selected row visible: as selection moves past the fold, scroll
   // the active row into view (the list can hold 50 results — well beyond 560px).
@@ -579,23 +710,37 @@ function PaletteDialog({
                     </YStack>
                   ) : (
                     <YStack gap="$0.5">
-                      {matchedActions.length > 0 ? <SectionLabel>Actions</SectionLabel> : null}
-                      {matchedActions.map((action, i) => (
-                        <ActionRow key={`action-${action.id}`} action={action} active={i === sel} onPress={action.run} />
+                      {sections.map((section) => (
+                        <YStack key={section.title} gap="$0.5">
+                          <SectionLabel>{section.title}</SectionLabel>
+                          {section.rows.map(({ it, index }) =>
+                            it.kind === 'action' ? (
+                              <ActionRow
+                                key={`action-${it.action.id}`}
+                                action={it.action}
+                                active={index === sel}
+                                onPress={it.action.run}
+                              />
+                            ) : it.kind === 'item' ? (
+                              <ItemRow
+                                key={`item-${it.item.id}`}
+                                item={it.item}
+                                active={index === sel}
+                                confirming={confirming === it.item.id}
+                                onPress={() => activateItem(it.item)}
+                              />
+                            ) : (
+                              <DestinationRow
+                                key={destKey(it.dest)}
+                                dest={it.dest}
+                                active={index === sel}
+                                colorOf={colorOf}
+                                onPress={() => activateDest(it.dest)}
+                              />
+                            ),
+                          )}
+                        </YStack>
                       ))}
-                      {destResults.length > 0 && matchedActions.length > 0 ? <SectionLabel>Go to</SectionLabel> : null}
-                      {destResults.map((dest, j) => {
-                        const i = matchedActions.length + j
-                        return (
-                          <DestinationRow
-                            key={destKey(dest)}
-                            dest={dest}
-                            active={i === sel}
-                            colorOf={colorOf}
-                            onPress={() => activateDest(dest)}
-                          />
-                        )
-                      })}
                     </YStack>
                   )}
                 </ScrollView>
@@ -687,19 +832,6 @@ export function Palette({ children }: { children: ReactNode }) {
   }, [])
 
   const close = useCallback(() => setIsOpen(false), [])
-
-  // ⌘K / Ctrl+K toggles the palette from anywhere.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
-        e.preventDefault()
-        setSeed('')
-        setIsOpen((v) => !v)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
 
   return (
     <Ctx.Provider value={{ isOpen, open, close }}>

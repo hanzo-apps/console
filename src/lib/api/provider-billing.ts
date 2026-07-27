@@ -231,9 +231,9 @@ export function foldFunding(rows: FundingRow[]): FundingFold {
 
 // ── formatting (pure) ─────────────────────────────────────────────────────────
 
-/** USD cents → `$1,234.56` (tabular-nums applied at the render site). */
-export const usd = (cents: number | null | undefined): string =>
-  cents == null ? '—' : '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+/** USD cents → `$1,234.56` (tabular-nums applied at the render site). The ONE money
+ *  formatter, in `~/lib/format`; aliased here for this module's existing importers. */
+export { usd } from '~/lib/format'
 
 /** Compact a large count (tokens/requests) — `1.2M`, `3.4K`, `842`. */
 export function compactNumber(n: number): string {

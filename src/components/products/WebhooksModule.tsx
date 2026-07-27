@@ -25,7 +25,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Copy,
   KeyRound,
   Plus,
   Power,
@@ -38,6 +37,7 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, restGet, restPost, restDelete, restPatch, cloudProxyV1Url } from '~/lib/api/client'
+import { CopyButton } from '~/components/ui/CopyButton'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
@@ -132,30 +132,6 @@ const shortTime = (iso?: string): string => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-// ── Small reusable copy control ─────────────────────────────────────────────────
-
-function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <Button
-      size="$2"
-      icon={copied ? <Check size={14} /> : <Copy size={14} />}
-      onPress={() =>
-        void navigator.clipboard?.writeText(value).then(
-          () => {
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1400)
-          },
-          () => undefined,
-        )
-      }
-      aria-label={label}
-    >
-      {copied ? 'Copied' : label}
-    </Button>
-  )
-}
-
 /** Small event pill. */
 function EventChip({ children }: { children: string }) {
   return (
@@ -188,7 +164,7 @@ function SecretReveal({ title, url, secret, onDismiss }: { title: string; url: s
         <Text flex={1} minW={200} fontSize="$2" color="$color12" className="hz-mono" style={{ wordBreak: 'break-all' }}>
           {secret}
         </Text>
-        <CopyButton value={secret} label="Copy secret" />
+        <CopyButton value={secret} label="Copy secret" chromeless={false} />
       </XStack>
       <Text fontSize="$1" color="$color10" className="hz-mono">
         Verify each delivery: {SIGNATURE_SCHEME}

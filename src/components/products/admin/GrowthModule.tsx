@@ -60,7 +60,10 @@ import {
   type Step,
   type Strategy,
 } from '~/lib/guide/client'
+import { usd } from '~/lib/format'
+import { distinctValues, searchRows } from '~/lib/table'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { SearchInput } from '~/components/ui/Filters'
 import { MetricCard, Panel, UtilBar, LegendDot } from '~/components/ui/Metric'
 import { Donut, type Slice } from '~/components/ui/Charts'
 import { RAMP } from '~/lib/theme/ramp'
@@ -92,8 +95,6 @@ const SINGULAR: Record<BlueprintCollection, string> = {
   strategies: 'Strategy',
   templates: 'Template',
 }
-
-const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })
 
 // ── enable/disable toggle (state encoded in form) ───────────────────────────
 function EnableToggle({ enabled, busy, onToggle }: { enabled: boolean; busy: boolean; onToggle: (next: boolean) => void }) {
@@ -609,10 +610,8 @@ function CorpusPanel({ nonce }: { nonce: number }) {
     return () => { live = false }
   }, [category, workload, stage, all])
 
-  const facet = (pick: (s: Strategy) => string): string[] =>
-    Array.from(new Set((all ?? []).map(pick).filter(Boolean))).sort()
-  const categories = useMemo(() => facet((s) => s.category), [all])
-  const workloads = useMemo(() => facet((s) => s.workload), [all])
+  const categories = useMemo(() => distinctValues(all ?? [], (s) => s.category), [all])
+  const workloads = useMemo(() => distinctValues(all ?? [], (s) => s.workload), [all])
 
   const coverage = useMemo<Slice[]>(() => {
     const counts = new Map<string, number>()
@@ -623,11 +622,10 @@ function CorpusPanel({ nonce }: { nonce: number }) {
     return rest > 0 ? [...top, { label: 'other', value: rest, color: toneVar('muted') }] : top
   }, [all])
 
-  const shown = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const base = rows ?? []
-    return q ? base.filter((s) => `${s.action} ${s.principle} ${s.tags.join(' ')} ${s.source}`.toLowerCase().includes(q)) : base
-  }, [rows, search])
+  const shown = useMemo(
+    () => searchRows(rows ?? [], search, (s) => `${s.action} ${s.principle} ${s.tags.join(' ')} ${s.source}`),
+    [rows, search],
+  )
 
   if (err && isForbidden(err)) return <OperatorAccessRequired />
   if (err) {
@@ -685,8 +683,7 @@ function CorpusPanel({ nonce }: { nonce: number }) {
         </YStack>
         <YStack gap="$1" flex={1} minW={200}>
           <Text fontSize="$1" color="$color10">Search actions</Text>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. launch, referral, SEO"
-            style={{ ...selectStyle, cursor: 'text' }} />
+          <SearchInput value={search} onChange={setSearch} placeholder="e.g. launch, referral, SEO" />
         </YStack>
         {(category || workload || stage || search) ? (
           <Button size="$2" chromeless icon={<X size={13} />} onPress={() => { setCategory(''); setWorkload(''); setStage(''); setSearch('') }}>Clear</Button>

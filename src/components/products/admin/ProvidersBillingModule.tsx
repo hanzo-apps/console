@@ -18,16 +18,14 @@
  * Renders gracefully for an empty OR one-provider set (DO is the only funded
  * provider today; the others slot in as keys drop). Never fabricates a number.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Coins, CreditCard, Flame, Gauge, RefreshCw, Server, Wallet } from '@hanzogui/lucide-icons-2'
 
-import { ApiError } from '~/lib/api'
 import {
   ProviderBillingApi,
   type ProviderCredit,
   type FundingRow,
-  usd,
   compactNumber,
   runwayLabel,
   runwayTone,
@@ -38,12 +36,16 @@ import {
   fundingColor,
 } from '~/lib/api/provider-billing'
 import type { RangeKey } from '~/lib/api/aimetrics'
+import { DASH, usd } from '~/lib/format'
+import { searchRows, useSort } from '~/lib/table'
+import { useAdminResource } from '~/lib/hooks/useAdminResource'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { SearchInput } from '~/components/ui/Filters'
 import { Donut } from '~/components/ui/Charts'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { toneColor, toneVar } from '~/components/ui/tone'
 
 // ── small presentational helpers ──────────────────────────────────────────────
@@ -152,56 +154,27 @@ function EmptyNote({ title, body }: { title: string; body: string }) {
 // ── module ────────────────────────────────────────────────────────────────────
 
 export function ProvidersBillingModule() {
-  const [credit, setCredit] = useState<ProviderCredit[] | null>(null)
-  const [creditErr, setCreditErr] = useState<ApiError | null>(null)
-  const [funding, setFunding] = useState<FundingRow[] | null>(null)
-  const [fundingErr, setFundingErr] = useState<ApiError | null>(null)
   const [range, setRange] = useState<RangeKey>('7d')
-  const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState('')
 
-  const loadCredit = useCallback(async () => {
-    setCreditErr(null)
-    try {
-      setCredit(await ProviderBillingApi.credit())
-    } catch (e) {
-      setCreditErr(asApiError(e))
-    }
-  }, [])
+  // Two independent reads: one failing never blanks the other. The funding fetcher
+  // closes over `range`, so switching the range tab IS the reload — no second path.
+  const { data: credit, err: creditErr, reload: reloadCredit } =
+    useAdminResource(useCallback(() => ProviderBillingApi.credit(), []))
+  const { data: funding, loading: fundingLoading, err: fundingErr, reload: reloadFunding } =
+    useAdminResource(useCallback(() => ProviderBillingApi.funding(range), [range]))
 
-  const loadFunding = useCallback(async (r: RangeKey) => {
-    setFundingErr(null)
-    try {
-      setFunding(await ProviderBillingApi.funding(r))
-    } catch (e) {
-      setFundingErr(asApiError(e))
-    }
-  }, [])
-
-  const loadAll = useCallback(async () => {
-    setLoading(true)
-    await Promise.allSettled([loadCredit(), loadFunding(range)])
-    setLoading(false)
-  }, [loadCredit, loadFunding, range])
-
-  useEffect(() => {
-    void loadAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const onRange = useCallback(
-    (r: RangeKey) => {
-      setRange(r)
-      void loadFunding(r)
-    },
-    [loadFunding],
-  )
+  const { sort, onSortChange, apply } = useSort('costCents', 'desc')
 
   const summary = useMemo(() => creditSummary(credit ?? []), [credit])
   const fold = useMemo(() => foldFunding(funding ?? []), [funding])
   const fundingRows = useMemo(
-    () => [...(funding ?? [])].sort((a, b) => b.costCents - a.costCents || b.tokens - a.tokens),
-    [funding],
+    () => apply(searchRows(funding ?? [], q, (r) => `${r.provider} ${r.model} ${r.funding}`)),
+    [funding, q, apply],
   )
+  const loadAll = useCallback(() => {
+    void Promise.all([reloadCredit(), reloadFunding()])
+  }, [reloadCredit, reloadFunding])
 
   // Both reads share the ONE admin gate: a 403 on either means "not authorized for
   // this admin surface" — show the operator panel, not a per-section error.
@@ -216,27 +189,12 @@ export function ProvidersBillingModule() {
   }
 
   const fundingCols: Column<FundingRow>[] = [
-    {
-      key: 'provider',
-      header: 'Provider',
-      render: (r) => (
-        <Text fontSize="$3" color="$color12">
-          {r.provider || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'model',
-      header: 'Model',
-      render: (r) => (
-        <Text fontSize="$2" color="$color11" numberOfLines={1}>
-          {r.model || '—'}
-        </Text>
-      ),
-    },
+    { key: 'provider', header: 'Provider', sortable: true, render: (r) => r.provider || DASH },
+    { key: 'model', header: 'Model', sortable: true, render: (r) => r.model || DASH },
     {
       key: 'funding',
       header: 'Funding',
+      sortable: true,
       render: (r) => (
         <XStack items="center" gap="$1.5">
           <Dot color={fundingColor(r.funding)} />
@@ -246,9 +204,9 @@ export function ProvidersBillingModule() {
         </XStack>
       ),
     },
-    { key: 'tokens', header: 'Tokens', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color11">{compactNumber(r.tokens)}</Text> },
-    { key: 'costCents', header: 'Cost', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color12">{usd(r.costCents)}</Text> },
-    { key: 'requests', header: 'Requests', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color11">{compactNumber(r.requests)}</Text> },
+    { key: 'tokens', header: 'Tokens', align: 'right', mono: true, sortable: true, render: (r) => compactNumber(r.tokens) },
+    { key: 'costCents', header: 'Cost', align: 'right', mono: true, sortable: true, render: (r) => usd(r.costCents) },
+    { key: 'requests', header: 'Requests', align: 'right', mono: true, sortable: true, render: (r) => compactNumber(r.requests) },
   ]
 
   const knownClasses = fold.costSlices // ordered credit→paid→paid_only→byo→other
@@ -274,14 +232,14 @@ export function ProvidersBillingModule() {
 
         {/* headline aggregate — reads at a glance even with one provider */}
         <XStack gap="$3" flexWrap="wrap">
-          <MetricCard icon={<Wallet size={16} />} label="Remaining credit" value={credit ? usd(summary.totalRemainingCents) : '—'} caption={credit ? `across ${summary.providersWithCredit} funded provider${summary.providersWithCredit === 1 ? '' : 's'}` : 'loading'} />
-          <MetricCard icon={<CreditCard size={16} />} label="Granted" value={credit ? usd(summary.totalGrantCents) : '—'} caption="total credit granted" />
-          <MetricCard icon={<Flame size={16} />} label="Burn / day" value={credit ? usd(summary.totalBurnCents) : '—'} caption="current daily burn" />
-          <MetricCard icon={<Gauge size={16} />} label="Min runway" value={credit ? runwayLabel(summary.minRunwayDays) : '—'} caption="the provider that runs out first" />
+          <MetricCard icon={<Wallet size={16} />} label="Remaining credit" value={credit ? usd(summary.totalRemainingCents) : DASH} caption={credit ? `across ${summary.providersWithCredit} funded provider${summary.providersWithCredit === 1 ? '' : 's'}` : 'loading'} />
+          <MetricCard icon={<CreditCard size={16} />} label="Granted" value={credit ? usd(summary.totalGrantCents) : DASH} caption="total credit granted" />
+          <MetricCard icon={<Flame size={16} />} label="Burn / day" value={credit ? usd(summary.totalBurnCents) : DASH} caption="current daily burn" />
+          <MetricCard icon={<Gauge size={16} />} label="Min runway" value={credit ? runwayLabel(summary.minRunwayDays) : DASH} caption="the provider that runs out first" />
         </XStack>
 
         {creditErr && !credit ? (
-          <ErrorState err={creditErr} onRetry={loadCredit} />
+          <ErrorState err={creditErr} onRetry={reloadCredit} />
         ) : credit && credit.length === 0 ? (
           <EmptyNote title="No provider credit yet" body="No upstream provider is reporting a credit grant. Providers appear here as credit is granted or keys are added." />
         ) : (
@@ -305,11 +263,11 @@ export function ProvidersBillingModule() {
               How spend splits across our credit, paid, paid-only, and BYO.
             </Text>
           </YStack>
-          <RangeTabs value={range} onChange={onRange} />
+          <RangeTabs value={range} onChange={setRange} />
         </XStack>
 
         {fundingErr && !funding ? (
-          <ErrorState err={fundingErr} onRetry={() => loadFunding(range)} />
+          <ErrorState err={fundingErr} onRetry={reloadFunding} />
         ) : noFunding ? (
           <EmptyNote title="No usage in this window" body="No billed usage was recorded for the selected range. Widen the range, or check back once traffic flows." />
         ) : (
@@ -319,7 +277,7 @@ export function ProvidersBillingModule() {
               <MetricCard
                 icon={<Coins size={16} />}
                 label="Total spend"
-                value={funding ? usd(fold.total.costCents) : '—'}
+                value={funding ? usd(fold.total.costCents) : DASH}
                 caption={funding ? `${compactNumber(fold.total.tokens)} tokens · ${compactNumber(fold.total.requests)} requests` : 'loading'}
               />
               {knownClasses.map((s) => (
@@ -361,12 +319,15 @@ export function ProvidersBillingModule() {
                 <Text fontSize="$3" color="$color11">
                   Usage by provider &amp; model
                 </Text>
+                <SearchInput value={q} onChange={setQ} placeholder="Search providers, models, funding…" />
                 <DataTable<FundingRow>
                   columns={fundingCols}
                   rows={fundingRows}
-                  loading={loading && !funding}
-                  empty="No usage rows."
+                  loading={fundingLoading}
+                  empty={q ? 'No usage rows match.' : 'No usage rows.'}
                   rowKey={(r) => `${r.provider}/${r.model}/${r.funding}`}
+                  sort={sort}
+                  onSortChange={onSortChange}
                 />
               </YStack>
             </XStack>

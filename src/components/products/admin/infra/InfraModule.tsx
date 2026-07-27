@@ -13,9 +13,11 @@
  *  1. Droplet LOCAL disk is INCLUDED in the droplet price. It is NOT block storage and
  *     NOT separately billed. The Overview says so loudly, because operators otherwise
  *     chase a phantom line item that does not exist.
- *  2. A delete affordance appears if and ONLY if the backend says `deletable` (which
- *     means a COMPLETE scan proved the volume unreferenced). Otherwise the row shows
- *     `blockedReason` instead — never a delete the server will refuse.
+ *  2. A mutation affordance appears if and ONLY if the backend's own permission bit says
+ *     so — `deletable` on a volume or load balancer, `mutable` on a droplet, a complete
+ *     scan for a node-pool scale. Otherwise the row and the drawer show `blockedReason`
+ *     instead: never a control the server will refuse. The controls themselves live in
+ *     `actions.tsx`; the gate that decides is `gate`/`scanGate` in the API module.
  *
  * Every table sorts on every column through the shared `DataTable` sort props + the pure
  * `sortRows` comparator; nothing here re-implements ordering, filtering, or formatting.
@@ -28,6 +30,9 @@ import { Ban, CircleAlert, HardDrive, Layers, Network, RefreshCw, Server, Shield
 import { ApiError } from '~/lib/api'
 import {
   AdminInfraApi,
+  destroyMessage,
+  gate,
+  scanGate,
   type InfraCluster,
   type InfraFinding,
   type InfraLoadBalancer,
@@ -70,6 +75,7 @@ import {
   type Sort,
   type VolumeFilter,
 } from './logic'
+import { Blocked, Gated, ResizeDroplet, ScalePool } from './actions'
 
 /** The board's tabs, in display order. `id` matches the registry sub-page slug. */
 const TABS: { id: string; label: string }[] = [
@@ -160,10 +166,10 @@ export function InfraModule({ params }: { params: Record<string, string> }) {
 
   const body = (() => {
     if (err) return isForbidden(err) ? <OperatorAccessRequired /> : <BackendStateCard state={classifyBackend(err)} onRetry={() => void load()} hint="GET /v1/admin/infra" />
-    if (tab === 'clusters') return <ClustersTab data={data} loading={loading} />
+    if (tab === 'clusters') return <ClustersTab data={data} loading={loading} reload={() => void load(true)} />
     if (tab === 'nodes') return <NodesTab data={data} loading={loading} reload={() => void load(true)} toast={toast} />
     if (tab === 'volumes') return <VolumesTab data={data} loading={loading} reload={() => void load(true)} toast={toast} />
-    if (tab === 'load-balancers') return <LoadBalancersTab data={data} loading={loading} />
+    if (tab === 'load-balancers') return <LoadBalancersTab data={data} loading={loading} reload={() => void load(true)} toast={toast} />
     if (tab === 'audit') return <AuditTab data={data} loading={loading} />
     return <OverviewTab data={data} loading={loading} />
   })()
@@ -201,18 +207,19 @@ export function InfraModule({ params }: { params: Record<string, string> }) {
   )
 }
 
-/** The scan-completeness banner — an incomplete scan makes NOTHING deletable. */
+/** The scan-completeness banner — an incomplete scan freezes EVERY mutation. */
 function ScanBanner({ data }: { data: InfraSnapshot }) {
   const failed = data.sources.filter((s) => !s.ok)
   return (
     <Card borderWidth={1} borderColor="$yellow8" bg="$yellow2" p="$3.5" gap="$2">
       <XStack gap="$2" items="center">
         <CircleAlert size={16} color="$yellow11" />
-        <Text fontSize="$4" fontWeight="700" color="$color12">Scan incomplete — no volume can be deleted</Text>
+        <Text fontSize="$4" fontWeight="700" color="$color12">Scan incomplete — every mutation is refused</Text>
       </XStack>
       <Text fontSize="$3" color="$color11">
         {data.incompleteReason || 'At least one cluster could not be scanned.'} Until every cluster reports, a volume that
-        looks unreferenced may still be in use by the cluster we could not read, so deletion is disabled fleet-wide.
+        looks unreferenced may still be in use by the cluster we could not read — so deletes, droplet changes and pool
+        scaling are all disabled fleet-wide.
       </Text>
       {failed.length ? (
         <Text fontSize="$2" color="$color10">
@@ -291,11 +298,14 @@ function OverviewTab({ data, loading }: { data: InfraSnapshot; loading: boolean 
 
 // ── Clusters ──────────────────────────────────────────────────────────────────
 
-function ClustersTab({ data, loading }: { data: InfraSnapshot; loading: boolean }) {
+function ClustersTab({ data, loading, reload }: { data: InfraSnapshot; loading: boolean; reload: () => void }) {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const [open, setOpen] = useState<InfraCluster | null>(null)
   const { sort, onSortChange, apply } = useSort('monthlyCents', 'desc')
+  // A pool scale has no per-row flag of its own: the server refuses EVERY mutation while
+  // the cross-cluster scan is incomplete, so that is the whole gate.
+  const scan = scanGate(data)
 
   const options = useMemo(() => ALL_OPT<string>(distinctValues(data.clusters, (c) => c.status)), [data.clusters])
   const rows = useMemo(
@@ -324,18 +334,33 @@ function ClustersTab({ data, loading }: { data: InfraSnapshot; loading: boolean 
       <DataTable columns={columns} rows={rows} loading={loading} rowKey={(c) => c.id} onRowPress={setOpen} sort={sort} onSortChange={onSortChange} empty="No clusters." />
       <SlideOver open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} icon={Layers} size={460}>
         {open ? (
-          <YStack gap="$1">
-            <Fact label="Cluster ID" value={open.id} />
-            <Fact label="Region" value={open.region} />
-            <Fact label="Version" value={open.version} />
-            <Fact label="Status" value={<StatusTag status={open.status} />} />
-            <Fact label="Node pools" value={String(open.nodePools)} />
-            <Fact label="Nodes" value={String(open.nodes)} />
-            <Fact label="Pods" value={String(open.pods)} />
-            <Fact label="PVs / PVCs" value={`${open.pvs} / ${open.pvcs}`} />
-            <Fact label="Idle PVCs" value={String(open.idlePVCs)} />
-            <Fact label="Monthly" value={`${usd(open.monthlyCents)}/mo`} />
-            <Fact label="Scanned" value={open.scanned ? 'Yes' : `No — ${open.scanError || 'no error given'}`} />
+          <YStack gap="$4">
+            <YStack gap="$1">
+              <Fact label="Cluster ID" value={open.id} />
+              <Fact label="Region" value={open.region} />
+              <Fact label="Version" value={open.version} />
+              <Fact label="Status" value={<StatusTag status={open.status} />} />
+              <Fact label="Node pools" value={String(open.nodePools)} />
+              <Fact label="Nodes" value={String(open.nodes)} />
+              <Fact label="Pods" value={String(open.pods)} />
+              <Fact label="PVs / PVCs" value={`${open.pvs} / ${open.pvcs}`} />
+              <Fact label="Idle PVCs" value={String(open.idlePVCs)} />
+              <Fact label="Monthly" value={`${usd(open.monthlyCents)}/mo`} />
+              <Fact label="Scanned" value={open.scanned ? 'Yes' : `No — ${open.scanError || 'no error given'}`} />
+            </YStack>
+
+            <YStack gap="$2">
+              <Text fontSize="$4" fontWeight="700" color="$color12">Node pools</Text>
+              {(open.pools ?? []).length === 0 ? (
+                <Text fontSize="$2" color="$color10">
+                  This scan reported no pool detail for {open.name}, so there is nothing to scale here.
+                </Text>
+              ) : (
+                (open.pools ?? []).map((p) => (
+                  <ScalePool key={p.name} clusterId={open.id} pool={p} gate={scan} onDone={() => { setOpen(null); reload() }} />
+                ))
+              )}
+            </YStack>
           </YStack>
         ) : null}
       </SlideOver>
@@ -346,6 +371,14 @@ function ClustersTab({ data, loading }: { data: InfraSnapshot; loading: boolean 
 // ── Nodes ─────────────────────────────────────────────────────────────────────
 
 type Toast = ReturnType<typeof useToast>
+
+/**
+ * A droplet's mutation gate — ONE reading of `mutable`, shared by resize and destroy,
+ * so the two controls can never disagree about what the server allows. Cordon/drain are
+ * NOT gated on it: they act on the Kubernetes node, which is precisely what a DOKS
+ * droplet (never droplet-mutable) still permits.
+ */
+const mutable = (n: InfraNode) => gate(n.mutable, n.blockedReason, 'The server has not cleared this droplet for changes.')
 
 const NODE_OPTIONS: Option<NodeFilter>[] = [
   { label: 'All', value: 'all' },
@@ -437,17 +470,42 @@ function NodesTab({ data, loading, reload, toast }: { data: InfraSnapshot; loadi
               <Fact label="Tags" value={open.tags.length ? open.tags.join(', ') : '—'} />
             </YStack>
 
+            <ResizeDroplet node={open} gate={mutable(open)} onDone={() => { setOpen(null); reload() }} />
+
             <YStack gap="$2">
               <Text fontSize="$4" fontWeight="700" color="$color12">Drain this node</Text>
               <ConfirmDelete
                 message={drainMessage(open)}
                 confirmLabel={`Drain ${open.name}`}
+                busyLabel="Draining…"
                 run={async () => {
                   const r = await AdminInfraApi.cordonNode(open.id, true, true)
                   toast.success(`Drained ${r.name || open.name}`, `${r.evicted} pod${r.evicted === 1 ? '' : 's'} evicted.`)
                 }}
                 onDone={() => { setOpen(null); reload() }}
               />
+            </YStack>
+
+            <YStack gap="$2">
+              <Text fontSize="$4" fontWeight="700" color="$color12">Destroy this droplet</Text>
+              <Gated gate={mutable(open)} title="This droplet cannot be destroyed">
+                <ConfirmDelete
+                  message={destroyMessage(
+                    'droplet',
+                    open.name,
+                    open.monthlyCents,
+                    open.pods ? `${open.pods} pod${open.pods === 1 ? '' : 's'} still run on it — drain it first.` : 'No pods run on it.',
+                  )}
+                  confirmLabel={`Destroy ${open.name}`}
+                  busyLabel="Destroying…"
+                  confirmText={open.name}
+                  run={async () => {
+                    const r = await AdminInfraApi.deleteDroplet(open.id)
+                    toast.success(`Destroyed ${r.name || open.name}`, `${usd(r.freedMonthlyCents || open.monthlyCents)}/mo reclaimed.`)
+                  }}
+                  onDone={() => { setOpen(null); reload() }}
+                />
+              </Gated>
             </YStack>
           </YStack>
         ) : null}
@@ -627,15 +685,10 @@ function VolumesTab({ data, loading, reload, toast }: { data: InfraSnapshot; loa
                 </>
               ) : (
                 // No control at all — an offer the server would refuse is worse than none.
-                <Card borderWidth={1} borderColor="$borderColor" bg="$color2" p="$3" gap="$1.5">
-                  <XStack gap="$2" items="center">
-                    <ShieldAlert size={15} color="$color10" />
-                    <Text fontSize="$3" fontWeight="700" color="$color12">This volume cannot be deleted</Text>
-                  </XStack>
-                  <Text fontSize="$2" color="$color11">
-                    {open.blockedReason || `It is ${open.state} — only a volume proven unreferenced by a complete scan can be deleted.`}
-                  </Text>
-                </Card>
+                <Blocked
+                  title="This volume cannot be deleted"
+                  reason={open.blockedReason || `It is ${open.state} — only a volume proven unreferenced by a complete scan can be deleted.`}
+                />
               )}
             </YStack>
           </YStack>
@@ -647,7 +700,11 @@ function VolumesTab({ data, loading, reload, toast }: { data: InfraSnapshot; loa
 
 // ── Load balancers ────────────────────────────────────────────────────────────
 
-function LoadBalancersTab({ data, loading }: { data: InfraSnapshot; loading: boolean }) {
+/** A load balancer's delete gate — the same fail-closed reading as a volume's. */
+const removable = (l: InfraLoadBalancer) =>
+  gate(l.deletable, l.blockedReason, 'The server has not cleared this load balancer for deletion.')
+
+function LoadBalancersTab({ data, loading, reload, toast }: { data: InfraSnapshot; loading: boolean; reload: () => void; toast: Toast }) {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const [open, setOpen] = useState<InfraLoadBalancer | null>(null)
@@ -655,7 +712,7 @@ function LoadBalancersTab({ data, loading }: { data: InfraSnapshot; loading: boo
 
   const options = useMemo(() => ALL_OPT<string>(distinctValues(data.loadBalancers, (l) => l.status)), [data.loadBalancers])
   const rows = useMemo(
-    () => apply(filterByStatus(data.loadBalancers, q, status, (l) => l.status, (l) => `${l.name} ${l.id} ${l.region} ${l.ip} ${l.cluster}`)),
+    () => apply(filterByStatus(data.loadBalancers, q, status, (l) => l.status, (l) => `${l.name} ${l.id} ${l.region} ${l.ip} ${l.cluster} ${l.service ?? ''}`)),
     [data.loadBalancers, q, status, apply],
   )
 
@@ -667,24 +724,59 @@ function LoadBalancersTab({ data, loading }: { data: InfraSnapshot; loading: boo
     { key: 'sizeUnit', header: 'Units', width: 74, align: 'right', mono: true, sortable: true },
     { key: 'droplets', header: 'Droplets', width: 88, align: 'right', mono: true, sortable: true },
     { key: 'cluster', header: 'Cluster', width: 150, sortable: true, render: (l) => l.cluster || '—' },
+    // The Service that claims it: both the reason a delete is refused and the thing to
+    // retire first — a cluster recreates its own LB seconds after one is destroyed.
+    { key: 'service', header: 'Service', width: 170, sortable: true, render: (l) => l.service || '—' },
     { key: 'monthlyCents', header: 'Monthly', width: 100, align: 'right', mono: true, sortable: true, render: (l) => usd(l.monthlyCents) },
+    {
+      key: 'deletable',
+      header: 'Deletable',
+      width: 120,
+      sortable: true,
+      render: (l) => (l.deletable ? <StatusTag status="ready" /> : <Text fontSize="$1" color="$color10" numberOfLines={1}>{l.blockedReason || 'In use'}</Text>),
+    },
   ]
 
   return (
     <YStack gap="$3">
-      <FilterBar q={q} onQ={setQ} placeholder="Search load balancers…" options={options} value={status} onChange={setStatus} />
+      <FilterBar q={q} onQ={setQ} placeholder="Search load balancers, services…" options={options} value={status} onChange={setStatus} />
       <DataTable columns={columns} rows={rows} loading={loading} rowKey={(l) => l.id} onRowPress={setOpen} sort={sort} onSortChange={onSortChange} empty="No load balancers." />
-      <SlideOver open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} icon={Network} size={440}>
+      <SlideOver open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} icon={Network} size={460}>
         {open ? (
-          <YStack gap="$1">
-            <Fact label="ID" value={open.id} />
-            <Fact label="Region" value={open.region} />
-            <Fact label="Status" value={<StatusTag status={open.status} />} />
-            <Fact label="IP" value={open.ip || '—'} />
-            <Fact label="Size units" value={String(open.sizeUnit)} />
-            <Fact label="Droplets behind it" value={String(open.droplets)} />
-            <Fact label="Cluster" value={open.cluster || '—'} />
-            <Fact label="Monthly" value={`${usd(open.monthlyCents)}/mo`} />
+          <YStack gap="$4">
+            <YStack gap="$1">
+              <Fact label="ID" value={open.id} />
+              <Fact label="Region" value={open.region} />
+              <Fact label="Status" value={<StatusTag status={open.status} />} />
+              <Fact label="IP" value={open.ip || '—'} />
+              <Fact label="Size units" value={String(open.sizeUnit)} />
+              <Fact label="Droplets behind it" value={String(open.droplets)} />
+              <Fact label="Cluster" value={open.cluster || '—'} />
+              <Fact label="Kubernetes Service" value={open.service || 'None — no Service claims it'} />
+              <Fact label="Monthly" value={`${usd(open.monthlyCents)}/mo`} />
+            </YStack>
+
+            <YStack gap="$2">
+              <Text fontSize="$4" fontWeight="700" color="$color12">Destroy</Text>
+              <Gated gate={removable(open)} title="This load balancer cannot be deleted">
+                <ConfirmDelete
+                  message={destroyMessage(
+                    'load balancer',
+                    open.name,
+                    open.monthlyCents,
+                    open.ip ? `Traffic to ${open.ip} stops immediately.` : 'It has no IP, so no traffic stops.',
+                  )}
+                  confirmLabel={`Destroy ${open.name}`}
+                  busyLabel="Destroying…"
+                  confirmText={open.name}
+                  run={async () => {
+                    const r = await AdminInfraApi.deleteLoadBalancer(open.id)
+                    toast.success(`Destroyed ${r.name || open.name}`, `${usd(r.freedMonthlyCents || open.monthlyCents)}/mo reclaimed.`)
+                  }}
+                  onDone={() => { setOpen(null); reload() }}
+                />
+              </Gated>
+            </YStack>
           </YStack>
         ) : null}
       </SlideOver>

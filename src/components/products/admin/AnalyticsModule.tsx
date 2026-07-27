@@ -13,23 +13,23 @@
  * heatmap shows real cohort × period percentages or honest zeros — never an invented
  * triangle.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, RefreshCw, TrendingUp, UserPlus, Users } from '@hanzogui/lucide-icons-2'
 
-import { ApiError } from '~/lib/api'
 import { AdminCockpitApi, type AnalyticsData } from '~/lib/api/admin-cockpit'
+import { DASH, int, pct, usd } from '~/lib/format'
+import { useAdminResource } from '~/lib/hooks/useAdminResource'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { LineChart, BarChart, type ChartPoint } from '~/components/ui/Charts'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
 import { toneVar } from '~/components/ui/tone'
 
 type Range = '7d' | '30d' | '90d' | 'all'
 const RANGES: { key: Range; label: string }[] = [
   { key: '7d', label: '7D' }, { key: '30d', label: '30D' }, { key: '90d', label: '90D' }, { key: 'all', label: 'All' },
 ]
-const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const pts = (s: { t: string; value: number }[]): ChartPoint[] => s.map((p) => ({ label: p.t, value: p.value }))
 
 /** An honest "computed[x] is false" panel — never a fabricated chart. */
@@ -84,19 +84,12 @@ function RetentionHeatmap({ data }: { data: AnalyticsData['retention'] }) {
 
 export function AnalyticsModule() {
   const [range, setRange] = useState<Range>('30d')
-  const [data, setData] = useState<AnalyticsData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState<ApiError | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true); setErr(null)
-    try { setData(await AdminCockpitApi.analytics(range)) } catch (e) { setErr(asApiError(e)) } finally { setLoading(false) }
-  }, [range])
-
-  useEffect(() => { void load() }, [load])
+  const { data, err, reload } = useAdminResource(
+    useCallback(() => AdminCockpitApi.analytics(range), [range]),
+  )
 
   if (err && isForbidden(err)) return <OperatorAccessRequired />
-  if (err) return <YStack p="$4" gap="$4"><PageHeader title="Analytics" /><ErrorState err={err} onRetry={load} /></YStack>
+  if (err) return <YStack p="$4" gap="$4"><PageHeader title="Analytics" /><ErrorState err={err} onRetry={reload} /></YStack>
 
   const c = data?.computed ?? {}
   const rangeToggle = (
@@ -112,16 +105,16 @@ export function AnalyticsModule() {
       <PageHeader
         title="Analytics"
         subtitle="Cohort retention, growth, churn, and revenue across the whole customer base. Global-admin only."
-        actions={<XStack gap="$2" items="center">{rangeToggle}<Button size="$3" icon={<RefreshCw size={15} />} onPress={load}>Refresh</Button></XStack>}
+        actions={<XStack gap="$2" items="center">{rangeToggle}<Button size="$3" icon={<RefreshCw size={15} />} onPress={reload}>Refresh</Button></XStack>}
       />
 
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Users size={16} />} label="Customers" value={data ? String(data.totalCustomers) : '—'} caption="all-time" />
-        <MetricCard icon={<UserPlus size={16} />} label="New" value={data ? String(data.newCustomers) : '—'} caption={data ? `this ${range} · ${data.growthRatePct >= 0 ? '+' : ''}${data.growthRatePct.toFixed(0)}% vs prior` : `this ${range}`} />
-        <MetricCard icon={<Activity size={16} />} label="Active (MAU)" value={data && c.active ? String(data.mau) : '—'} caption={data && c.active ? `DAU ${data.dau} · WAU ${data.wau}` : 'needs usage data'} />
-        <MetricCard icon={<TrendingUp size={16} />} label="MRR" value={data ? usd(data.mrrCents) : '—'} caption="recurring" />
-        <MetricCard icon={<TrendingUp size={16} />} label="ARPU" value={data && c.arpu ? usd(data.arpuCents) : '—'} caption={data && c.arpu ? 'per active customer' : 'needs usage data'} />
-        <MetricCard icon={<TrendingUp size={16} />} label="Churn" value={data && c.churn ? `${data.churnRatePct.toFixed(1)}%` : '—'} caption={data && c.churn ? 'monthly logo churn' : 'needs usage history'} />
+        <MetricCard icon={<Users size={16} />} label="Customers" value={int(data?.totalCustomers)} caption="all-time" />
+        <MetricCard icon={<UserPlus size={16} />} label="New" value={int(data?.newCustomers)} caption={data ? `this ${range} · ${data.growthRatePct >= 0 ? '+' : ''}${pct(data.growthRatePct, 0)} vs prior` : `this ${range}`} />
+        <MetricCard icon={<Activity size={16} />} label="Active (MAU)" value={data && c.active ? int(data.mau) : DASH} caption={data && c.active ? `DAU ${int(data.dau)} · WAU ${int(data.wau)}` : 'needs usage data'} />
+        <MetricCard icon={<TrendingUp size={16} />} label="MRR" value={usd(data?.mrrCents)} caption="recurring" />
+        <MetricCard icon={<TrendingUp size={16} />} label="ARPU" value={data && c.arpu ? usd(data.arpuCents) : DASH} caption={data && c.arpu ? 'per active customer' : 'needs usage data'} />
+        <MetricCard icon={<TrendingUp size={16} />} label="Churn" value={data && c.churn ? pct(data.churnRatePct) : DASH} caption={data && c.churn ? 'monthly logo churn' : 'needs usage history'} />
       </XStack>
 
       {/* HEADLINE: cohort retention heatmap */}
@@ -154,8 +147,8 @@ export function AnalyticsModule() {
       </XStack>
 
       <XStack gap="$3" flexWrap="wrap">
-        <Text fontSize="$1" color="$color9">LTV: {data && data.ltvCents != null ? usd(data.ltvCents) : '— (needs observed churn)'}</Text>
-        <Text fontSize="$1" color="$color9">· NRR: {data && data.nrrPct != null ? `${data.nrrPct.toFixed(0)}%` : '— (needs MRR history)'}</Text>
+        <Text fontSize="$1" color="$color9">LTV: {data && data.ltvCents != null ? usd(data.ltvCents) : `${DASH} (needs observed churn)`}</Text>
+        <Text fontSize="$1" color="$color9">· NRR: {data && data.nrrPct != null ? pct(data.nrrPct, 0) : `${DASH} (needs MRR history)`}</Text>
       </XStack>
     </YStack>
   )

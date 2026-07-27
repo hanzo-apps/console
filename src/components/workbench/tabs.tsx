@@ -28,9 +28,7 @@ import { Button, Card, Input, ScrollView, Spinner, Text, XStack, YStack } from '
 import {
   Activity,
   AlertTriangle,
-  Check,
   ChevronRight,
-  Copy,
   ExternalLink,
   KeyRound,
   Lightbulb,
@@ -48,6 +46,7 @@ import { KeysApi, type KeyStatus } from '~/lib/api'
 import { ApmApi, apmWindow, type ExceptionGroup, type ServiceHealth } from '~/lib/api/apm'
 import { ApiError, cloudProxyV1Url, restGet } from '~/lib/api/client'
 import { config } from '~/config'
+import { CopyButton } from '~/components/ui/CopyButton'
 import { MetricCard } from '~/components/ui/Metric'
 import { RuntimeNotice } from '~/components/products/observability/RuntimeNotice'
 import { TracesModule } from '~/components/products/TracesModule'
@@ -75,32 +74,6 @@ export function Cell({ w, flex, dim, right, children }: { w?: number; flex?: num
     >
       {children}
     </Text>
-  )
-}
-
-/** Copy-to-clipboard button with a transient confirmed state. */
-function CopyBtn({ value, label = 'Copy', size = '$1' as const }: { value: string; label?: string; size?: '$1' | '$2' }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <Button
-      size={size}
-      chromeless
-      icon={copied ? <Check size={12} /> : <Copy size={12} />}
-      onPress={() => {
-        void navigator.clipboard?.writeText(value).then(
-          () => {
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1400)
-          },
-          () => undefined,
-        )
-      }}
-      aria-label={label}
-    >
-      <Text fontSize="$1" color="$color10">
-        {copied ? 'Copied' : label}
-      </Text>
-    </Button>
   )
 }
 
@@ -136,7 +109,6 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
   const [creating, setCreating] = useState(false)
   const [newKey, setNewKey] = useState<string | null>(null)
   const [keyErr, setKeyErr] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -220,22 +192,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
                 <Text flex={1} fontSize="$1" color="$color12" className="hz-mono" numberOfLines={1}>
                   {newKey}
                 </Text>
-                <Button
-                  size="$1"
-                  onPress={() => {
-                    try {
-                      void navigator.clipboard?.writeText(newKey)
-                    } catch {
-                      /* clipboard unavailable — the key text is selectable */
-                    }
-                    setCopied(true)
-                    setTimeout(() => setCopied(false), 1500)
-                  }}
-                >
-                  <Text fontSize="$1" fontWeight="700">
-                    {copied ? 'Copied' : 'Copy'}
-                  </Text>
-                </Button>
+                <CopyButton value={newKey} size="$1" chromeless={false} ariaLabel="Copy the new API key" />
               </XStack>
             </YStack>
           ) : null}
@@ -862,7 +819,7 @@ export function InspectorTab({ records }: { records: UsageRecord[] }) {
                     {result.label} · GET /v1/{result.path}
                   </Text>
                   <XStack flex={1} />
-                  {result.ok ? <CopyBtn value={curlFor(result.path)} label="curl" /> : null}
+                  {result.ok ? <CopyButton value={curlFor(result.path)} label="curl" size="$1" /> : null}
                 </XStack>
               ) : null}
               <Text fontSize="$1" color={result.ok ? '$color12' : toneColor('critical')} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
@@ -982,8 +939,8 @@ export function ShellTab() {
                 </Text>
                 {e.ok && e.path ? (
                   <>
-                    <CopyBtn value={curlFor(e.path)} label="curl" />
-                    <CopyBtn value={hanzoCli(e.path)} label="CLI" />
+                    <CopyButton value={curlFor(e.path)} label="curl" size="$1" />
+                    <CopyButton value={hanzoCli(e.path)} label="CLI" size="$1" />
                   </>
                 ) : null}
               </XStack>

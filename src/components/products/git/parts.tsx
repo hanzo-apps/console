@@ -14,7 +14,6 @@ import { Button, Input, Popover, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Check,
   ChevronDown,
-  Copy,
   File as FileIcon2,
   Folder,
   GitBranch,
@@ -24,45 +23,12 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import type { Ref, RefList } from '~/lib/api/git'
+import { CopyButton } from '~/components/ui/CopyButton'
 import { paper } from '~/components/ui/paper'
 
-/** Copy a value to the clipboard, showing a transient check. ONE control, DRY. */
-export function CopyButton({
-  value,
-  label = 'Copy',
-  ariaLabel,
-  size = '$2',
-}: {
-  value: string
-  label?: string
-  ariaLabel?: string
-  size?: '$1' | '$2' | '$3'
-}) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard?.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* clipboard blocked (insecure context) — the value is already visible */
-    }
-  }
-  return (
-    <Button
-      size={size}
-      chromeless
-      aria-label={ariaLabel ?? label}
-      disabled={!value}
-      icon={copied ? <Check size={14} /> : <Copy size={14} />}
-      onPress={() => void copy()}
-    >
-      <Text fontSize="$2" color="$color11">
-        {copied ? 'Copied' : label}
-      </Text>
-    </Button>
-  )
-}
+// The copy control is the shared UI primitive — re-exported so the git views (and
+// anything that imported it from here) keep one import path.
+export { CopyButton }
 
 /**
  * The clone panel — a segmented HTTPS/SSH toggle over one copyable URL box, the gitea

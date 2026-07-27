@@ -17,13 +17,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Dialog, Spinner, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
-import { Check, Copy, Link2, RefreshCw, Shield, Trash2, UserPlus, X } from '@hanzogui/lucide-icons-2'
+import { Link2, RefreshCw, Shield, Trash2, UserPlus, X } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, TeamApi, type IamUser, type Role, type Paged } from '~/lib/api'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { CopyButton } from '~/components/ui/CopyButton'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { DataTable, type Column } from '~/components/ui/DataTable'
@@ -79,18 +80,8 @@ const isPending = (u: IamUser): boolean => !(typeof u.password === 'string' && u
 const mfaOn = (u: IamUser): boolean =>
   Boolean((u.preferredMfaType && u.preferredMfaType !== '') || u.mfaPhoneEnabled || u.mfaEmailEnabled)
 
-/** Read-only, copyable link field with a transient "copied" state. */
+/** Read-only, copyable link field. */
 function CopyLink({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard?.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* clipboard unavailable — the value is still visible + selectable */
-    }
-  }
   return (
     <XStack gap="$2" items="center">
       <Text
@@ -107,9 +98,7 @@ function CopyLink({ value }: { value: string }) {
       >
         {value}
       </Text>
-      <Button size="$3" icon={copied ? <Check size={15} /> : <Copy size={15} />} onPress={() => void copy()}>
-        {copied ? 'Copied' : 'Copy'}
-      </Button>
+      <CopyButton value={value} size="$3" chromeless={false} ariaLabel="Copy the invite link" />
     </XStack>
   )
 }

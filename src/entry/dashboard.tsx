@@ -254,14 +254,22 @@ function NavRow({
   ) : undefined
   return (
     <XStack items="center" gap="$1">
+      {/* Active marker: a 2px rail plus a quiet fill, rather than one heavy block of
+          `$color4`. Scanning a 60-item list, the eye catches the rail immediately and
+          the row itself stays calm — the Linear read. */}
+      <YStack width={2} height={16} rounded="$10" bg={active ? '$color12' : 'transparent'} />
       <Button
         flex={1}
         onPress={onOpen}
-        bg={active ? '$color4' : 'transparent'}
+        height={32}
+        px="$2"
+        rounded="$3"
+        bg={active ? '$color3' : 'transparent'}
+        hoverStyle={{ bg: '$color2' }}
         justify="flex-start"
-        icon={<ProductIcon icon={Icon} color={color} size={18} />}
+        icon={<ProductIcon icon={Icon} color={color} size={16} />}
         iconAfter={hint}
-        size="$3"
+        size="$2"
       >
         {entry.label}
       </Button>
@@ -382,28 +390,30 @@ function CategorySection({
 }) {
   const sectionId = `nav-cat-${categorySlug(category)}`
   return (
-    <YStack gap="$1.5">
+    <YStack gap="$0.5">
       <Button
         chromeless
         size="$2"
-        height={32}
-        px="$2.5"
+        height={26}
+        px="$2"
         rounded="$3"
         justify="flex-start"
         onPress={onToggle}
-        hoverStyle={{ bg: '$color3' }}
-        focusStyle={{ bg: '$color3' }}
+        hoverStyle={{ bg: '$color2' }}
+        focusStyle={{ bg: '$color2' }}
         aria-expanded={open}
         aria-controls={sectionId}
         aria-label={`${category}, ${open ? 'collapse' : 'expand'} section, ${count} items`}
       >
         <XStack flex={1} items="center" gap="$2">
           {/* Flush-left label — calm neutral tint (per-product COLOR lives on the icons
-              within). The count + the collapse chevron sit at the far RIGHT. */}
-          <Text flex={1} fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+              within). The count + the collapse chevron sit at the far RIGHT. A section
+              heading is a landmark, not content: quiet weight and normal case keep the
+              product names the loudest thing in the list. */}
+          <Text flex={1} fontSize="$1" color="$color9" fontWeight="500">
             {category}
           </Text>
-          <Text fontSize={10} fontWeight="700" color="$color9">
+          <Text fontSize={10} fontWeight="500" color="$color9">
             {count}
           </Text>
           {/* The OPTIONAL collapse affordance — a chevron that rotates ▸→▾. Wrapped in a
@@ -419,7 +429,7 @@ function CategorySection({
       </Button>
       <div className="hz-acc" data-open={open ? 'true' : 'false'} id={sectionId} inert={!open}>
         <div className="hz-acc-inner">
-          <YStack gap="$1.5" pb="$2">
+          <YStack gap="$0.5" pb="$2">
             {children}
           </YStack>
         </div>

@@ -12,20 +12,21 @@
  * server-side. NO card data is ever shown (the backend never sends it); an API key's
  * PRESENCE is shown, never its value.
  */
-import { type CSSProperties, useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, Ban, Building2, CheckCircle2, CreditCard, RefreshCw, Users } from '@hanzogui/lucide-icons-2'
 
-import { ApiError } from '~/lib/api'
 import { AdminCockpitApi, type CustomerDetail, type CustomerRow, type GrantSource } from '~/lib/api/admin-cockpit'
+import { DASH, shortDate, usd } from '~/lib/format'
+import { searchRows, useSort } from '~/lib/table'
+import { useAdminResource } from '~/lib/hooks/useAdminResource'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
+import { SearchInput } from '~/components/ui/Filters'
+import { FieldText } from '~/components/ui/Field'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
-
-const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const shortDate = (s: string): string => (s ? (s.split('T')[0] ?? s) : '—')
 
 function StatusBadge({ status }: { status: string }) {
   const suspended = status === 'suspended'
@@ -34,14 +35,6 @@ function StatusBadge({ status }: { status: string }) {
       <Text fontSize="$1" color={suspended ? '$red11' : '$green11'}>{suspended ? 'Suspended' : 'Active'}</Text>
     </XStack>
   )
-}
-
-const INPUT_BASE: CSSProperties = {
-  background: 'transparent',
-  border: '1px solid var(--borderColor)',
-  borderRadius: 8,
-  padding: '8px 10px',
-  color: 'var(--color12)',
 }
 
 /** What a grant submit carries — amount (cents), the source bucket, optional reason. */
@@ -121,15 +114,13 @@ function GrantCreditPanel({
         </XStack>
       </YStack>
       <XStack gap="$3" items="flex-end" flexWrap="wrap">
-        <YStack gap="$1">
+        <YStack gap="$1" width={140}>
           <Text fontSize="$1" color="$color10">Amount (USD)</Text>
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25.00" inputMode="decimal"
-            style={{ ...INPUT_BASE, width: 120 }} />
+          <FieldText value={amount} onChange={setAmount} disabled={busy} placeholder="25.00" />
         </YStack>
         <YStack gap="$1" flex={1} minW={200}>
           <Text fontSize="$1" color="$color10">Reason</Text>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="support comp"
-            style={{ ...INPUT_BASE, width: '100%' }} />
+          <FieldText value={reason} onChange={setReason} disabled={busy} placeholder="support comp" />
         </YStack>
         <XStack gap="$2">
           <Button size="$3" chromeless disabled={busy} onPress={onCancel}>Cancel</Button>
@@ -146,30 +137,21 @@ const grantNotice = (source: GrantSource, res: { grantedCents: number; balanceCe
   `Granted ${usd(res.grantedCents)} ${source === 'trial' ? 'trial credit' : 'prepaid'} · new balance ${usd(res.balanceCents)} · tx ${res.transactionId}`
 
 export function CustomersModule() {
-  const [rows, setRows] = useState<CustomerRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState<ApiError | null>(null)
+  const [q, setQ] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   // Per-row quick-grant: the customer whose grant panel is open (null = closed).
   const [grantFor, setGrantFor] = useState<CustomerRow | null>(null)
   const [grantBusy, setGrantBusy] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setErr(null)
-    try {
-      setRows(await AdminCockpitApi.customers())
-    } catch (e) {
-      setErr(asApiError(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const { data, loading, err, reload } = useAdminResource(useCallback(() => AdminCockpitApi.customers(), []))
+  const { sort, onSortChange, apply } = useSort('spendCents', 'desc')
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  const all = useMemo(() => data ?? [], [data])
+  const rows = useMemo(
+    () => apply(searchRows(all, q, (r) => `${r.display} ${r.org} ${r.ownerEmail} ${r.plan} ${r.status}`)),
+    [all, q, apply],
+  )
 
   const submitGrant = useCallback(async (input: GrantInput, idempotencyKey: string) => {
     if (!grantFor) return
@@ -179,37 +161,38 @@ export function CustomersModule() {
       const res = await AdminCockpitApi.grantCredit(grantFor.org, input, idempotencyKey)
       setNotice({ ok: true, msg: grantNotice(input.source, res) })
       setGrantFor(null)
-      await load()
+      await reload()
     } catch (e) {
       setNotice({ ok: false, msg: asApiError(e).message })
     } finally {
       setGrantBusy(false)
     }
-  }, [grantFor, load])
+  }, [grantFor, reload])
 
-  if (selected) return <CustomerDetailView org={selected} onBack={() => { setSelected(null); void load() }} />
+  if (selected) return <CustomerDetailView org={selected} onBack={() => { setSelected(null); void reload() }} />
 
   if (err && isForbidden(err)) return <OperatorAccessRequired />
-  if (err) return <YStack p="$4" gap="$4"><PageHeader title="Customers" /><ErrorState err={err} onRetry={load} /></YStack>
+  if (err) return <YStack p="$4" gap="$4"><PageHeader title="Customers" /><ErrorState err={err} onRetry={reload} /></YStack>
 
-  const totalBal = rows.reduce((s, r) => s + r.balanceCents, 0)
-  const totalSpend = rows.reduce((s, r) => s + r.spendCents, 0)
-  const suspended = rows.filter((r) => r.status === 'suspended').length
+  const totalBal = all.reduce((s, r) => s + r.balanceCents, 0)
+  const totalSpend = all.reduce((s, r) => s + r.spendCents, 0)
+  const suspended = all.filter((r) => r.status === 'suspended').length
 
   const columns: Column<CustomerRow>[] = [
-    { key: 'org', header: 'Customer', render: (r) => (
+    // Sorts on `display` — the field the cell SHOWS; `org` is the row key, not the label.
+    { key: 'display', header: 'Customer', sortable: true, render: (r) => (
       <YStack>
         <Text fontSize="$3" color="$color12">{r.display}</Text>
         <Text fontSize="$1" color="$color10">{r.ownerEmail || r.org}</Text>
       </YStack>
     ) },
-    { key: 'plan', header: 'Plan', render: (r) => <Text fontSize="$2" color="$color11">{r.plan}</Text> },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-    { key: 'users', header: 'Users', render: (r) => <Text fontSize="$2" color="$color11">{r.users}</Text> },
-    { key: 'balanceCents', header: 'Balance', render: (r) => <Text fontSize="$2" color="$green11">{usd(r.balanceCents)}</Text> },
-    { key: 'spendCents', header: 'Spend', render: (r) => <Text fontSize="$2" color="$color11">{usd(r.spendCents)}</Text> },
-    { key: 'mrrCents', header: 'MRR', render: (r) => <Text fontSize="$2" color="$color11">{r.mrrCents ? usd(r.mrrCents) : '—'}</Text> },
-    { key: 'lastActive', header: 'Last active', render: (r) => <Text fontSize="$1" color="$color10">{shortDate(r.lastActive)}</Text> },
+    { key: 'plan', header: 'Plan', sortable: true },
+    { key: 'status', header: 'Status', sortable: true, render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'users', header: 'Users', align: 'right', mono: true, sortable: true },
+    { key: 'balanceCents', header: 'Balance', align: 'right', mono: true, sortable: true, render: (r) => usd(r.balanceCents) },
+    { key: 'spendCents', header: 'Spend', align: 'right', mono: true, sortable: true, render: (r) => usd(r.spendCents) },
+    { key: 'mrrCents', header: 'MRR', align: 'right', mono: true, sortable: true, render: (r) => (r.mrrCents ? usd(r.mrrCents) : DASH) },
+    { key: 'lastActive', header: 'Last active', align: 'right', mono: true, sortable: true, render: (r) => shortDate(r.lastActive) },
     // Per-ROW quick action — opens the SAME grant flow for this org without leaving the
     // list. `stopPropagation` so the button click doesn't also open the row's detail view.
     { key: 'grant', header: '', width: 96, align: 'right', render: (r) => (
@@ -229,10 +212,10 @@ export function CustomersModule() {
       <PageHeader
         title="Customers"
         subtitle="Every organization on the platform — balances, usage, and access. Global-admin only."
-        actions={<Button size="$3" icon={<RefreshCw size={15} />} onPress={load}>Refresh</Button>}
+        actions={<Button size="$3" icon={<RefreshCw size={15} />} onPress={reload}>Refresh</Button>}
       />
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Users size={16} />} label="Customers" value={String(rows.length)} caption={suspended ? `${suspended} suspended` : 'all active'} />
+        <MetricCard icon={<Users size={16} />} label="Customers" value={String(all.length)} caption={suspended ? `${suspended} suspended` : 'all active'} />
         <MetricCard icon={<CreditCard size={16} />} label="Total balances" value={usd(totalBal)} caption="prepaid credit held" />
         <MetricCard icon={<Building2 size={16} />} label="Total spend" value={usd(totalSpend)} caption="realized usage" />
       </XStack>
@@ -256,13 +239,17 @@ export function CustomersModule() {
         />
       )}
 
+      <SearchInput value={q} onChange={setQ} placeholder="Search customers, orgs, owners, plans…" />
+
       <DataTable<CustomerRow>
         columns={columns}
         rows={rows}
         loading={loading}
-        empty="No customers yet."
+        empty={q ? 'No customers match.' : 'No customers yet.'}
         rowKey={(r) => r.org}
         onRowPress={(r) => setSelected(r.org)}
+        sort={sort}
+        onSortChange={onSortChange}
       />
     </YStack>
   )
@@ -270,29 +257,32 @@ export function CustomersModule() {
 
 // ── one-customer detail + management actions ─────────────────────────────────
 
+const userCols: Column<CustomerDetail['users'][number]>[] = [
+  { key: 'name', header: 'User', sortable: true, render: (u) => (
+    <YStack><Text fontSize="$2" color="$color12">{u.name}{u.isAdmin ? ' · admin' : ''}</Text><Text fontSize="$1" color="$color10">{u.email}</Text></YStack>
+  ) },
+  { key: 'hasApiKey', header: 'API key', sortable: true, render: (u) => <Text fontSize="$1" color={u.hasApiKey ? '$green11' : '$color9'}>{u.hasApiKey ? 'present' : DASH}</Text> },
+  { key: 'forbidden', header: 'Access', sortable: true, render: (u) => <Text fontSize="$1" color={u.forbidden ? '$red11' : '$green11'}>{u.forbidden ? 'suspended' : 'active'}</Text> },
+  { key: 'lastSignin', header: 'Last sign-in', align: 'right', mono: true, sortable: true, render: (u) => shortDate(u.lastSignin) },
+]
+
+const txCols: Column<CustomerDetail['transactions'][number]>[] = [
+  { key: 'time', header: 'When', align: 'right', mono: true, sortable: true, render: (t) => shortDate(t.time) },
+  { key: 'type', header: 'Type', sortable: true, render: (t) => <Text fontSize="$2" color={t.type === 'deposit' ? '$green11' : '$color11'}>{t.type}</Text> },
+  { key: 'cents', header: 'Amount', align: 'right', mono: true, sortable: true, render: (t) => usd(t.cents) },
+  { key: 'notes', header: 'Notes', sortable: true, render: (t) => t.notes ?? '' },
+]
+
 function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }) {
-  const [detail, setDetail] = useState<CustomerDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState<ApiError | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null)
   const [showCredit, setShowCredit] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setErr(null)
-    try {
-      setDetail(await AdminCockpitApi.customer(org))
-    } catch (e) {
-      setErr(asApiError(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [org])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const { data: detail, loading, err, reload } = useAdminResource(
+    useCallback(() => AdminCockpitApi.customer(org), [org]),
+  )
+  const users = useSort('name')
+  const txs = useSort('time', 'desc')
 
   const grant = useCallback(async (input: GrantInput, idempotencyKey: string) => {
     setBusy(true)
@@ -301,13 +291,13 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
       const res = await AdminCockpitApi.grantCredit(org, input, idempotencyKey)
       setNotice({ ok: true, msg: grantNotice(input.source, res) })
       setShowCredit(false)
-      await load()
+      await reload()
     } catch (e) {
       setNotice({ ok: false, msg: asApiError(e).message })
     } finally {
       setBusy(false)
     }
-  }, [org, load])
+  }, [org, reload])
 
   const toggleSuspend = useCallback(async (suspend: boolean) => {
     setBusy(true)
@@ -316,37 +306,22 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
       const res = suspend ? await AdminCockpitApi.suspend(org) : await AdminCockpitApi.reactivate(org)
       const failed = res.failed.length ? ` (${res.failed.length} user(s) not updated)` : ''
       setNotice({ ok: res.failed.length === 0, msg: `${suspend ? 'Suspended' : 'Reactivated'} ${res.affected.length} user(s)${failed}` })
-      await load()
+      await reload()
     } catch (e) {
       setNotice({ ok: false, msg: asApiError(e).message })
     } finally {
       setBusy(false)
     }
-  }, [org, load])
+  }, [org, reload])
 
   const back = <Button size="$3" chromeless icon={<ArrowLeft size={16} />} onPress={onBack}>Customers</Button>
 
   if (err && isForbidden(err)) return <OperatorAccessRequired />
-  if (err) return <YStack p="$4" gap="$4">{back}<ErrorState err={err} onRetry={load} /></YStack>
+  if (err) return <YStack p="$4" gap="$4">{back}<ErrorState err={err} onRetry={reload} /></YStack>
   if (loading || !detail) return <YStack p="$4" gap="$4">{back}<PageHeader title={org} /><Text color="$color10">Loading…</Text></YStack>
 
   const d = detail
   const suspended = d.status === 'suspended'
-
-  const userCols: Column<CustomerDetail['users'][number]>[] = [
-    { key: 'name', header: 'User', render: (u) => (
-      <YStack><Text fontSize="$2" color="$color12">{u.name}{u.isAdmin ? ' · admin' : ''}</Text><Text fontSize="$1" color="$color10">{u.email}</Text></YStack>
-    ) },
-    { key: 'hasApiKey', header: 'API key', render: (u) => <Text fontSize="$1" color={u.hasApiKey ? '$green11' : '$color9'}>{u.hasApiKey ? 'present' : '—'}</Text> },
-    { key: 'forbidden', header: 'Access', render: (u) => <Text fontSize="$1" color={u.forbidden ? '$red11' : '$green11'}>{u.forbidden ? 'suspended' : 'active'}</Text> },
-    { key: 'lastSignin', header: 'Last sign-in', render: (u) => <Text fontSize="$1" color="$color10">{shortDate(u.lastSignin)}</Text> },
-  ]
-  const txCols: Column<CustomerDetail['transactions'][number]>[] = [
-    { key: 'time', header: 'When', render: (t) => <Text fontSize="$1" color="$color10">{shortDate(t.time)}</Text> },
-    { key: 'type', header: 'Type', render: (t) => <Text fontSize="$2" color={t.type === 'deposit' ? '$green11' : '$color11'}>{t.type}</Text> },
-    { key: 'cents', header: 'Amount', render: (t) => <Text fontSize="$2" color="$color12">{usd(t.cents)}</Text> },
-    { key: 'notes', header: 'Notes', render: (t) => <Text fontSize="$1" color="$color10">{t.notes ?? ''}</Text> },
-  ]
 
   return (
     <YStack p="$4" gap="$4">
@@ -377,20 +352,33 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
       <XStack gap="$3" flexWrap="wrap">
         <MetricCard icon={<CreditCard size={16} />} label="Balance" value={usd(d.balanceCents)} caption="available credit" />
         <MetricCard icon={<Building2 size={16} />} label="Spend" value={usd(d.spendCents)} caption="realized usage" />
-        <MetricCard icon={<RefreshCw size={16} />} label="MRR" value={d.mrrCents ? usd(d.mrrCents) : '—'} caption="recurring" />
+        <MetricCard icon={<RefreshCw size={16} />} label="MRR" value={d.mrrCents ? usd(d.mrrCents) : DASH} caption="recurring" />
         <MetricCard icon={<Users size={16} />} label="Users · keys" value={`${d.users.length} · ${d.apiKeys}`} caption="members · API keys" />
       </XStack>
 
       <YStack gap="$2">
         <Text fontSize="$5" color="$color12">Members</Text>
-        <DataTable<CustomerDetail['users'][number]> columns={userCols} rows={d.users} empty="No users." rowKey={(u) => u.name} />
+        <DataTable<CustomerDetail['users'][number]>
+          columns={userCols}
+          rows={users.apply(d.users)}
+          empty="No users."
+          rowKey={(u) => u.name}
+          sort={users.sort}
+          onSortChange={users.onSortChange}
+        />
       </YStack>
 
       <YStack gap="$2">
         <Text fontSize="$5" color="$color12">Top-ups & usage</Text>
         {d.transactions.length === 0
           ? <EmptyState icon={CreditCard} title="No transactions yet" description="Deposits and usage appear here as they happen." />
-          : <DataTable<CustomerDetail['transactions'][number]> columns={txCols} rows={d.transactions} rowKey={(t) => t.id || t.time} />}
+          : <DataTable<CustomerDetail['transactions'][number]>
+              columns={txCols}
+              rows={txs.apply(d.transactions)}
+              rowKey={(t) => t.id || t.time}
+              sort={txs.sort}
+              onSortChange={txs.onSortChange}
+            />}
       </YStack>
     </YStack>
   )

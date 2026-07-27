@@ -32,7 +32,13 @@
  *    `infra/nodes/:id/cordon`. `allowAdminSurface` admits `v1/admin/infra[/...]`, so
  *    every sub-path passes and nothing outside `v1/admin/<head>` ever does.
  */
-export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'spend-caps', 'block-storage', 'infra'] as const
+// ONE list, two consumers: next.config.mjs builds the /v1/admin/<head> rewrite from
+// it, and this module authorizes the forwarded path against it. They used to be two
+// hand-maintained arrays, and 'infra' had drifted into only one — which 403s every
+// call from a module whose rewrite exists. A shared JSON file cannot drift.
+import ADMIN_HEADS from './admin-heads.json'
+
+export const ADMIN_AGGREGATE_HEADS: readonly string[] = ADMIN_HEADS
 
 const ALLOWED = new Set<string>(ADMIN_AGGREGATE_HEADS)
 

@@ -78,6 +78,7 @@ import { Users,
   Tag,
   ArrowLeftRight,
   Wallet,
+  Banknote,
   Coins,
   Landmark,
   Gift,
@@ -301,6 +302,8 @@ import { EnablementModule as AdminEnablementModule } from '~/components/products
 // Aliased to avoid collisions with the customer `projects` product + a bare Grants name.
 import { GrantsModule as FleetGrantsModule } from '~/components/products/admin/GrantsModule'
 import { ProjectsModule as FleetProjectsModule } from '~/components/products/admin/ProjectsModule'
+import { SubsystemsModule } from '~/components/products/admin/SubsystemsModule'
+import { MoneyModule } from '~/components/products/admin/MoneyModule'
 import { BetaFeaturesModule } from '~/components/products/BetaFeaturesModule'
 // GitOps — the native ArgoCD replacement (SuperAdmin operator surface).
 import { GitOpsModule } from '~/components/products/gitops/GitOpsModule'
@@ -728,6 +731,20 @@ export const catalog: CatalogEntry[] = [
     // backends answer different questions about the same object (this one knows what
     // is REFERENCED and therefore safe to delete; block-storage knows how FULL it is),
     // so the volumes tab reads both and shows one row with a Fill column.
+    id: 'subsystems',
+    label: 'Subsystems',
+    icon: Layers,
+    description:
+      'Per-subsystem health across the one cloud binary — request rate, error rate, latency percentiles, last error, and which subsystems are enabled or switched off.',
+    gcp: 'Cloud Run services',
+    category: 'Platform',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [{ path: '', component: SubsystemsModule }],
+  },
+  {
     id: 'infra',
     label: 'Infrastructure',
     icon: Server,
@@ -822,6 +839,23 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FleetRevenueModule }],
+  },
+  {
+    // admin.hanzo.ai MONEY board — the ONE consolidated financial view: revenue,
+    // credits granted vs consumed, spend by org, outstanding balance, infra cost.
+    // GLOBAL-ADMIN ONLY. Cloud folds it from the same functions /revenue, /finance and
+    // /grants use, so it cannot disagree with those boards.
+    id: 'fleet-money',
+    label: 'Money',
+    icon: Banknote,
+    description: 'Revenue, credits granted vs consumed, spend by customer, outstanding balance, and infrastructure cost — consolidated.',
+    gcp: 'Cloud Billing overview',
+    category: 'Billing',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/console',
+    kind: 'module',
+    routes: [{ path: '', component: MoneyModule }],
   },
   {
     // admin.hanzo.ai GRANTS board — the fleet credit-grant ledger + issuance (comps,

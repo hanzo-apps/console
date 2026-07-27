@@ -15,6 +15,12 @@
  * clicked key (it never reorders `rows` itself — the caller's own pure comparator
  * stays the one source of order). Omit all three and the table behaves exactly as
  * before, so every existing consumer is unchanged.
+ *
+ * DENSITY and a STICKY HEADER are opt-in the same way. `dense` tightens the row
+ * padding for long operator tables; `maxHeight` caps the body and makes the header
+ * stick to the top of that scroll box. Sticky needs a scroll ancestor whose
+ * overflow-y is not `visible`, which is exactly what `maxHeight` creates — so the
+ * two travel together rather than as a flag that silently does nothing.
  */
 import type { ReactNode } from 'react'
 import { Text, XStack, YStack } from '@hanzo/gui'
@@ -39,11 +45,12 @@ export type Column<T> = {
 export type SortState = { key: string; dir: 'asc' | 'desc' }
 
 /** Skeleton rows in the real column layout — an honest "loading", never a void. */
-function SkeletonRows<T>({ columns, count = 6 }: { columns: Column<T>[]; count?: number }) {
+function SkeletonRows<T>({ columns, count = 6, dense }: { columns: Column<T>[]; count?: number; dense?: boolean }) {
   return (
     <YStack>
       {Array.from({ length: count }).map((_, r) => (
-        <XStack key={r} py="$2.5" px="$3" gap="$3" borderTopWidth={1} borderColor="$borderColor" items="center">
+        // Same padding as a real row, or the table visibly jumps when loading ends.
+        <XStack key={r} py={dense ? '$1.5' : '$2.5'} px={dense ? '$2.5' : '$3'} gap="$3" borderTopWidth={1} borderColor="$borderColor" items="center">
           {columns.map((c, i) => (
             <YStack key={c.key} width={c.width} flex={c.width ? undefined : 1} minW={c.width ? undefined : FLEX_MIN_COL_W} items={c.align === 'right' ? 'flex-end' : 'flex-start'}>
               <div
@@ -70,6 +77,8 @@ export function DataTable<T>({
   renderExpanded,
   sort,
   onSortChange,
+  dense,
+  maxHeight,
 }: {
   columns: Column<T>[]
   rows: T[]
@@ -77,6 +86,10 @@ export function DataTable<T>({
   empty?: string
   rowKey: (row: T) => string
   onRowPress?: (row: T) => void
+  /** Tighter rows for long operator tables. */
+  dense?: boolean
+  /** Cap the body height (px) and stick the header to the top of that scroll box. */
+  maxHeight?: number
   /** When set + true for a row, its `renderExpanded` panel is shown below it. */
   isRowExpanded?: (row: T) => boolean
   /** Full-width detail panel rendered under an expanded row (master-detail accordion). */
@@ -93,14 +106,28 @@ export function DataTable<T>({
   // `overflow:hidden` cut the right edge off, e.g. the Status column). On desktop
   // the flex columns still expand to fill, so wide screens are unchanged.
   const minTableW = columns.reduce((sum, c) => sum + (c.width ?? FLEX_MIN_COL_W), 0) + (columns.length + 1) * 12
+  const padY = dense ? '$1.5' : '$2.5'
+  const padX = dense ? '$2.5' : '$3'
 
   return (
     <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" overflow="hidden">
-      <YStack style={{ overflowX: 'auto', overflowY: 'visible' }}>
+      {/* overflowY stays `visible` unless a maxHeight is given: `visible` is what lets
+          a row's popovers/menus escape the table, and only a capped table needs to
+          become a scroll box (which is also what makes the sticky header possible). */}
+      <YStack style={maxHeight ? { overflowX: 'auto', overflowY: 'auto', maxHeight } : { overflowX: 'auto', overflowY: 'visible' }}>
         <YStack minW={minTableW}>
           {/* Header — quiet, uppercase-free, Medium. A hairline under it separates
               the head from the body without a heavy fill. */}
-          <XStack bg="$color1" py="$2.5" px="$3" gap="$3" borderBottomWidth={1} borderColor="$borderColor" role="row">
+          <XStack
+            bg="$color1"
+            py={padY}
+            px={padX}
+            gap="$3"
+            borderBottomWidth={1}
+            borderColor="$borderColor"
+            role="row"
+            style={maxHeight ? { position: 'sticky', top: 0, zIndex: 10 } : undefined}
+          >
             {columns.map((c) => {
               // Sortable needs BOTH the column opt-in and a caller handler — a column
               // can never look clickable with nothing listening.
@@ -139,7 +166,7 @@ export function DataTable<T>({
           </XStack>
 
           {loading ? (
-            <SkeletonRows columns={columns} />
+            <SkeletonRows columns={columns} dense={dense} />
           ) : rows.length > 0 ? (
             <YStack>
               {rows.map((row) => {
@@ -148,8 +175,8 @@ export function DataTable<T>({
                 <YStack key={rowKey(row)}>
                 <XStack
                   className="hz-row"
-                  py="$2.5"
-                  px="$3"
+                  py={padY}
+                  px={padX}
                   gap="$3"
                   borderTopWidth={1}
                   borderColor="$borderColor"
