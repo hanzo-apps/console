@@ -567,3 +567,22 @@ body {
     min-width: 44px;
   }
 }
+
+/* 4. ONE typeface per screen. The shared `@hanzogui/shell` chrome (HanzoHeader and
+      its Meet-Hanzo / Products menus, HanzoFooter, HanzoAppHeader, …) sets its own
+      SYSTEM font stack as an INLINE style on its root — `fontFamily: CHROME.font`,
+      i.e. `ui-sans-serif, system-ui, -apple-system, "Segoe UI", …`, which contains no
+      Geist — and its subtree inherits it (the shell's own buttons re-declare
+      `font-family: inherit`). So the logged-out console rendered the header wordmark
+      and nav in the platform's system face while the hero and body below correctly
+      rendered Geist: mixed typography on one screen. Geist itself loads fine (see
+      app/fonts.css) — this is a cascade problem, not a loading one.
+
+      An inline declaration can only be beaten by `!important`, and the rule has to
+      reach descendants because of that `inherit`. Every shell root carries
+      `data-hanzo-shell`, so ONE rule covers the whole set. Code-ish elements keep the
+      mono face declared above, so the two font invariants stay orthogonal. */
+[data-hanzo-shell],
+[data-hanzo-shell] :not(code, pre, kbd, samp) {
+  font-family: var(--font-sans) !important;
+}
