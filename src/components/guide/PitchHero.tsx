@@ -208,12 +208,12 @@ export function PitchHero({ guide }: { guide: ProductGuide }) {
                 rounded="$10"
                 items="center"
                 justify="center"
-                {...(r.done ? { style: { backgroundColor: '#2ea043' } } : { bg: r.active ? '$color9' : '$color4' })}
+                {...(r.done ? { style: { backgroundColor: '#2ea043' } } : { bg: r.active ? '$color12' : '$color4' })}
               >
                 {r.done ? (
                   <Check size={15} color="#fff" />
                 ) : (
-                  <Text fontSize="$2" fontWeight="800" color={r.active ? '#fff' : '$color11'}>
+                  <Text fontSize="$2" fontWeight="800" color={r.active ? '$color1' : '$color11'}>
                     {i + 1}
                   </Text>
                 )}

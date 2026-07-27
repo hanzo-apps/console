@@ -162,8 +162,16 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
         }}
       >
         {/* A logo may be a wordmark, so it is allowed to run wide; the monogram
-            stays the square tile the account avatar wears. */}
-        <OrgMark org={org} size={24} maxW={140} />
+            stays the square tile the account avatar wears.
+
+            `data-monogram`: OrgMark is a DISTRIBUTED component that sizes its
+            monogram glyph proportionally to its tile, so it paints text off the
+            app type scale by design — correct for a mark, wrong to police. The
+            marker declares that here, at our call site, rather than teaching the
+            design gate a library's class names. */}
+        <span data-monogram style={{ display: 'contents' }}>
+          <OrgMark org={org} size={24} maxW={140} />
+        </span>
       </div>
       {menu ? <BrandMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} /> : null}
     </>

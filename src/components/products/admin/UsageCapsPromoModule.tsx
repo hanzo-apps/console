@@ -45,7 +45,8 @@ import { AdminSpendCapsApi, type AdminSpendCap } from '~/lib/api/admin-spend-cap
 import { fmtInt, fmtUsd } from '~/lib/api/functions'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { MetricCard, Panel } from '~/components/ui/Metric'
+import { MetricCard } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldSelect, FieldSwitch, FieldText, FieldSlider } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
@@ -194,7 +195,7 @@ function PromoTab() {
   const live = state.data
   return (
     <YStack gap="$4">
-      <Panel title="Current promo" grow={false} right={<Button size="$2" icon={<RefreshCw size={15} />} onPress={load} />}>
+      <Panel title="Current promo" grow={false} actions={<Button size="$2" icon={<RefreshCw size={15} />} onPress={load} />}>
         <XStack gap="$5" flexWrap="wrap">
           <Fact label="State" value={promoSummary(live)} />
           <Fact label="Percent off" value={`${live.percentOff}%`} />

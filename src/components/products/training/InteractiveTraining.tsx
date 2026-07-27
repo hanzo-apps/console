@@ -25,7 +25,7 @@ import {
 import { parseTrainingData } from './interactive-data'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
-import { Panel } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'

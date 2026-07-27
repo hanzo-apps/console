@@ -1,37 +1,39 @@
 'use client'
 
 /**
- * `Panel` + `Row` — the settings surface: a stack of rounded panels, each panel a
- * group of rows, each row label + one-line description on the LEFT and its control
- * on the RIGHT.
+ * `Panel` + `Row` — the console's rounded panel, and the settings row inside it.
  *
- * This was the one primitive the console genuinely did not have. There is a `paper`
- * for floating overlays, a `DataTable` for lists, `Filters`, `PageHeader`,
- * `EmptyState` — but every settings-shaped surface hand-rolled its own `Card` +
- * `XStack justify="space-between"`, so the same shape carried a different padding,
- * a different divider and a different label weight on each screen.
+ * A panel is a rounded surface with a quiet header and a body. That was already
+ * TWO things: `ui/Metric.tsx` had a `Panel` for chart/content bodies (13
+ * consumers), and every settings-shaped surface hand-rolled its own `Card` +
+ * `XStack justify="space-between"` — so one concept carried a different padding,
+ * a different divider and a different label weight on each screen. This is that
+ * concept, once.
  *
- * Every value here is a token, never a literal: radius `$5` (12px, the panel step),
- * `$borderColor` hairline, `$color1` resting surface over the true-black canvas.
- * The row's min-height and padding sit on the 4px ramp. Nothing is decorative —
- * one hover fill, one focus ring, one hairline between rows.
+ * A body is one of two shapes, and the panel is told which:
+ *   - CONTENT (the default) — a chart, a form, prose. The panel pads it.
+ *   - ROWS (`rows`) — a list of `Row`s. Rows own their own padding and the
+ *     hairline between them, so the panel must not add its own.
+ * The flag names the CONTENT SHAPE, not a style, which is why it is a flag and
+ * not a second component.
  *
- * A row is only interactive when it is given `onPress`; a row that merely displays
- * a value stays inert (no hover, no pointer, not in the tab order), because a
- * surface that looks clickable and does nothing is the defect this replaces.
+ * Every value is a token: radius `$5` (12px, the panel step), `$borderColor`
+ * hairline, `$color1` resting surface over the true-black canvas. Nothing is
+ * decorative — one hover fill, one focus ring, one hairline.
  */
 import type { ReactNode } from 'react'
 import { Text, XStack, YStack } from '@hanzo/gui'
 
 import type { IconLike } from '~/components/ui/color'
 
-/** A rounded panel: hairline, resting surface, optional quiet header. Rows inside
- *  are hairline-separated by the row itself, so a panel is just the container. */
 export function Panel({
   title,
   description,
   icon: Icon,
   actions,
+  rows,
+  minW = 280,
+  grow = true,
   children,
 }: {
   /** Quiet section header. Sentence case — never shouted. */
@@ -39,17 +41,37 @@ export function Panel({
   /** One line under the title, explaining what the group is for. */
   description?: string
   icon?: IconLike
-  /** Right-aligned header controls (a button, a toggle). */
+  /** Right-aligned header controls (a button, a range toggle, a legend). */
   actions?: ReactNode
+  /** The body is a list of `Row`s, which pad and separate themselves. */
+  rows?: boolean
+  minW?: number
+  grow?: boolean
   children: ReactNode
 }) {
   return (
-    <YStack rounded="$5" borderWidth={1} borderColor="$borderColor" bg="$color1" overflow="hidden">
+    <YStack
+      rounded="$5"
+      borderWidth={1}
+      borderColor="$borderColor"
+      bg="$color1"
+      overflow="hidden"
+      flex={grow ? 1 : undefined}
+      width={grow ? undefined : '100%'}
+      // The minimum is what makes panels sit two-up in a wrapping row on a wide
+      // screen — but a PIXEL minimum larger than its container clips the panel off
+      // the right edge of a phone with nothing to scroll it (measured: a 340px
+      // minimum inside a 366px pane painted to x=432 at 390 wide). `min()` says the
+      // real intent — this wide, but never wider than the space there is — with no
+      // breakpoint to get backwards. It rides `style` because it is a CSS function,
+      // not a token.
+      style={{ minWidth: `min(${minW}px, 100%)` }}
+    >
       {title ? (
-        <XStack items="center" gap="$2" px="$4" pt="$3" pb="$2">
+        <XStack items="center" gap="$2" px="$4" pt="$3" pb={rows ? '$2' : '$1'}>
           {Icon ? <Icon size={15} color="$color10" /> : null}
           <YStack flex={1} minW={0} gap="$0.5">
-            <Text fontSize="$3" fontWeight="600" color="$color12">
+            <Text fontSize="$4" fontWeight="600" color="$color12">
               {title}
             </Text>
             {description ? (
@@ -61,17 +83,20 @@ export function Panel({
           {actions}
         </XStack>
       ) : null}
-      <YStack>{children}</YStack>
+      {rows ? <YStack>{children}</YStack> : <YStack px="$4" pt={title ? '$2' : '$4'} pb="$4" gap="$3">{children}</YStack>}
     </YStack>
   )
 }
 
-/** One row: label + one-line description left, control right.
+/** One settings row: label + one-line description left, control right.
  *
- *  `control` is anything — a switch, a select, a button, or a read-only value.
- *  Pass a plain string as `value` for the read-only case and it renders on the
- *  design scale with an honest em dash when absent, so a missing fact never reads
- *  as an empty cell. */
+ *  `control` is anything — a switch, a select, a button. Pass `value` instead for
+ *  the read-only case and it renders on the design scale with an honest em dash
+ *  when absent, so a missing fact never reads as an empty cell.
+ *
+ *  A row is interactive ONLY when given `onPress`; otherwise it stays inert — no
+ *  hover, no pointer, not in the tab order — because a row that looks clickable
+ *  and does nothing is the defect this replaces. */
 export function Row({
   label,
   description,
@@ -90,7 +115,7 @@ export function Row({
    *  endpoints, counts and prices. */
   mono?: boolean
   onPress?: () => void
-  /** Suppresses the top hairline — set on the first row of a headerless panel. */
+  /** Suppresses the top hairline — set on the first row of a panel. */
   first?: boolean
 }) {
   const interactive = !!onPress
@@ -112,7 +137,7 @@ export function Row({
       borderColor="$borderColor"
       flexWrap="wrap"
     >
-      <YStack flex={1} minW={180} gap="$0.5">
+      <YStack flex={1} minW={0} gap="$0.5">
         <Text fontSize="$3" color="$color12">
           {label}
         </Text>
