@@ -23,7 +23,7 @@
  * allowlist (empty = all allowed) + a savings↔quality dial (0..1). An empty
  * prefer + 0 ceiling clears the org override (reverts to "*" then conf).
  */
-import { originGet, originPost, originPut } from './client'
+import { originGet, originPost, originPatch, originPut } from './client'
 
 /** One servable model the org may allow the router to pick from (rows the allowlist multi-select). */
 export type RouterModel = { id: string; name: string }
@@ -139,8 +139,8 @@ export type TrainingContribution = { enabled: boolean }
 
 export const TrainingContributionApi = {
   /** Read the caller org's opt-in flag. */
-  get: (): Promise<TrainingContribution> => originGet('get-training-contribution'),
+  get: (): Promise<TrainingContribution> => originGet('ai/training-contribution'),
   /** Set the caller org's opt-in flag (org-admin gated + self-scoped server-side). */
   save: (enabled: boolean): Promise<TrainingContribution> =>
-    originPost('update-training-contribution', { enabled }),
+    originPatch('ai/training-contribution', { enabled }),
 }

@@ -130,20 +130,30 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/code/index')).toBe(true)
   })
 
-  it('admits the casibase store-admin heads the console uses (Embeddings · Collections)', () => {
-    for (const head of ['get-stores', 'get-store', 'add-store', 'update-store', 'delete-store', 'refresh-store-vectors']) {
-      expect(CLOUD_HEADS).toContain(head)
-      expect(allowCloudSurface(`v1/${head}`)).toBe(true)
+  it('admits the retrieval subsystem the console uses (Embeddings · Collections)', () => {
+    // One SUBSYSTEM head, not eight individual routes — which is what a
+    // head-based allow-list is supposed to mean.
+    expect(CLOUD_HEADS).toContain('rag')
+    for (const p of [
+      'v1/rag/stores',
+      'v1/rag/stores/acme/my-store',
+      'v1/rag/stores/acme/my-store/vectors',
+      'v1/rag/stores/names',
+      'v1/rag/files',
+    ]) {
+      expect(allowCloudSurface(p)).toBe(true)
     }
   })
 
-  it('LEAST PRIVILEGE: does NOT tunnel the cross-tenant / unused store heads', () => {
-    // get-global-stores is a cross-tenant read the console never invokes; get-store-names
-    // is unused. Neither is allow-listed, so /v1 refuses them (not a general tunnel).
-    expect(CLOUD_HEADS).not.toContain('get-global-stores')
-    expect(CLOUD_HEADS).not.toContain('get-store-names')
+  it('LEAST PRIVILEGE: still refuses the cross-tenant store listing', () => {
+    // The cross-tenant store read is one the console never invokes, and it was
+    // explicitly refused before the surface was namespaced. A head-based rule
+    // alone would have admitted it once `rag` was granted — this keeps the
+    // property the head grain would otherwise have silently dropped.
+    expect(allowCloudSurface('v1/rag/stores/global')).toBe(false)
+    // The compound routes are gone entirely; nothing answers at their old names.
     expect(allowCloudSurface('v1/get-global-stores')).toBe(false)
-    expect(allowCloudSurface('v1/get-store-names')).toBe(false)
+    expect(allowCloudSurface('v1/get-stores')).toBe(false)
   })
 
   it('REFUSES privileged / unlisted cloud-api surfaces (not a general tunnel)', () => {

@@ -1,22 +1,24 @@
-/** Provider admin API — `/v1/*-provider(s)`. Ported from ProviderBackend.js. */
-import { get, getList, post, idOf } from './client'
+/** Provider admin API — the `/v1/ai/providers` resource. */
+import { get, getList, patch, post, del, memberOf } from './client'
 import { type Provider, type ListParams, listQuery } from './types'
+
+const PROVIDERS = 'ai/providers'
 
 export const ProviderApi = {
   /** Globally-shared providers (read-only catalog). */
-  listGlobal: () => get<Provider[]>('get-global-providers'),
+  listGlobal: () => get<Provider[]>(`${PROVIDERS}/global`),
 
   list: (params: ListParams & { store?: string } = {}) =>
-    getList<Provider[]>('get-providers', { ...listQuery(params), store: params.store }),
+    getList<Provider[]>(PROVIDERS, { ...listQuery(params), store: params.store }),
 
-  get: (owner: string, name: string) => get<Provider>('get-provider', { id: idOf(owner, name) }),
+  get: (owner: string, name: string) => get<Provider>(memberOf(PROVIDERS, owner, name)),
 
   update: (owner: string, name: string, provider: Provider) =>
-    post('update-provider', provider, { id: idOf(owner, name) }),
+    patch(memberOf(PROVIDERS, owner, name), provider),
 
-  add: (provider: Provider) => post('add-provider', provider),
+  add: (provider: Provider) => post(PROVIDERS, provider),
 
-  remove: (provider: Provider) => post('delete-provider', provider),
+  remove: (provider: Provider) => del(memberOf(PROVIDERS, provider.owner, provider.name)),
 
-  refreshMcpTools: (provider: Provider) => post('refresh-mcp-tools', provider),
+  refreshMcpTools: (provider: Provider) => post(`${PROVIDERS}/mcp-tools`, provider),
 }

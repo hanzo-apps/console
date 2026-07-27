@@ -411,6 +411,44 @@ export const iamMutate = (segment: string, body?: unknown, query?: Query): Promi
 /** Owner/name -> the `id` query param the backend expects (`owner/name`). */
 export const idOf = (owner: string, name: string): string => `${owner}/${encodeURIComponent(name)}`
 
+/**
+ * A resource member URL: `<collection>/<owner>/<name>`.
+ *
+ * Every object in the backend is keyed by the PAIR (owner, name), and its REST
+ * member route carries both as SEPARATE path segments. Each is encoded on its
+ * own — encoding the pair as one segment would put a `%2F` in the path, which the
+ * server decodes back into a separator before routing, so it would never match.
+ */
+export const memberOf = (collection: string, owner: string, name: string): string =>
+  `${collection}/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
+
+/** PATCH a JSON body — the update verb for a resource member. */
+export async function patch<T = string>(path: string, body?: unknown, query?: Query): Promise<ApiResponse<T>> {
+  const r = await request<T>('PATCH', path, { query, body })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r
+}
+
+/** DELETE a resource member. */
+export async function del<T = string>(path: string, query?: Query): Promise<ApiResponse<T>> {
+  const r = await request<T>('DELETE', path, { query })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r
+}
+
+/** The `cloudGet` twins for the mutating member verbs. */
+export async function cloudPatch<T = string>(path: string, body?: unknown, query?: Query): Promise<ApiResponse<T>> {
+  const r = await request<T>('PATCH', path, { query, body, absoluteUrl: cloudProxyV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r
+}
+
+export async function cloudDelete<T = string>(path: string, query?: Query): Promise<ApiResponse<T>> {
+  const r = await request<T>('DELETE', path, { query, absoluteUrl: cloudProxyV1Url(path) })
+  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r
+}
+
 // ── Plain-REST layer ────────────────────────────────────────────────────────
 // Some sub-services mounted on the same backend speak plain REST (raw JSON,
 // 2xx / 201 / 204, DELETE) instead of the casibase `{status,msg,data}` envelope

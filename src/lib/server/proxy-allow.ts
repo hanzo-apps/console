@@ -282,21 +282,28 @@ export const CLOUD_HEADS: readonly string[] = [
   // heads the console actually calls — read (list/get), mutate (add/update/delete/refresh).
   // Deliberately NOT `get-global-stores` (a cross-tenant read the console never invokes)
   // nor `get-store-names` (unused) — do not widen the tunnel past what's used.
-  'get-stores',
-  'get-store',
-  'add-store',
-  'update-store',
-  'delete-store',
-  'refresh-store-vectors',
   // Knowledge-store ingest + per-file index status (casibase docs surface): the
   // Embeddings product's ingest actions (`/v1/docs/ingest` — upload/github/crawl) and
   // per-file status (`/v1/get-files`). Bearer-required + org-scoped (owner from the
   // token); a cookie-only call 401s, so they route through /v1 like the stores.
   'docs',
-  'get-files',
+  // Retrieval: the stores/files/vectors resource family (/v1/rag/*). One head per
+  // SUBSYSTEM, which is what a head-based allow-list is supposed to mean — this
+  // used to enumerate eight individual ROUTES (get-stores, add-store, …) because
+  // the surface had no namespaces to enumerate.
+  'rag',
+  // The operational record: the usage ledger the billing + overview panels read
+  // (/v1/ops/usages/*).
+  'ops',
+  // Model plumbing: providers and model routes (/v1/ai/*).
+  'ai',
+  // Conversations and their messages (/v1/chat/*).
+  'chat',
+  // The account surface (/v1/auth/*) — this backend's own account/session objects,
+  // distinct from the IAM service that owns /v1/iam.
+  'auth',
   // Embeddings/collections usage slice of the cloud-usage read API (`/v1/get-cloud-usages`).
   // Bearer-required; degrades to "—" but should read real data through /v1.
-  'get-cloud-usages',
   // Per-org product entitlements (cloud clients/entitlements): /v1/orgs/{org}/entitlements
   // — the set of products the org has enabled (out-of-box each org assembles its own
   // backend from the catalog). GET reads the enabled ids; POST { add?, remove? } toggles
@@ -330,8 +337,32 @@ export function v1Head(path: string): string | null {
   return m ? m[1] : null
 }
 
+/**
+ * Sub-paths refused even though their head is admitted.
+ *
+ * A head-based allow-list grants a whole subsystem, which is the right grain for
+ * a tenant-scoped resource family — but a few routes under an admitted head are
+ * deliberately NOT part of the console's surface, and admitting them by accident
+ * would silently widen this boundary. The cross-tenant store listing is the case
+ * that exists today: an admin read the console never invokes, explicitly refused
+ * before the surface was namespaced. Keeping that refusal costs one rule and
+ * preserves the property the head grain would otherwise drop.
+ *
+ * This is defense in depth — the backend gates cross-tenant reads on its own.
+ *
+ * Scoped to exactly what was refused before, NOT a blanket rule over every
+ * `global` sub-path: the Providers board does read its cross-tenant catalog
+ * (`ProviderApi.listGlobal`), so a blanket rule would break a live surface while
+ * claiming to preserve a property that never covered it.
+ */
+const REFUSED_SUBPATHS: readonly RegExp[] = [/^v1\/rag\/stores\/global(?:$|[/?#])/]
+
 /** True iff `path` (e.g. `v1/vector/mydb`) is an allow-listed cloud-api surface. */
 export function allowCloudSurface(path: string): boolean {
+  const rel = path.replace(/^\/+/, '')
+  if (REFUSED_SUBPATHS.some((re) => re.test(rel))) {
+    return false
+  }
   const head = v1Head(path)
   return head != null && CLOUD_HEADS.includes(head)
 }
