@@ -23,9 +23,8 @@
  * verbatim (each self-headed), so consolidating the old scattered Cost /
  * Subscriptions / Payment-methods entries into one center forks nothing.
  */
-import { useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button, XStack } from '@hanzo/gui'
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 
 import { BillingOverview } from './billing/BillingOverview'
 import { BillingReports } from './billing/BillingReports'
@@ -36,42 +35,14 @@ import { SubscriptionsModule } from './SubscriptionsModule'
 import { PaymentMethodsModule } from './PaymentMethodsModule'
 import { BillingCredits } from './billing/BillingCredits'
 
-/** The billing-center tabs, in display order. `id` matches the registry sub-page slug. */
-const TABS: { id: string; label: string }[] = [
-  { id: '', label: 'Overview' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'accounts', label: 'Accounts' },
-  { id: 'budgets', label: 'Budgets' },
-  { id: 'invoices', label: 'Invoices' },
-  { id: 'subscriptions', label: 'Subscriptions' },
-  { id: 'payment-methods', label: 'Payment methods' },
-  { id: 'credits', label: 'Credits' },
-]
-
-const path = (id: string): string => (id ? `/billing/${id}` : '/billing')
-
 export function BillingModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
   // Normalize an unknown/base tab (settings/status/…) to the Overview, like the
   // other tabbed modules (GpusModule) — never a dead sub-page.
-  const tab = useMemo(() => (TABS.some((t) => t.id === params.tab) ? params.tab ?? '' : ''), [params.tab])
+  const tab = productSubpageSlug('billing', params.tab)
 
   return (
     <>
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'overview'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(path(t.id))}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="billing" />
 
       {tab === 'reports' ? (
         <BillingReports params={params} />

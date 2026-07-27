@@ -16,6 +16,8 @@
  * isn't live yet, so today most reads show that honest state until the in-cluster
  * engine is reachable.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -41,14 +43,6 @@ import { statusOf, statusStyle, type Bucket } from './tasks/status'
 import { WorkflowDetailPanel } from './tasks/detail'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
-
-const TABS = [
-  { id: '', label: 'Workflows' },
-  { id: 'schedules', label: 'Schedules' },
-  { id: 'queues', label: 'Queues' },
-  { id: 'workers', label: 'Workers' },
-  { id: 'activities', label: 'Activities' },
-] as const
 
 const nsName = (n: Namespace): string => n.namespaceInfo?.name ?? ''
 const fmt = (v?: string): string => {
@@ -200,7 +194,7 @@ function Rail({ data }: { data: NsData }) {
 
 export function TasksModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
-  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+  const tab = productSubpageSlug('tasks', params.tab)
 
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
   const [ns, setNs] = useState('')
@@ -352,11 +346,7 @@ export function TasksModule({ params }: { params: Record<string, string> }) {
           <Text fontSize="$2" color="$color11">Namespace</Text>
           <YStack flex={1}><FieldSelect value={active} options={nsOptions.length ? nsOptions : [active]} onChange={setNs} /></YStack>
         </XStack>
-        <XStack gap="$1" flexWrap="wrap">
-          {TABS.map((t) => (
-            <Button key={t.id || 'workflows'} size="$2" bg={t.id === tab ? '$color5' : 'transparent'} borderWidth={1} borderColor="$borderColor" onPress={() => go(t.id)}>{t.label}</Button>
-          ))}
-        </XStack>
+        <SubNav id="tasks" />
       </XStack>
 
       <XStack gap="$4" flexWrap="wrap" items="flex-start">

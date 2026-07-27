@@ -14,8 +14,9 @@
  * Writes are gated in the UI (shown only to an org admin) AND server-side (the
  * proxy requires org admin + pins the caller to their own org).
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button, Card, Dialog, Spinner, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
 import { Check, Copy, Link2, RefreshCw, Shield, Trash2, UserPlus, X } from '@hanzogui/lucide-icons-2'
 
@@ -516,16 +517,10 @@ function RolesTab({ org }: { org: string }) {
 
 // ── Module ────────────────────────────────────────────────────────────────────
 
-const TABS = [
-  { id: '', label: 'Members' },
-  { id: 'roles', label: 'Roles' },
-] as const
-
 export function TeamModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
   const { account } = useSession()
   const isGlobal = useIsSuperAdmin()
-  const tab = params.tab ?? ''
+  const tab = productSubpageSlug('team', params.tab)
   const org = currentOrg()
   // Writes are allowed for an org admin (own org) or a global admin — the server
   // proxy enforces the same; this only decides which controls to show.
@@ -537,20 +532,7 @@ export function TeamModule({ params }: { params: Record<string, string> }) {
         title="Team"
         subtitle={`Members and roles for ${org === config.iamOrgName ? 'your organization' : org}.`}
       />
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'members'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.id ? `/team/${t.id}` : '/team')}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="team" />
       {tab === 'roles' ? <RolesTab org={org} /> : <MembersTab org={org} canManage={canManage} />}
     </>
   )

@@ -25,6 +25,8 @@
 import type { ComponentType } from 'react'
 import { Users,
   Building2,
+  Percent,
+  Upload,
   AppWindow,
   Accessibility,
   LifeBuoy,
@@ -46,6 +48,7 @@ import { Users,
   FileText,
   Network,
   Waypoints,
+  Trophy,
   Route,
   Globe,
   Cable,
@@ -286,7 +289,6 @@ const BusinessDashboard = livingOverviewModule('admin-business')
 // Hanzo-internal and must never reach a customer.
 const FinanceDashboard = livingOverviewModule('finance')
 const OpenEditionLiving = livingOverviewModule('open-edition')
-const FunctionsLiving = livingOverviewModule('functions')
 // GPUs Overview is role-aware (admin → living overview, customer → visor catalog);
 // the living-overview construction lives in GpusModule (GpusOverview) so this route
 // is a plain component reference like every other.
@@ -445,6 +447,14 @@ type CatalogBase = {
    * Omit for a single-screen product — it still gets Overview + the base set.
    */
   subpages?: ProductSubpage[]
+  /**
+   * What the product calls its own index ('' route) in the level-2 nav. Defaults
+   * to "Overview". Set it where the index is a NAMED surface rather than a summary
+   * — Models' index is the Catalog, Tasks' is Workflows, Team's is Members — so the
+   * one level-2 nav reads the way the product does. This is the ONLY place that
+   * name lives; the nav and the module both read it here.
+   */
+  indexLabel?: string
 }
 
 /**
@@ -1004,10 +1014,12 @@ export const catalog: CatalogEntry[] = [
     // Enso tiers form over). The routing POLICY, though, is admin-only
     // shared-gateway config (hidden from a customer's sub-nav; graceful notice if
     // reached directly).
+    // The index is the live Catalog, not a summary — the one level-2 nav says so.
+    indexLabel: 'Catalog',
     subpages: [
-      { slug: 'leaderboard', label: 'Leaderboard' },
-      { slug: 'blend', label: 'Blend' },
-      { slug: 'routing', label: 'Routing', admin: true },
+      { slug: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+      { slug: 'blend', label: 'Blend', icon: Boxes },
+      { slug: 'routing', label: 'Routing', icon: Waypoints, admin: true },
     ],
   },
   {
@@ -1261,6 +1273,7 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: AutomationsModule },
       { path: ':tab', component: AutomationsModule },
     ],
+    indexLabel: 'Flows',
     subpages: [
       { slug: 'connectors', label: 'Connectors' },
       { slug: 'runs', label: 'Runs' },
@@ -1304,6 +1317,14 @@ export const catalog: CatalogEntry[] = [
     routes: [
       { path: '', component: FinetuningModule },
       { path: ':tab', component: FinetuningModule },
+    ],
+    indexLabel: 'Jobs',
+    subpages: [
+      { slug: 'interactive', label: 'Interactive' },
+      { slug: 'datasets', label: 'Datasets' },
+      { slug: 'checkpoints', label: 'Checkpoints' },
+      { slug: 'models', label: 'Models' },
+      { slug: 'configs', label: 'Configs' },
     ],
   },
   {
@@ -1349,11 +1370,11 @@ export const catalog: CatalogEntry[] = [
       { path: 'collections/:name', component: EmbeddingsModule },
     ],
     subpages: [
-      { slug: 'explore', label: 'Explore' },
-      { slug: 'collections', label: 'Collections' },
-      { slug: 'ingest', label: 'Ingest' },
-      { slug: 'models', label: 'Models' },
-      { slug: 'settings', label: 'Settings' },
+      { slug: 'explore', label: 'Explore', icon: Search },
+      { slug: 'collections', label: 'Collections', icon: Boxes },
+      { slug: 'ingest', label: 'Ingest', icon: Upload },
+      { slug: 'models', label: 'Models', icon: Brain },
+      { slug: 'settings', label: 'Settings', icon: SlidersHorizontal },
     ],
   },
   {
@@ -1388,6 +1409,8 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: EvalsModule },
       { path: ':tab', component: EvalsModule },
     ],
+    indexLabel: 'Run',
+    subpages: [{ slug: 'scores', label: 'Scores' }],
   },
 
   // ── Compute ──────────────────────────────────────────────────────────
@@ -1464,6 +1487,14 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: ContainersModule },
       { path: ':tab', component: ContainersModule },
     ],
+    indexLabel: 'Workloads',
+    subpages: [
+      { slug: 'pods', label: 'Pods' },
+      { slug: 'containers', label: 'Containers' },
+      { slug: 'images', label: 'Images' },
+      { slug: 'namespaces', label: 'Namespaces' },
+      { slug: 'events', label: 'Events' },
+    ],
   },
   {
     id: 'functions',
@@ -1475,11 +1506,11 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/functions',
     docs: `${DOCS}/functions`,
     kind: 'module',
-    // Overview ('') is the reusable LivingOverview (real inventory + metrics); the
-    // product tabs (Functions/Deployments/Triggers/Secrets/Settings) render via the
-    // `:tab` route the module already targets (`/functions/:tab`).
+    // ONE component owns the product at every level, so the index carries the same
+    // level-2 nav its tabs do; the index BOARD is still the reusable LivingOverview
+    // (real inventory + metrics), rendered by the module.
     routes: [
-      { path: '', component: FunctionsLiving },
+      { path: '', component: FunctionsModule },
       { path: ':tab', component: FunctionsModule },
     ],
     subpages: [
@@ -1893,6 +1924,13 @@ export const catalog: CatalogEntry[] = [
     routes: [
       { path: '', component: ZeroTrustModule },
       { path: ':tab', component: ZeroTrustModule },
+    ],
+    subpages: [
+      { slug: 'services', label: 'Services' },
+      { slug: 'identities', label: 'Identities' },
+      { slug: 'routers', label: 'Routers' },
+      { slug: 'policies', label: 'Policies' },
+      { slug: 'sessions', label: 'Sessions' },
     ],
   },
 
@@ -3001,16 +3039,18 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
-    // Overview ('') defaults to Companies; the three collections render via the
-    // `:tab` route the module targets (`/crm/{companies,contacts,opportunities}`).
+    // The index IS Companies (`/crm`); the other two collections render via the
+    // `:tab` route (`/crm/{contacts,opportunities}`). A bookmarked
+    // `/crm/companies` still resolves — the module falls back to Companies — but
+    // the nav offers ONE URL per screen.
     routes: [
       { path: '', component: CrmModule },
       { path: ':tab', component: CrmModule },
     ],
+    indexLabel: 'Companies',
     subpages: [
-      { slug: 'companies', label: 'Companies' },
-      { slug: 'contacts', label: 'Contacts' },
-      { slug: 'opportunities', label: 'Opportunities' },
+      { slug: 'contacts', label: 'Contacts', icon: Users },
+      { slug: 'opportunities', label: 'Opportunities', icon: Target },
     ],
   },
   {
@@ -3050,11 +3090,12 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: CapTableModule },
       { path: ':tab', component: CapTableModule },
     ],
+    indexLabel: 'Summary',
     subpages: [
-      { slug: 'stakeholders', label: 'Stakeholders' },
-      { slug: 'shares', label: 'Shares' },
-      { slug: 'classes', label: 'Classes' },
-      { slug: 'fundraising', label: 'Fundraising' },
+      { slug: 'stakeholders', label: 'Stakeholders', icon: Users },
+      { slug: 'shares', label: 'Shares', icon: ScrollText },
+      { slug: 'classes', label: 'Classes', icon: Layers },
+      { slug: 'fundraising', label: 'Fundraising', icon: TrendingUp },
     ],
   },
   {
@@ -3426,6 +3467,7 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: SettingsModule },
       { path: ':tab', component: SettingsModule },
     ],
+    indexLabel: 'General',
     subpages: [{ slug: 'branding', label: 'Branding' }],
   },
   {
@@ -3629,7 +3671,13 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: TasksModule },
       { path: ':ns/:wid', component: TasksModule },
     ],
-    subpages: [{ slug: 'queues', label: 'Queues' }],
+    indexLabel: 'Workflows',
+    subpages: [
+      { slug: 'schedules', label: 'Schedules' },
+      { slug: 'queues', label: 'Queues' },
+      { slug: 'workers', label: 'Workers' },
+      { slug: 'activities', label: 'Activities' },
+    ],
   },
 
   // ── Settings — org & account administration. Team (members + roles), org
@@ -3651,6 +3699,7 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: TeamModule },
       { path: ':tab', component: TeamModule },
     ],
+    indexLabel: 'Members',
     subpages: [{ slug: 'roles', label: 'Roles' }],
   },
   {
@@ -3666,6 +3715,7 @@ export const catalog: CatalogEntry[] = [
       { path: '', component: ProfileModule },
       { path: ':tab', component: ProfileModule },
     ],
+    indexLabel: 'Account',
     subpages: [
       { slug: 'security', label: 'Security' },
       { slug: 'keys', label: 'API Keys' },

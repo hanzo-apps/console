@@ -20,6 +20,8 @@
  * activity (`EmptyState`), and an em-dash for every absent/nullable metric. All
  * numbers come from the pure, tested `router/logic.ts` — nothing is fabricated.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -61,13 +63,6 @@ const ACCENT = 'var(--color11)'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
-const TABS: { id: string; label: string }[] = [
-  { id: '', label: 'Overview' },
-  { id: 'usage', label: 'Usage' },
-  { id: 'policy', label: 'Policy' },
-]
-
-const tabPath = (id: string): string => (id ? `/router/${id}` : '/router')
 
 /** Map a pure `NamedValue[]` to polychrome donut slices (color assigned in the view). */
 const toSlices = (rows: NamedValue[]): Slice[] =>
@@ -75,24 +70,11 @@ const toSlices = (rows: NamedValue[]): Slice[] =>
 
 export function RouterModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
-  const tab = useMemo(() => (TABS.some((t) => t.id === params.tab) ? params.tab ?? '' : ''), [params.tab])
+  const tab = productSubpageSlug('router', params.tab)
 
   return (
     <>
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'overview'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(tabPath(t.id))}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="router" />
 
       {tab === 'policy' ? (
         <RouterPolicyEditor params={params} />

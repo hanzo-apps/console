@@ -11,6 +11,8 @@
  * identity mutations are owned by IAM and deep-link there. Every read has honest
  * loading / 404 / access states; nothing is fabricated.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -19,7 +21,7 @@ import { Check, ExternalLink, Lock, Users } from '@hanzogui/lucide-icons-2'
 import { ApiError, TeamApi, type Organization } from '~/lib/api'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
-import { setOrgAccent, useAccent } from '~/lib/theme/accent'
+import { setOrgAccent } from '~/lib/theme/accent'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
@@ -346,37 +348,14 @@ function BrandingTab() {
   )
 }
 
-const TABS = [
-  { id: '', label: 'General' },
-  { id: 'branding', label: 'Branding' },
-] as const
-
 export function SettingsModule({ params }: { params: Record<string, string> }) {
-  const router = useRouter()
-  const { accent, contrast } = useAccent()
-  const tab = params.tab ?? ''
+  const tab = productSubpageSlug('settings', params.tab)
   const body = tab === 'branding' ? <BrandingTab /> : <GeneralTab />
 
   return (
     <>
       <PageHeader title="Settings" subtitle="Organization and account settings." actions={<ManageInIam />} />
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'general'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            // Custom org accent recolors the ACTIVE tab (Tamagui-native inline bg + text);
-            // default monochrome when no accent.
-            style={t.id === tab && accent ? { backgroundColor: accent, color: contrast } : undefined}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => router.push(t.id ? `/settings/${t.id}` : '/settings')}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="settings" />
       {body}
     </>
   )

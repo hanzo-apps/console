@@ -13,6 +13,8 @@
  * 404/not-wired read shows a truthful BackendStateCard, never lorem rows. Creating
  * a job is billing-gated (402) and surfaced honestly by the New-job panel.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -32,15 +34,6 @@ import { NewTrainingPanel } from './training/NewTrainingPanel'
 import { InteractiveTraining } from './training/InteractiveTraining'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
-
-const TABS = [
-  { id: '', label: 'Jobs' },
-  { id: 'interactive', label: 'Interactive' },
-  { id: 'datasets', label: 'Datasets' },
-  { id: 'checkpoints', label: 'Checkpoints' },
-  { id: 'models', label: 'Models' },
-  { id: 'configs', label: 'Configs' },
-] as const
 
 const ACTIVE = new Set(['training', 'running', 'queued', 'pending'])
 const DONE = new Set(['completed', 'succeeded'])
@@ -128,7 +121,7 @@ function lossSeries(experiments: TrainExperiment[]): { name: string; points: Cha
 export function FinetuningModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
   const org = currentOrg()
-  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+  const tab = productSubpageSlug('finetuning', params.tab)
 
   const [jobs, setJobs] = useState<Async<TrainJob[]>>({ phase: 'loading' })
   const [experiments, setExperiments] = useState<Async<TrainExperiment[]>>({ phase: 'loading' })
@@ -192,13 +185,7 @@ export function FinetuningModule({ params }: { params: Record<string, string> })
         <MetricCard icon={<Target size={15} />} label="Success rate" value={stats.successRate == null ? '—' : `${stats.successRate}%`} caption="completed / finished" />
       </XStack>
 
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button key={t.id || 'jobs'} size="$2" bg={t.id === tab ? '$color5' : 'transparent'} borderWidth={1} borderColor="$borderColor" onPress={() => go(t.id)}>
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="finetuning" />
 
       {tab === '' ? (
         <>

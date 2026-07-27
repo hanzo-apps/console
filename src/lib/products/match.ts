@@ -17,12 +17,25 @@ import {
   productSubpages,
   subpageIsWired,
   isAdminView,
+  subpageSlug,
+  subpageHref,
+  activeSubpage,
   type Matched,
   type ProductView,
 } from './match-core'
 
 export type { Matched, ProductView }
-export { productSubpages }
+export { productSubpages, subpageHref, activeSubpage }
+
+/**
+ * The level-2 slug a `:tab` param selects within a product — validated against the
+ * ONE registry declaration, so a module and the nav can never disagree about which
+ * tab is live. Unknown segment → '' (the index).
+ */
+export function productSubpageSlug(id: string, seg: string | undefined, showAdmin = true): string {
+  const entry = catalog.find((e) => e.id === id)
+  return entry ? subpageSlug(entry, seg, showAdmin) : ''
+}
 
 export function matchRoute(slug: string[]): Matched | null {
   return resolveRoute(productModules, slug)

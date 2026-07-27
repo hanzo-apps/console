@@ -21,57 +21,22 @@
  * The four tabs are one surface on purpose: they are the same question asked four
  * ways — what can I run (Catalog), what is any good (Leaderboard), what does MY org
  * run (Blend), and how is it routed (Routing, admin-only platform config).
+ *
+ * Those four are DECLARED in the registry (`indexLabel: 'Catalog'` + three
+ * sub-pages), not here — the sidebar's drill-down and `SubNav` render the same
+ * declaration, and `productSubpageSlug` validates the URL against it. This module
+ * only decides what each tab SHOWS.
  */
 import { useRouter } from 'next/navigation'
-import { Button, XStack, YStack } from '@hanzo/gui'
-import { Boxes, Library, Trophy, Waypoints } from '@hanzogui/lucide-icons-2'
-import type { ComponentType } from 'react'
+import { YStack } from '@hanzo/gui'
 
+import { productSubpageSlug } from '~/lib/products/match'
+import { SubNav } from '~/components/ui/SubNav'
 import { ModelCatalogModule } from './ModelCatalogModule'
 import { ModelRouteListView } from './models/ModelRouteListView'
 import { ModelRouteEditView } from './models/ModelRouteEditView'
 import { LeaderboardView } from './models/LeaderboardView'
 import { BlendView } from './models/BlendView'
-
-type Tab = 'catalog' | 'leaderboard' | 'blend' | 'routing'
-
-const TABS: { tab: Tab; label: string; Icon: ComponentType<{ size?: number }>; path: string }[] = [
-  { tab: 'catalog', label: 'Catalog', Icon: Library, path: '/models' },
-  { tab: 'leaderboard', label: 'Leaderboard', Icon: Trophy, path: '/models/leaderboard' },
-  { tab: 'blend', label: 'Blend', Icon: Boxes, path: '/models/blend' },
-  { tab: 'routing', label: 'Routing', Icon: Waypoints, path: '/models/routing' },
-]
-
-/** The tab a `:tab` segment selects; anything unknown falls back to the catalog. */
-function tabFor(seg: string | undefined): Tab {
-  const hit = TABS.find((t) => t.tab === seg)
-  return hit ? hit.tab : 'catalog'
-}
-
-function TabButton({
-  active,
-  label,
-  Icon,
-  onPress,
-}: {
-  active: boolean
-  label: string
-  Icon: ComponentType<{ size?: number }>
-  onPress: () => void
-}) {
-  return (
-    <Button
-      size="$2"
-      icon={<Icon size={15} />}
-      bg={active ? '$color5' : 'transparent'}
-      borderWidth={1}
-      borderColor="$borderColor"
-      onPress={onPress}
-    >
-      {label}
-    </Button>
-  )
-}
 
 export function ModelsModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
@@ -87,33 +52,24 @@ export function ModelsModule({ params }: { params: Record<string, string> }) {
     )
   }
 
-  const tab: Tab = tabFor(params.tab)
+  // Level 2 is the URL, validated against the ONE registry declaration.
+  const tab = productSubpageSlug('models', params.tab)
 
   return (
     <YStack gap="$3">
-      <XStack gap="$1.5" flexWrap="wrap">
-        {TABS.map((t) => (
-          <TabButton
-            key={t.tab}
-            active={tab === t.tab}
-            label={t.label}
-            Icon={t.Icon}
-            onPress={() => router.push(t.path)}
-          />
-        ))}
-      </XStack>
+      <SubNav id="models" />
 
-      {tab === 'catalog' ? (
-        <ModelCatalogModule params={params} />
-      ) : tab === 'leaderboard' ? (
+      {tab === 'leaderboard' ? (
         <LeaderboardView />
       ) : tab === 'blend' ? (
         <BlendView />
-      ) : (
+      ) : tab === 'routing' ? (
         <ModelRouteListView
           onOpen={(r) => router.push(`/models/routing/${encodeURIComponent(r.modelName ?? '')}`)}
           onNew={() => router.push('/models/routing/new')}
         />
+      ) : (
+        <ModelCatalogModule params={params} />
       )}
     </YStack>
   )

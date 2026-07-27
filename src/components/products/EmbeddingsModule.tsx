@@ -21,6 +21,8 @@
  *   /embeddings/<tab>                  → that tab
  *   /embeddings/collections/<name>     → edit one collection (reuses StoreEditView)
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug, subpageHref } from '~/lib/products/match'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
@@ -50,36 +52,9 @@ import { IngestView } from './embeddings/IngestView'
 import { ModelsView } from './embeddings/ModelsView'
 import { SettingsView } from './embeddings/SettingsView'
 
-const TABS = [
-  ['overview', 'Overview', LayoutDashboard],
-  ['explore', 'Explore', Search],
-  ['collections', 'Collections', Boxes],
-  ['ingest', 'Ingest', Upload],
-  ['models', 'Models', Brain],
-  ['settings', 'Settings', SlidersHorizontal],
-] as const
-
-type Tab = (typeof TABS)[number][0]
-
-function TabBar({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void }) {
-  return (
-    <XStack gap="$1.5" flexWrap="wrap">
-      {TABS.map(([id, label, Icon]) => (
-        <Button
-          key={id}
-          size="$2"
-          icon={<Icon size={15} />}
-          bg={active === id ? '$color5' : 'transparent'}
-          borderWidth={1}
-          borderColor="$borderColor"
-          onPress={() => onSelect(id)}
-        >
-          {label}
-        </Button>
-      ))}
-    </XStack>
-  )
-}
+/** The tabs are DECLARED in the registry (`subpages`); this is only the union the
+ *  module switches on. */
+type Tab = '' | 'explore' | 'collections' | 'ingest' | 'models' | 'settings'
 
 export function EmbeddingsModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
@@ -96,8 +71,8 @@ export function EmbeddingsModule({ params }: { params: Record<string, string> })
     )
   }
 
-  const tab: Tab = (TABS.find(([id]) => id === params.tab)?.[0] ?? 'overview') as Tab
-  const go = (t: Tab) => router.push(t === 'overview' ? '/embeddings' : `/embeddings/${t}`)
+  const tab = productSubpageSlug('embeddings', params.tab) as Tab
+  const go = (t: Tab) => router.push(subpageHref('embeddings', t))
   const openCollection = (name: string) => router.push(`/embeddings/collections/${encodeURIComponent(name)}`)
 
   // The ONE create path — used by the header action AND the Collections "New".
@@ -113,7 +88,7 @@ export function EmbeddingsModule({ params }: { params: Record<string, string> })
   }
 
   const Tabs: Record<Tab, ComponentType> = {
-    overview: () => (
+    '': () => (
       <OverviewView
         owner={owner}
         onOpenCollection={openCollection}
@@ -147,7 +122,7 @@ export function EmbeddingsModule({ params }: { params: Record<string, string> })
         }
       />
 
-      <TabBar active={tab} onSelect={go} />
+      <SubNav id="embeddings" />
       {notice ? (
         <Text fontSize="$2" color="$red10">
           {notice}

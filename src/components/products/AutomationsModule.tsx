@@ -18,6 +18,8 @@
  * ever sees THEIR org's flows/runs. States are honest: loading, `BackendStateCard`
  * on a `/v1` failure, and real empty states — never fabricated rows.
  */
+import { SubNav } from '~/components/ui/SubNav'
+import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -48,18 +50,12 @@ import {
 } from './automations/logic'
 import { toneColor } from '~/components/ui/tone'
 
-const TABS = [
-  { id: '', label: 'Flows' },
-  { id: 'connectors', label: 'Connectors' },
-  { id: 'runs', label: 'Runs' },
-] as const
-
 /** Cap the rendered connector cards; search/category narrow the rest (honest note). */
 const CATALOG_RENDER_CAP = 240
 
 export function AutomationsModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
-  const tab = TABS.some((t) => t.id === params.tab) ? (params.tab ?? '') : ''
+  const tab = productSubpageSlug('automations', params.tab)
   const go = (id: string) => router.push(`/automations${id ? `/${id}` : ''}`)
 
   return (
@@ -69,20 +65,7 @@ export function AutomationsModule({ params }: { params: Record<string, string> }
         subtitle="Build and run automation flows — 706 connectors on the native engine, in-console."
       />
 
-      <XStack gap="$1" flexWrap="wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.id || 'flows'}
-            size="$2"
-            bg={t.id === tab ? '$color5' : 'transparent'}
-            borderWidth={1}
-            borderColor="$borderColor"
-            onPress={() => go(t.id)}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </XStack>
+      <SubNav id="automations" />
 
       {tab === 'connectors' ? <ConnectorsView /> : tab === 'runs' ? <RunsView /> : <FlowsView onBrowse={() => go('connectors')} />}
     </YStack>
