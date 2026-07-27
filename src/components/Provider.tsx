@@ -62,7 +62,7 @@ export function Provider({ children }: { children: ReactNode }) {
       <SessionProvider>
         <OrgAccentProvider />
         {/* Entitlements live inside the session (they read the signed-in account +
-            active org scope) so the sidebar/launcher/palette gate from ONE fetch. */}
+            active org scope) so the sidebar/palette gate from ONE fetch. */}
         <EntitlementsProvider>
           {/* Analytics lives INSIDE the session so `identify` binds the signed-in
               actor. The ONE shared `eventClient` (same-origin /v1/event; the tenant is

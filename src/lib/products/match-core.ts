@@ -63,7 +63,7 @@ export function entryMatches(e: CatalogEntry, query: string): boolean {
 /**
  * Conventional / intuitive slugs that a user (or an external doc, bookmark, or a
  * hand-typed URL) reasonably expects, mapped to the canonical catalog `id`. The
- * nav/launcher/⌘K always open the canonical id, so these aliases exist ONLY to
+ * nav/⌘K always open the canonical id, so these aliases exist ONLY to
  * keep a directly-navigated URL from 404ing — the ONE place aliasing is defined
  * (DRY), consumed only by `resolveProductView`.
  *
@@ -219,7 +219,7 @@ export type ProductView =
   // A directly-navigated URL that resolves (possibly via an alias) to an EXTERNAL
   // entry — a real product on its own domain (e.g. a Lux/Zoo chain app launch tile).
   // External entries own no in-console route, so the catch-all launches `href`
-  // instead of 404ing. The nav/launcher never produce this (they `openProduct`
+  // instead of 404ing. The nav/palette never produce this (they `openProduct`
   // directly); it's only for a hand-typed/bookmarked URL.
   | { kind: 'external'; entry: Extract<CatalogEntry, { kind: 'external' }> }
   | { kind: 'notfound' }

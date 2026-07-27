@@ -1,5 +1,5 @@
 /**
- * Open a catalog entry — the ONE opener every surface (nav, launcher, ⌘K,
+ * Open a catalog entry — the ONE opener every surface (nav, ⌘K,
  * category page, level-2 siblings) routes through, so opening is defined in one
  * place. Discriminates on `kind`:
  *  - `module`   : navigate to its in-console route (`/<id>`).

@@ -974,8 +974,8 @@ function SidebarNav({
 }
 
 /** Mobile/tablet nav drawer — the same SidebarNav, slid in from the LEFT (the
- *  hamburger is top-left and this is a left-nav), with a ⌘K search + Apps launcher
- *  at the top (the command surface, reachable on mobile). */
+ *  hamburger is top-left and this is a left-nav), with the ⌘K search + Apps button
+ *  at the top — both open the one command surface, reachable on mobile. */
 function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const palette = useCommandPalette()
   return (
@@ -1189,7 +1189,7 @@ export function Dashboard({ children }: { children: ReactNode }) {
 
           <CommandSearchBox />
 
-          {/* Apps launcher — icon-only below lg, labeled at lg+. */}
+          {/* Apps — opens the command palette; icon-only below lg, labeled at lg+. */}
           <Button
             size="$3"
             icon={<LayoutGrid size={18} />}
