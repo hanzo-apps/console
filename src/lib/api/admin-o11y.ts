@@ -3,7 +3,7 @@
  * admin.hanzo.ai Fleet Observability board. It is the un-org-scoped twin of the
  * per-org console o11y: the SAME signals, aggregated across EVERY tenant, from the
  * ONE hanzoai/datastore — LLM usage (hanzo.cloud_usage), traces
- * (signoz_traces), logs (signoz_logs), and o11y AI generations.
+ * (o11y_traces), logs (o11y_logs), and LLM generations.
  *
  * Transport: `originGet('admin/o11y', …)` pins the request to the console's OWN
  * origin (never a split-origin `NEXT_PUBLIC_CLOUD_URL`), so it terminates at

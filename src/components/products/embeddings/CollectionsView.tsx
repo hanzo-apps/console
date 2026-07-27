@@ -158,7 +158,7 @@ export function CollectionsView({
       <EmptyState
         icon={Boxes}
         title="Create your first collection"
-        description="A collection is a vector index for one knowledge base. Each maps to the Qdrant/Search index {org}-{name}-docs; ingest documents to fill it."
+        description="A collection is a vector index for one knowledge base. Each maps to the Vector/Search index {org}-{name}-docs; ingest documents to fill it."
         bullets={[
           'Embeddings are generated with a Zen embedding model',
           'Ingest from upload, GitHub, crawl, or S3 (Jobs tab)',
