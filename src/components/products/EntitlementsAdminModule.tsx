@@ -133,7 +133,7 @@ export function EntitlementsAdminModule() {
         <Card borderWidth={1} borderColor="$borderColor" overflow="hidden">
           <XStack items="center" gap="$2" px="$3" py="$2.5" bg="$color2">
             <ShieldCheck size={14} color="$color10" />
-            <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+            <Text fontSize="$1" color="$color10" fontWeight="500">
               {rows.length} products · super-admin control
             </Text>
           </XStack>

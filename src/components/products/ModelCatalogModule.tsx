@@ -350,7 +350,7 @@ const Stat = ({ label, value, divider }: { label: string; value: string; divider
     <Text className={TNUM} fontSize="$7" fontWeight="800" color="$color12" letterSpacing={-0.5}>
       {value}
     </Text>
-    <Text fontSize="$1" color="$color10" textTransform="uppercase" letterSpacing={0.4}>
+    <Text fontSize="$1" color="$color10">
       {label}
     </Text>
   </YStack>

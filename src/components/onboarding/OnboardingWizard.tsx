@@ -131,8 +131,8 @@ export function OnboardingWizard({
           <YStack flex={1} minW={0}>
             <FadeIn key={ONBOARDING_STEPS[index].id}>
               <Card p="$5" gap="$4" borderWidth={1} borderColor="$borderColor" bg="$color1" width="100%">
-                <Text fontSize="$1" color="$color10" fontWeight="700" letterSpacing={1}>
-                  STEP {index + 1} OF {ONBOARDING_STEPS.length}
+                <Text fontSize="$1" color="$color10" fontWeight="500">
+                  Step {index + 1} of {ONBOARDING_STEPS.length}
                 </Text>
                 <Step {...props} />
               </Card>

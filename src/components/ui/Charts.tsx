@@ -205,7 +205,7 @@ export function LineChart({
             </>
           ) : null}
           {ticks.map((t) => (
-            <text key={t.i} x={x(t.i)} y={height - 7} fontSize={10} fill={AXIS} textAnchor={t.anchor}>
+            <text key={t.i} x={x(t.i)} y={height - 7} fontSize={11} fill={AXIS} textAnchor={t.anchor}>
               {t.label}
             </text>
           ))}
@@ -279,7 +279,7 @@ export function BarChart({
             )
           })}
           {ticks.map((t) => (
-            <text key={t.i} x={cx(t.i)} y={height - 7} fontSize={10} fill={AXIS} textAnchor="middle">
+            <text key={t.i} x={cx(t.i)} y={height - 7} fontSize={11} fill={AXIS} textAnchor="middle">
               {t.label}
             </text>
           ))}

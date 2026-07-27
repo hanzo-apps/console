@@ -26,6 +26,7 @@ import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import { X } from '@hanzogui/lucide-icons-2'
 
 import { asColor, type IconLike } from '~/components/ui/color'
+import { Z, type ZLayer } from '~/lib/z'
 
 /** The lg breakpoint (px) — matches the shell's one responsive threshold. */
 const LG = 1024
@@ -63,8 +64,9 @@ export type SlideOverProps = {
   headerRight?: ReactNode
   /** Accessible label when no visible title is given. */
   ariaLabel?: string
-  /** z-index for stacking (a pane opened over a drawer passes a higher value). */
-  zIndex?: number | string
+  /** Stacking layer from the ONE ladder (~/lib/z). A pane opened over a drawer
+   *  passes a higher one, e.g. `Z.popover` over the default `Z.modal`. */
+  zIndex?: ZLayer
   children: ReactNode
 }
 
@@ -78,11 +80,11 @@ export function SlideOver({
   iconColor,
   headerRight,
   ariaLabel,
-  // The ladder's own rung for a sheet (`app/design/z.css`), not a literal. It sits
-  // BELOW `--z-popover` deliberately: a popover anchored inside a sheet — the
+  // The ladder's own rung for a sheet, named rather than spelled as a number. It
+  // sits BELOW `Z.popover` deliberately: a popover anchored inside a sheet — the
   // account control in the phone's account drawer — must paint over it, which a
   // hardcoded 1000 made impossible.
-  zIndex = 'var(--z-modal, 600)',
+  zIndex = Z.modal,
   children,
 }: SlideOverProps) {
   const panelRef = useRef<HTMLElement | null>(null)

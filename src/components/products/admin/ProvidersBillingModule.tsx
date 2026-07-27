@@ -60,7 +60,7 @@ function Pill({ tone, children }: { tone: 'credit' | 'paid' | 'empty'; children:
   // theme tokens + hex LITERALS, per the Charts.tsx convention).
   return (
     <XStack style={{ backgroundColor: c.bg }} px="$2.5" py="$1" rounded="$10" items="center">
-      <Text fontSize="$1" fontWeight="700" style={{ color: c.fg, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+      <Text fontSize="$1" fontWeight="700" style={{ color: c.fg }}>
         {children}
       </Text>
     </XStack>

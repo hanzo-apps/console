@@ -20,7 +20,7 @@
  */
 import { XStack } from '@hanzo/gui'
 
-import { asColor, type IconLike } from './color'
+import { asColor, tileRadius, type IconLike } from './color'
 import { contrastText } from '~/lib/theme/accent'
 
 export function ProductIcon({
@@ -33,7 +33,7 @@ export function ProductIcon({
   color?: string
   size?: number
 }) {
-  const radius = Math.round(size * 0.28)
+  const radius = tileRadius(size)
   const glyph = Math.round(size * 0.58)
   const tinted = typeof color === 'string' && color.trim() !== ''
 

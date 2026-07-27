@@ -130,7 +130,7 @@ export function ProductCustomize({ id }: { id: string }) {
       {/* Color */}
       <YStack gap="$2.5">
         <XStack items="center" justify="space-between">
-          <Text fontSize="$2" color="$color11" fontWeight="700" textTransform="uppercase">
+          <Text fontSize="$2" color="$color11" fontWeight="500">
             Icon color
           </Text>
           <Button size="$1" chromeless onPress={() => resetColor(id)}>
@@ -148,7 +148,7 @@ export function ProductCustomize({ id }: { id: string }) {
 
       {/* Pin */}
       <YStack gap="$2.5">
-        <Text fontSize="$2" color="$color11" fontWeight="700" textTransform="uppercase">
+        <Text fontSize="$2" color="$color11" fontWeight="500">
           Pin
         </Text>
         <Button
@@ -166,7 +166,7 @@ export function ProductCustomize({ id }: { id: string }) {
       {/* Group (only meaningful once pinned) */}
       {pinned ? (
         <YStack gap="$2.5">
-          <Text fontSize="$2" color="$color11" fontWeight="700" textTransform="uppercase">
+          <Text fontSize="$2" color="$color11" fontWeight="500">
             Group
           </Text>
           <XStack flexWrap="wrap" gap="$2">
@@ -292,7 +292,7 @@ function ManageGroup({
             />
           </XStack>
         ) : (
-          <Text flex={1} fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+          <Text flex={1} fontSize="$1" color="$color10" fontWeight="500">
             {group.label}
           </Text>
         )}
@@ -357,7 +357,7 @@ export function ManagePins() {
       ))}
 
       <YStack gap="$2">
-        <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+        <Text fontSize="$1" color="$color10" fontWeight="500">
           New group
         </Text>
         <NewGroup onAdd={addGroup} />

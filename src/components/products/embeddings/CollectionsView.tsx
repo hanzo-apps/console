@@ -117,7 +117,7 @@ export function CollectionsView({
   const columns: Column<Collection>[] = [
     {
       key: 'collection',
-      header: 'COLLECTION',
+      header: 'Collection',
       render: (c) => (
         <YStack gap="$1">
           <Text fontSize="$3" fontWeight="600" color="$color12" cursor="pointer" onPress={() => onOpen(c.name)} numberOfLines={1}>
@@ -130,12 +130,12 @@ export function CollectionsView({
         </YStack>
       ),
     },
-    { key: 'model', header: 'MODEL', width: 150, render: (c) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{c.model || '—'}</Text> },
-    { key: 'vectors', header: 'VECTORS', width: 90, render: (c) => <Text fontSize="$3" color="$color11">{c.vectors != null ? c.vectors.toLocaleString() : '—'}</Text> },
-    { key: 'dimension', header: 'DIMENSION', width: 100, render: (c) => <Text fontSize="$3" color="$color11">{c.dimension ?? '—'}</Text> },
-    { key: 'metric', header: 'METRIC', width: 90, render: (c) => <Text fontSize="$3" color="$color11">{c.metric}</Text> },
-    { key: 'size', header: 'SIZE', width: 80, render: (c) => <Text fontSize="$3" color="$color11">{c.sizeBytes != null ? `${c.sizeBytes}` : '—'}</Text> },
-    { key: 'created', header: 'CREATED', width: 110, render: (c) => <Text fontSize="$3" color="$color11">{fmtDate(c.created)}</Text> },
+    { key: 'model', header: 'Model', width: 150, render: (c) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{c.model || '—'}</Text> },
+    { key: 'vectors', header: 'Vectors', width: 90, render: (c) => <Text fontSize="$3" color="$color11">{c.vectors != null ? c.vectors.toLocaleString() : '—'}</Text> },
+    { key: 'dimension', header: 'Dimension', width: 100, render: (c) => <Text fontSize="$3" color="$color11">{c.dimension ?? '—'}</Text> },
+    { key: 'metric', header: 'Metric', width: 90, render: (c) => <Text fontSize="$3" color="$color11">{c.metric}</Text> },
+    { key: 'size', header: 'Size', width: 80, render: (c) => <Text fontSize="$3" color="$color11">{c.sizeBytes != null ? `${c.sizeBytes}` : '—'}</Text> },
+    { key: 'created', header: 'Created', width: 110, render: (c) => <Text fontSize="$3" color="$color11">{fmtDate(c.created)}</Text> },
     {
       key: 'menu',
       header: '',
