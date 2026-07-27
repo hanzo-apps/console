@@ -123,6 +123,7 @@ import { ApplicationsModule } from '~/components/products/ApplicationsModule'
 import { PlatformAppsModule } from '~/components/products/PlatformAppsModule'
 import { PlatformModule } from '~/components/products/PlatformModule'
 import { StoreModule } from '~/components/products/store/StoreModule'
+import { StoreDetail } from '~/components/products/store/StoreDetail'
 import { MapModule } from '~/components/products/map/MapModule'
 import { EmbeddingsModule } from '~/components/products/EmbeddingsModule'
 import { KnowledgeModule } from '~/components/products/KnowledgeModule'
@@ -2038,7 +2039,7 @@ export const catalog: CatalogEntry[] = [
     // App Store — the OSS one-click marketplace: browse the LIVE 1000+-app catalog
     // (templates.hanzo.ai/meta.json, open CORS → fetched straight from the browser, no
     // BFF) and deploy any of them over the console's REAL PaaS path (`PaasApi` →
-    // `/v1/platform/*`). The maker "Earn 20%" hook routes to the in-console OSS Author
+    // `/v1/platform/*`). The maker payout hook routes to the in-console OSS Author
     // program. The centerpiece of the platform.<brand> deploy experience.
     id: 'store',
     label: 'App Store',
@@ -2049,7 +2050,12 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
-    routes: [{ path: '', component: StoreModule }],
+    routes: [
+      { path: '', component: StoreModule },
+      // The per-app detail page: what a deploy actually provisions, read from the
+      // blueprint itself, so the decision to run someone else's stack is informed.
+      { path: ':id', component: StoreDetail },
+    ],
   },
   {
     // Deploy — the native ArgoCD replacement, rendered as a Railway-grade fleet MAP
@@ -2650,7 +2656,10 @@ export const catalog: CatalogEntry[] = [
     label: 'Authors',
     icon: BookOpen,
     description: 'Earn when your open-source project is deployed on Hanzo.',
-    category: 'Web3',
+    // Dev, not Web3: the audience is open-source developers shipping code, and the
+    // subject is their project. A wallet is how the payout arrives — the mechanism,
+    // not the category. Filing it under Web3 hid it from everyone it is meant for.
+    category: 'Dev',
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
