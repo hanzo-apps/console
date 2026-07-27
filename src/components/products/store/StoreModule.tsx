@@ -25,7 +25,14 @@ type Async =
   | { phase: 'error'; error: BackendState }
   | { phase: 'ready'; apps: OssApp[] }
 
-/** The maker payout banner — "built one of these? earn 20%" → the in-console Author program. */
+/**
+ * The maker payout banner — the ONE place the Author program is pitched (it used to
+ * repeat on every tile, which read as noise and buried the apps).
+ *
+ * Addressed to the developer, not to the catalog: "Built one of these?" implicitly
+ * conceded that we built none of it, framing our own store as other people's work.
+ * The subject is the reader's project and what they earn from it.
+ */
 function PayoutBanner() {
   const router = useRouter()
   return (
@@ -34,10 +41,11 @@ function PayoutBanner() {
         <HandCoins size={22} color="$color11" />
         <YStack flex={1} minW={240} gap="$0.5">
           <Text fontSize="$4" fontWeight="700">
-            Built one of these? Get paid when people run it.
+            Open source developer? Earn up to 20%.
           </Text>
           <Text fontSize="$2" color="$color11">
-            Earn 20% of the compute margin when teams deploy your open-source project on {config.brandName} — paid to your Hanzo wallet.
+            Every time a team runs your project on {config.brandName}, you earn up to 20% of the
+            compute margin — paid to your Hanzo wallet, for as long as it runs.
           </Text>
         </YStack>
         <PrimaryButton size="$2" onPress={() => router.push('/authors')}>
