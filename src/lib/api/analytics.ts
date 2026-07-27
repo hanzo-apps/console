@@ -6,7 +6,7 @@
  * server-authoritatively from the Bearer owner claim, so every metric is scoped to the
  * caller's own org — the browser never holds a datastore credential.
  *
- * ONE warehouse (ClickHouse / datastore), TWO lenses, and exactly the FOUR routes the
+ * ONE warehouse (Hanzo Datastore), TWO lenses, and exactly the FOUR routes the
  * backend actually mounts (`clients/analytics/analytics.go` routes at 95-98) — no more:
  *   - GET /v1/analytics/overview    — headline KPIs (llm + web + commerce blocks)
  *   - GET /v1/analytics/timeseries  — the LLM usage series (requests/tokens/spend)
