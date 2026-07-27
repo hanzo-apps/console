@@ -21,7 +21,7 @@
     "@hanzo/canvas": "^0.1.0",
     "@hanzo/dash": "0.3.0",
     "@hanzo/data": "^1.2.0",
-    "@hanzo/event": "^0.3.3",
+    "@hanzo/event": "^0.3.4",
     "@hanzo/finance-ui": "0.1.1",
     "@hanzo/gui": "7.3.0",
     "@hanzo/iam": "^0.13.6",
