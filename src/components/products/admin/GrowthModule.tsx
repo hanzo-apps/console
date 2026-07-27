@@ -61,7 +61,8 @@ import {
   type Strategy,
 } from '~/lib/guide/client'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard, Panel, UtilBar, LegendDot } from '~/components/ui/Metric'
+import { MetricCard, UtilBar, LegendDot } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { Donut, type Slice } from '~/components/ui/Charts'
 import { RAMP } from '~/lib/theme/ramp'
 import { asColor } from '~/components/ui/color'

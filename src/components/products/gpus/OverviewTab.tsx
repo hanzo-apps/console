@@ -126,7 +126,7 @@ export function OverviewTab({
         <Panel
           title="Utilization over time"
           minW={360}
-          right={
+          actions={
             <XStack gap="$1">
               {RANGES.map((r) => (
                 <Text
@@ -177,7 +177,7 @@ export function OverviewTab({
 
       {/* Top clusters + Alerts */}
       <XStack gap="$3" flexWrap="wrap">
-        <Panel title="Top clusters" minW={320} right={<Text fontSize="$2" color="$color10" cursor="pointer" onPress={() => onNav('clusters')}>View all</Text>}>
+        <Panel title="Top clusters" minW={320} actions={<Text fontSize="$2" color="$color10" cursor="pointer" onPress={() => onNav('clusters')}>View all</Text>}>
           {clusters.phase === 'loading' ? (
             <XStack p="$3" gap="$2" items="center"><Spinner /><Text color="$color11">Loading clusters…</Text></XStack>
           ) : clusters.phase === 'error' ? (
@@ -199,7 +199,7 @@ export function OverviewTab({
           )}
         </Panel>
 
-        <Panel title="Alerts" minW={300} right={<Text fontSize="$2" color="$color10" cursor="pointer" onPress={() => onNav('alerts')}>View all</Text>}>
+        <Panel title="Alerts" minW={300} actions={<Text fontSize="$2" color="$color10" cursor="pointer" onPress={() => onNav('alerts')}>View all</Text>}>
           {alerts.phase === 'loading' ? (
             <XStack p="$3" gap="$2" items="center"><Spinner /><Text color="$color11">Loading…</Text></XStack>
           ) : alerts.phase === 'error' ? (
@@ -233,7 +233,7 @@ export function OverviewTab({
       </YStack>
 
       {/* Cost trend */}
-      <Panel title="Cost trend · 7D" minW={320} right={<Text fontSize="$2" color="$color10" cursor="pointer" onPress={() => onNav('pricing')}>Pricing</Text>}>
+      <Panel title="Cost trend · 7D" minW={320} actions={<Text fontSize="$2" color="$color10" cursor="pointer" onPress={() => onNav('pricing')}>Pricing</Text>}>
         {ledger.phase === 'loading' ? (
           <XStack p="$3" gap="$2" items="center"><Spinner /><Text color="$color11">Loading usage…</Text></XStack>
         ) : ledger.phase === 'ready' && ledger.data.daily.length ? (

@@ -228,35 +228,3 @@ export function HintButton({
     </span>
   )
 }
-
-/**
- * A titled panel wrapper used across the consoles (chart + list cards). `grow`
- * (default true) sets `flex={1}` so panels SHARE width in a ROW; pass `grow={false}`
- * inside a vertical rail (a column YStack) so each panel sizes to its content and
- * stacks — flex-grow in a column with no fixed height collapses them onto each other.
- */
-export function Panel({
-  title,
-  right,
-  children,
-  minW = 280,
-  grow = true,
-}: {
-  title: string
-  right?: ReactNode
-  children: ReactNode
-  minW?: number
-  grow?: boolean
-}) {
-  return (
-    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={grow ? 1 : undefined} minW={minW} width={grow ? undefined : '100%'}>
-      <XStack items="center" justify="space-between" gap="$2">
-        <Text fontSize="$4" fontWeight="500" color="$color12">
-          {title}
-        </Text>
-        {right}
-      </XStack>
-      {children}
-    </Card>
-  )
-}

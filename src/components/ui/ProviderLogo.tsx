@@ -21,6 +21,7 @@ import { Text, XStack, useTheme } from '@hanzo/gui'
 import { normalizeBrand, brandForModel, BRANDS, providerInitials } from './brand'
 import { BRAND_MARK, type BrandMark } from './brand-marks'
 import { tileRadius } from './color'
+import { Monogram } from '~/components/ui/Monogram'
 
 export { providerInitials } from './brand'
 
@@ -97,12 +98,10 @@ function GitHubMark({ size, color }: { size: number; color: string }) {
  * colour take the exact same, type-clean path.
  */
 function Tile({ size, bg, borderColor, children }: { size: number; bg: string; borderColor?: string; children: React.ReactNode }) {
+  // A tile's glyph/initials scale with the tile, so it is a GRAPHIC — see Monogram.
   return (
-    // `data-monogram` marks this as a GRAPHIC, not app text: the initials inside
-    // scale with the tile (a fixed 11px monogram in a 40px circle reads broken),
-    // so the design gate exempts it from the type scale. One marker, one meaning.
+    <Monogram>
     <XStack
-      data-monogram
       width={size}
       height={size}
       items="center"
@@ -112,6 +111,7 @@ function Tile({ size, bg, borderColor, children }: { size: number; bg: string; b
     >
       {children}
     </XStack>
+    </Monogram>
   )
 }
 

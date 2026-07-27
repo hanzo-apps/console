@@ -573,7 +573,12 @@ function SidebarNav({
         : []
     const activeSlug = root ? activeSubpage(pathname, root.id) : ''
     return (
-      <>
+      // The product rail is a NAVIGATION LANDMARK. It had no role at all, so a
+      // screen-reader user had no way to jump to the product list and no way to
+      // skip past it. `display: contents` adds the landmark with ZERO layout
+      // effect (the children keep their parent's flex context), and the explicit
+      // role survives regardless of how a given AT treats display:contents.
+      <nav role="navigation" aria-label="Products" style={{ display: 'contents' }}>
         {shell.wordmark && !collapsed ? (
           <XStack
             items="center"
@@ -617,7 +622,7 @@ function SidebarNav({
         </ScrollView>
         <SidebarAccount collapsed={collapsed} />
         <SidebarWallet collapsed={collapsed} />
-      </>
+      </nav>
     )
   }
 
@@ -691,7 +696,12 @@ function SidebarNav({
   // ── Level 1 — the full product list: brand; filter; Overview/Docs; Pinned; every
   //    category (EXPANDED by default, collapsible); All-products; identity + wallet. ──
   return (
-    <>
+    // The product rail is a NAVIGATION LANDMARK. It had no role at all, so a
+    // screen-reader user had no way to jump to the product list and no way to
+    // skip past it. `display: contents` adds the landmark with ZERO layout
+    // effect (the children keep their parent's flex context), and the explicit
+    // role survives regardless of how a given AT treats display:contents.
+    <nav role="navigation" aria-label="Products" style={{ display: 'contents' }}>
       <SidebarBrand collapsed={false} onNavigate={onNavigate} />
 
       {/* Product filter — narrows the whole list; a match from any category jumps
@@ -825,7 +835,7 @@ function SidebarNav({
       {/* Bottom-left cluster: the org switcher + account menu, then the wallet. */}
       <SidebarAccount collapsed={false} />
       <SidebarWallet collapsed={false} />
-    </>
+    </nav>
   )
 }
 
