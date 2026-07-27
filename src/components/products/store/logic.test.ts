@@ -71,8 +71,9 @@ describe('paginate + remaining', () => {
 })
 
 describe('tags', () => {
-  it('availableTags is the distinct, sorted set', () => {
-    expect(availableTags(CATALOG)).toEqual(['automation', 'caprover', 'cms', 'database', 'monitoring', 'self-hosted'])
+  it('availableTags is the distinct, sorted set, without provenance tags', () => {
+    // 'caprover' (the upstream marketplace an entry came from) is never a browsable chip.
+    expect(availableTags(CATALOG)).toEqual(['automation', 'cms', 'database', 'monitoring', 'self-hosted'])
   })
 
   it('featuredQuickTags keeps present FEATURED_TAGS and hides provenance tags', () => {
