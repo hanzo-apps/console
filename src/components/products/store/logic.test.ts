@@ -10,6 +10,7 @@ import {
   featuredQuickTags,
   featuredApps,
   hasDeploySource,
+  parseBlueprint,
   slugify,
 } from './logic'
 
@@ -115,5 +116,52 @@ describe('slugify', () => {
     expect(slugify('!!!')).toBe('app')
     expect(slugify('')).toBe('app')
     expect(slugify('a'.repeat(80)).length).toBeLessThanOrEqual(40)
+  })
+})
+
+describe('parseBlueprint (what a deploy actually provisions)', () => {
+  it('reads services, images and ports from a real compose file', () => {
+    const yaml = [
+      "version: '3.8'",
+      'services:',
+      '  web:',
+      '    image: nginx:1.27-alpine',
+      '    ports:',
+      '      - "8080:80"',
+      '      - "443:443"',
+      '    environment:',
+      '      - APP_URL=https://example.com',
+      '      - SECRET_KEY=changeme',
+      '  db:',
+      '    image: postgres:16',
+      '    environment:',
+      '      - POSTGRES_PASSWORD=pw',
+      'volumes:',
+      '  pgdata:',
+    ].join('\n')
+    const bp = parseBlueprint(yaml)
+    expect(bp.services.map((s) => s.name)).toEqual(['web', 'db'])
+    expect(bp.services[0].image).toBe('nginx:1.27-alpine')
+    expect(bp.services[0].ports).toEqual(['8080:80', '443:443'])
+    expect(bp.services[1].image).toBe('postgres:16')
+    // Env keys are the KEYS only — never the values, which are often secrets.
+    expect(bp.env).toEqual(['APP_URL', 'POSTGRES_PASSWORD', 'SECRET_KEY'])
+  })
+
+  it('stops at the end of the services block (a trailing top-level key is not a service)', () => {
+    const bp = parseBlueprint(['services:', '  app:', '    image: a:1', 'networks:', '  default:'].join('\n'))
+    expect(bp.services.map((s) => s.name)).toEqual(['app'])
+  })
+
+  it('marks a build-from-source service as having no image rather than guessing one', () => {
+    const bp = parseBlueprint(['services:', '  app:', '    build: .'].join('\n'))
+    expect(bp.services).toEqual([{ name: 'app', ports: [] }])
+    expect(bp.services[0].image).toBeUndefined()
+  })
+
+  it('is total on input it cannot read — empty, junk, or no services block', () => {
+    for (const input of ['', 'not yaml at all', '{[garbage', 'version: "3"']) {
+      expect(parseBlueprint(input)).toEqual({ services: [], env: [] })
+    }
   })
 })

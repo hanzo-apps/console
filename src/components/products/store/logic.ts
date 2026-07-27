@@ -47,10 +47,8 @@ const FEATURED_IDS = [
   'supabase',
 ]
 
-/** An app is one-click deployable when it carries a buildable source (its GitHub repo). */
-export function hasDeploySource(app: OssApp): boolean {
-  return Boolean(app.links.github)
-}
+/** An app is one-click deployable when it carries a buildable source (its repo). */
+export { hasDeploySource } from '@hanzo/ui/oss'
 
 /**
  * A DNS/PaaS-safe slug from a free string (lowercase, non-alnum → single `-`, trimmed,
@@ -68,6 +66,12 @@ export function slugify(s: string): string {
     .replace(/-+$/g, '')
   return out || 'app'
 }
+
+// What a blueprint provisions is read by the console App Store, by platform and by the
+// public oss.hanzo.ai gallery. The reader lives in @hanzo/ui/oss so there is ONE
+// implementation of the compose format; re-exported here so this module stays the one
+// import site for the store's logic.
+export { parseBlueprint, type Blueprint, type Service } from '@hanzo/ui/oss'
 
 /** Every distinct tag across the catalog, alphabetized. */
 export function availableTags(apps: OssApp[]): string[] {

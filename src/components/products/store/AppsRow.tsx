@@ -1,16 +1,16 @@
 'use client'
 
 /**
- * A wrapping row of OSS App Store cards that owns the shared deploy dialog + the maker
- * "Earn 20%" navigation — the ONE place the card's injected `onDeploy`/`onEarn` are wired,
- * reused by the full App Store grid AND the Platform home's featured strip (DRY). Purely a
- * layout + interaction shell; the caller passes the apps to show.
+ * A wrapping row of OSS App Store cards that owns the shared deploy dialog + detail
+ * navigation — the ONE place the card's injected `onDeploy`/`onOpen` are wired, reused by
+ * the full App Store grid AND the Platform home's featured strip (DRY). Purely a layout +
+ * interaction shell; the caller passes the apps to show.
  */
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { XStack } from '@hanzo/gui'
 
-import { claimPath, type OssApp } from '~/lib/api/oss-apps'
+import { type OssApp } from '~/lib/api/oss-apps'
 import { StoreCard } from './StoreCard'
 import { DeployDialog } from './DeployDialog'
 
@@ -26,7 +26,7 @@ export function AppsRow({ apps, base }: { apps: OssApp[]; base: string }) {
             app={app}
             base={base}
             onDeploy={setDeploying}
-            onEarn={(a) => router.push(claimPath(a))}
+            onOpen={(a) => router.push(`/store/${encodeURIComponent(a.id)}`)}
           />
         ))}
       </XStack>
