@@ -6,7 +6,7 @@
  *   - kind='bot'     — a machine running the @hanzo/bot agent (booted, gateway-connected).
  *
  * Each lens is grouped org → app → project. SOURCE: the unified datastore
- * (hanzoai/datastore, ClickHouse) via cloud-api's `GET /v1/admin/compute?kind=` —
+ * (hanzoai/datastore) via cloud-api's `GET /v1/admin/compute?kind=` —
  * ONE cross-tenant GROUP BY over `hanzo.compute_events(org, app, project, kind,
  * event, machine_id, size, price_cents, ts)`, never a per-tenant SQLite fan-out
  * (the tenant-data-hierarchy invariant). The request goes through `originGet` — the
@@ -15,7 +15,7 @@
  * fail-closed 403, THEN a minted user bearer). The browser holds no admin credential.
  *
  * OPTIONAL-SAFE end to end (mirrors `admin-overview.ts`): the endpoint may return
- * PRE-AGGREGATED leaves (`{ leaves }` — the cheap ClickHouse GROUP BY, the ONE way
+ * PRE-AGGREGATED leaves (`{ leaves }` — the cheap datastore GROUP BY, the ONE way
  * cloud ships) OR raw event rows (`{ events }` — the exact datastore schema), which
  * pure `foldEvents` folds client-side. Either way `normalizeCompute` filters to the
  * requested `kind`, builds the org → app → project tree, and every missing field

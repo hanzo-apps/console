@@ -2,7 +2,7 @@
  * Admin (GLOBAL) observability — the cross-org fleet o11y read behind the
  * admin.hanzo.ai Fleet Observability board. It is the un-org-scoped twin of the
  * per-org console o11y: the SAME signals, aggregated across EVERY tenant, from the
- * ONE hanzoai/datastore (ClickHouse) — LLM usage (hanzo.cloud_usage), traces
+ * ONE hanzoai/datastore — LLM usage (hanzo.cloud_usage), traces
  * (signoz_traces), logs (signoz_logs), and Langfuse generations.
  *
  * Transport: `originGet('admin/o11y', …)` pins the request to the console's OWN
