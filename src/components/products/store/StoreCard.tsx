@@ -2,19 +2,36 @@
 
 /**
  * One OSS App Store card — logo (lazy, monogram fallback), name + version, tags,
- * description, external links, a Deploy CTA, and the maker "Earn 20%" hook. Purely
- * presentational: the deploy + earn actions are INJECTED callbacks (the grid owns the
- * deploy dialog + in-console navigation), so the card has no data/router coupling.
+ * description, external links, and a Deploy CTA. Purely presentational: open + deploy
+ * are INJECTED callbacks (the grid owns the detail route and the deploy dialog), so the
+ * card has no data/router coupling.
+ *
+ * The card itself is the primary target: it OPENS the app's detail page, because
+ * choosing what to run is a decision that needs the full picture (what it provisions,
+ * what it costs, what it needs configured) and a 300px tile cannot carry that. Deploy
+ * stays on the card as the fast path for someone who already knows what they want.
+ *
+ * The maker payout hook used to repeat on every tile; it now lives once, in the module
+ * banner. Saying it 1000 times is not 1000 times more persuasive.
  */
 import { useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowUpRight, BookOpen, Github, Globe, HandCoins, Rocket } from '@hanzogui/lucide-icons-2'
+import { ArrowUpRight, BookOpen, Github, Globe, Rocket } from '@hanzogui/lucide-icons-2'
 
-import { logoUrl, ownerRepo, type OssApp } from '~/lib/api/oss-apps'
+import { logoUrl, type OssApp } from '~/lib/api/oss-apps'
 import { hasDeploySource } from './logic'
 
 const openExt = (href?: string) => {
   if (href && typeof window !== 'undefined') window.open(href, '_blank', 'noopener,noreferrer')
+}
+
+/**
+ * Keep a nested control's press from also firing the card's open handler. Every
+ * interactive child inside a pressable card needs this, so it is written once.
+ */
+const stop = (fn: () => void) => (e?: { stopPropagation?: () => void }) => {
+  e?.stopPropagation?.()
+  fn()
 }
 
 /** The app logo — a lazy `<img>` that degrades to a monogram on error / missing asset. */
@@ -56,15 +73,14 @@ export function StoreCard({
   app,
   base,
   onDeploy,
-  onEarn,
+  onOpen,
 }: {
   app: OssApp
   base: string
   onDeploy: (app: OssApp) => void
-  onEarn: (app: OssApp) => void
+  onOpen: (app: OssApp) => void
 }) {
   const deployable = hasDeploySource(app)
-  const repo = ownerRepo(app.links.github)
   return (
     <Card
       width={300}
@@ -72,7 +88,13 @@ export function StoreCard({
       gap="$2.5"
       borderWidth={1}
       borderColor="$borderColor"
+      cursor="pointer"
       hoverStyle={{ borderColor: '$color8' }}
+      focusStyle={{ borderColor: '$color8' }}
+      tabIndex={0}
+      role="link"
+      aria-label={`${app.name} — details`}
+      onPress={() => onOpen(app)}
     >
       <XStack gap="$3" items="flex-start">
         <AppLogo app={app} base={base} />
@@ -105,20 +127,20 @@ export function StoreCard({
       {/* External references — only the ones present, never a dead link. */}
       <XStack gap="$1" items="center">
         {app.links.github ? (
-          <Button size="$1" chromeless circular icon={<Github size={14} />} aria-label="Source on GitHub" onPress={() => openExt(app.links.github)} />
+          <Button size="$1" chromeless circular icon={<Github size={14} />} aria-label="Source on GitHub" onPress={stop(() => openExt(app.links.github))} />
         ) : null}
         {app.links.website ? (
-          <Button size="$1" chromeless circular icon={<Globe size={14} />} aria-label="Website" onPress={() => openExt(app.links.website)} />
+          <Button size="$1" chromeless circular icon={<Globe size={14} />} aria-label="Website" onPress={stop(() => openExt(app.links.website))} />
         ) : null}
         {app.links.docs ? (
-          <Button size="$1" chromeless circular icon={<BookOpen size={14} />} aria-label="Docs" onPress={() => openExt(app.links.docs)} />
+          <Button size="$1" chromeless circular icon={<BookOpen size={14} />} aria-label="Docs" onPress={stop(() => openExt(app.links.docs))} />
         ) : null}
       </XStack>
 
       {/* Primary action: one-click deploy over the real PaaS path; honest when there is
           no buildable source (open the app's site/source instead of a dead Deploy). */}
       {deployable ? (
-        <Button size="$2" self="flex-start" icon={<Rocket size={14} />} onPress={() => onDeploy(app)}>
+        <Button size="$2" self="flex-start" icon={<Rocket size={14} />} onPress={stop(() => onDeploy(app))}>
           Deploy
         </Button>
       ) : (
@@ -128,30 +150,11 @@ export function StoreCard({
           self="flex-start"
           icon={<ArrowUpRight size={14} />}
           disabled={!app.links.website && !app.links.docs && !app.links.github}
-          onPress={() => openExt(app.links.website ?? app.links.docs ?? app.links.github)}
+          onPress={stop(() => openExt(app.links.website ?? app.links.docs ?? app.links.github))}
         >
           View app
         </Button>
       )}
-
-      {/* Maker hook — derived from links.github (no author field exists); routes to the
-          in-console OSS Author program. Only shown when we can identify the repo owner. */}
-      {repo ? (
-        <XStack
-          items="center"
-          gap="$1.5"
-          self="flex-start"
-          cursor="pointer"
-          hoverStyle={{ opacity: 0.7 }}
-          onPress={() => onEarn(app)}
-          aria-label={`Maintainer of ${repo}? Earn 20%`}
-        >
-          <HandCoins size={13} color="$color10" />
-          <Text fontSize="$1" color="$color10">
-            Maintainer? Earn 20% →
-          </Text>
-        </XStack>
-      ) : null}
     </Card>
   )
 }
