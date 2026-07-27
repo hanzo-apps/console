@@ -15,7 +15,7 @@
  * `getAdminGate` before anything is forwarded). This is the compute half of the
  * admin.hanzo.ai control surface, beside Business (MRR) and Finance (margin).
  *
- * SOURCE: the unified datastore (hanzoai/datastore, ClickHouse) via cloud-api's
+ * SOURCE: the unified datastore (hanzoai/datastore) via cloud-api's
  * `GET /v1/admin/compute?kind=` — ONE cross-tenant GROUP BY, never a per-tenant
  * fan-out (the tenant-data-hierarchy invariant). `AdminComputeApi.compute` folds the
  * raw compute events (or consumes cloud's pre-aggregated leaves) into the tree.
@@ -278,7 +278,7 @@ function ComputeBoard({ kind }: { kind: ComputeKind }) {
           title={ui.emptyTitle}
           description={ui.emptyDescription}
           bullets={[
-            'Source: the unified datastore (ClickHouse) via GET /v1/admin/compute — one cross-tenant read, never a per-tenant fan-out.',
+            'Source: the unified Hanzo Datastore via GET /v1/admin/compute — one cross-tenant read, never a per-tenant fan-out.',
             'Rows arrive once the compute-events emitter is wired (visor / commerce meter) — no data is fabricated until then.',
           ]}
         />

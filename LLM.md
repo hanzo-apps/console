@@ -1504,7 +1504,7 @@ noun was wrong: bots and machines are distinct compute kinds, not one "fleet").
   global-admin only) BEFORE forwarding a minted user bearer. Same RED-H1 gate as
   Business/Finance — no new proxy/trust boundary.
 - **`lib/api/admin-compute.ts` — kind-parameterized client + pure tree.** OPTIONAL-SAFE
-  over BOTH shapes: pre-aggregated `{ leaves }` (the cheap ClickHouse GROUP BY) OR raw
+  over BOTH shapes: pre-aggregated `{ leaves }` (the cheap datastore GROUP BY) OR raw
   `{ events }` (the coordinated 9-column datastore row: `org, app, project, kind, event,
   machine_id, size, price_cents, ts`), which pure `foldEvents` folds client-side.
   `normalizeCompute(raw, kind)` filters to the requested kind (defensive — the endpoint
@@ -1574,7 +1574,7 @@ backend's real tenancy model (RED-checkable).
   `overview | timeseries | top | health` (analytics.go:95-98) with DIFFERENT response
   shapes — so 5 tabs 404'd and 2 mis-parsed. `analytics.ts` + `AnalyticsModule.tsx`
   rewritten to the real structs (`clients/analytics/query.go`): the **LLM lens is REAL
-  live per-org data** (`hanzo.cloud_usage`, prod ClickHouse `datastore.hanzo.svc:9000`),
+  live per-org data** (`hanzo.cloud_usage`, prod Hanzo Datastore `datastore.hanzo.svc:9000`),
   charted over time; the **web + commerce lenses render honest-empty via the backend
   `available` flag** (`hanzo.events`, until a collector emits) — never fabricated zeros.
   Dropped the fabricated **Real-Time tab** (no realtime backend exists). Tabs: Overview
@@ -3288,7 +3288,7 @@ so it rides the `app/admin/aggregate` BFF standalone and cloud-native in the go:
   (`clients/admin/storage.go`, SuperAdmin `s.guard`) — the DO block-storage inventory
   (count · total · monthly cost · per-volume region + attachment) from a new paginated
   `Volumes()` on the existing `DO_API_TOKEN` client, PLUS the datastore's own fill from
-  ClickHouse `system.disks` (the 200Gi PVC) over the SAME shared `aiobject.DatastoreQuery`
+  `system.disks` (the 200Gi PVC) over the SAME shared `aiobject.DatastoreQuery`
   the analytics/compute lenses use. Each source degrades independently; near-full raises
   an alert (warn ≥ 80%, critical ≥ 90%). Pure `buildStorageSnapshot`/`alertLevel`/
   `datastoreFillFromRow` unit-tested (4 Go tests green).

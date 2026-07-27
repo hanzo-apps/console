@@ -125,7 +125,7 @@ describe('buildTree — group leaves into org → app → project, rolled up + s
 })
 
 describe('normalizeCompute — optional-safe, kind-filtered, over both backend shapes', () => {
-  it('consumes pre-aggregated { leaves } (the cheap ClickHouse GROUP BY path)', () => {
+  it('consumes pre-aggregated { leaves } (the cheap datastore GROUP BY path)', () => {
     const tree = normalizeCompute(
       {
         range: '7d',
