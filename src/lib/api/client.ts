@@ -336,9 +336,13 @@ export async function originPatch<T>(path: string, body?: unknown, query?: Query
   return r.data
 }
 
-export async function originDelete(path: string, query?: Query): Promise<void> {
-  const r = await request<unknown>('DELETE', path, { query, absoluteUrl: originV1Url(path) })
+/** Generic in its RESULT so a delete that reports what it freed (e.g. `/v1/admin/infra`
+ *  volumes → `{deleted,snapshotId,freedMonthlyCents}`) can read it; defaults to `void`,
+ *  so every existing `await originDelete(...)` caller is unchanged. */
+export async function originDelete<T = void>(path: string, query?: Query): Promise<T> {
+  const r = await request<T>('DELETE', path, { query, absoluteUrl: originV1Url(path) })
   if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
+  return r.data
 }
 
 /**

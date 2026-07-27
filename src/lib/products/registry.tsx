@@ -125,6 +125,7 @@ import { ChatModule } from '~/components/products/ChatModule'
 import { BotModule } from '~/components/products/BotModule'
 import { BotsConsole } from '~/components/products/BotsConsole'
 import { AdminO11yModule } from '~/components/products/AdminO11yModule'
+import { InfraModule } from '~/components/products/admin/infra/InfraModule'
 import { SaasModule } from '~/components/products/SaasModule'
 import { MarketplaceModule } from '~/components/products/MarketplaceModule'
 import { SearchModule } from '~/components/products/SearchModule'
@@ -681,6 +682,38 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminO11yModule }],
+  },
+  {
+    // admin.hanzo.ai INFRASTRUCTURE board — the DigitalOcean FLEET cockpit: droplets,
+    // block-storage volumes, DOKS clusters and load balancers, what each costs per
+    // month, and what is reclaimable. GLOBAL-ADMIN ONLY (`admin: true` hides it from
+    // every customer; the `/v1/admin/infra` aggregate is server-gated by getAdminGate).
+    //
+    // This is INFRASTRUCTURE — the machines we rent from DigitalOcean. It is DISTINCT
+    // from the compute-worker "Fleet" entries (`fleet-o11y` telemetry, `bots`/`vms`
+    // compute-analytics), which lens the datastore's per-org compute events. Different
+    // nouns, different backends: do not merge them.
+    id: 'infra',
+    label: 'Infrastructure',
+    icon: Server,
+    description: 'DigitalOcean fleet — droplets, block-storage volumes, clusters and load balancers, with monthly cost and what is reclaimable.',
+    gcp: 'Compute Engine / Persistent Disk',
+    category: 'Platform',
+    status: 'enabled',
+    admin: true,
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [
+      { path: '', component: InfraModule },
+      { path: ':tab', component: InfraModule },
+    ],
+    subpages: [
+      { slug: 'clusters', label: 'Clusters' },
+      { slug: 'nodes', label: 'Nodes' },
+      { slug: 'volumes', label: 'Volumes' },
+      { slug: 'load-balancers', label: 'Load balancers' },
+      { slug: 'audit', label: 'Audit' },
+    ],
   },
   {
     // admin.hanzo.ai SAAS METRICS board — the whole-business money god view: MRR/ARR,

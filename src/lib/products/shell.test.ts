@@ -17,9 +17,9 @@ import {
 // is ORTHOGONAL to the brand (a face never crosses a brand). Pure (host passed in /
 // env restored), so no window mocking.
 
-const ALL: ShellId[] = ['console', 'billing', 'marketing', 'ads', 'social', 'sentry', 'dns']
+const ALL: ShellId[] = ['console', 'billing', 'marketing', 'ads', 'social', 'sentry', 'dns', 'tracker']
 /** The single-product FACES (everything but the full console). */
-const FACES: ShellId[] = ['billing', 'marketing', 'ads', 'social', 'sentry', 'dns']
+const FACES: ShellId[] = ['billing', 'marketing', 'ads', 'social', 'sentry', 'dns', 'tracker']
 
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_PRODUCT_SHELL
