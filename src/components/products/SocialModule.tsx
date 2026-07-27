@@ -261,6 +261,17 @@ function PostDetail({ post, onChanged }: { post: Post; onChanged: () => void }) 
           <Text fontSize="$3">{when(post.scheduleAt)}</Text>
         </FieldRow>
       ) : null}
+      {post.media.length > 0 ? (
+        <FieldRow label="Media">
+          <YStack gap="$1">
+            {post.media.map((m) => (
+              <Text key={m} fontSize="$2" color="$color11">
+                {m}
+              </Text>
+            ))}
+          </YStack>
+        </FieldRow>
+      ) : null}
       {post.externalId ? (
         <FieldRow label="External id">
           <Text fontSize="$3" className="hz-tnum">
