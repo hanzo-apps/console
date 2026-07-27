@@ -108,7 +108,7 @@ function OwnershipDonut({ summary }: { summary: CapTableSummary }) {
           return (
             <XStack key={s.label} items="center" gap="$2" justify="space-between">
               <XStack items="center" gap="$2" minW={0} flex={1}>
-                <XStack width={10} height={10} rounded={999} style={{ backgroundColor: s.color }} />
+                <XStack width={10} height={10} rounded="$10" style={{ backgroundColor: s.color }} />
                 <Text fontSize="$2" color="$color12" numberOfLines={1}>{s.label}</Text>
               </XStack>
               <Text fontSize="$2" color="$color11" className="hz-tnum">{holder ? pct(holder.ownershipPct) : ''}</Text>

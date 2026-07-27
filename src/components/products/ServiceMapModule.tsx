@@ -29,7 +29,8 @@ import {
   type TopOperation,
 } from '~/lib/api'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard, Panel } from '~/components/ui/Metric'
+import { MetricCard } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { RuntimeNotice } from './observability/RuntimeNotice'

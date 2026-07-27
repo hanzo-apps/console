@@ -201,7 +201,7 @@ export function WorkbenchDock() {
               justifyContent: 'center',
             }}
           >
-            <div style={{ width: 44, height: 3, borderRadius: 999, background: 'var(--color7)' }} />
+            <div style={{ width: 44, height: 3, borderRadius: 9999, background: 'var(--color7)' }} />
           </div>
           <XStack items="center" gap="$1" px="$2" height={40} borderBottomWidth={1} borderColor="$borderColor">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} flex={1}>

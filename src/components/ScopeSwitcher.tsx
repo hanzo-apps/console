@@ -55,7 +55,7 @@ function ProjectPicker() {
       </Popover.Trigger>
       <Popover.Content {...paper} p="$2" width={260}>
         <YStack gap="$0.5">
-          <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+          <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="500">
             Project
           </Text>
 
@@ -170,7 +170,7 @@ function NetworkPicker() {
       <Popover.Trigger asChild>
         <Button size="$2" chromeless icon={<Layers size={14} />} iconAfter={<ChevronsUpDown size={13} />}>
           <XStack items="center" gap="$2">
-            <YStack width={8} height={8} rounded={999} bg={netDot(activeNetwork)} />
+            <YStack width={8} height={8} rounded="$10" bg={netDot(activeNetwork)} />
             <Text fontSize="$2" color="$color12">
               {activeNetwork.label}
             </Text>
@@ -179,7 +179,7 @@ function NetworkPicker() {
       </Popover.Trigger>
       <Popover.Content {...paper} p="$2" width={300}>
         <YStack gap="$0.5">
-          <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+          <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="500">
             Network
           </Text>
 
@@ -196,7 +196,7 @@ function NetworkPicker() {
           {extraEnvs.length ? (
             <>
               <XStack height={1} bg="$borderColor" my="$1" />
-              <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+              <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="500">
                 Project environments
               </Text>
               {extraEnvs.map((env) => (
@@ -239,7 +239,7 @@ function NetworkRow({
   return (
     <XStack items="center" gap="$1" rounded="$3" hoverStyle={{ bg: '$color4' }}>
       <XStack flex={1} onPress={onPress} cursor="pointer" items="center" gap="$2" px="$2" py="$2">
-        <YStack width={8} height={8} rounded={999} bg={netDot(net)} />
+        <YStack width={8} height={8} rounded="$10" bg={netDot(net)} />
         <YStack flex={1}>
           <Text fontSize="$2" color="$color12" numberOfLines={1}>
             {net.label}
@@ -290,7 +290,7 @@ function Row({
       rounded="$3"
       hoverStyle={{ bg: '$color4' }}
     >
-      {dot ? <YStack width={8} height={8} rounded={999} bg={dot} /> : icon}
+      {dot ? <YStack width={8} height={8} rounded="$10" bg={dot} /> : icon}
       <YStack flex={1}>
         <Text fontSize="$2" color="$color12" numberOfLines={1}>
           {label}

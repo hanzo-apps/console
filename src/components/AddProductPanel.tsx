@@ -226,7 +226,7 @@ export function AddProductPanel() {
       ) : (
         shown.map((group) => (
           <YStack key={group.category} gap="$1">
-            <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" px="$2">
+            <Text fontSize="$1" color="$color10" fontWeight="500" px="$2">
               {group.category}
             </Text>
             {group.entries.map((entry) => (

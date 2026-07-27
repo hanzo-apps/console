@@ -9,14 +9,17 @@
  *   invoices — the org's own data, scoped to the active org.
  * - **Top up** → the brand's hosted payment page (`config.payUrl`, e.g. pay.hanzo.ai)
  *   in a NEW TAB. Display + link only: the wallet never hosts a card form or mints
- *   credit — the hosted page owns payment. **Sign out** beneath.
+ *   credit — the hosted page owns payment.
+ *
+ * Sign-out is NOT here. It belongs to the ONE account control at the foot of the
+ * rail (`AccountMenu`); this used to be one of four places that offered it.
  *
  * The balance comes from the per-tenant `/billing/*` server proxy, scoped to the
  * caller's OWN org — the exact credit the gateway debits.
  */
 import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
-import { ChevronRight, ExternalLink, LogOut, Wallet } from '@hanzogui/lucide-icons-2'
+import { ChevronRight, ExternalLink, Wallet } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
@@ -25,7 +28,7 @@ import { useCloudBalance, spendableCents, balanceSplitLabel } from '~/lib/billin
 const fmtUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 
 export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
-  const { account, signOut } = useSession()
+  const { account } = useSession()
   const router = useRouter()
   const owner = account?.owner ?? ''
   // ONE shared live balance (same value the Wallet/Cost pages show): refetches on
@@ -48,11 +51,10 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
   }
 
   if (collapsed) {
-    // Two stacked affordances: wallet/top-up + sign out (the identity is the top avatar).
+    // One affordance: the wallet. Identity and sign-out are the account control's.
     return (
       <YStack items="center" gap="$2">
         <Button size="$2" chromeless onPress={openTopUp} icon={<Wallet size={18} />} aria-label={`Wallet ${balanceText} — top up`} />
-        <Button size="$2" chromeless onPress={() => void signOut()} icon={<LogOut size={18} />} aria-label="Sign out" />
       </YStack>
     )
   }
@@ -79,9 +81,6 @@ export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
       </YStack>
 
       <Button size="$2" onPress={openTopUp} iconAfter={<ExternalLink size={13} />} aria-label="Top up — opens the payment page in a new tab">Top up</Button>
-      <Button size="$2" chromeless icon={<LogOut size={15} />} onPress={() => void signOut()} justify="center">
-        Sign out
-      </Button>
     </YStack>
   )
 }

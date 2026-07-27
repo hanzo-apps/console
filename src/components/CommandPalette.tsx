@@ -15,14 +15,20 @@
  * settings, switch organization, ask AI / search docs, sign out — ranked by the
  * same query, so ⌘K is ONE surface for "go somewhere" and "do something".
  *
+ * PINS are first-class here, not just in the sidebar. A user's pinned products
+ * lead the results (their own pin order, via `pinnedFirst`), and every result
+ * carries a pin at its right edge — quiet until you reach the row, lit while it is
+ * pinned. `⌥↵` pins the selected result WITHOUT leaving the palette, so curating
+ * what you keep at hand is the same gesture as finding it: type, ⌥↵, keep going.
+ *
  * Everything composes existing pieces: the catalog registry (`searchCatalog` +
  * `openProduct`), the AI client (`AiApi`), the chrome hooks (theme/session/
  * org-scope), and the honest backend-state mapper. Nothing is fabricated —
  * AI/RAG failures degrade to a truthful state card.
  *
  * Keyboard is handled on `window`: ⌘K toggles from anywhere; while open, ↑/↓ move
- * the selection (over actions then products), ↵ activates, Esc closes. The header
- * search box and Apps buttons open it; type `>` for AI, `?` for docs.
+ * the selection (over actions then products), ↵ activates, ⌥↵ pins/unpins, Esc
+ * closes. The header search box and Apps buttons open it; `>` for AI, `?` for docs.
  */
 import {
   createContext,
@@ -57,6 +63,7 @@ import {
   Lock,
   LogOut,
   Moon,
+  Pin,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -68,7 +75,8 @@ import { AiApi, IamAdminApi, type Organization } from '~/lib/api'
 import { findEntry, type CatalogEntry } from '~/lib/products/registry'
 import { commandBarSystemPrompt, hanzoAssistantSystemPrompt } from '~/lib/assistant'
 import { searchDestinations, type Destination } from '~/lib/products/search'
-import { useProductColors } from '~/lib/products/pins'
+import { DEFAULT_GROUP_LABEL, pinnedFirst } from '~/lib/products/pins-core'
+import { usePins, useProductColors } from '~/lib/products/pins'
 import { asColor } from '~/components/ui/color'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import { openProduct } from '~/lib/products/open'
@@ -138,7 +146,7 @@ function Answer({ text }: { text: string }) {
       </YStack>
       {urls.length > 0 ? (
         <YStack gap="$1" borderTopWidth={1} borderColor="$borderColor" pt="$2">
-          <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+          <Text fontSize="$1" color="$color10" fontWeight="500">
             Links
           </Text>
           {urls.map((u) => (
@@ -152,20 +160,60 @@ function Answer({ text }: { text: string }) {
   )
 }
 
+/**
+ * The pin at a result row's right edge. Quiet by construction: invisible until the
+ * row is reached (hovered via `.hz-pin` + `.hz-row-pin:hover`, or selected by the
+ * keyboard), and steady once the product is pinned — so the control appears where
+ * the eye already is and the lit ones read as state, not decoration.
+ */
+function PinToggle({ label, pinned, active, onPress }: { label: string; pinned: boolean; active: boolean; onPress: () => void }) {
+  return (
+    <XStack
+      className={pinned || active ? undefined : 'hz-pin'}
+      onPress={(e: { stopPropagation?: () => void }) => {
+        // The row itself navigates; pinning must not also open the product.
+        e?.stopPropagation?.()
+        onPress()
+      }}
+      cursor="pointer"
+      items="center"
+      justify="center"
+      width={26}
+      height={26}
+      rounded="$2"
+      // NO inline `opacity` prop: Gui compiles one to an atomic rule it injects at
+      // `:root ._ops-…` (specificity 0,2,0), which would outrank the `.hz-pin`
+      // utility and paint the resting pin at full strength. Resting visibility is
+      // the CSS utility's job alone; presence/absence of the class is the switch.
+      hoverStyle={{ bg: '$color6' }}
+      role="button"
+      aria-pressed={pinned}
+      aria-label={`${pinned ? 'Unpin' : 'Pin'} ${label}`}
+    >
+      <Pin size={13} color={pinned ? '$color12' : '$color10'} fill={pinned ? 'currentColor' : 'none'} />
+    </XStack>
+  )
+}
+
 function CatalogRow({
   entry,
   active,
   color,
+  pinned,
+  onPin,
   onPress,
 }: {
   entry: CatalogEntry
   active: boolean
   color?: string
+  pinned?: boolean
+  onPin?: () => void
   onPress: () => void
 }) {
   const Icon = entry.icon
   return (
     <XStack
+      className="hz-row-pin"
       onPress={onPress}
       cursor="pointer"
       items="center"
@@ -188,25 +236,45 @@ function CatalogRow({
         </Text>
       </YStack>
       {entry.admin ? <Lock size={13} opacity={0.45} /> : null}
+      {onPin ? <PinToggle label={entry.label} pinned={pinned === true} active={active} onPress={onPin} /> : null}
       <ArrowRight size={13} opacity={active ? 0.8 : 0.3} />
     </XStack>
   )
 }
 
-/** A ⌘K result — a product (via CatalogRow) or a deep sub-page jump. */
+/**
+ * A ⌘K result — a product (via CatalogRow) or a deep sub-page jump.
+ *
+ * Only PRODUCTS carry a pin: the pin model keys on a product id, so pinning a
+ * sub-page would either silently pin its parent (a lie about what you clicked) or
+ * need a second pin model. One model, so sub-pages simply don't offer the control.
+ */
 function DestinationRow({
   dest,
   active,
   colorOf,
+  pinned,
+  onPin,
   onPress,
 }: {
   dest: Destination
   active: boolean
   colorOf: (id: string) => string
+  pinned?: boolean
+  onPin?: () => void
   onPress: () => void
 }) {
   if (dest.kind === 'product')
-    return <CatalogRow entry={dest.entry} active={active} color={colorOf(dest.entry.id)} onPress={onPress} />
+    return (
+      <CatalogRow
+        entry={dest.entry}
+        active={active}
+        color={colorOf(dest.entry.id)}
+        pinned={pinned}
+        onPin={onPin}
+        onPress={onPress}
+      />
+    )
   const { entry, subpage } = dest
   const Icon = subpage.icon ?? entry.icon
   return (
@@ -279,7 +347,7 @@ function ActionRow({
 /** A small uppercase section label inside the palette result list. */
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <Text px="$3" pt="$2" pb="$1" fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase">
+    <Text px="$3" pt="$2" pb="$1" fontSize="$1" color="$color10" fontWeight="500">
       {children}
     </Text>
   )
@@ -298,6 +366,7 @@ function PaletteDialog({
   const { signOut } = useSession()
   const showAdmin = useIsSuperAdmin()
   const { colorOf } = useProductColors()
+  const pins = usePins()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
   const isDark = (resolvedTheme ?? current ?? 'dark') !== 'light'
   const [query, setQuery] = useState(seed)
@@ -359,11 +428,22 @@ function PaletteDialog({
   // ⌘K is a DISCOVERY surface: it jumps to the WHOLE catalog (admin-gated only), NOT
   // the org's entitled scope — entitlement governs the sidebar + product use, never
   // what you can find/jump to. Admin-only operator surfaces stay gated by `showAdmin`.
+  //
+  // PINS ORDER THE DEFAULT VIEW; TYPING ORDERS ITSELF. With no query the list is the
+  // user's own — their pinned products lead, in their own pin order, exactly as the
+  // sidebar's Pinned section does. The moment they type, RELEVANCE decides and pins
+  // step aside.
+  //
+  // That split is not fussiness, it is a bug this cost: floating pins over a ranked
+  // query meant a barely-matching pinned product outranked an exact name match, and
+  // typing "billing" + ↵ opened Models. A search that ignores what you typed is not
+  // a search, so the ranked branch is left strictly alone.
   const destResults = useMemo(() => {
     if (mode !== 'catalog') return []
     const found = searchDestinations(query, showAdmin, null)
-    return sub ? found.slice(0, 50) : found
-  }, [mode, query, sub, showAdmin])
+    if (sub) return found.slice(0, 50)
+    return pinnedFirst(found, (d) => (d.kind === 'product' ? d.entry.id : ''), pins.pinnedIds)
+  }, [mode, query, sub, showAdmin, pins.pinnedIds])
 
   const matchedActions = useMemo(
     () => (mode === 'catalog' && sub ? actions.filter((a) => actionMatches(a, sub.toLowerCase())) : []),
@@ -382,17 +462,22 @@ function PaletteDialog({
 
   // Empty query is the Apps browse state: the same destinations, grouped for scan
   // speed. Typing switches to one ranked list without opening a second overlay.
+  //
+  // Pinned products already lead `destResults`, so labelling them by "Pinned"
+  // rather than their category collects them into ONE leading section — the same
+  // section, in the same order, under the same word the sidebar uses.
   const browseGroups = useMemo(() => {
     if (mode !== 'catalog' || sub) return []
     const groups: { category: string; rows: { dest: Destination; index: number }[] }[] = []
     destResults.forEach((dest, index) => {
-      const category = dest.entry.category
+      const category =
+        dest.kind === 'product' && pins.isPinned(dest.entry.id) ? DEFAULT_GROUP_LABEL : dest.entry.category
       const last = groups[groups.length - 1]
       if (last?.category === category) last.rows.push({ dest, index })
       else groups.push({ category, rows: [{ dest, index }] })
     })
     return groups
-  }, [mode, sub, destResults])
+  }, [mode, sub, destResults, pins])
 
   // Seed the query each time the palette opens.
   useEffect(() => {
@@ -421,6 +506,18 @@ function PaletteDialog({
       else openProduct(dest.entry, (p) => router.push(p))
     },
     [onOpenChange, router],
+  )
+
+  /**
+   * Pin/unpin a destination WITHOUT closing — curating is a repeated act, and an
+   * overlay that dismisses itself after each one would make pinning five products
+   * five round trips. A sub-page has no pin (see `DestinationRow`), so it no-ops.
+   */
+  const togglePin = useCallback(
+    (dest: Destination) => {
+      if (dest.kind === 'product') pins.toggle(dest.entry.id)
+    },
+    [pins],
   )
 
   const submit = useCallback(async () => {
@@ -467,10 +564,16 @@ function PaletteDialog({
         } else if (e.key === 'Enter') {
           e.preventDefault()
           const it = items[sel]
-          if (it) {
-            if (it.kind === 'action') it.action.run()
-            else activateDest(it.dest)
+          if (!it) return
+          // ⌥↵ is the secondary verb on the selection: keep this, stay here.
+          // ↵ is the primary: go there. Same key, one modifier apart, so the
+          // pair is learnable from the legend without a second shortcut to know.
+          if (e.altKey) {
+            if (it.kind === 'dest') togglePin(it.dest)
+            return
           }
+          if (it.kind === 'action') it.action.run()
+          else activateDest(it.dest)
         }
       } else if (e.key === 'Enter') {
         e.preventDefault()
@@ -481,7 +584,7 @@ function PaletteDialog({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, mode, items, sel, run, submit, activate, activateDest, onOpenChange])
+  }, [open, mode, items, sel, run, submit, activate, activateDest, togglePin, onOpenChange])
 
   // Keep the ↑/↓-selected row visible: as selection moves past the fold, scroll
   // the active row into view (the list can hold 50 results — well beyond 560px).
@@ -536,6 +639,10 @@ function PaletteDialog({
               placeholder={placeholder}
               fontSize="$4"
               color="$color12"
+              // `unstyled` still leaves Gui's own 3px base radius, which belongs to
+              // no scale and is visible as a faint rounding inside the palette's
+              // own 12px panel. A field that fills its container is flat.
+              rounded="$0"
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -569,6 +676,8 @@ function PaletteDialog({
                                   dest={dest}
                                   active={index === sel}
                                   colorOf={colorOf}
+                                  pinned={dest.kind === 'product' && pins.isPinned(dest.entry.id)}
+                                  onPin={dest.kind === 'product' ? () => togglePin(dest) : undefined}
                                   onPress={() => activateDest(dest)}
                                 />
                               </YStack>
@@ -592,6 +701,8 @@ function PaletteDialog({
                             dest={dest}
                             active={i === sel}
                             colorOf={colorOf}
+                            pinned={dest.kind === 'product' && pins.isPinned(dest.entry.id)}
+                            onPin={dest.kind === 'product' ? () => togglePin(dest) : undefined}
                             onPress={() => activateDest(dest)}
                           />
                         )
@@ -641,6 +752,7 @@ function PaletteDialog({
           >
             <Legend keys="↑↓" label="navigate" />
             <Legend keys="↵" label="open" />
+            <Legend keys="⌥↵" label="pin" />
             <Legend keys=">" label="AI" />
             <Legend keys="?" label="docs" />
             <XStack flex={1} />

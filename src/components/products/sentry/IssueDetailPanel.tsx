@@ -238,7 +238,7 @@ function Breadcrumbs({ event }: { event: SentryEvent | null }) {
       <YStack borderWidth={1} borderColor="$borderColor" rounded="$3" overflow="hidden">
         {event.breadcrumbs.map((b, i) => (
           <XStack key={i} py="$1.5" px="$2.5" gap="$2.5" items="center" borderTopWidth={i === 0 ? 0 : 1} borderColor="$borderColor">
-            <YStack width={7} height={7} rounded={99} style={{ backgroundColor: levelColor(b.level) }} />
+            <YStack width={7} height={7} rounded="$10" style={{ backgroundColor: levelColor(b.level) }} />
             <Text fontSize="$1" color="$color10" width={64} numberOfLines={1}>
               {b.category || b.type || '—'}
             </Text>

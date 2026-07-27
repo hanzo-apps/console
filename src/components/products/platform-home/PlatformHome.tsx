@@ -111,7 +111,7 @@ export function PlatformHome() {
       <Card borderWidth={1} borderColor="$borderColor" bg="$color2" p="$5" gap="$3">
         <XStack items="center" gap="$2">
           <Rocket size={18} color="$color11" />
-          <Text fontSize="$2" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={1}>
+          <Text fontSize="$2" color="$color10" fontWeight="500">
             {config.brandName} Platform
           </Text>
         </XStack>
