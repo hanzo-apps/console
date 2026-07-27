@@ -9,6 +9,7 @@ import {
   move,
   normalizeModel,
   pin,
+  pinnedFirst,
   removeGroup,
   renameGroup,
   toggle,
@@ -164,5 +165,41 @@ describe('groupedView — ordering', () => {
     const view = groupedView(m)
     expect(view.map((v) => v.name)).toEqual(['', 'Infra', 'Data'])
     expect(view[0].label).toBe('Pinned')
+  })
+})
+
+describe('pinnedFirst — one "pinned leads" rule, shared by the sidebar and search', () => {
+  type Row = { id: string }
+  const id = (r: Row) => r.id
+  const rows: Row[] = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]
+
+  it('floats pinned items to the front in the USER\'s pin order, not the list order', () => {
+    expect(pinnedFirst(rows, id, ['c', 'a']).map(id)).toEqual(['c', 'a', 'b', 'd'])
+  })
+
+  it('leaves the tail in the order it arrived, so search relevance still decides it', () => {
+    expect(pinnedFirst(rows, id, ['d']).map(id)).toEqual(['d', 'a', 'b', 'c'])
+  })
+
+  it('reorders — it never injects a pinned id the list does not contain', () => {
+    const out = pinnedFirst(rows, id, ['zzz', 'b'])
+    expect(out.map(id)).toEqual(['b', 'a', 'c', 'd'])
+    expect(out).toHaveLength(rows.length)
+  })
+
+  it('is a no-op with no pins, or when nothing on the list is pinned', () => {
+    expect(pinnedFirst(rows, id, [])).toBe(rows)
+    expect(pinnedFirst(rows, id, ['nope'])).toBe(rows)
+  })
+
+  it('ignores items with no id (a sub-page result is never floated)', () => {
+    const mixed = [{ id: '' }, { id: 'a' }, { id: '' }]
+    expect(pinnedFirst(mixed, id, ['a']).map(id)).toEqual(['a', '', ''])
+  })
+
+  it('does not mutate the input', () => {
+    const input = [{ id: 'a' }, { id: 'b' }]
+    pinnedFirst(input, id, ['b'])
+    expect(input.map(id)).toEqual(['a', 'b'])
   })
 })
