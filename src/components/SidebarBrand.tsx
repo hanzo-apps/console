@@ -1,21 +1,24 @@
 'use client'
 
 /**
- * Top-left brand logomark — the ONE brand glyph in the console chrome, matching
- * the unified Hanzo app-shell (hanzo.app + hanzo.chat): the real geometric mark
- * ALONE (no wordmark, no product name, no letter-H text), white-labeled by host.
+ * Top-left mark — the identity of the ORGANIZATION the console is scoped to.
  *
- * The mark is the host-derived `BrandMark` (Hanzo H / Lux / Zoo / Pars per host,
- * `currentColor` so it inherits the calm chrome foreground and adapts to the
- * theme) — never a hardcoded Hanzo asset. On a lux/zoo/pars host it renders THAT
- * brand's mark. Left-click → product home (`/`); RIGHT-CLICK → a small brand
- * context menu (Settings · Brand · Docs · About), the same affordance the shared
- * shell's HanzoMark exposes.
+ * White-label is the point: a customer's console must show the customer's mark,
+ * never ours. So this renders the ONE shared `OrgMark` (@hanzo/ui) — the org's
+ * own logo when IAM carries one, else the org's MONOGRAM, the same treatment the
+ * account widget gives a person. It is never the house glyph and never the org
+ * name set as running text.
+ *
+ * The house `BrandMark` still exists, but for the PRODUCT's own moments (the
+ * assistant trigger, the org picker, onboarding) — not for the tenant's slot.
+ *
+ * Left-click → product home (`/`); RIGHT-CLICK → a small brand context menu
+ * (Settings · Brand · Docs · About), the same affordance the shared shell's
+ * HanzoMark exposes.
  *
  * The interactive surface is a plain `<div>` (the console's own escape hatch, as
  * used for `<div onScroll>` in OrgSwitcher) so the native `contextmenu` event is
- * guaranteed to fire and the mark still inherits the chrome color via
- * `currentColor`. The menu reuses the console's one menu surface (a `$color2`
+ * guaranteed to fire. The menu reuses the console's one menu surface (a `$color2`
  * paper sheet with the shared `hz-paper hz-menu-in` styling) — no new menu
  * system; it is a cursor-anchored overlay (a right-click has no trigger rect to
  * anchor a Popover to).
@@ -23,11 +26,12 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Text, XStack, YStack } from '@hanzo/gui'
+import { OrgMark } from '@hanzo/ui/product'
 import { BookOpen, Globe, Info, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
-import { BrandMark, useOrgLogo } from '~/components/ui/BrandLogo'
+import { useOrgIdentity } from '~/components/ui/BrandLogo'
 
 type MenuItem = {
   icon: typeof SlidersHorizontal
@@ -99,17 +103,16 @@ function BrandMenu({ x, y, items, onClose }: { x: number; y: number; items: Menu
 }
 
 /**
- * The top-left brand mark. `collapsed` centers it in the icon rail. Left-click →
+ * The top-left org mark. `collapsed` centers it in the icon rail. Left-click →
  * home; right-click → the brand context menu.
  */
 export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const router = useRouter()
   const brand = getBrand()
-  // White-label: the selected org's OWN logo is the primary chrome identity (the
-  // tenant's brand, front and center). The host BrandMark is only the fallback when
-  // the org has set no logo — the `hanzo` org's logo is the Hanzo mark, so it stays
-  // on-brand. `useOrgLogo` is the ONE cached org-logo source, shared with BrandLogo.
-  const orgLogo = useOrgLogo()
+  // The tenant leads the chrome: its own logo when set, else its monogram — never
+  // the house mark. `useOrgIdentity` is the ONE cached org-identity source.
+  const org = useOrgIdentity()
+  const orgLabel = org.displayName || org.name
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
   const go = useCallback(
@@ -145,8 +148,8 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
         onClick={() => go('/')}
         onContextMenu={onContextMenu}
         role="link"
-        aria-label={`${brand.brandName} — home (right-click for brand menu)`}
-        title={brand.brandName}
+        aria-label={`${orgLabel} — home (right-click for brand menu)`}
+        title={orgLabel}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -157,18 +160,9 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
           color: 'var(--color12)',
         }}
       >
-        {orgLogo ? (
-          // The org's own IAM logo, at the brand-mark size — the tenant's brand leads
-          // the chrome; the Hanzo H is hidden whenever the org has its own.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={orgLogo}
-            alt={brand.brandName}
-            style={{ height: 24, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'block' }}
-          />
-        ) : (
-          <BrandMark size={24} />
-        )}
+        {/* A logo may be a wordmark, so it is allowed to run wide; the monogram
+            stays the square tile the account avatar wears. */}
+        <OrgMark org={org} size={24} maxW={140} />
       </div>
       {menu ? <BrandMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} /> : null}
     </>
