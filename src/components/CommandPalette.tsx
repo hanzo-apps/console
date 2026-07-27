@@ -639,6 +639,10 @@ function PaletteDialog({
               placeholder={placeholder}
               fontSize="$4"
               color="$color12"
+              // `unstyled` still leaves Gui's own 3px base radius, which belongs to
+              // no scale and is visible as a faint rounding inside the palette's
+              // own 12px panel. A field that fills its container is flat.
+              rounded="$0"
               autoCapitalize="none"
               autoCorrect={false}
             />

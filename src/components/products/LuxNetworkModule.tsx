@@ -30,7 +30,8 @@ import { LuxInfraApi, COMING_SOON_NETWORKS, type LuxInfra, type Liveness, type N
 import { ApiError } from '~/lib/api'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard, Panel, UtilBar, utilColor } from '~/components/ui/Metric'
+import { MetricCard, UtilBar, utilColor } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { OperatorAccessRequired } from '~/components/ui/States'
 
@@ -279,7 +280,7 @@ function NetworkPanel({ net }: { net: NetworkSummary }) {
     <Panel
       title={net.label}
       grow={false}
-      right={
+      actions={
         <XStack items="center" gap="$2">
           {net.primary ? (
             <XStack items="center" gap="$1">

@@ -260,7 +260,11 @@ export function ResourceOverview() {
   return (
     <YStack gap="$4">
       <XStack items="center" justify="space-between" gap="$3" flexWrap="wrap">
-        <YStack>
+        {/* `flex` + `minW={0}`: a bare View is `flex-shrink: 0`, so this column held
+            its max-content width (533px inside a 366px pane at 390 wide), its text
+            never wrapped, and the heading painted off the right edge with nothing to
+            scroll it — the same defect the landing footer had in v8.5.29. */}
+        <YStack flex={1} minW={0}>
           <Text fontSize="$7" fontWeight="800" color="$color12">
             Resources
           </Text>

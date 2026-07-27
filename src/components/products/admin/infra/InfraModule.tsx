@@ -37,7 +37,8 @@ import {
   type InfraVolume,
 } from '~/lib/api/admin-infra'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { MetricCard, Panel } from '~/components/ui/Metric'
+import { MetricCard } from '~/components/ui/Metric'
+import { Panel } from '~/components/ui/Panel'
 import { DataTable, type Column, type SortState } from '~/components/ui/DataTable'
 import { Segmented, SearchInput, type Option } from '~/components/ui/Filters'
 import { SlideOver } from '~/components/ui/SlideOver'
@@ -714,7 +715,7 @@ function AuditTab({ data, loading }: { data: InfraSnapshot; loading: boolean }) 
             key={grp.severity}
             grow={false}
             title={`${grp.severity} · ${grp.findings.length}`}
-            right={<Text fontSize="$2" color={TONE_COLOR[severityTone(grp.severity)]}>{usd(grp.monthlyCents)}/mo</Text>}
+            actions={<Text fontSize="$2" color={TONE_COLOR[severityTone(grp.severity)]}>{usd(grp.monthlyCents)}/mo</Text>}
           >
             <DataTable columns={columns} rows={apply(grp.findings)} rowKey={(f) => f.id} onRowPress={setOpen} sort={sort} onSortChange={onSortChange} />
           </Panel>
