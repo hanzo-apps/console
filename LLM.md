@@ -1504,7 +1504,7 @@ noun was wrong: bots and machines are distinct compute kinds, not one "fleet").
   global-admin only) BEFORE forwarding a minted user bearer. Same RED-H1 gate as
   Business/Finance — no new proxy/trust boundary.
 - **`lib/api/admin-compute.ts` — kind-parameterized client + pure tree.** OPTIONAL-SAFE
-  over BOTH shapes: pre-aggregated `{ leaves }` (the cheap ClickHouse GROUP BY) OR raw
+  over BOTH shapes: pre-aggregated `{ leaves }` (the cheap datastore GROUP BY) OR raw
   `{ events }` (the coordinated 9-column datastore row: `org, app, project, kind, event,
   machine_id, size, price_cents, ts`), which pure `foldEvents` folds client-side.
   `normalizeCompute(raw, kind)` filters to the requested kind (defensive — the endpoint
@@ -1574,7 +1574,7 @@ backend's real tenancy model (RED-checkable).
   `overview | timeseries | top | health` (analytics.go:95-98) with DIFFERENT response
   shapes — so 5 tabs 404'd and 2 mis-parsed. `analytics.ts` + `AnalyticsModule.tsx`
   rewritten to the real structs (`clients/analytics/query.go`): the **LLM lens is REAL
-  live per-org data** (`hanzo.cloud_usage`, prod ClickHouse `datastore.hanzo.svc:9000`),
+  live per-org data** (`hanzo.cloud_usage`, prod Hanzo Datastore `datastore.hanzo.svc:9000`),
   charted over time; the **web + commerce lenses render honest-empty via the backend
   `available` flag** (`hanzo.events`, until a collector emits) — never fabricated zeros.
   Dropped the fabricated **Real-Time tab** (no realtime backend exists). Tabs: Overview
@@ -3288,7 +3288,7 @@ so it rides the `app/admin/aggregate` BFF standalone and cloud-native in the go:
   (`clients/admin/storage.go`, SuperAdmin `s.guard`) — the DO block-storage inventory
   (count · total · monthly cost · per-volume region + attachment) from a new paginated
   `Volumes()` on the existing `DO_API_TOKEN` client, PLUS the datastore's own fill from
-  ClickHouse `system.disks` (the 200Gi PVC) over the SAME shared `aiobject.DatastoreQuery`
+  `system.disks` (the 200Gi PVC) over the SAME shared `aiobject.DatastoreQuery`
   the analytics/compute lenses use. Each source degrades independently; near-full raises
   an alert (warn ≥ 80%, critical ≥ 90%). Pure `buildStorageSnapshot`/`alertLevel`/
   `datastoreFillFromRow` unit-tested (4 Go tests green).
@@ -3434,3 +3434,62 @@ hook. Purely ADDITIVE — the committed single-product platform shell is respect
   a MULTI-product category-scoped nav (Platform · Compute · Network) so the sidebar itself
   leads with Projects/Containers/App Store/Functions/Usage — a shell.ts + registry-gate change,
   a separate CTO call.
+
+## Logged-out landing chrome — reachable footer, ONE typeface, ONE sign-in (v8.5.29)
+
+A rendered-DOM audit (CDP + hit-testing) of the LIVE `cloud.hanzo.ai` at 390x844 and
+1440x900 found three defects in the anon landing's chrome. Root causes, measured — not
+inferred:
+
+- **Footer legal links were CLIPPED off-screen and unreachable at 390px.** The link
+  clusters are Views (`flex-shrink: 0`), so they held their max-content width and their
+  own `flex-wrap` never engaged: "Terms" painted at x 397→435 on a 390px viewport, and
+  `html,body{overflow-x:clip}` means `documentElement.scrollWidth` stays 390 — the
+  overflow is CLIPPED, not scrollable, so a legally-required link could not be reached
+  by any gesture. Already fixed in `ConsoleFooter` by `2fc59f4cad` (`flexShrink: 1` on
+  every wrapping cluster, so `flex-wrap` engages); this wave LOCKS it with the geometry
+  spec below, because the clip makes it invisible to `scrollWidth` and to every unit
+  test. Measured after: the row wraps to two lines, Terms at x 149→187, nothing painted
+  past the right edge. The fix is WRAP — the page body must never scroll sideways.
+- **Header chrome rendered in a SYSTEM font while the body rendered Geist.** The shared
+  `@hanzogui/shell` chrome sets its own stack as an INLINE style on its root
+  (`fontFamily: CHROME.font` = `ui-sans-serif, system-ui, -apple-system, "Segoe UI", …`,
+  which names no Geist) and its subtree inherits it (its buttons re-declare
+  `font-family: inherit`). Measured on live: wordmark `Noto Sans:11:SYSTEM`, nav links
+  `Noto Sans:9:SYSTEM`, hero `Geist:26:custom` — mixed typography on one screen. Geist
+  loads fine (self-hosted woff2, `app/fonts.css`), so this is a CASCADE problem, not a
+  loading one, and the font loading is untouched. Fixed console-side (the shell is
+  another repo) with ONE rule in `app/globals.css`: `[data-hanzo-shell]` + its
+  descendants pinned to `var(--font-sans)`. `!important` is required — nothing else
+  beats an inline declaration — and matches the existing `font-synthesis` invariant
+  right above it. `code/pre/kbd/samp` keep the mono face, so the two font invariants
+  stay orthogonal. Measured after: nav `Geist:9:custom`, Meet-Hanzo `Geist:10:custom`,
+  CTA `Geist:7:custom` — identical to the body's own face.
+- **TWO "Sign in" affordances in the desktop logged-out header.** `HanzoHeader` renders
+  its OWN account link whenever `account` is nullish (`account ?? <DefaultAccount/>`),
+  and `landingSurface` already relabels the primary CTA "Sign in" — so live read
+  `[Get API key] [Sign in (filled, /signin)] [Sign in (plain, href="#")]`; the duplicate
+  was also a dead link. `PublicLanding` now declines the control explicitly
+  (`account={NO_ACCOUNT}`, i.e. `false` — not nullish, so the default never renders, and
+  React draws nothing, including the mobile sheet's identity row). Exactly ONE sign-in.
+- **RENDER-proven, not just mocked** (`e2e/landing-chrome.spec.ts`, anon by
+  construction — every API call answers 401 so the public landing mounts): at 390 every
+  footer link's box is inside the viewport AND hit-tests to itself,
+  `documentElement.scrollWidth === clientWidth`, and NO element is painted past the right
+  edge; the header chrome reports the same Geist face as the body via CDP
+  `CSS.getPlatformFontsForNode` (`document.fonts.check()` is worthless as evidence — it
+  answers true on a page with zero `@font-face` rules); and the header carries exactly
+  one "Sign in", the filled primary (`rgb(255,255,255)`), with none at 390 (collapsed to
+  the disclosure button). Screenshots `e2e-shots/{landing-footer-mobile,
+  landing-header-desktop}.png`.
+- Verification: `next build` ✓ ("Compiled successfully in 8.6min", types + 20/20 static
+  pages); `tsc --noEmit` clean; `vitest` all green; `landing-chrome` 3/3 against the
+  PRODUCTION build on `next start`. Negative control for the font rule: deleting it from
+  the CSSOM on the same build reverts the header to `Noto Sans:9:SYSTEM` with the stack
+  `ui-sans-serif, system-ui, -apple-system, "Segoe UI"` — so that one rule is
+  demonstrably the fix, in isolation.
+- NOTE (deploy): both `cloud.hanzo.ai` and `console.hanzo.ai` were measured serving a
+  build that predates `2fc59f4cad` (hero still a `SPAN`, two sign-ins), so main is AHEAD
+  of production on both hosts. The console FE reaches prod by bumping the console image
+  tag on the universe operator CR (ArgoCD syncs it) — a code push alone does not deploy.
+  These fixes are LANDED, not live, until that tag bump.

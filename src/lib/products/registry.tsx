@@ -871,7 +871,7 @@ export const catalog: CatalogEntry[] = [
     // booted across the platform (kind='bot'), and its spend, grouped
     // org → app → project. GLOBAL-ADMIN ONLY (`admin: true` hides it from every
     // customer's nav/launcher/palette; the `/v1/admin/compute` datastore aggregate is
-    // server-gated by `getAdminGate`). Reads ONLY the unified datastore (ClickHouse) —
+    // server-gated by `getAdminGate`). Reads ONLY the unified datastore —
     // one cross-tenant GROUP BY, never a per-tenant fan-out (the tenant-data-hierarchy
     // invariant). Honest-empty until the compute-events emitter lands.
     id: 'bots',
@@ -2399,7 +2399,7 @@ export const catalog: CatalogEntry[] = [
   },
   {
     // Native Analytics — per-org LLM + web + commerce analytics over the unified
-    // ClickHouse warehouse (datastore), read through cloud-api /v1/analytics/* via
+    // Hanzo Datastore warehouse, read through cloud-api /v1/analytics/* via
     // the /v1 bearer proxy (the FOUR real routes: overview/timeseries/top/health).
     // Overview (LLM lens REAL from hanzo.cloud_usage; web/commerce honest-empty until
     // the events collector emits) + LLM (top models) — every metric a real query,

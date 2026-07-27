@@ -7,7 +7,7 @@
  * to the caller's own org/billing-subject — the SAME subject the gateway debits
  * and the Cost page reads. This deliberately does NOT use cloud `get-cloud-usages`
  * anymore: that endpoint returns 200 with `{"status":"error","msg":"usage ledger
- * unavailable: datastore peer not connected"}` (its o11y/ClickHouse peer is down),
+ * unavailable: datastore peer not connected"}` (its o11y/datastore peer is down),
  * so the customer saw no spend. "Billing IS commerce" — the Overview reads the one
  * real, charged source, and `usage-adapter.ts` rolls the raw records up into the
  * rich `CloudUsageOverview` the dashboard renders (reusing the aimetrics parse, so

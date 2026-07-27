@@ -167,7 +167,7 @@ export const CLOUD_HEADS: readonly string[] = [
   // — never through this proxy — so it is out of scope here.)
   'integrations',
   // Unified analytics (cloud clients/analytics): /v1/analytics/{overview,timeseries,
-  // realtime,top/*,llm/*}. Read-only per-org warehouse (datastore/ClickHouse); the
+  // realtime,top/*,llm/*}. Read-only per-org warehouse (Hanzo Datastore); the
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
   // call, so it routes through /v1 like prompts/agents. Multi-segment sub-paths
   // (top/referrers, llm/overview) are admitted by the single `analytics` head.
