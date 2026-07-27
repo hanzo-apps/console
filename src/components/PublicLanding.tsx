@@ -25,6 +25,17 @@ import { ConsoleFooter } from '~/components/ConsoleFooter'
 const LANDING_SURFACE: HanzoSurface = landingSurface(findSurfaceByHost('cloud.hanzo.ai'))
 
 /**
+ * Decline the shell's account control. `HanzoHeader` renders its OWN text "Sign in"
+ * link whenever `account` is nullish (`account ?? <DefaultAccount/>`), so omitting it
+ * put a second sign-in beside the primary CTA that IS the sign-in — the desktop
+ * logged-out header read `[Get API key] [Sign in] [Sign in]`. `false` is how a caller
+ * says "no account node": it is not nullish, so the default never renders, and React
+ * renders nothing for it — including in the mobile sheet, which would otherwise draw
+ * an empty bordered identity row around it. Exactly ONE sign-in affordance.
+ */
+const NO_ACCOUNT = false
+
+/**
  * The house hero buttons — the same pill pair every Hanzo landing wears: a white
  * primary carrying the weight, and a hairline secondary that is still visibly a
  * button. Tamagui's default Button is a grey chip that reads as DISABLED next to
@@ -69,9 +80,14 @@ export function PublicLanding() {
         brand-neutral bar so no Hanzo ecosystem URL leaks onto their console.
       */}
       {brand.id === 'hanzo' ? (
-        // The header's own primary CTA IS the sign-in (see LANDING_SURFACE), so no
-        // separate `account` control — one way in, not two competing buttons.
-        <HanzoHeader surface={LANDING_SURFACE} productsTaxonomy={HANZO_PRODUCT_CATEGORIES} />
+        // The header's own primary CTA IS the sign-in (see LANDING_SURFACE), so the
+        // account control is declined explicitly (see NO_ACCOUNT) — one way in, not
+        // two competing sign-ins.
+        <HanzoHeader
+          surface={LANDING_SURFACE}
+          productsTaxonomy={HANZO_PRODUCT_CATEGORIES}
+          account={NO_ACCOUNT}
+        />
       ) : (
         <XStack
           items="center"

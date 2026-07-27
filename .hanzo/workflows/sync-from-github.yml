@@ -7,11 +7,10 @@ name: Sync from GitHub
 # Fast-forward ONLY: a divergence fails loudly here instead of force-pushing
 # either side.
 #
-# LIVE: the pull-mirror conversion is done (mirror: false, has_actions: true), so
-# this cron owns the GitHub -> canonical direction and the push below lands.
-#
-# It moves refs/heads/main and NOTHING else — never tags. That restriction is
-# load-bearing, not incidental; see the tag note in cicd.yml.
+# Inert until hanzoai/console stops being a Gitea pull mirror — while it is one,
+# the forge overwrites main from GitHub on its own timer and rejects the push
+# below. That conversion is also what turns Actions on here (measured today:
+# mirror: true, has_actions: false ⇒ zero native runs).
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -43,7 +42,7 @@ jobs:
             curl -fsS --max-time 20 -X POST \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               -H "Content-Type: application/json" \
-              "${{ github.server_url }}/api/v1/repos/${{ github.repository }}/actions/workflows/cicd.yml/dispatches" \
+              "${{ github.server_url }}/v1/repos/${{ github.repository }}/actions/workflows/cicd.yml/dispatches" \
               -d '{"ref":"main"}' \
               && echo "CI dispatched" || echo "CI dispatch failed (non-fatal — next direct push builds)"
           elif git merge-base --is-ancestor "$REMOTE" "$LOCAL"; then
