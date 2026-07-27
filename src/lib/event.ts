@@ -1,13 +1,20 @@
 /**
  * The ONE telemetry client for the console — @hanzo/event, natively enabled.
  *
- * Every kind of signal (pageview · product event · identify · error) rides ONE
+ * Analytics and product events (pageview · product event · identify) ride ONE
  * batched stream to the ONE Hanzo Cloud front door, POST /v1/event, which lenses
- * it server-side into web analytics, product insights, and error tracking. There
- * is a SINGLE instance, referenced as a value everywhere it's needed — the
+ * them server-side into web analytics and product insights. There is a SINGLE
+ * instance, referenced as a value everywhere it's needed — the
  * `AnalyticsProvider` (pageviews + product `capture`) and the app's error
  * boundaries (`reportError`), so even the provider-less `global-error` boundary
- * reports to the same stream. One client, one wire, no second path.
+ * reports through the same client. One client, no second path.
+ *
+ * ERRORS ARE A SECOND PLANE, and they do NOT ride the event stream. There is no
+ * server-side fan-out from /v1/event into error tracking — a claim this file used
+ * to make, which is precisely why the console reported ZERO errors. `captureError`
+ * sends a Sentry envelope directly, authenticated by its own `dsn`. NO DSN => THE
+ * ERROR PLANE IS INERT (fail-safe, by design). Requires @hanzo/event >= 0.3.2;
+ * versions <= 0.3.1 had no envelope code at all.
  *
  * Wiring for the console SPA:
  *  - `host: ''` — SAME-ORIGIN. Events POST to the console's own `/v1/event`, so the
@@ -18,6 +25,9 @@
  *    for LOGGED-OUT / public views (sign-in, marketing faces) so their pageviews +
  *    errors ingest without a session. Unset → logged-in flows via the cookie and
  *    logged-out is best-effort anonymous. Mint one per org via POST /v1/ingest/keys.
+ *  - `dsn` (`NEXT_PUBLIC_HANZO_EVENT_DSN`) — the error plane's own credential,
+ *    shaped `https://<key>@api.hanzo.ai/v1/sentry/<project>`. Publishable by design
+ *    (it ships in the client bundle). Unset → errors are captured and dropped.
  *  - auto error capture is ON by default (window.onerror + unhandledrejection),
  *    making this the app-wide error path (subsumes @sentry). React render errors —
  *    which React swallows before window.onerror — are reported from the boundaries
@@ -44,6 +54,9 @@ function consented(): boolean {
 /** Publishable ingest key for logged-out ingestion; empty → same-origin cookie/anon. */
 const ingestKey = process.env.NEXT_PUBLIC_EVENT_INGEST_KEY?.trim() || undefined
 
+/** Error-plane credential. Unset → captureError is inert (fail-safe). */
+const dsn = process.env.NEXT_PUBLIC_HANZO_EVENT_DSN?.trim() || undefined
+
 /**
  * The ONE console analytics client. Built once at module scope (SSR-safe: the
  * client's browser-only side effects are guarded and deferred to `init()`, which
@@ -53,6 +66,7 @@ export const eventClient: Analytics = createAnalytics({
   product: 'console',
   host: '',
   ingestKey,
+  dsn,
   enabled: consented(),
 })
 
