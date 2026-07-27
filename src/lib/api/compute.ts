@@ -18,7 +18,7 @@
  *     clusters are detected from the node-size slug; per-model GPU COUNTS are derived
  *     from real `nodeCount × GPUs-per-node`. Counts/clusters only — NEVER synthetic
  *     per-GPU rows (we have no UUIDs/temps for a node we only know the size of).
- *  3. Usage ledger — `GET /v1/get-cloud-usages` (the read API over the ZAP-written
+ *  3. Usage ledger — `GET /v1/ai/usages/cloud` (the read API over the ZAP-written
  *     `hanzo.cloud_usage` ledger: timestamp/org/model/provider/tokens/cost_cents).
  *     Powers cost. Not yet registered on the backend → 404 → the caller degrades to
  *     the commerce usage total (`BillingApi.usage`) and finally to `—`.
@@ -500,13 +500,13 @@ export const ComputeApi = {
 
   /**
    * Metered usage over the last `days` from the cloud usage ledger
-   * (`GET /v1/get-cloud-usages` — the reader over `hanzo.cloud_usage`). Routed through
+   * (`GET /v1/ai/usages/cloud` — the reader over `hanzo.cloud_usage`). Routed through
    * the `/v1` user-bearer proxy (org resolved from the Bearer owner) — a bare
-   * `/v1/get-cloud-usages` is cookie-only and 401s on the live ingress. Throws (→ honest
+   * `/v1/ai/usages/cloud` is cookie-only and 401s on the live ingress. Throws (→ honest
    * state) when the reader is not yet registered (404).
    */
   usageLedger: async (days = 7): Promise<UsageLedger> => {
-    const data = await cloudGet<unknown>('get-cloud-usages', { days })
+    const data = await cloudGet<unknown>('ai/usages/cloud', { days })
     return normalizeLedger(data)
   },
 }

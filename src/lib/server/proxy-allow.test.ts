@@ -138,16 +138,32 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/code/index')).toBe(true)
   })
 
-  it('admits the casibase store-admin heads the console uses (Embeddings · Collections)', () => {
-    for (const head of ['get-stores', 'get-store', 'add-store', 'update-store', 'delete-store', 'refresh-store-vectors']) {
-      expect(CLOUD_HEADS).toContain(head)
-      expect(allowCloudSurface(`v1/${head}`)).toBe(true)
+  it('admits the ai service the console uses (Embeddings · Collections)', () => {
+    // ONE SERVICE head — /v1/<service>/<resource> is the canonical form, and the
+    // service that owns stores/files/chats/providers is `ai`. This used to
+    // enumerate eight individual ROUTES because the surface had no namespace.
+    expect(CLOUD_HEADS).toContain('ai')
+    for (const p of [
+      'v1/ai/stores',
+      'v1/ai/stores/acme/my-store',
+      'v1/ai/stores/acme/my-store/vectors',
+      'v1/ai/stores/names',
+      'v1/ai/files',
+    ]) {
+      expect(allowCloudSurface(p)).toBe(true)
     }
   })
 
-  it('LEAST PRIVILEGE: does NOT tunnel the cross-tenant / unused store heads', () => {
-    // get-global-stores is a cross-tenant read the console never invokes; get-store-names
-    // is unused. Neither is allow-listed, so /v1 refuses them (not a general tunnel).
+  it('LEAST PRIVILEGE: still refuses the cross-tenant store listing', () => {
+    // An admin read the console never invokes, explicitly refused before the
+    // surface was namespaced. Granting the `ai` head would have admitted it
+    // silently, so the refusal follows the path.
+    expect(allowCloudSurface('v1/ai/stores/global')).toBe(false)
+    // The compound routes are gone entirely.
+    expect(allowCloudSurface('v1/get-stores')).toBe(false)
+  })
+
+  it('the retired compound heads are gone', () => {
     expect(CLOUD_HEADS).not.toContain('get-global-stores')
     expect(CLOUD_HEADS).not.toContain('get-store-names')
     expect(allowCloudSurface('v1/get-global-stores')).toBe(false)

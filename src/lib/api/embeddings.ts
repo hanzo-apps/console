@@ -6,8 +6,8 @@
  * remaining calls reach the cloud `/v1` through the console's OWN `/v1` user-bearer
  * proxy (the live ingress does not rewrite bare `/v1/*`). Each call uses the transport
  * its endpoint speaks:
- *   - envelope (`{status,msg,data}`): get-stores, get-cloud-usages, get-files,
- *     add-store, docs/ingest, index            → `cloudGet`/`cloudPost` (→ /v1)
+ *   - envelope (`{status,msg,data}`): ai/stores, ai/usages/cloud, ai/files,
+ *     ai/stores, docs/ingest, index            → `cloudGet`/`cloudPost` (→ /v1)
  *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`) → `restGet`/`restPost`
  *     on `cloudProxyV1Url` (→ /v1)
  *   - OpenAI gateway (Bearer-only): embeddings  → the keyless `/ai` proxy (`originV1Url`)
@@ -142,7 +142,7 @@ export const EmbeddingsApi = {
    * `feat/cloud-usage-read-api` ships — callers catch and degrade to "—".
    */
   cloudUsages: async (days = 7): Promise<CloudUsages> => {
-    const data = await cloudGet<unknown>('get-cloud-usages', { category: 'embeddings', days })
+    const data = await cloudGet<unknown>('ai/usages/cloud', { category: 'embeddings', days })
     return normalizeCloudUsages(data)
   },
 
@@ -172,7 +172,7 @@ export const EmbeddingsApi = {
 
   /** Per-file index status across the org's stores (the Jobs surface). */
   files: async (owner: string): Promise<FileRow[]> => {
-    const raw = await cloudGet<unknown[]>('get-files', { owner })
+    const raw = await cloudGet<unknown[]>('ai/files', { owner })
     return (raw ?? []).map((r) => {
       const f = (r ?? {}) as Record<string, unknown>
       return {

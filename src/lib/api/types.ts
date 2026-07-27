@@ -114,7 +114,7 @@ export type Chat = Owned & {
 }
 
 /**
- * A chat message (`/v1/get-messages`).
+ * A chat message (`/v1/ai/messages`).
  *
  * `author` is "AI" for assistant turns, otherwise the user. `text` is the
  * content; `reasonText` carries any reasoning trace.
