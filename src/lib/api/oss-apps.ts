@@ -170,3 +170,24 @@ export async function fetchOssApps(base: string, force = false): Promise<OssApp[
     inflight.delete(key)
   }
 }
+
+/**
+ * Fetch one app's `docker-compose.yml` blueprint as raw text, or null when the entry
+ * publishes none (a 404 is a normal, expected answer for a large community catalog —
+ * not every blueprint ships compose). Never throws: the detail page treats an absent
+ * blueprint as "nothing to show here", which is honest, and must not fail the whole
+ * page over a missing optional asset.
+ */
+export async function fetchCompose(base: string, id: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${blueprintBase(base, id)}/docker-compose.yml`, {
+      headers: { Accept: 'text/plain' },
+      credentials: 'omit',
+    })
+    if (!res.ok) return null
+    const text = await res.text()
+    return text.trim() ? text : null
+  } catch {
+    return null
+  }
+}
