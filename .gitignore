@@ -3,6 +3,11 @@ node_modules
 out/
 dist/
 
+# npm is the one package manager here — package-lock.json is the tracked lockfile
+# (the Dockerfile runs `npm install`). A pnpm/yarn lockfile would silently drift.
+pnpm-lock.yaml
+yarn.lock
+
 # build artifacts
 *.tsbuildinfo
 next-env.d.ts
