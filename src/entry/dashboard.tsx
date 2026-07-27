@@ -43,24 +43,21 @@
  */
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Button, Input, Popover, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
+import { Button, Input, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
   ArrowLeft,
   BarChart3,
   Bell,
   BookOpen,
   ChevronRight,
-  ChevronsUpDown,
   Circle,
   CircleHelp,
-  CircleUser,
   Command,
   CreditCard,
   ExternalLink,
   House,
   LayoutGrid,
   Lock,
-  LogOut,
   Menu,
   Mic,
   PanelLeft,
@@ -107,15 +104,14 @@ import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { SystemStatusBadge } from '~/components/ui/SystemStatusBadge'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { SidebarBrand } from '~/components/SidebarBrand'
+import { AccountMenu } from '~/components/AccountMenu'
 import { BrandMark } from '~/components/ui/BrandLogo'
 import { shellFor, isProductShell } from '~/lib/products/shell'
-import { OrgSwitcher } from '~/components/OrgSwitcher'
-import { leaveOrg } from '~/lib/org-scope'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
 import { voiceSupported } from '~/lib/voice'
 import { WorkbenchDock } from '~/components/workbench/Workbench'
-import { paper } from '~/components/ui/paper'
+import { Z } from '~/lib/z'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
@@ -307,7 +303,7 @@ function DrillNav({
         hoverStyle={{ bg: '$color3' }}
         aria-label="Back to all products"
       >
-        <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+        <Text fontSize="$1" color="$color10" fontWeight="500">
           {entry.category}
         </Text>
       </Button>
@@ -388,10 +384,10 @@ function CategorySection({
         <XStack flex={1} items="center" gap="$2">
           {/* Flush-left label — calm neutral tint (per-product COLOR lives on the icons
               within). The count + the collapse chevron sit at the far RIGHT. */}
-          <Text flex={1} fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+          <Text flex={1} fontSize="$1" color="$color10" fontWeight="500">
             {category}
           </Text>
-          <Text fontSize={10} fontWeight="700" color="$color9">
+          <Text fontSize="$1" fontWeight="700" color="$color9">
             {count}
           </Text>
           {/* The OPTIONAL collapse affordance — a chevron that rotates ▸→▾. Wrapped in a
@@ -416,153 +412,27 @@ function CategorySection({
   )
 }
 
-/** A square identity avatar — the account/org image when set, else initials on a tile. */
-function IdentityAvatar({ src, label, size }: { src?: string | null; label: string; size: number }) {
-  if (src) {
-    // Arbitrary account/org image URL — raw <img> (next/image needs a per-tenant allowlist).
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt="" style={{ height: size, width: size, borderRadius: 8, objectFit: 'cover', display: 'block', flexShrink: 0 }} />
-  }
-  const initials = (label.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2) || 'U').toUpperCase()
+/**
+ * Sidebar account — the ONE account control, at the FOOT of the rail: who you are,
+ * which organization you are acting in, the balance, the theme, and the way out.
+ *
+ * There used to be three of these — an org switcher at the top, an account popover
+ * at the bottom, and a third menu in the mobile drawer, each with its own sign-out.
+ * They are now one `AccountMenu` (`@hanzo/iam`'s `UserMenu`), mounted here and in
+ * the drawer, so identity and tenancy are never two places to look. Reused by the
+ * desktop sidebar, the collapsed rail, the flyout, AND the mobile drawer.
+ */
+function SidebarAccount({ collapsed }: { collapsed: boolean }) {
   return (
-    <XStack width={size} height={size} items="center" justify="center" rounded="$3" bg="$color5" style={{ flexShrink: 0 }}>
-      <Text fontSize={Math.round(size * 0.4)} fontWeight="800" color="$color12">
-        {initials}
-      </Text>
-    </XStack>
-  )
-}
-
-/** One row in the account menu popover. */
-function MenuItem({ icon: Icon, label, onPress }: { icon: ComponentType<{ size?: number }>; label: string; onPress: () => void }) {
-  return (
-    <XStack
-      onPress={onPress}
-      cursor="pointer"
-      items="center"
-      gap="$2.5"
-      px="$2"
-      py="$2"
-      rounded="$3"
-      hoverStyle={{ bg: '$color4' }}
+    <YStack
+      gap="$1.5"
+      pt="$2"
+      mt="$1"
+      items={collapsed ? 'center' : undefined}
+      borderTopWidth={1}
+      borderColor="$borderColor"
     >
-      <Icon size={15} />
-      <Text fontSize="$2" color="$color12">
-        {label}
-      </Text>
-    </XStack>
-  )
-}
-
-/**
- * Sidebar workspace switcher — the TOP-of-sidebar tenancy control (beneath the brand).
- * Switching the workspace changes everything beneath it, so it leads the sidebar
- * (Account → Workspace → Project → Environment). The working `OrgSwitcher` owns switch /
- * create / "All organizations" in its own dropdown. Collapsed rail → hidden (workspace
- * switching happens in the expanded flyout). Reused across every sidebar layout (DRY).
- */
-function SidebarWorkspace({ collapsed }: { collapsed: boolean }) {
-  if (collapsed) return null
-  // A COLUMN, so the switcher stretches the sidebar's width exactly as the account
-  // row below does — the two are peers, and a row container would have shrunk this
-  // one to its text.
-  return (
-    <YStack pb="$1" mb="$1" borderBottomWidth={1} borderColor="$borderColor">
-      <OrgSwitcher />
-    </YStack>
-  )
-}
-
-/**
- * Sidebar account — the BOTTOM-LEFT user/account row. Opens an account menu
- * (profile · theme · sign out) UPWARD (`top-start`, foot-anchored, never clips).
- * Collapsed → just the account avatar, opening the same menu to the right. The org/
- * workspace switcher is NO LONGER here — it moved to the top (`SidebarWorkspace`), so a
- * user never confuses "who I am" (bottom) with "which workspace I'm acting in" (top).
- * Reused by the desktop sidebar, the flyout, AND the mobile drawer (DRY).
- */
-function SidebarAccount({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
-  const router = useRouter()
-  const { account, signOut } = useSession()
-  const [open, setOpen] = useState(false)
-  const name = account?.displayName?.trim() || account?.name || 'Account'
-  const email = account?.email
-  const go = (path: string) => {
-    setOpen(false)
-    router.push(path)
-    onNavigate()
-  }
-
-  const menu = (
-    <Popover.Content {...paper} p="$2" width={252}>
-      <YStack gap="$1">
-        <XStack items="center" gap="$2.5" px="$2" py="$2">
-          <IdentityAvatar src={account?.avatar} label={name} size={34} />
-          <YStack flex={1} minW={0}>
-            <Text fontSize="$3" fontWeight="700" color="$color12" numberOfLines={1}>
-              {name}
-            </Text>
-            {email ? (
-              <Text fontSize="$1" color="$color10" numberOfLines={1}>
-                {email}
-              </Text>
-            ) : null}
-          </YStack>
-        </XStack>
-        <MenuItem icon={CircleUser} label="Profile" onPress={() => go('/profile')} />
-        <XStack items="center" justify="space-between" px="$2" py="$1.5">
-          <Text fontSize="$2" color="$color11">
-            Theme
-          </Text>
-          <ThemeToggle />
-        </XStack>
-        <YStack borderTopWidth={1} borderColor="$borderColor" pt="$1">
-          <MenuItem icon={LogOut} label="Sign out" onPress={() => { setOpen(false); void signOut() }} />
-        </YStack>
-      </YStack>
-    </Popover.Content>
-  )
-
-  if (collapsed) {
-    return (
-      <YStack items="center" gap="$1" pt="$2" mt="$1" borderTopWidth={1} borderColor="$borderColor">
-        <Popover open={open} onOpenChange={setOpen} placement="right-start">
-          <Popover.Trigger asChild>
-            <Button chromeless p="$0" width={40} height={40} aria-label={`${name} · account menu`}>
-              <IdentityAvatar src={account?.avatar} label={name} size={36} />
-            </Button>
-          </Popover.Trigger>
-          {menu}
-        </Popover>
-      </YStack>
-    )
-  }
-
-  return (
-    <YStack gap="$1.5" pt="$2" mt="$1" borderTopWidth={1} borderColor="$borderColor">
-      {/* The user/account — opens UPWARD (foot-anchored), so the menu never clips.
-          The workspace switcher lives at the TOP now (SidebarWorkspace). */}
-      <Popover open={open} onOpenChange={setOpen} placement="top-start">
-        <Popover.Trigger asChild>
-          <Button chromeless height={44} px="$2" justify="flex-start" aria-label={`${name} · account menu`}>
-            <XStack items="center" gap="$2.5" flex={1} minW={0}>
-              <IdentityAvatar src={account?.avatar} label={name} size={30} />
-              <YStack flex={1} minW={0}>
-                <Text fontSize="$4" fontWeight="800" color="$color12" numberOfLines={1}>
-                  {name}
-                </Text>
-                {email ? (
-                  <Text fontSize="$1" color="$color10" numberOfLines={1}>
-                    {email}
-                  </Text>
-                ) : null}
-              </YStack>
-              <ChevronsUpDown size={15} color="$color9" />
-            </XStack>
-          </Button>
-        </Popover.Trigger>
-        {menu}
-      </Popover>
+      <AccountMenu />
     </YStack>
   )
 }
@@ -703,7 +573,12 @@ function SidebarNav({
         : []
     const activeSlug = root ? activeSubpage(pathname, root.id) : ''
     return (
-      <>
+      // The product rail is a NAVIGATION LANDMARK. It had no role at all, so a
+      // screen-reader user had no way to jump to the product list and no way to
+      // skip past it. `display: contents` adds the landmark with ZERO layout
+      // effect (the children keep their parent's flex context), and the explicit
+      // role survives regardless of how a given AT treats display:contents.
+      <nav role="navigation" aria-label="Products" style={{ display: 'contents' }}>
         {shell.wordmark && !collapsed ? (
           <XStack
             items="center"
@@ -722,7 +597,6 @@ function SidebarNav({
         ) : (
           <SidebarBrand collapsed={collapsed} onNavigate={onNavigate} />
         )}
-        <SidebarWorkspace collapsed={collapsed} />
         <ScrollView flex={1}>
           <YStack gap="$1">
             {subs.map((sp) => {
@@ -746,9 +620,9 @@ function SidebarNav({
             })}
           </YStack>
         </ScrollView>
-        <SidebarAccount collapsed={collapsed} onNavigate={onNavigate} />
+        <SidebarAccount collapsed={collapsed} />
         <SidebarWallet collapsed={collapsed} />
-      </>
+      </nav>
     )
   }
 
@@ -794,7 +668,7 @@ function SidebarNav({
             <FixedRow icon={LayoutGrid} label="All products" collapsed onPress={allProducts} />
           </YStack>
         </ScrollView>
-        <SidebarAccount collapsed onNavigate={onNavigate} />
+        <SidebarAccount collapsed />
         <SidebarWallet collapsed />
       </>
     )
@@ -805,7 +679,6 @@ function SidebarNav({
     return (
       <>
         <SidebarBrand collapsed={false} onNavigate={onNavigate} />
-        <SidebarWorkspace collapsed={false} />
         <DrillNav
           entry={activeEntry}
           subs={activeSubs}
@@ -814,7 +687,7 @@ function SidebarNav({
           onBack={() => setManualList(true)}
           onGo={go}
         />
-        <SidebarAccount collapsed={false} onNavigate={onNavigate} />
+        <SidebarAccount collapsed={false} />
         <SidebarWallet collapsed={false} />
       </>
     )
@@ -823,9 +696,13 @@ function SidebarNav({
   // ── Level 1 — the full product list: brand; filter; Overview/Docs; Pinned; every
   //    category (EXPANDED by default, collapsible); All-products; identity + wallet. ──
   return (
-    <>
+    // The product rail is a NAVIGATION LANDMARK. It had no role at all, so a
+    // screen-reader user had no way to jump to the product list and no way to
+    // skip past it. `display: contents` adds the landmark with ZERO layout
+    // effect (the children keep their parent's flex context), and the explicit
+    // role survives regardless of how a given AT treats display:contents.
+    <nav role="navigation" aria-label="Products" style={{ display: 'contents' }}>
       <SidebarBrand collapsed={false} onNavigate={onNavigate} />
-        <SidebarWorkspace collapsed={false} />
 
       {/* Product filter — narrows the whole list; a match from any category jumps
           straight there. Typing hides the section chrome so the list stays scannable. */}
@@ -869,7 +746,7 @@ function SidebarNav({
           {!filtering && pinnedGroups.length > 0 ? (
             <YStack gap="$1.5">
               <XStack items="center" justify="space-between" px="$2.5">
-                <Text fontSize="$1" color="$color10" fontWeight="700" textTransform="uppercase" letterSpacing={0.4}>
+                <Text fontSize="$1" color="$color10" fontWeight="500">
                   Pinned
                 </Text>
                 <Button size="$1" chromeless onPress={manage} aria-label="Manage pins">
@@ -956,9 +833,9 @@ function SidebarNav({
       </ScrollView>
 
       {/* Bottom-left cluster: the org switcher + account menu, then the wallet. */}
-      <SidebarAccount collapsed={false} onNavigate={onNavigate} />
+      <SidebarAccount collapsed={false} />
       <SidebarWallet collapsed={false} />
-    </>
+    </nav>
   )
 }
 
@@ -1062,7 +939,6 @@ export function Dashboard({ children }: { children: ReactNode }) {
   // lost scroll/state). Any shell re-render is a genuine shell interaction (collapse,
   // drawer, dock), never a route change.
   const router = useRouter()
-  const { signOut } = useSession()
   const { get, set } = usePreferences()
   const palette = useCommandPalette()
   // The assistant: `docked` reserves the right column; `openChat` (the small brand-H)
@@ -1129,7 +1005,9 @@ export function Dashboard({ children }: { children: ReactNode }) {
               borderRightWidth={1}
               borderColor="$borderColor"
               className="hz-elevation-4"
-              style={{ zIndex: 1000 }}
+              // A flyout is a menu: the ladder's dropdown rung, so the account
+              // control it contains (a popover) still paints above it.
+              style={{ zIndex: Z.dropdown }}
             >
               <SidebarNav collapsed={false} onNavigate={() => setFlyout(false)} />
             </YStack>
@@ -1274,17 +1152,13 @@ export function Dashboard({ children }: { children: ReactNode }) {
         <DockedChatPanel />
       </YStack>
 
-      {/* Mobile account drawer — org/scope switching, notifications, theme, docs,
-          sign-out. The SAME SlideOver primitive as the nav drawer (DRY, smooth). */}
+      {/* Mobile account drawer — the SAME account control as the rail foot, so
+          identity, tenancy, theme, billing and sign-out read identically on a
+          phone. Only the phone-only extras (project/network scope, alerts) sit
+          beside it; the drawer no longer keeps its own copies of them. */}
       <SlideOver open={menuOpen} onClose={() => setMenuOpen(false)} side="right" size={320} title="Account">
         <YStack gap="$2" className="hz-touch-target">
-          <XStack items="center" justify="space-between">
-            <Text fontSize="$2" color="$color10">
-              Theme
-            </Text>
-            <ThemeToggle />
-          </XStack>
-          <OrgSwitcher />
+          <AccountMenu />
           <ScopeSwitcher />
           <Button
             justify="flex-start"
@@ -1295,36 +1169,6 @@ export function Dashboard({ children }: { children: ReactNode }) {
             }}
           >
             Notifications
-          </Button>
-          <Button
-            justify="flex-start"
-            icon={<SlidersHorizontal size={16} />}
-            onPress={() => {
-              setMenuOpen(false)
-              push('/profile')
-            }}
-          >
-            Profile
-          </Button>
-          <Button
-            justify="flex-start"
-            icon={<CircleHelp size={16} />}
-            onPress={() => {
-              setMenuOpen(false)
-              openDocs()
-            }}
-          >
-            Documentation
-          </Button>
-          <Button
-            justify="flex-start"
-            icon={<LogOut size={16} />}
-            onPress={() => {
-              setMenuOpen(false)
-              void signOut()
-            }}
-          >
-            Sign out
           </Button>
         </YStack>
       </SlideOver>

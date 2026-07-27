@@ -15,6 +15,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { createPortal } from 'react-dom'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { CircleCheck, CircleX, Info, X } from '@hanzogui/lucide-icons-2'
+import { Z } from '~/lib/z'
 
 export type ToastKind = 'success' | 'error' | 'info'
 
@@ -94,7 +95,7 @@ function ToastViewport({ toasts, dismiss }: { toasts: ToastItem[]; dismiss: (id:
   useEffect(() => setMounted(true), [])
   if (!mounted || typeof document === 'undefined') return null
   return createPortal(
-    <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 100000, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', top: 16, right: 16, zIndex: Z.toast, pointerEvents: 'none' }}>
       <YStack gap="$2" items="flex-end">
         {toasts.map((t) => (
           <YStack key={t.id} pointerEvents="auto">

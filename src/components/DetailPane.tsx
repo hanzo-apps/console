@@ -29,6 +29,7 @@ import { X } from '@hanzogui/lucide-icons-2'
 
 import { SlideOver } from '~/components/ui/SlideOver'
 import { asColor, type IconLike } from '~/components/ui/color'
+import { Z } from '~/lib/z'
 
 export type DetailDescriptor = {
   /** Pane title (the item's name). */
@@ -82,7 +83,7 @@ export function DetailPane({ children }: { children: ReactNode }) {
         side="right"
         size={desc?.size ?? 460}
         ariaLabel={typeof desc?.title === 'string' ? desc?.title : 'Details'}
-        zIndex={1100}
+        zIndex={Z.popover}
       >
         {/* Bare-mode layout: fixed header · scroll body · optional sticky footer. */}
         <XStack items="center" gap="$2.5" px="$4" height={56} borderBottomWidth={1} borderColor="$borderColor">

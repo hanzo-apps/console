@@ -6,8 +6,12 @@
  *
  * Source of truth is the signed-in user's IAM account (`properties` →
  * `hanzo.preferences`), so customizations follow the user across every product
- * and every device/login. localStorage is used ONLY as a fast-paint cache to
- * avoid a flash before the account loads — it is never authoritative.
+ * and every device/login. localStorage is the fast-paint cache that avoids a
+ * flash before the account loads, AND the fallback for keys the account has not
+ * told us about yet — see `mergePrefs` in `preferences-core` for exactly why
+ * that second role is load-bearing (without it, a pin made after sign-in was
+ * wiped on the next reload, because the account's claims come off a token minted
+ * before the pin existed).
  *
  * Writes are optimistic + write-through: the local view updates immediately and
  * `update-preferences` persists to the account (self-scoped, shallow-merged
@@ -25,11 +29,10 @@ import {
 
 import { AccountApi } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
+import { mergePrefs, parsePrefs, type Preferences } from './preferences-core'
 
 /** Must match the backend `preferencesKey` (controllers/account.go). */
 const PREFS_PROPERTY = 'hanzo.preferences'
-
-export type Preferences = Record<string, unknown>
 
 type PreferencesState = {
   prefs: Preferences
@@ -45,15 +48,8 @@ const PreferencesContext = createContext<PreferencesState | null>(null)
 
 const cacheKey = (name: string | undefined) => `hanzo.console2.prefs.${name ?? 'anon'}`
 
-function parsePrefs(raw: string | undefined | null): Preferences {
-  if (!raw) return {}
-  try {
-    const p = JSON.parse(raw)
-    return p && typeof p === 'object' && !Array.isArray(p) ? (p as Preferences) : {}
-  } catch {
-    return {}
-  }
-}
+const readCache = (name: string | undefined): Preferences =>
+  typeof window === 'undefined' ? {} : parsePrefs(window.localStorage.getItem(cacheKey(name)))
 
 export function Preferences({ children }: { children: ReactNode }) {
   const { account } = useSession()
@@ -63,17 +59,21 @@ export function Preferences({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Fast-paint from the local cache so pins don't flash on a cold load…
-    if (typeof window !== 'undefined' && !account) {
-      setPrefs(parsePrefs(window.localStorage.getItem(cacheKey(name))))
+    const cached = readCache(name)
+    if (!account) {
+      setPrefs(cached)
       return
     }
-    // …then the account becomes the source of truth once it arrives.
-    const fromAccount = parsePrefs(account?.properties?.[PREFS_PROPERTY])
-    setPrefs(fromAccount)
+    // …then reconcile: the account wins for every key it CARRIES, and the cache
+    // keeps the keys it is silent about. Writing the MERGE back to the cache is
+    // what makes a customization survive the next reload — overwriting the cache
+    // with the account's view alone is precisely what used to lose it.
+    const merged = mergePrefs(cached, parsePrefs(account.properties?.[PREFS_PROPERTY]))
+    setPrefs(merged)
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(cacheKey(name), JSON.stringify(fromAccount))
+      window.localStorage.setItem(cacheKey(name), JSON.stringify(merged))
     }
-    setReady(Boolean(account))
+    setReady(true)
   }, [account, name])
 
   const set = useCallback(

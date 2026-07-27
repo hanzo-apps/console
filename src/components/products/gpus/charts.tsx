@@ -23,8 +23,8 @@ export {
   LegendDot,
   MetricCard,
   HintButton,
-  Panel,
 } from '~/components/ui/Metric'
+export { Panel } from '~/components/ui/Panel'
 
 const TRACK = 'rgba(128,128,128,0.18)'
 

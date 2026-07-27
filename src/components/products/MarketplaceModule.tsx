@@ -19,8 +19,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { RefreshCw, Search, X, Play, ArrowRight, ShieldCheck, Store } from '@hanzogui/lucide-icons-2'
+import { Button, Text, XStack, YStack } from '@hanzo/gui'
+import { RefreshCw, X, Play, ArrowRight, ShieldCheck, Store } from '@hanzogui/lucide-icons-2'
 
 import {
   fetchCatalog,
@@ -39,6 +39,8 @@ import { brandForModel, brandLabel } from '~/components/ui/brand'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
+import { Filters } from '~/components/ui/Filters'
+import { useList } from '~/lib/list'
 import type { ApiError } from '~/lib/api'
 
 /** The "Verified" pill for our first-party (Zen) listings. */
@@ -186,7 +188,7 @@ function FeaturedShelf({ items, onOpen }: { items: CatalogEntry[]; onOpen: (m: C
   if (items.length === 0) return null
   return (
     <YStack gap="$2">
-      <Text fontSize="$2" color="$color11" fontWeight="700" textTransform="uppercase">
+      <Text fontSize="$2" color="$color11" fontWeight="500">
         Featured
       </Text>
       <XStack gap="$3" flexWrap="wrap">
@@ -206,9 +208,16 @@ type LoadState =
 export function MarketplaceModule(_props: { params: Record<string, string> }) {
   const router = useRouter()
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
-  const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<string | null>(null)
-  const [availableOnly, setAvailableOnly] = useState(false)
+  // Search, chosen category and the availability toggle are the user's own view of
+  // the storefront, so they live in the ONE persisted list state rather than in
+  // three `useState`s a single navigation throws away. A facet is stored only when
+  // it narrows something — "All" and "off" are the ABSENCE of a facet, never a
+  // stored sentinel — which is what keeps `active`/Reset honest.
+  const list = useList('marketplace')
+  const query = list.q
+  const category = list.filter('category') || null
+  const availableOnly = list.filter('available') === 'now'
+  const setCategory = (c: string | null) => list.setFilter('category', c ?? '')
 
   const run = useCallback(() => {
     setState({ phase: 'loading' })
@@ -237,7 +246,7 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
     else router.push('/models')
   }
 
-  const filtering = Boolean(query) || Boolean(category) || availableOnly
+  const filtering = list.active > 0
 
   return (
     <>
@@ -270,7 +279,7 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
           {/* Category tiles */}
           {categories.length > 0 ? (
             <YStack gap="$2">
-              <Text fontSize="$2" color="$color11" fontWeight="700" textTransform="uppercase">
+              <Text fontSize="$2" color="$color11" fontWeight="500">
                 Categories
               </Text>
               <XStack gap="$2.5" flexWrap="wrap">
@@ -291,46 +300,21 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
             </YStack>
           ) : null}
 
-          {/* Search + available-only */}
-          <XStack gap="$2" items="center" flexWrap="wrap">
-            <XStack
-              flex={1}
-              minW={240}
-              items="center"
-              gap="$2"
-              px="$2.5"
-              py="$1.5"
-              rounded="$3"
-              borderWidth={1}
-              borderColor="$borderColor"
-              bg="$color1"
-            >
-              <Search size={14} opacity={0.6} />
-              <Input
-                flex={1}
-                size="$2"
-                borderWidth={0}
-                bg="transparent"
-                placeholder="Search listings, providers, descriptions…"
-                value={query}
-                onChangeText={setQuery}
-                autoCapitalize="none"
-              />
-              {query ? (
-                <Button size="$1" chromeless circular icon={<X size={13} />} onPress={() => setQuery('')} />
-              ) : null}
-            </XStack>
+          {/* Search + available-only — the ONE list bar; the toggle rides along as
+              its trailing control, so search, facets and Reset stay in one row. */}
+          <Filters list={list} placeholder="Search listings, providers, descriptions…">
             <Button
               size="$2"
               icon={<Play size={14} />}
               bg={availableOnly ? '$color5' : 'transparent'}
               borderWidth={1}
               borderColor="$borderColor"
-              onPress={() => setAvailableOnly((v) => !v)}
+              aria-pressed={availableOnly}
+              onPress={() => list.setFilter('available', availableOnly ? '' : 'now')}
             >
               Available now
             </Button>
-          </XStack>
+          </Filters>
 
           {/* Listings grid */}
           {listings.length === 0 ? (
@@ -346,11 +330,7 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
                   size="$2"
                   chromeless
                   icon={<X size={14} />}
-                  onPress={() => {
-                    setQuery('')
-                    setCategory(null)
-                    setAvailableOnly(false)
-                  }}
+                  onPress={list.reset}
                 >
                   Clear filters
                 </Button>

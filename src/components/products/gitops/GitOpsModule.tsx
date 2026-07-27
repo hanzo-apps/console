@@ -51,6 +51,7 @@ import {
   type FleetGit,
 } from './logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { Z } from '~/lib/z'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -367,7 +368,7 @@ function SyncConfirm({ app, onClose, onDone, toast }: { app: Application | null;
     }
   }
   return (
-    <SlideOver open={!!app} onClose={onClose} title={app ? `Sync ${app.name}` : 'Sync'} icon={RefreshCw} size={440} zIndex={1100} ariaLabel="Sync application">
+    <SlideOver open={!!app} onClose={onClose} title={app ? `Sync ${app.name}` : 'Sync'} icon={RefreshCw} size={440} zIndex={Z.popover} ariaLabel="Sync application">
       {app ? (
         <YStack gap="$4">
           <Text fontSize="$3" color="$color11">
@@ -425,7 +426,7 @@ function RollbackPanel({ app, onClose, onDone, toast }: { app: Application | nul
   }
 
   return (
-    <SlideOver open={!!app} onClose={onClose} title={app ? `Roll back ${app.name}` : 'Roll back'} icon={RotateCcw} size={460} zIndex={1100} ariaLabel="Roll back application">
+    <SlideOver open={!!app} onClose={onClose} title={app ? `Roll back ${app.name}` : 'Roll back'} icon={RotateCcw} size={460} zIndex={Z.popover} ariaLabel="Roll back application">
       {app ? (
         <YStack gap="$3">
           <Text fontSize="$3" color="$color11">

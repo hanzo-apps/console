@@ -87,7 +87,7 @@ function VerdictTag({ verdict }: { verdict: CapVerdict }) {
     <XStack items="center" gap="$1.5" px="$2" py="$1" rounded="$3" bg="$color3">
       <span
         aria-hidden
-        style={{ width: 7, height: 7, borderRadius: 999, background: meterColor(verdict), display: 'inline-block' }}
+        style={{ width: 7, height: 7, borderRadius: 9999, background: meterColor(verdict), display: 'inline-block' }}
       />
       <Text fontSize="$1" color="$color11" fontWeight="500">
         {VERDICT_LABEL[verdict]}
