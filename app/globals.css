@@ -10,6 +10,14 @@ body {
   background-color: var(--background, #000000);
   color: var(--color, #ededf1);
   font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  /* The base of the ONE type scale. Without this the body inherits the browser's
+     16px root, and every element that does not name a size token — a Gui <Button>
+     label, a bare <span>, anything the ladder does not reach — renders at a size
+     that belongs to no scale. That was the single largest source of type drift in
+     the console: hundreds of nodes painting the retired 16px base beside a 14px
+     one. `--text-base` is the same 14px the Gui `$3` token resolves to
+     (gui.config.ts), so the inherited size and the named size agree. */
+  font-size: var(--text-base, 0.875rem);
   /* Calm type rendering — crisp, low-glare, comfortable rhythm for a full workday. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -445,7 +453,7 @@ html:root.t_light {
   .hz-chat-dock {
     position: sticky;
     bottom: 0;
-    z-index: 5;
+    z-index: var(--z-raised);
     /* Clear the iOS home indicator when Safari's bottom bar hides (viewport-fit=cover
        exposes the inset; 0 on devices without one, so no effect elsewhere). */
     padding-bottom: env(safe-area-inset-bottom);

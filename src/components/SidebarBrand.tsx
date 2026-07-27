@@ -32,6 +32,7 @@ import { BookOpen, Globe, Info, SlidersHorizontal } from '@hanzogui/lucide-icons
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
 import { useOrgIdentity } from '~/components/ui/BrandLogo'
+import { Z } from '~/lib/z'
 
 type MenuItem = {
   icon: typeof SlidersHorizontal
@@ -64,7 +65,7 @@ function BrandMenu({ x, y, items, onClose }: { x: number; y: number; items: Menu
   const top = typeof window !== 'undefined' ? Math.min(y, window.innerHeight - 200) : y
 
   return (
-    <div ref={ref} role="menu" style={{ position: 'fixed', left, top, zIndex: 9999 }}>
+    <div ref={ref} role="menu" style={{ position: 'fixed', left, top, zIndex: Z.dropdown }}>
       <YStack
         className="hz-paper hz-menu-in"
         minW={184}

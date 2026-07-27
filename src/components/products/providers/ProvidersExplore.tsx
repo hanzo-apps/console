@@ -238,11 +238,11 @@ function ProviderDetailPanel({ g, onBack }: { g: ProviderGroup; onBack: () => vo
 
       <YStack gap={0} rounded="$4" borderWidth={1} borderColor="$borderColor" overflow="hidden">
         <XStack px="$3" py="$2" bg="$color2" gap="$3">
-          <Text flex={1} fontSize="$1" color="$color10">MODEL</Text>
-          <Text width={90} fontSize="$1" color="$color10">TYPE</Text>
-          <Text width={80} fontSize="$1" color="$color10">CONTEXT</Text>
-          <Text width={90} fontSize="$1" color="$color10">IN / OUT $</Text>
-          <Text width={90} fontSize="$1" color="$color10">STATUS</Text>
+          <Text flex={1} fontSize="$1" color="$color10">Model</Text>
+          <Text width={90} fontSize="$1" color="$color10">Type</Text>
+          <Text width={80} fontSize="$1" color="$color10">Context</Text>
+          <Text width={90} fontSize="$1" color="$color10">In / out $</Text>
+          <Text width={90} fontSize="$1" color="$color10">Status</Text>
         </XStack>
         {g.models.map((m) => (
           <XStack key={m.id ?? m.name} px="$3" py="$2.5" gap="$3" borderTopWidth={1} borderColor="$borderColor" items="center">

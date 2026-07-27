@@ -148,7 +148,7 @@ function HowTile({ n, title, body }: { n: string; title: string; body: string })
   return (
     <Card flex={1} minW={200} p="$3.5" gap="$1.5" borderWidth={1} borderColor="$borderColor">
       <XStack items="center" gap="$2">
-        <YStack width={22} height={22} rounded={999} bg="$color3" items="center" justify="center">
+        <YStack width={22} height={22} rounded="$10" bg="$color3" items="center" justify="center">
           <Text fontSize="$2" fontWeight="700" color="$color11">
             {n}
           </Text>

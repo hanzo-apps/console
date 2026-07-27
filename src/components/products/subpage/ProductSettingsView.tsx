@@ -25,24 +25,11 @@ import { config } from '~/config'
 import { githubUrl } from '~/lib/oss-program'
 import { PlatformApi, type PlatformApp } from '~/lib/api/platform'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { Panel, Row } from '~/components/ui/Panel'
 import { settingsConfigFor, subpageSourcesFor } from './sources'
 
 const openExternal = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')
-}
-
-/** One read-only key/value row. A missing value reads an honest em dash. */
-function Row({ label, value, hint }: { label: string; value?: string | null; hint?: string }) {
-  const text = value === undefined || value === null || value === '' ? '—' : value
-  return (
-    <XStack justify="space-between" gap="$3" flexWrap="wrap" items="baseline">
-      <Text fontSize="$3" color="$color10" fontWeight="600">{label}</Text>
-      <YStack items="flex-end" flex={1}>
-        <Text fontSize="$3" color={text === '—' ? '$color10' : '$color12'} numberOfLines={1}>{text}</Text>
-        {hint ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{hint}</Text> : null}
-      </YStack>
-    </XStack>
-  )
 }
 
 export function ProductSettingsView({ entry }: { entry: CatalogEntry }) {
@@ -86,24 +73,25 @@ export function ProductSettingsView({ entry }: { entry: CatalogEntry }) {
       <YStack gap="$4" maxW={720}>
         {/* Configuration — the product's REAL, product-specific config (endpoint / auth /
             connection), read-only, plus links to where it is administered. */}
-        <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
-          <XStack gap="$2" items="center">
-            <SlidersHorizontal size={16} />
-            <Text fontSize="$5" fontWeight="700">Configuration</Text>
-          </XStack>
+        <Panel
+          title="Configuration"
+          description={`How ${entry.label} is addressed and authenticated.`}
+          icon={SlidersHorizontal}
+        >
           {cfg.facts.length ? (
-            <YStack gap="$2.5">
-              {cfg.facts.map((f) => (
-                <Row key={f.label} label={f.label} value={f.value} hint={f.hint} />
-              ))}
-            </YStack>
+            cfg.facts.map((f, i) => (
+              <Row key={f.label} label={f.label} description={f.hint} value={f.value} mono first={i === 0} />
+            ))
           ) : (
-            <Text fontSize="$3" color="$color11">
-              {entry.label} has no self-serve configuration here — it is a managed Hanzo Cloud capability.
-            </Text>
+            <Row
+              label={`${entry.label} has no self-serve configuration here`}
+              description="It is a managed Hanzo Cloud capability."
+              value=""
+              first
+            />
           )}
           {cfg.links.length ? (
-            <XStack gap="$2" pt="$1" flexWrap="wrap">
+            <XStack gap="$2" px="$4" py="$3" borderTopWidth={1} borderColor="$borderColor" flexWrap="wrap">
               {cfg.links.map((l, i) => (
                 <Button
                   key={l.to}
@@ -118,15 +106,14 @@ export function ProductSettingsView({ entry }: { entry: CatalogEntry }) {
               ))}
             </XStack>
           ) : null}
-        </Card>
+        </Panel>
 
         {/* About — real catalog facts, read-only. */}
-        <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
-          <Text fontSize="$5" fontWeight="700">About</Text>
-          <Row label="Category" value={entry.category} />
+        <Panel title="About" description={`What ${entry.label} is, and where it lives.`}>
+          <Row label="Category" value={entry.category} first />
           {entry.gcp ? <Row label="Equivalent to" value={entry.gcp} /> : null}
-          <Row label="Open source" value={entry.repo ?? null} />
-          <XStack gap="$2" pt="$1" flexWrap="wrap">
+          <Row label="Open source" value={entry.repo ?? null} mono />
+          <XStack gap="$2" px="$4" py="$3" borderTopWidth={1} borderColor="$borderColor" flexWrap="wrap">
             {entry.repo ? (
               <Button size="$2" chromeless icon={<ExternalLink size={14} />} onPress={() => openExternal(githubUrl(entry.repo!))}>
                 Source
@@ -136,36 +123,36 @@ export function ProductSettingsView({ entry }: { entry: CatalogEntry }) {
               Docs
             </Button>
           </XStack>
-        </Card>
+        </Panel>
 
         {/* Deployment — real per-service config (image/tag/cluster), read-only, when reported. */}
         {deployment ? (
-          <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
-            <Text fontSize="$5" fontWeight="700">Deployment</Text>
-            <Text fontSize="$2" color="$color10">
-              Managed by the Hanzo control plane. {deploys && deploys.length > 1 ? `${deploys.length} environments.` : ''}
-            </Text>
-            <Row label="Environment" value={deployment.env} />
+          <Panel
+            title="Deployment"
+            description={`Managed by the Hanzo control plane.${deploys && deploys.length > 1 ? ` ${deploys.length} environments.` : ''}`}
+          >
+            <Row label="Environment" value={deployment.env} first />
             <Row label="Cluster" value={deployment.cluster} />
             <Row label="Namespace" value={deployment.namespace ?? null} />
-            <Row label="Declared image" value={deployment.declaredTag ?? null} />
-            <Row label="Running image" value={deployment.runningTag ?? null} />
-          </Card>
+            <Row label="Declared image" value={deployment.declaredTag ?? null} mono />
+            <Row label="Running image" value={deployment.runningTag ?? null} mono />
+          </Panel>
         ) : null}
 
         {/* Org-wide settings — the one home for identity, branding, and members. */}
-        <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
-          <XStack gap="$2" items="center">
-            <SettingsIcon size={16} />
-            <Text fontSize="$5" fontWeight="700">Organization settings</Text>
-          </XStack>
-          <Text fontSize="$3" color="$color11">
-            Identity, branding, and members are managed in one place for every product: Settings.
-          </Text>
-          <Button size="$3" self="flex-start" icon={<ArrowRight size={16} />} onPress={() => router.push('/settings')}>
-            Open Settings
-          </Button>
-        </Card>
+        <Panel
+          title="Organization settings"
+          description="Identity, branding, and members — one place for every product."
+          icon={SettingsIcon}
+        >
+          <Row
+            label="Open Settings"
+            description="Manage your organization."
+            onPress={() => router.push('/settings')}
+            control={<ArrowRight size={16} color="$color10" />}
+            first
+          />
+        </Panel>
       </YStack>
     </>
   )

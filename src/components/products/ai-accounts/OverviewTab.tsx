@@ -57,7 +57,7 @@ function ProviderCard({ pu }: { pu: ProviderUsage }) {
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={260}>
       <XStack items="center" gap="$2" justify="space-between">
         <XStack items="center" gap="$2">
-          <YStack width={10} height={10} rounded={99} style={{ backgroundColor: color }} />
+          <YStack width={10} height={10} rounded="$10" style={{ backgroundColor: color }} />
           <Text fontSize="$5" fontWeight="700">
             {labelFor(pu.id)}
           </Text>
