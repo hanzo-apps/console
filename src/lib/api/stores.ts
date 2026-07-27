@@ -1,5 +1,5 @@
 /**
- * Store admin API — the `/v1/rag/stores` resource on the cloud binary. These heads
+ * Store admin API — the `/v1/ai/stores` resource on the cloud binary. These heads
  * REQUIRE a Bearer: a cookie-only call 401s → a FALSE "session expired" for a
  * signed-in user. So every call goes through the console's OWN same-origin `/v1`
  * user-bearer BFF (`cloudGet`/`cloudPost` → the `app/v1/[...path]` catch-all), which
@@ -9,7 +9,7 @@
 import { cloudGet, cloudPost, cloudPatch, cloudDelete, memberOf } from './client'
 import { type Store } from './types'
 
-const STORES = 'rag/stores'
+const STORES = 'ai/stores'
 
 export const StoreApi = {
   listGlobal: () => cloudGet<Store[]>(`${STORES}/global`),

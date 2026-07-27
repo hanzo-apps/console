@@ -131,15 +131,16 @@ describe('allowCloudSurface', () => {
   })
 
   it('admits the retrieval subsystem the console uses (Embeddings · Collections)', () => {
-    // One SUBSYSTEM head, not eight individual routes — which is what a
-    // head-based allow-list is supposed to mean.
-    expect(CLOUD_HEADS).toContain('rag')
+    // ONE SERVICE head, not eight individual routes and not five invented
+    // subsystems — /v1/<service>/<resource> is the canonical form, and the
+    // service that owns all of these is `ai`.
+    expect(CLOUD_HEADS).toContain('ai')
     for (const p of [
-      'v1/rag/stores',
-      'v1/rag/stores/acme/my-store',
-      'v1/rag/stores/acme/my-store/vectors',
-      'v1/rag/stores/names',
-      'v1/rag/files',
+      'v1/ai/stores',
+      'v1/ai/stores/acme/my-store',
+      'v1/ai/stores/acme/my-store/vectors',
+      'v1/ai/stores/names',
+      'v1/ai/files',
     ]) {
       expect(allowCloudSurface(p)).toBe(true)
     }
@@ -150,7 +151,7 @@ describe('allowCloudSurface', () => {
     // explicitly refused before the surface was namespaced. A head-based rule
     // alone would have admitted it once `rag` was granted — this keeps the
     // property the head grain would otherwise have silently dropped.
-    expect(allowCloudSurface('v1/rag/stores/global')).toBe(false)
+    expect(allowCloudSurface('v1/ai/stores/global')).toBe(false)
     // The compound routes are gone entirely; nothing answers at their old names.
     expect(allowCloudSurface('v1/get-global-stores')).toBe(false)
     expect(allowCloudSurface('v1/get-stores')).toBe(false)

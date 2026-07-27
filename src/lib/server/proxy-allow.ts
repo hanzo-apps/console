@@ -291,17 +291,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // SUBSYSTEM, which is what a head-based allow-list is supposed to mean — this
   // used to enumerate eight individual ROUTES (get-stores, add-store, …) because
   // the surface had no namespaces to enumerate.
-  'rag',
   // The operational record: the usage ledger the billing + overview panels read
-  // (/v1/ops/usages/*).
-  'ops',
+  // (/v1/ai/usages/*).
   // Model plumbing: providers and model routes (/v1/ai/*).
   'ai',
   // Conversations and their messages (/v1/chat/*).
-  'chat',
   // The account surface (/v1/auth/*) — this backend's own account/session objects,
   // distinct from the IAM service that owns /v1/iam.
-  'auth',
   // Embeddings/collections usage slice of the cloud-usage read API (`/v1/get-cloud-usages`).
   // Bearer-required; degrades to "—" but should read real data through /v1.
   // Per-org product entitlements (cloud clients/entitlements): /v1/orgs/{org}/entitlements
@@ -355,7 +351,7 @@ export function v1Head(path: string): string | null {
  * (`ProviderApi.listGlobal`), so a blanket rule would break a live surface while
  * claiming to preserve a property that never covered it.
  */
-const REFUSED_SUBPATHS: readonly RegExp[] = [/^v1\/rag\/stores\/global(?:$|[/?#])/]
+const REFUSED_SUBPATHS: readonly RegExp[] = [/^v1\/ai\/stores\/global(?:$|[/?#])/]
 
 /** True iff `path` (e.g. `v1/vector/mydb`) is an allow-listed cloud-api surface. */
 export function allowCloudSurface(path: string): boolean {

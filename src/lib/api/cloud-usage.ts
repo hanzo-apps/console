@@ -1,7 +1,7 @@
 /**
  * Cloud usage read — the ONE canonical AI-usage overview for the console.
  *
- * SOURCE: the server-owned `GET /v1/ops/usages/cloud` (hanzoai/ai
+ * SOURCE: the server-owned `GET /v1/ai/usages/cloud` (hanzoai/ai
  * controllers/cloud_usage.go), reached through the same-origin user-bearer `/v1`
  * proxy (`cloudGet`; cookie auth, the browser holds no bearer). The server
  * aggregates the `hanzo.cloud_usage` ledger into the `CloudUsageOverview` shape —
@@ -33,7 +33,7 @@ export const CloudUsageApi = {
   /** Read the org's usage overview for a range. Throws `ApiError` on an
    *  unreachable/erroring ledger — the caller shows an honest state. */
   overview: async (range: UsageRange, p: CloudUsageParams = {}): Promise<CloudUsageOverview> => {
-    const raw = await cloudGet<unknown>('ops/usages/cloud', {
+    const raw = await cloudGet<unknown>('ai/usages/cloud', {
       range,
       topModels: p.topModels ?? 6,
       activityType: 'all',

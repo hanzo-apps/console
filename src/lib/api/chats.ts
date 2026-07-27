@@ -1,7 +1,7 @@
-/** Chat admin API — the `/v1/chat/chats` resource. */
+/** Chat admin API — the `/v1/ai/chats` resource. */
 import { get, getList, patch, post, del, memberOf } from './client'
 
-const CHATS = 'chat/chats'
+const CHATS = 'ai/chats'
 import { type Chat, type ListParams, listQuery } from './types'
 
 export const ChatApi = {

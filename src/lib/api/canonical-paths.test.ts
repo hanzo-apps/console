@@ -106,10 +106,10 @@ describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /clo
     await ProvisioningApi.list('sql')
     expect(lastUrl).toBe(`${ORIGIN}/v1/sql`)
   })
-  it('StoreApi.list (embeddings collections) -> /v1/rag/stores', async () => {
+  it('StoreApi.list (embeddings collections) -> /v1/ai/stores', async () => {
     stub({ status: 'ok', msg: '', data: [] })
     await StoreApi.list('acme')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/rag/stores?owner=acme`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/ai/stores?owner=acme`)
   })
   it('StoreApi.get -> the member URL, owner and name as SEPARATE segments', async () => {
     stub({ status: 'ok', msg: '', data: {} })
@@ -117,7 +117,7 @@ describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /clo
     // Not `?id=acme/my store`, and not one percent-encoded segment: the server
     // decodes %2F back into a separator before routing, so a composite id in one
     // segment would never match its route.
-    expect(lastUrl).toBe(`${ORIGIN}/v1/rag/stores/acme/my%20store`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/ai/stores/acme/my%20store`)
   })
   it('VisorApi.machines -> /v1/machines (bearer-scoped)', async () => {
     stub({ machines: [] })

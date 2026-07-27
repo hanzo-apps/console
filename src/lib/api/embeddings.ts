@@ -142,7 +142,7 @@ export const EmbeddingsApi = {
    * `feat/cloud-usage-read-api` ships — callers catch and degrade to "—".
    */
   cloudUsages: async (days = 7): Promise<CloudUsages> => {
-    const data = await cloudGet<unknown>('ops/usages/cloud', { category: 'embeddings', days })
+    const data = await cloudGet<unknown>('ai/usages/cloud', { category: 'embeddings', days })
     return normalizeCloudUsages(data)
   },
 
@@ -172,7 +172,7 @@ export const EmbeddingsApi = {
 
   /** Per-file index status across the org's stores (the Jobs surface). */
   files: async (owner: string): Promise<FileRow[]> => {
-    const raw = await cloudGet<unknown[]>('rag/files', { owner })
+    const raw = await cloudGet<unknown[]>('ai/files', { owner })
     return (raw ?? []).map((r) => {
       const f = (r ?? {}) as Record<string, unknown>
       return {

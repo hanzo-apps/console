@@ -110,7 +110,7 @@ export const AccountApi = {
   updatePreferences: async (
     partial: Record<string, unknown>,
   ): Promise<Record<string, unknown>> => {
-    const r = await patch<Record<string, unknown>>('auth/preferences', partial)
+    const r = await patch<Record<string, unknown>>('ai/preferences', partial)
     return r.data ?? {}
   },
 }
