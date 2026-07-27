@@ -422,7 +422,7 @@ const functionsOverview: LivingOverviewConfig = {
       { tile: 'timeseries', key: 'invocations', title: 'Invocations over time' },
       { tile: 'distribution', key: 'status', title: 'Invocation status', centerLabel: 'total' },
     ],
-    [{ tile: 'health', title: 'Fission health', empty: 'Function health appears once the engine reports.' }],
+    [{ tile: 'health', title: 'Functions health', empty: 'Function health appears once the engine reports.' }],
   ],
   load: async ({ range }) => {
     const fns = await FunctionsApi.list()

@@ -25,8 +25,10 @@ export const FEATURED_TAGS = [
   'analytics',
 ] as const
 
-/** Catalog-provenance tags (which source list an app came from) — hidden from the quick
- *  chips (they are noise to a deployer) but still searchable in the full tag list. */
+/** Catalog-provenance tags (which upstream source list an app came from) — never
+ *  surfaced as a filter chip: they name other marketplaces, not a category a deployer
+ *  browses by. `availableTags` drops them, so neither the quick chips nor the full
+ *  "All tags" list renders one. A free-text search still matches them. */
 export const PROVENANCE_TAGS = new Set(['caprover', 'dokploy', 'coolify', 'casaos', 'runtipi'])
 
 /** Well-known apps to feature on the Platform home strip, in order (present ones only). */
@@ -73,17 +75,18 @@ export function slugify(s: string): string {
 // import site for the store's logic.
 export { parseBlueprint, type Blueprint, type Service } from '@hanzo/ui/oss'
 
-/** Every distinct tag across the catalog, alphabetized. */
+/** Every distinct browsable tag across the catalog, alphabetized — provenance tags
+ *  (the upstream marketplace an entry came from) are dropped, so no chip names one. */
 export function availableTags(apps: OssApp[]): string[] {
   const set = new Set<string>()
-  for (const a of apps) for (const t of a.tags) set.add(t)
+  for (const a of apps) for (const t of a.tags) if (!PROVENANCE_TAGS.has(t)) set.add(t)
   return [...set].sort((x, y) => x.localeCompare(y))
 }
 
-/** The one-tap quick-filter chips: FEATURED_TAGS that are present and not provenance. */
+/** The one-tap quick-filter chips: FEATURED_TAGS that are present in the catalog. */
 export function featuredQuickTags(apps: OssApp[]): string[] {
   const present = new Set(availableTags(apps))
-  return FEATURED_TAGS.filter((t) => present.has(t) && !PROVENANCE_TAGS.has(t))
+  return FEATURED_TAGS.filter((t) => present.has(t))
 }
 
 /**
