@@ -332,9 +332,8 @@ keep all credentials server-side (the browser only ever sends its session cookie
   honest 402 "add credits" state, and a "History" toggle to the old session list.
 - **Chrome**: the sidebar/header show the Hanzo **H mark + "Console"**
   (`ui/HanzoMark.tsx` + `ui/BrandLogo.tsx`; `BrandLogo` shows the org's IAM logo
-  when set, else the H). A fullscreen **app launcher** (`components/AppLauncher.tsx`,
-  Launchpad-style grid + filter) opens from the header "Apps" button, the sidebar
-  grid icon, and the command palette's "Browse all apps". cmd+K stays the palette.
+  when set, else the H). The original fullscreen app launcher was later folded into
+  the command palette; see v8.5.30 below.
 
 Server-only env the routes need (added to `console2-v1.yaml`, never `NEXT_PUBLIC_`):
 `IAM_URL`, `CLOUD_API_URL` (in-cluster cloud-api), `AI_GATEWAY_URL` (api.hanzo.ai),
@@ -3493,3 +3492,24 @@ inferred:
   of production on both hosts. The console FE reaches prod by bumping the console image
   tag on the universe operator CR (ArgoCD syncs it) — a code push alone does not deploy.
   These fixes are LANDED, not live, until that tag bump.
+
+## One app search — Apps and ⌘K converge (v8.5.30)
+
+- Removed the fullscreen app launcher and its duplicate product filter.
+- The header Apps button, mobile Apps button, search field, and ⌘K now open the
+  same `CommandPalette`.
+- An empty query is the browse state: products are grouped by category in a compact
+  two-column desktop grid and a one-column mobile list. Typing switches to ranked
+  commands, products, and product sub-pages without changing overlays.
+- `>` remains the AI mode and `?` remains the documentation mode. Keyboard
+  navigation, Enter, Escape, and the mobile full-screen layout remain intact.
+- Integrated the concurrent category-accent restoration: one accent per category,
+  neutral chrome, user overrides still win. Removed its duplicated swatch array and
+  updated the color contract tests.
+
+## Canonical main convergence (v8.5.31)
+
+- Merged the newer forge guide, pitch, signal, and route work into the same main
+  after v8.5.30, preserving the unified app search and category accents.
+- Verified the combined tree: strict typecheck, 3,044 tests, and the production
+  Next.js build all pass.
