@@ -231,7 +231,7 @@ export function KmsModule(_props: { params: Record<string, string> }) {
       )}
 
       <Text fontSize="$2" color="$color10">
-        endpoint · /v1/kms/orgs/{org}/secrets · {config.brandName}
+        endpoint · /v1/kms/secrets · org {org} · {config.brandName}
       </Text>
     </>
   )
