@@ -51,7 +51,7 @@ const fnRange = (r: OverviewRange): '24H' | '7D' | '30D' => (r === '24h' ? '24H'
  * renders. NEVER throws into the caller.
  */
 async function withHealth(data: OverviewData, probeApps = true): Promise<OverviewData> {
-  // The apps inventory (`/paas/apps`) is admin-gated on this deployment, so a
+  // The fleet inventory (`/v1/platform/fleet`) is admin-gated on this deployment, so a
   // tenant user's probe only 403s — skip it and leave health in its honest empty
   // state instead of firing a request we know will be rejected (keeps the browser
   // console clean). Super admins (probeApps=true, the default) still enrich health.

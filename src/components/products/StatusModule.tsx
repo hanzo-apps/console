@@ -9,7 +9,7 @@
  * `up == 0` is a real "down". Nothing is fabricated — there are no fake green dots,
  * only what the TSDB actually reports.
  *
- * Why not `/paas/apps` (the old source): the platform apps inventory reports ZERO
+ * Why not `/v1/platform/fleet` (the old source): the fleet inventory reports ZERO
  * apps on this deployment, so that board was empty for admins and "managed by Hanzo"
  * for customers — it showed no health at all. VictoriaMetrics is where the live
  * signal is, and platform status is a status-page concern appropriate for any
