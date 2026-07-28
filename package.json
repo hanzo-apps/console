@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.5.32",
+  "version": "8.5.33",
   "packageManager": "pnpm@11.17.0",
   "private": true,
   "license": "BSD-3-Clause",
@@ -27,12 +27,13 @@
     "@hanzo/gui": "7.3.0",
     "@hanzo/iam": "^0.21.2",
     "@hanzo/logo": "^1.0.13",
-    "@hanzo/ui": "^8.0.17",
+    "@hanzo/ui": "^8.0.20",
     "@hanzo/usage": "^0.1.6",
     "@hanzogui/config": "7.3.0",
     "@hanzogui/core": "7.3.0",
     "@hanzogui/lucide-icons-2": "7.3.0",
     "@hanzogui/next-theme": "7.3.0",
+    "@hanzogui/shell": "^7.6.3",
     "@lexical/html": "0.46.0",
     "@lexical/link": "0.46.0",
     "@lexical/list": "0.46.0",
@@ -53,17 +54,16 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-native-web": "0.21.2",
-    "superjson": "2.2.2",
-    "@hanzogui/shell": "^7.6.3"
+    "superjson": "2.2.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@types/node": "22.20.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "patch-package": "^8.0.0",
     "react-native": "0.83.9",
-    "typescript": "^7.0.2",
-    "vitest": "3.2.4",
-    "patch-package": "^8.0.0"
+    "typescript": "^5.9.3",
+    "vitest": "3.2.4"
   }
 }

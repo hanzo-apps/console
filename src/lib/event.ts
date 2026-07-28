@@ -40,6 +40,7 @@
  * logged-out marketing/public views.
  */
 import { createAnalytics, type Analytics } from '@hanzo/event'
+import { setTelemetry } from '@hanzo/ui/telemetry'
 
 /** Honor an explicit browser opt-out signal (GPC, then legacy DNT). SSR (no
  *  navigator) defaults to enabled; the browser instance reads the real signal. */
@@ -68,6 +69,38 @@ export const eventClient: Analytics = createAnalytics({
   ingestKey,
   dsn,
   enabled: consented(),
+})
+
+// ── The shared components emit through THIS client, not a second one ─────────
+//
+// @hanzo/ui instruments itself: DataTable, PrimaryButton, SlideOver, ConfirmDelete,
+// the Field* editors, ComboBox, Segmented/SearchInput, MenuItemView, OrgSwitcher,
+// ThemeToggle, Toast and EmptyState all report what a user did. They emit through
+// module-scope `track()`, which resolves an AMBIENT client — and left alone that
+// client would be a SECOND one: default host api.hanzo.ai, no cookie, no session.
+// Cloud's anonymous lane admits only pageview + error, so every one of those
+// component events would have been DROPPED on arrival.
+//
+// Registering `eventClient` as the ambient client is the whole fix, and it is what
+// keeps the promise this file's header makes: ONE client, one batch, one anon id,
+// one stream, same-origin with the session cookie — so component events arrive
+// CREDENTIALED and are attributed to the signed-in org. `AnalyticsProvider` in
+// Provider.tsx already hands this same instance to `useAnalytics()`.
+//
+// The wrapper is the `Telemetry` shape @hanzogui/telemetry hands out; every method
+// delegates, so there is nothing here to keep in sync but the delegation itself.
+setTelemetry({
+  enabled: true,
+  product: 'console',
+  client: eventClient,
+  track: (event, properties, commerce) => eventClient.capture(event, properties, commerce),
+  pageview: (path, properties) => eventClient.pageview(path, properties),
+  identify: (personId, traits) => eventClient.identify(personId, traits),
+  group: (groupId, traits) => eventClient.group(groupId, traits),
+  captureError: (err, context) => eventClient.captureError(err, context),
+  captureException: (err, context) => eventClient.captureError(err, context),
+  setCohort: (patch) => eventClient.setCohort(patch),
+  flush: () => eventClient.flush(),
 })
 
 /**
