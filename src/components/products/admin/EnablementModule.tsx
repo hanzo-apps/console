@@ -16,7 +16,7 @@ import { ApiError } from '~/lib/api'
 import { EnablementApi, type AdminEnablementItem, type EnablementState } from '~/lib/api/admin-cockpit'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 
 const STATES: EnablementState[] = ['off', 'beta', 'ga']
 const KINDS = ['model', 'provider', 'feature'] as const
@@ -69,7 +69,7 @@ export function EnablementModule() {
     setNewId('')
   }, [newKind, newId, setState])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) return <YStack p="$4" gap="$4"><PageHeader title="Enablement" /><ErrorState err={err} onRetry={load} /></YStack>
 
   return (

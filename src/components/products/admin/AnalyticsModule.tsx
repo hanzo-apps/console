@@ -22,7 +22,7 @@ import { AdminCockpitApi, type AnalyticsData } from '~/lib/api/admin-cockpit'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { LineChart, BarChart, type ChartPoint } from '~/components/ui/Charts'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { toneVar } from '~/components/ui/tone'
 
 type Range = '7d' | '30d' | '90d' | 'all'
@@ -95,7 +95,7 @@ export function AnalyticsModule() {
 
   useEffect(() => { void load() }, [load])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) return <YStack p="$4" gap="$4"><PageHeader title="Analytics" /><ErrorState err={err} onRetry={load} /></YStack>
 
   const c = data?.computed ?? {}

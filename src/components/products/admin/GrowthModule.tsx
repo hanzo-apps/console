@@ -12,7 +12,7 @@
  * GLOBAL-ADMIN ONLY. The catalog entry is `admin: true` (hidden from every customer's
  * nav/palette) and this module additionally gates on `useIsSuperAdmin()` — the
  * matching UI gate over the authoritative server-side SuperAdmin gate (a non-admin sees
- * the honest OperatorAccessRequired panel, never a 403 crash). Every read is REAL over
+ * the honest SuperAdminRequired panel, never a 403 crash). Every read is REAL over
  * the `/v1` user-bearer BFF; honest loading/empty/error states throughout, no fabrication.
  *
  * SCOPE: the Live-state section reads the admin org's OWN `/v1/guide/profile` (Hanzo's
@@ -66,7 +66,7 @@ import { Panel } from '~/components/ui/Panel'
 import { Donut, type Slice } from '~/components/ui/Charts'
 import { RAMP } from '~/lib/theme/ramp'
 import { asColor } from '~/components/ui/color'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { BackendStateCard, classifyRead } from '~/components/ui/BackendState'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
@@ -373,7 +373,7 @@ function BlueprintPanel({
     }
   }, [showHistory, versions])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) {
     const state = classifyRead(err)
     return state ? <BackendStateCard state={state} onRetry={reload} hint="GET /v1/guide/blueprint" /> : <ErrorState err={err} onRetry={reload} />
@@ -630,7 +630,7 @@ function CorpusPanel({ nonce }: { nonce: number }) {
     return q ? base.filter((s) => `${s.action} ${s.principle} ${s.tags.join(' ')} ${s.source}`.toLowerCase().includes(q)) : base
   }, [rows, search])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) {
     const onRetry = () => setRetry((r) => r + 1)
     const state = classifyRead(err)
@@ -783,7 +783,7 @@ function LivePanel({ nonce }: { nonce: number }) {
     return () => { live = false }
   }, [nonce, retry])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err && !profile) {
     const onRetry = () => setRetry((r) => r + 1)
     const state = classifyRead(err)
@@ -947,7 +947,7 @@ export function GrowthModule() {
     return (
       <YStack p="$5" gap="$4">
         <PageHeader title="Growth" subtitle="The Zen-of-Hanzo Guide engine — operator cockpit." />
-        <OperatorAccessRequired />
+        <SuperAdminRequired />
       </YStack>
     )
   }

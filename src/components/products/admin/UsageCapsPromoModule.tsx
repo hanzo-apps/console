@@ -49,7 +49,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldRow, FieldSelect, FieldSwitch, FieldText, FieldSlider } from '~/components/ui/Field'
-import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import {
   capVerdict,
   deriveBudgetsSummary,
@@ -189,7 +189,7 @@ function PromoTab() {
 
   if (state.phase === 'loading') return <Loading label="Loading the platform promo…" />
   if (state.phase === 'error')
-    return isForbidden(state.err) ? <OperatorAccessRequired /> : <ErrorState err={state.err} onRetry={load} />
+    return isForbidden(state.err) ? <SuperAdminRequired /> : <ErrorState err={state.err} onRetry={load} />
   if (!form) return null
 
   const live = state.data
@@ -594,7 +594,7 @@ function CapsTab() {
         <Loading label={`Loading caps for ${org}…`} />
       ) : state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={reload} />
         )
@@ -655,7 +655,7 @@ export function UsageCapsPromoModule() {
   const isAdmin = useIsSuperAdmin()
   const [tab, setTab] = useState<Tab>('promo')
 
-  if (!isAdmin) return <OperatorAccessRequired />
+  if (!isAdmin) return <SuperAdminRequired />
 
   return (
     <YStack p="$4" gap="$5">

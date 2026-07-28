@@ -16,7 +16,7 @@
  * an honest partial rather than blanking the board.
  *
  * Gated twice: the registry entry is `admin: true` (hidden from every customer's
- * nav/palette) and this module renders `OperatorAccessRequired` for a
+ * nav/palette) and this module renders `SuperAdminRequired` for a
  * non-global-admin client. Honest by construction — every figure is a real aggregate
  * or an em-dash; not-instrumented signals (upgrades/downgrades, per-model latency)
  * render honestly, never fabricated.
@@ -29,7 +29,7 @@ import { SaasApi, type SaaSMetrics, type SaasWindow } from '~/lib/api/saas'
 import { AdminO11yApi, type FleetO11y, type O11yRange } from '~/lib/api/admin-o11y'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, ErrorState, SuperAdminRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { formatMetric } from '~/components/products/overview/living/logic'
 
@@ -134,7 +134,7 @@ export function SaasModule() {
     }
   }, [isAdmin, range])
 
-  if (!isAdmin) return <OperatorAccessRequired />
+  if (!isAdmin) return <SuperAdminRequired />
 
   const d = m.data
   const rev = d?.revenue

@@ -12,7 +12,7 @@
  *
  * Every call goes through the console's OWN same-origin `/v1/catalog/*` user-bearer
  * proxy → commerce, whose `requireSuperAdmin` (owner=="admin") is the AUTHORITATIVE
- * gate: a signed-in non-admin gets an honest 403 (the OperatorAccessRequired panel),
+ * gate: a signed-in non-admin gets an honest 403 (the SuperAdminRequired panel),
  * never catalog write access. The browser holds no credential.
  *
  * The structured `Metadata` spec is edited as a type-preserving key/value list
@@ -33,7 +33,7 @@ import { FieldRow, FieldSelect, FieldSwitch, FieldText, FieldTextArea } from '~/
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 import { MetadataEditor } from './pricing/MetadataEditor'
 import {
   centsToInput,
@@ -227,7 +227,7 @@ export function CatalogModule(_props: { params: Record<string, string> }) {
 
       {state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={load} copy={CATALOG_COPY} />
         )

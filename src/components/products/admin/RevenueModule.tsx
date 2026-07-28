@@ -17,7 +17,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart } from '~/components/ui/Charts'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { toneVar } from '~/components/ui/tone'
 
 const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -34,7 +34,7 @@ export function RevenueModule() {
 
   useEffect(() => { void load() }, [load])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) return <YStack p="$4" gap="$4"><PageHeader title="Revenue" /><ErrorState err={err} onRetry={load} /></YStack>
 
   const cols: Column<RevenueCustomer>[] = [

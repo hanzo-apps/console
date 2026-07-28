@@ -28,7 +28,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldSwitch } from '~/components/ui/Field'
-import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; err: ApiError } | { phase: 'ready'; data: T }
@@ -101,7 +101,7 @@ export function FeatureGateModule() {
     )
   }
   if (state.phase === 'error') {
-    return isForbidden(state.err) ? <OperatorAccessRequired /> : <ErrorState err={state.err} onRetry={load} />
+    return isForbidden(state.err) ? <SuperAdminRequired /> : <ErrorState err={state.err} onRetry={load} />
   }
 
   const { services, pending } = state.data
