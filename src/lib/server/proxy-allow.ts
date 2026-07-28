@@ -206,11 +206,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
   // call, so it routes through /v1 like the rest of the surface.
   'projects',
-  // PaaS control plane (cloud clients/platform): /v1/platform/{projects,projects/:p/
-  // apps,apps/:a/deploy,.../deployments,.../deployments/:id/logs,health}. Per-org
-  // container-app platform on Base/SQLite; SanitizeIdentity resolves the org from the
-  // Bearer owner and 403s a cookie-only call, so it routes through /v1 like the
-  // rest — the single `platform` head admits every project/app/deployment sub-path.
+  // The platform control plane (cloud clients/platform): /v1/platform/{projects,
+  // projects/:p/apps,.../deploy,.../deployments,.../deployments/:id/logs,fleet,health}.
+  // Per-org container-app platform on Base/SQLite; SanitizeIdentity resolves the org
+  // from the Bearer owner and 403s a cookie-only call, so it routes through /v1 like
+  // the rest — the single `platform` head admits every sub-path, including the
+  // operator fleet board at /v1/platform/fleet (folded in from the retired /v1/paas:
+  // paas was a second name for platform, and one product gets one name).
   'platform',
   // SBOM datastore (cloud clients/sbom): /v1/sbom/{ref} — the software bill of
   // materials CI recorded for an image ref/digest (components + licenses). The
