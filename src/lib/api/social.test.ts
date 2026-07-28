@@ -42,6 +42,17 @@ describe('Social normalizers — real store.go JSON shape, defensive', () => {
     expect(normalizePost(null).id).toBe('')
   })
 
+  it('carries a post’s media through — cloud’s PUT rebuilds the row, so dropping it would wipe it', () => {
+    expect(normalizePost({ id: 'post_3', media: ['https://s3/a.png', 'https://s3/b.png'] }).media).toEqual([
+      'https://s3/a.png',
+      'https://s3/b.png',
+    ])
+    // Always an array, and non-string entries are dropped rather than rendered.
+    expect(normalizePost({ id: 'post_4' }).media).toEqual([])
+    expect(normalizePost({ id: 'post_5', media: 'nope' }).media).toEqual([])
+    expect(normalizePost({ id: 'post_6', media: ['ok', 7, null] }).media).toEqual(['ok'])
+  })
+
   it('normalizes a provider capability with the missing-credentials list', () => {
     const c = normalizeProviderCapability({
       provider: 'x', credentialsConfigured: false, missingCredentials: ['X_API_KEY', 'X_API_SECRET'],
