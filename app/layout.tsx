@@ -20,12 +20,19 @@ import { resolveConfig } from '~/config'
 // The visible shell resolves the brand client-side from window.location, but the
 // tab title is server-rendered — without reading the Host header here the browser
 // tab leaks "Hanzo Cloud Console" on Lux/Zoo hosts, a white-label violation.
+//
+// The description is the same metadata read by the same brand, so it resolves the
+// same way. It did not, and shipped `content="Unified admin console for Hanzo Cloud
+// and all cloud products."` to console.lux.cloud and console.zoo.cloud — the title
+// beside it was already correct, which is exactly why nobody noticed. Every
+// brand-visible string in this function comes from `brandName`; adding a literal
+// here re-opens the leak.
 export async function generateMetadata(): Promise<Metadata> {
   const host = (await headers()).get('host') ?? undefined
   const { brandName } = resolveConfig(host)
   return {
     title: `${brandName} Console`,
-    description: 'Unified admin console for Hanzo Cloud and all cloud products.',
+    description: `Unified admin console for ${brandName} and all cloud products.`,
   }
 }
 
