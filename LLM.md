@@ -290,11 +290,18 @@ Findings + fixes (all in console2; honest states everywhere, no fakes):
   separately) → honest "not available on this deployment" (was a scary error).
   HUSD balance/top-up already honest "coming" (token unconfigured).
 - **Providers was broken** — `ProviderListView`/`ProviderEditView` imported the
-  ZAP twin (`~/lib/zap`), but the cloud `/zap` WS face is NOT served (the edge
-  returns SPA HTML, 200 not a WS upgrade — documented in `lib/zap/client.ts`), so
-  the module showed "Failed to load providers". Switched both back to the working
-  REST `~/lib/api` (identical surface). The ZAP twin stays as the proof-of-pattern
-  until `/zap` is bound. Providers now shows real/empty over REST like every module.
+  ZAP twin (`~/lib/zap`), and at the time the cloud `/zap` WS face was not served
+  (the edge returned SPA HTML, 200 rather than a WS upgrade), so the module showed
+  "Failed to load providers". Switched both back to the working REST `~/lib/api`
+  (identical surface). Providers now shows real/empty over REST like every module.
+
+  **STALE AS OF 2026-07-28 — `/zap` IS served.** Measured on all three hosts
+  (api.hanzo.ai, platform.hanzo.ai, cloud.hanzo.ai): a WebSocket upgrade handshake
+  returns **401**, not SPA HTML and not 200. A route that refuses an
+  unauthenticated upgrade is a route that exists. The reason this section gives
+  for preferring REST no longer holds, and read as current it says ZAP is
+  unavailable when it is merely gated. The REST path is still correct and still
+  shipping — this is a stale rationale, not a bug. Re-measure before acting on it.
 - Already-correct honest states (unchanged): IAM/Audit + KMS/Secrets (`/v1/iam`,
   `/v1/kms` 404 → "not available on this deployment"); Observability (`/v1/o11y`
   503 → "runtime not initialized"). Plans/Embeddings show real data; Models/
