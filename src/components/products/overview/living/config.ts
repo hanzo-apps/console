@@ -148,7 +148,7 @@ export type OverviewContext = {
   allOrgs?: boolean
   /**
    * True when the viewer is a global (cross-tenant) admin. Loaders use this to
-   * SKIP admin-only aggregates (e.g. `/v1/admin/overview`, `/paas/apps`) that a
+   * SKIP admin-only aggregates (e.g. `/v1/admin/overview`, `/v1/platform/fleet`) that a
    * tenant user's browser would only ever get a 403 from, going straight to the
    * org-scoped source instead — the board renders the same, minus the console noise.
    */
