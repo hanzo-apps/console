@@ -9,7 +9,7 @@
  * request BEFORE any cross-tenant row is read).
  *
  * Gated twice: the registry entry is `admin: true` (hidden from every customer's
- * nav/palette) and this module renders `OperatorAccessRequired` for a
+ * nav/palette) and this module renders `SuperAdminRequired` for a
  * non-global-admin client. Honest by construction — every KPI is a real aggregate
  * or an em-dash, near-empty signals (o11y AI generations) render honest-empty,
  * and a failed fetch shows the honest error/access state, never a fabricated fleet.
@@ -22,7 +22,7 @@ import { AdminO11yApi, type FleetO11y, type O11yRange } from '~/lib/api/admin-o1
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
-import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, ErrorState, SuperAdminRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { formatMetric } from '~/components/products/overview/living/logic'
 
@@ -81,7 +81,7 @@ export function AdminO11yModule() {
 
   // Client gate — a non-global-admin never sees the cross-tenant board (the server
   // gate is the authoritative one; this is the honest UI twin).
-  if (!isAdmin) return <OperatorAccessRequired />
+  if (!isAdmin) return <SuperAdminRequired />
 
   const d = st.data
   const t = d?.totals

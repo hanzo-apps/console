@@ -22,7 +22,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 
 const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const shortDate = (s: string): string => (s ? (s.split('T')[0] ?? s) : '—')
@@ -189,7 +189,7 @@ export function CustomersModule() {
 
   if (selected) return <CustomerDetailView org={selected} onBack={() => { setSelected(null); void load() }} />
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) return <YStack p="$4" gap="$4"><PageHeader title="Customers" /><ErrorState err={err} onRetry={load} /></YStack>
 
   const totalBal = rows.reduce((s, r) => s + r.balanceCents, 0)
@@ -326,7 +326,7 @@ function CustomerDetailView({ org, onBack }: { org: string; onBack: () => void }
 
   const back = <Button size="$3" chromeless icon={<ArrowLeft size={16} />} onPress={onBack}>Customers</Button>
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) return <YStack p="$4" gap="$4">{back}<ErrorState err={err} onRetry={load} /></YStack>
   if (loading || !detail) return <YStack p="$4" gap="$4">{back}<PageHeader title={org} /><Text color="$color10">Loading…</Text></YStack>
 

@@ -17,7 +17,7 @@ import { AdminReferralsApi, type AdminReferralsView, type SweepResult } from '~/
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 import { shortDate, statusLabel, statusColor, usd } from './referrals/logic'
 import { toneColor } from '~/components/ui/tone'
@@ -88,7 +88,7 @@ export function ReferralsAdminModule() {
         </XStack>
       ) : state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState
             err={state.err}

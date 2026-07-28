@@ -31,15 +31,21 @@ export type { HonestCopy }
 export const asApiError = (e: unknown): ApiError =>
   e instanceof ApiError ? e : new ApiError(e instanceof Error ? e.message : String(e))
 
-/** True for the gate's `ApiError('forbidden', 403)` — the operator-access panel. */
+/** True for the gate's `ApiError('forbidden', 403)` — the SuperAdmin-required panel. */
 export const isForbidden = (err: ApiError): boolean => err.status === 403
 
 /**
- * The operator-access-required panel — the honest UX on top of the authoritative
+ * The ONE gate headline. Exported so a surface that renders its own error card
+ * (rather than this panel) says the same words — one predicate, one string.
+ */
+export const SUPERADMIN_REQUIRED = 'SuperAdmin access required'
+
+/**
+ * The SuperAdmin-required panel — the honest UX on top of the authoritative
  * server-side admin gate. Shown when the IAM/KMS gated proxies return 403: the
  * caller is signed in but not authorized for THIS brand's admin console.
  */
-export function OperatorAccessRequired() {
+export function SuperAdminRequired() {
   const { account } = useSession()
   const brand = getBrand()
   const who = account?.email || account?.name || 'This account'
@@ -48,12 +54,12 @@ export function OperatorAccessRequired() {
       <XStack gap="$2" items="center">
         <Lock size={16} />
         <Text fontSize="$4" fontWeight="700">
-          Operator access required
+          {SUPERADMIN_REQUIRED}
         </Text>
       </XStack>
       <Text fontSize="$3" color="$color11">
-        {who} is not authorized for the {brand.brandName} admin console. This console requires an
-        @{brand.adminDomain} account with an admin role.
+        {who} is not authorized for the {brand.brandName} admin console. This console requires a
+        SuperAdmin — a member of the reserved admin org, on an @{brand.adminDomain} account.
       </Text>
     </Card>
   )

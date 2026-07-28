@@ -48,7 +48,7 @@ import { StatusTag } from '~/components/ui/StatusTag'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { FieldSwitch } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
-import { asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { fmtAgo, fmtBytes } from '~/components/products/observability/apm-format'
 import { StorageFleetApi, type StorageVolume } from '~/lib/api/storage-fleet'
 import {
@@ -150,7 +150,7 @@ export function InfraModule({ params }: { params: Record<string, string> }) {
   const data = snap ?? EMPTY
 
   const body = (() => {
-    if (err) return isForbidden(err) ? <OperatorAccessRequired /> : <BackendStateCard state={classifyBackend(err)} onRetry={() => void load()} hint="GET /v1/admin/infra" />
+    if (err) return isForbidden(err) ? <SuperAdminRequired /> : <BackendStateCard state={classifyBackend(err)} onRetry={() => void load()} hint="GET /v1/admin/infra" />
     if (tab === 'clusters') return <ClustersTab data={data} loading={loading} />
     if (tab === 'nodes') return <NodesTab data={data} loading={loading} reload={() => void load(true)} toast={toast} />
     if (tab === 'volumes') return <VolumesTab data={data} loading={loading} reload={() => void load(true)} toast={toast} />

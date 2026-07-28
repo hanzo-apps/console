@@ -9,7 +9,7 @@
  *
  * Gated twice, exactly like the Fleet Observability board: the registry entry is
  * `admin: true` (hidden from every customer's nav/palette) and this module
- * renders `OperatorAccessRequired` for a non-super-admin client. The read is
+ * renders `SuperAdminRequired` for a non-super-admin client. The read is
  * org-scoped server-side (the `research` head resolves the org from the Bearer owner),
  * so a customer only ever reaches their OWN corpus — never Hanzo's platform R&D.
  *
@@ -24,7 +24,7 @@ import { FlaskConical, CheckCircle2, CircleSlash, FolderGit2, ListChecks, Coins,
 import { ResearchApi, type Experiment, type Totals, type Verdict } from '~/lib/api/research'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { asApiError, ErrorState, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, ErrorState, SuperAdminRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { fmtValue, fmtDate, rowKeyOf } from './research-fmt'
 import { toneVar } from '~/components/ui/tone'
@@ -106,7 +106,7 @@ export function ResearchModule() {
 
   // Client gate — the authoritative gate is server-side (the `research` head is
   // org-scoped by the Bearer owner); this is the honest matching UI gate.
-  if (!isAdmin) return <OperatorAccessRequired />
+  if (!isAdmin) return <SuperAdminRequired />
 
   return (
     <YStack gap="$4" p="$4" maxW={1200} self="center" width="100%">

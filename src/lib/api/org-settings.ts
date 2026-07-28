@@ -20,7 +20,7 @@
  * Reads/writes ride originGet/originPut/originDelete — the console's OWN origin, dispatched by
  * next.config to the /ai user-bearer proxy (session cookie → short-lived minted
  * bearer → the hanzoai/ai gateway). The super-admin gate is enforced UPSTREAM; a
- * non-admin gets a real 403 the module renders honestly (OperatorAccessRequired).
+ * non-admin gets a real 403 the module renders honestly (SuperAdminRequired).
  */
 import { originGet, originPut, originDelete } from './client'
 

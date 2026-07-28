@@ -10,7 +10,7 @@
  *
  * Gated twice, like the fleet o11y board: the catalog entry is `admin: true` +
  * `brands: ['lux']` (hidden from every customer and every non-Lux console), and this
- * module renders OperatorAccessRequired for a non-SuperAdmin client. The cloud VM
+ * module renders SuperAdminRequired for a non-SuperAdmin client. The cloud VM
  * proxy is the authoritative server gate (admin(c) + the fixed allowlist).
  *
  * Honest uptime: there is NO uptime metric in the hub, and the luxd on-chain uptime
@@ -33,7 +33,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard, UtilBar, utilColor } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { OperatorAccessRequired } from '~/components/ui/States'
+import { SuperAdminRequired, SUPERADMIN_REQUIRED } from '~/components/ui/States'
 
 // Lux primary-network staking facts (mainnet): 5 validators, each bonds 500M LUX →
 // 2.5B LUX staked. Displayed as a caption on the primary panel (investor context).
@@ -73,7 +73,7 @@ export function LuxNetworkModule(_props: { params: Record<string, string> }) {
 
   // Client gate — the authoritative one is the cloud VM proxy (admin(c)); this is the
   // honest UI twin, so a non-SuperAdmin never sees a broken board.
-  if (!isSuperAdmin) return <OperatorAccessRequired />
+  if (!isSuperAdmin) return <SuperAdminRequired />
 
   return (
     <>
@@ -401,13 +401,13 @@ function LuxError({ status, message, onRetry }: { status: number; message: strin
     status === 501
       ? 'Telemetry not configured'
       : status === 401 || status === 403
-        ? 'Operator access required'
+        ? SUPERADMIN_REQUIRED
         : 'Could not reach the telemetry store'
   const body =
     status === 501
       ? 'This console reads Lux telemetry from the telemetry store, but its URL is not set on this deployment yet. Once it is, live validator and infrastructure metrics appear here — no fabricated data is shown.'
       : status === 401 || status === 403
-        ? 'The Lux Network board is a platform-operator surface. Sign in with an operator account to view it.'
+        ? 'The Lux Network board is a platform surface, restricted to SuperAdmins — members of the reserved admin org.'
         : message
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={640}>

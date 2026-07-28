@@ -183,7 +183,7 @@ test.describe('Insights renders on admin.hanzo.ai for the SuperAdmin (authentica
       { id: 'service-map', label: 'Service Map', expect: /Service Map|Rate|Errors|Duration|p99|dependency|Observability|no telemetry|not enabled|initializing/i },
       { id: 'logs', label: 'Logs', expect: /Logs|Application logs|Request activity|Severity|Message|no application logs|Observability|initializing/i },
       { id: 'o11y', label: 'Traces', expect: /Traces|Trace|Latency|Tokens|Cost|Observability|No traces|initializing|not enabled/i },
-      { id: 'fleet-o11y', label: 'Fleet Observability', expect: /Fleet Observability|Requests|Tokens|Latency|Top organizations|operator access|not authorized/i },
+      { id: 'fleet-o11y', label: 'Fleet Observability', expect: /Fleet Observability|Requests|Tokens|Latency|Top organizations|superadmin access|not authorized/i },
     ]
     for (const m of modules) {
       await page.goto(`${surface}/${m.id}`, { waitUntil: 'domcontentloaded' })

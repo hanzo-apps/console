@@ -34,7 +34,7 @@ import { Loader } from '~/components/ui/Loader'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { FieldText } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
-import { OperatorAccessRequired, ErrorState, asApiError, isForbidden, type HonestCopy } from '~/components/ui/States'
+import { SuperAdminRequired, ErrorState, asApiError, isForbidden, type HonestCopy } from '~/components/ui/States'
 import { usePoll, useReducedMotion } from '../overview/living/hooks'
 import { renderServiceIcon } from '../platform-apps/icons'
 import { LazyProjectCanvas, CanvasFrame } from './canvas-lazy'
@@ -228,7 +228,7 @@ export function GitOpsModule({ params }: { params: Record<string, string> }) {
 
       {state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={refresh} copy={COPY} />
         )

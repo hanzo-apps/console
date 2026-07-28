@@ -21,8 +21,8 @@
  * not a live probe: disabled ⇒ Off; enabled + keyPresent ⇒ Ready; enabled + no key
  * ⇒ No key. No fabricated green.
  *
- * States are honest end to end: loading (Spinner), operator-access-required (403 →
- * the shared `OperatorAccessRequired` panel — a signed-in non-admin reads "admin
+ * States are honest end to end: loading (Spinner), superadmin-required (403 →
+ * the shared `SuperAdminRequired` panel — a signed-in non-admin reads "admin
  * only", NEVER "sign in"), listing-unavailable (404), error (retry), empty.
  *
  * All calls go through the origin-pinned admin client → the global-admin-gated
@@ -39,7 +39,7 @@ import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldSwitch } from '~/components/ui/Field'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 
 /** Provider-board guidance for the honest 404 / unauthorized states. */
 const PROVIDERS_COPY: HonestCopy = {
@@ -245,7 +245,7 @@ export function ProviderAdminModule(_props: { params: Record<string, string> }) 
 
       {state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={run} copy={PROVIDERS_COPY} />
         )

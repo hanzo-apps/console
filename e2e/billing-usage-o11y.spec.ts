@@ -120,7 +120,7 @@ async function auditSurface(page: Page, slug: string, name: string, marker: RegE
 // Honest states that count as a truthful render for ANY surface (real content is added
 // per-surface). Kept in ONE place so every marker is consistent.
 const HONEST =
-  'Add credits|Your session expired|Access required|Not enabled|Not available on this deployment|initializing|runtime|managed by Hanzo|Connected|Operator access|No .* yet|not connected|not configured|Sign in'
+  'Add credits|Your session expired|Access required|Not enabled|Not available on this deployment|initializing|runtime|managed by Hanzo|Connected|SuperAdmin access|No .* yet|not connected|not configured|Sign in'
 
 // ════════════════════════════════════════════════════════════════════════════════
 // A. UNAUTHENTICATED fail-closed proof — ALWAYS runs (no credentials required).
@@ -314,9 +314,9 @@ test.describe.serial('Billing / Settings / Usage / o11y render smoke (authentica
   test('Alerts renders (alerting rules or honest state)', async () => {
     await auditSurface(page, 'alerts', 'Alerts', new RegExp(`Alert|rule|notification|${HONEST}`, 'i'))
   })
-  test('Fleet Observability renders (global-admin board or honest operator-access state)', async () => {
-    // For a non-global-admin this is honestly `OperatorAccessRequired` — that IS a pass.
-    await auditSurface(page, 'fleet-o11y', 'Fleet Observability', new RegExp(`Fleet Observability|Requests|Tokens|Latency|Top organizations|Operator access|${HONEST}`, 'i'))
+  test('Fleet Observability renders (global-admin board or honest superadmin-access state)', async () => {
+    // For a non-global-admin this is honestly `SuperAdminRequired` — that IS a pass.
+    await auditSurface(page, 'fleet-o11y', 'Fleet Observability', new RegExp(`Fleet Observability|Requests|Tokens|Latency|Top organizations|SuperAdmin access|${HONEST}`, 'i'))
   })
 
   // ── AGGREGATE — the dead-card audit. FLAGS every surface that showed a dead

@@ -10,7 +10,7 @@
  * entirely through the server-gated `/admin/kms` proxy (KmsAdminApi), which
  * enforces the brand-admin gate and forwards as the user, scoped to the active
  * org. Values are revealed one at a time, shown once, never listed or stored.
- * States are honest: loading, operator-access-required (403), listing-
+ * States are honest: loading, superadmin-required (403), listing-
  * unavailable (404), error, and empty.
  */
 import { useCallback, useEffect, useState } from 'react'
@@ -23,7 +23,7 @@ import { config } from '~/config'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldRow, FieldText } from '~/components/ui/Field'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 
 /** KMS-specific guidance for the honest 404 / unauthorized states. */
 const KMS_COPY: HonestCopy = {
@@ -216,7 +216,7 @@ export function KmsModule(_props: { params: Record<string, string> }) {
 
       {state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={run} copy={KMS_COPY} />
         )

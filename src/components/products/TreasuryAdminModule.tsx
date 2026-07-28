@@ -33,7 +33,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { FieldText } from '~/components/ui/Field'
-import { asApiError, ErrorState, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 import { toneColor } from '~/components/ui/tone'
 
@@ -126,7 +126,7 @@ export function TreasuryAdminModule() {
         </XStack>
       ) : state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState
             err={state.err}
