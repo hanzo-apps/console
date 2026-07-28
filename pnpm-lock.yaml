@@ -30,8 +30,8 @@ importers:
         specifier: 7.3.0
         version: 7.3.0(expo@57.0.8)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7)(sf-symbols-typescript@2.2.0)
       '@hanzo/iam':
-        specifier: ^0.21.1
-        version: 0.21.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.21.2
+        version: 0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@hanzo/logo':
         specifier: ^1.0.13
         version: 1.0.13(react@19.2.7)
@@ -55,7 +55,7 @@ importers:
         version: 7.3.0(next@15.5.19(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.62.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7)
       '@hanzogui/shell':
         specifier: ^7.6.3
-        version: 7.6.3(@hanzo/iam@0.21.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 7.6.3(@hanzo/iam@0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@lexical/html':
         specifier: 0.46.0
         version: 0.46.0(typescript@7.0.2)
@@ -1000,8 +1000,8 @@ packages:
       react: '>=19'
       react-native: '*'
 
-  '@hanzo/iam@0.21.1':
-    resolution: {integrity: sha512-mjdC67CeShO0wp/HzbPOPg/K3TYOhaWJg+begWv67RpzBcYBicZRglSvfA+jD/tIuPMAiBTVGPs+P18S94Xy1g==}
+  '@hanzo/iam@0.21.2':
+    resolution: {integrity: sha512-yuk+di2VB02FQVHH2ggqOrJtEXiDLnKNOwkC6XMr+WAI8yzC0u/KqGhxn162jJRtYihvq9ykA428UfLgR2giHg==}
     engines: {node: '>=18'}
     peerDependencies:
       react: '>=17'
@@ -6137,7 +6137,7 @@ snapshots:
       - sf-symbols-typescript
       - zeego
 
-  '@hanzo/iam@0.21.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@hanzo/iam@0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       jose: 6.2.4
       libphonenumber-js: 1.13.9
@@ -7723,9 +7723,9 @@ snapshots:
       - sf-symbols-typescript
       - zeego
 
-  '@hanzogui/shell@7.6.3(@hanzo/iam@0.21.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@hanzogui/shell@7.6.3(@hanzo/iam@0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@hanzo/iam': 0.21.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@hanzo/iam': 0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
