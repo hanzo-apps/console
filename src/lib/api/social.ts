@@ -38,6 +38,7 @@ const num = (v: unknown): number => {
   if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v)
   return 0
 }
+const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
 const asRecord = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
 
@@ -81,6 +82,12 @@ export type Post = {
   status: string
   /** Unix seconds; 0 = not scheduled / publish now. */
   scheduleAt: number
+  /**
+   * Attached media URLs. Cloud stores these and ALWAYS serializes an array (never
+   * null), and its PUT rebuilds the row from the body — so this has to round-trip:
+   * an update that omitted it would wipe the post's media.
+   */
+  media: string[]
   /** Server-managed publish results (empty until a publish attempt lands). */
   accountId?: string
   externalId?: string
@@ -128,6 +135,7 @@ export function normalizePost(raw: unknown): Post {
     channel: str(r.channel) || 'x',
     status: str(r.status) || 'draft',
     scheduleAt: num(r.scheduleAt),
+    media: strs(r.media),
     accountId: str(r.accountId) || undefined,
     externalId: str(r.externalId) || undefined,
     error: str(r.error) || undefined,
@@ -143,13 +151,10 @@ export function normalizeSummary(raw: unknown): Summary {
 
 export function normalizeProviderCapability(raw: unknown): ProviderCapability {
   const r = asRecord(raw)
-  const miss = Array.isArray(r.missingCredentials)
-    ? (r.missingCredentials.filter((x) => typeof x === 'string') as string[])
-    : []
   return {
     provider: str(r.provider),
     credentialsConfigured: Boolean(r.credentialsConfigured),
-    missingCredentials: miss,
+    missingCredentials: strs(r.missingCredentials),
   }
 }
 

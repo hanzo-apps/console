@@ -57,7 +57,7 @@ const TIMEOUT_MS = Number(process.env.NODES_RPC_TIMEOUT_MS ?? 8000)
 /** A single allowlisted luxd JSON-RPC call. `path` and `method` are fixed here. */
 async function rpc<T>(
   host: string,
-  path: '/ext/bc/P' | '/ext/info',
+  path: '/v1/bc/P' | '/v1/info',
   method: string,
   signal: AbortSignal,
 ): Promise<T> {
@@ -94,11 +94,11 @@ async function probe(net: NodeNetworkId): Promise<NetworkInventory> {
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
   try {
     const [valR, peerR, verR, hgtR, chainR] = await Promise.allSettled([
-      rpc<{ validators?: RawValidator[] }>(host, '/ext/bc/P', 'platform.getCurrentValidators', ctrl.signal),
-      rpc<{ numPeers?: string; peers?: RawPeer[] }>(host, '/ext/info', 'info.peers', ctrl.signal),
-      rpc<{ version?: string }>(host, '/ext/info', 'info.getNodeVersion', ctrl.signal),
-      rpc<{ height?: string }>(host, '/ext/bc/P', 'platform.getHeight', ctrl.signal),
-      rpc<{ blockchains?: RawBlockchain[] }>(host, '/ext/bc/P', 'platform.getBlockchains', ctrl.signal),
+      rpc<{ validators?: RawValidator[] }>(host, '/v1/bc/P', 'platform.getCurrentValidators', ctrl.signal),
+      rpc<{ numPeers?: string; peers?: RawPeer[] }>(host, '/v1/info', 'info.peers', ctrl.signal),
+      rpc<{ version?: string }>(host, '/v1/info', 'info.getNodeVersion', ctrl.signal),
+      rpc<{ height?: string }>(host, '/v1/bc/P', 'platform.getHeight', ctrl.signal),
+      rpc<{ blockchains?: RawBlockchain[] }>(host, '/v1/bc/P', 'platform.getBlockchains', ctrl.signal),
     ])
 
     const reachable =

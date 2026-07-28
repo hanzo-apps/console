@@ -2957,25 +2957,34 @@ contract. The law: a client-facing same-origin API path is `/v1/<head>/…` — 
   `/v1/<head>` forms); `next build` ✓ (route table); `npm run build:embed` ✓ (go:embed gate,
   31 handlers stashed+restored). `git grep -oE '/[a-z-]+/v[0-9]/'` = external hosts only.
 
-## TODO — embed the Hanzo Social dashboard (follow-up to social.hanzo.ai)
+## Social — one surface, shared parts (social.hanzo.ai)
 
-The dedicated Social frontend shipped at **social.hanzo.ai** (hanzoai/social
-`apps/frontend`, image `ghcr.io/hanzoai/social-frontend`) on the unified cloud BE
-(`/v1/social/*` + `/v1/marketing/*`). Its pure display components were extracted to
-**`@hanzo/ui@8.0.2`** under `@hanzo/ui/product/social` — `ChannelBadge`, `PostCard`,
-`CampaignCard` (on `@hanzo/gui` primitives, data + handlers injected via props,
-reusing `StatusTag`). To embed the same dashboard here:
-- Bump `@hanzo/ui` to `>=8.0.2` and import `{ PostCard, CampaignCard, ChannelBadge }
-  from '@hanzo/ui/product/social'` — the console already has the `@hanzo/gui`
-  runtime/provider, so these render directly (unlike the Tailwind `apps/frontend`,
-  which is why the round-trip back into that app is intentionally NOT done).
-- Data layer: call the same cloud shapes the social FE uses
-  (`GET/POST /v1/social/posts`, `/v1/social/summary`, `/v1/marketing/campaigns`);
-  org comes from the console's existing IAM session, not a new client.
-- Still to extract into `@hanzo/ui` when needed: `QueueBoard` (compose
-  `@hanzo/data` `BoardView`), `Calendar` (reuse `@hanzo/data` `Calendar`),
-  `PostComposer` (needs `@hanzo/gui` input/select primitives). Ships via the normal
-  cloud release embedding `console@main` — coordinate with the cloud train.
+**social.hanzo.ai IS this console**, booted in the `social`-only product shell
+(`PRODUCT_SHELLS.social` → `config.isSocialHost`/`socialOnly` → `SocialModule`) over
+the folded `/v1/social` in the cloud binary. The standalone `social-frontend` pod was
+retired by the ingress cutover (`universe` `routes.yaml`: `/v1`+`/healthz` →
+`cloud-api-hanzo-ai` at prio 100, root → `console-hanzo-ai`) — there is deliberately
+NO second dedicated app, and login rides the console's own `hanzo-cloud` path.
+
+The presentational half lives ONCE in **`@hanzo/ui/product/social`**: `ChannelBadge`,
+`PostCard`, `CampaignCard`, plus `SocialSummaryBar`, `ViewToggle`, `PostAgenda`,
+`PostComposer`, `ProviderReadinessList` and the pure `format` module
+(`formatPostTime`/`postDayBucket`/`postPreview`/`parsePostTime`). Data and handlers are
+injected — `SocialApi` and every failure classification stay here.
+
+- **Blocked on a publish**: those parts are in the `@hanzo/ui` source at **8.0.12** but
+  the published **8.0.11** never shipped a `product/social` — so `SocialModule` still
+  renders its local copies. `@hanzo/ui`'s own `pnpm run build` fails first: `src/index.ts`
+  re-exports the local `./backends/shadcn`, whose `clsx`/`tailwind-merge`/
+  `class-variance-authority`/`@radix-ui/*` imports are declared nowhere (the package
+  ships `@hanzo/ui-shadcn` as a *peer* instead). Fix that entry, publish 8.0.12, then
+  switch `SocialModule`'s social imports to `@hanzo/ui/product` and drop the local ones.
+- **No invented endpoints.** Cloud `clients/social` serves only summary, providers,
+  accounts CRUD, posts CRUD, `posts/:id/publish` — there is no OAuth callback, no
+  analytics, no media upload, no teams. Publishing fails CLOSED with the exact missing
+  provider env vars; the composer surfaces that verbatim, never a fake "connected".
+- `Post.media` round-trips (cloud always serializes an array and its PUT rebuilds the
+  row from the body, so dropping it would wipe a post's media).
 
 ## Inference Router — per-org router policy editor over /v1-first paths (v8.4.136)
 
