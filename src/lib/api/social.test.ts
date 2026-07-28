@@ -1,85 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-import {
-  SocialApi,
-  PROVIDERS,
-  normalizePost,
-  normalizeSummary,
-  normalizeProviderCapability,
-  normalizeProviders,
-  normalizeAccounts,
-} from './social'
+import { SocialApi } from './social'
 
 /**
- * Social API + pure normalizers. The module calls the DOCUMENTED cloud `/v1/social`
- * contract same-origin, keyless and prefix-free (`originV1Url` → `<origin>/v1/social`),
- * the canonical CRM/Agents form. These tests pin (1) the EXACT same-origin paths for the
- * new publish surface (providers + posts/:id/publish), (2) that the real store.go JSON
- * shape — including the server-managed publish results — normalizes, and (3) that a
- * garbage/absent field degrades to a safe default, never throws.
+ * The console's `/v1/social` BINDING. The contract (types, normalizers, paths) is
+ * tested in `@hanzo/ui/product/social` — the ONE place it lives. What is console-only,
+ * and therefore tested here, is the TRANSPORT: that a contract path resolves to this
+ * origin's `/v1/social/...` (keyless, prefix-free, through the user-bearer BFF), which
+ * is the canonical CRM/Agents form.
  */
 const ORIGIN = 'https://social.hanzo.ai'
 
-describe('Social normalizers — real store.go JSON shape, defensive', () => {
-  it('normalizes a post including the server-managed publish results', () => {
-    const p = normalizePost({
-      id: 'post_1', content: 'hi', channel: 'linkedin', status: 'published',
-      scheduleAt: 1000, accountId: 'acct_1', externalId: 'ext_9', error: '',
-      createdAt: 1, updatedAt: 2,
-    })
-    expect(p).toMatchObject({
-      id: 'post_1', content: 'hi', channel: 'linkedin', status: 'published',
-      scheduleAt: 1000, accountId: 'acct_1', externalId: 'ext_9',
-    })
-    // Empty error normalizes to undefined (omitted), never the string "".
-    expect(p.error).toBeUndefined()
-  })
-
-  it('coerces missing/garbage post fields to safe defaults (never throws)', () => {
-    const p = normalizePost({ id: 'post_2' })
-    expect(p).toMatchObject({ id: 'post_2', content: '', channel: 'x', status: 'draft', scheduleAt: 0 })
-    expect(p.externalId).toBeUndefined()
-    expect(normalizePost(null).id).toBe('')
-  })
-
-  it('carries a post’s media through — cloud’s PUT rebuilds the row, so dropping it would wipe it', () => {
-    expect(normalizePost({ id: 'post_3', media: ['https://s3/a.png', 'https://s3/b.png'] }).media).toEqual([
-      'https://s3/a.png',
-      'https://s3/b.png',
-    ])
-    // Always an array, and non-string entries are dropped rather than rendered.
-    expect(normalizePost({ id: 'post_4' }).media).toEqual([])
-    expect(normalizePost({ id: 'post_5', media: 'nope' }).media).toEqual([])
-    expect(normalizePost({ id: 'post_6', media: ['ok', 7, null] }).media).toEqual(['ok'])
-  })
-
-  it('normalizes a provider capability with the missing-credentials list', () => {
-    const c = normalizeProviderCapability({
-      provider: 'x', credentialsConfigured: false, missingCredentials: ['X_API_KEY', 'X_API_SECRET'],
-    })
-    expect(c).toEqual({ provider: 'x', credentialsConfigured: false, missingCredentials: ['X_API_KEY', 'X_API_SECRET'] })
-    // A configured provider with a non-array field degrades to an empty list.
-    expect(normalizeProviderCapability({ provider: 'linkedin', credentialsConfigured: true })).toEqual({
-      provider: 'linkedin', credentialsConfigured: true, missingCredentials: [],
-    })
-  })
-
-  it('reads lists from any envelope key or a bare array', () => {
-    expect(normalizeProviders({ data: [{ provider: 'x' }, { provider: 'threads' }] }).map((c) => c.provider)).toEqual([
-      'x', 'threads',
-    ])
-    expect(normalizeAccounts([{ id: 'a' }, { id: 'b' }]).length).toBe(2)
-    expect(normalizeSummary({ posts: 3, scheduled: 1, published: 2, accounts: 4 })).toEqual({
-      posts: 3, scheduled: 1, published: 2, accounts: 4,
-    })
-  })
-
-  it('exposes the network vocabulary', () => {
-    expect(PROVIDERS).toEqual(['x', 'facebook', 'instagram', 'linkedin', 'tiktok', 'youtube', 'threads'])
-  })
-})
-
-describe('SocialApi — hits the same-origin /v1/social contract', () => {
+describe('SocialApi — binds the contract to the console origin', () => {
   const fetched: { url: string; method: string }[] = []
 
   beforeEach(() => {
