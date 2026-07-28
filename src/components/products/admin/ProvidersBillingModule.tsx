@@ -43,7 +43,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { Donut } from '~/components/ui/Charts'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { toneColor, toneVar } from '~/components/ui/tone'
 
 // ── small presentational helpers ──────────────────────────────────────────────
@@ -210,7 +210,7 @@ export function ProvidersBillingModule() {
     return (
       <YStack p="$4" gap="$4">
         <PageHeader title="Provider billing" />
-        <OperatorAccessRequired />
+        <SuperAdminRequired />
       </YStack>
     )
   }

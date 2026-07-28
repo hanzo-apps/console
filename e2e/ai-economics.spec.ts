@@ -149,7 +149,7 @@ test.describe('(A) fixture render — model mix (fable-5 75%) + 62% margin + hon
 
     // Page rendered (not the operator gate).
     await expect(page.getByText('AI Economics').first()).toBeVisible()
-    await expect(page.locator('text=/Operator access required|not authorized|access denied/i')).toHaveCount(0)
+    await expect(page.locator('text=/SuperAdmin access required|not authorized|access denied/i')).toHaveCount(0)
 
     // (a) model mix — the mocked rows WITH request-share %.
     const modelMix = page.getByTestId('model-mix')

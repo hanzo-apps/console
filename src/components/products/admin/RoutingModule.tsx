@@ -17,7 +17,7 @@
  * Every edit is a write to the OrgSettings row via OrgSettingsApi (read-modify-write,
  * so sibling routing-policy fields are never clobbered). GLOBAL-ADMIN ONLY: the
  * endpoints are RequireSuperAdmin upstream, so a non-admin who reaches this sees the
- * real OperatorAccessRequired panel — never a faked success. Honest states, no
+ * real SuperAdminRequired panel — never a faked success. Honest states, no
  * fabricated rows.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -37,7 +37,7 @@ import { getBrand } from '~/lib/branding/brands'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 
 const STATES: RoutingState[] = ['inherit', 'enabled', 'disabled']
 const LABEL: Record<RoutingState, string> = { inherit: 'Inherit', enabled: 'Enabled', disabled: 'Disabled' }
@@ -170,7 +170,7 @@ export function RoutingModule() {
     }
   }, [newOrg])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err)
     return (
       <YStack p="$4" gap="$4">

@@ -22,7 +22,7 @@
  *
  * HONEST BY CONSTRUCTION: renders an honest empty state until the compute-events
  * emitter + aggregate land — never a fabricated fleet. States: loading,
- * operator-access-required (403), not-routed (404), error, empty.
+ * superadmin-required (403), not-routed (404), error, empty.
  */
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
@@ -33,7 +33,7 @@ import { AdminComputeApi, type ComputeFleets, type ComputeKind, type Rollup, typ
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { EmptyState } from '~/components/ui/EmptyState'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 
 type Range = '24h' | '7d' | '30d'
 const RANGES: { key: Range; label: string }[] = [
@@ -268,7 +268,7 @@ function ComputeBoard({ kind }: { kind: ComputeKind }) {
         </XStack>
       ) : state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={() => load(range)} copy={copyFor(kind)} />
         )

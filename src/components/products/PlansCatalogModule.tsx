@@ -31,7 +31,7 @@ import { FieldRow, FieldSelect, FieldSwitch, FieldText, FieldTextArea } from '~/
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 import { MetadataEditor } from './pricing/MetadataEditor'
 import { centsToInput, distinctCategories, formatUsd, inputToCents, metadataToRows, type MetadataRow, rowsToMetadata } from './catalog/logic'
 import { annualDisplay, PLAN_CATEGORIES, priceDisplay } from './plans/logic'
@@ -212,7 +212,7 @@ export function PlansCatalogModule(_props: { params: Record<string, string> }) {
 
       {state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={load} copy={PLANS_COPY} />
         )

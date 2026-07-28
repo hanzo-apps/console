@@ -17,7 +17,7 @@ import { AdminProjectsApi, groupByOrg, type ProjectRow } from '~/lib/api/admin-p
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 
 const shortDate = (s: string): string => (s ? (s.split('T')[0] ?? s) : '—')
 
@@ -72,7 +72,7 @@ export function ProjectsModule() {
 
   const orgCount = useMemo(() => groupByOrg(rows).length, [rows])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) return <YStack p="$4" gap="$4"><PageHeader title="Projects" /><ErrorState err={err} onRetry={load} /></YStack>
 
   const columns: Column<ProjectRow>[] = [

@@ -26,7 +26,7 @@ import { currentOrg } from '~/lib/org-scope'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { FieldRow, FieldText } from '~/components/ui/Field'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired, type HonestCopy } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 
 /** IAM-specific guidance for the honest 404 / unauthorized states. */
 const IAM_COPY: HonestCopy = {
@@ -234,7 +234,7 @@ function UsersAdminView({ owner }: { owner: string }) {
 
       {state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={run} copy={IAM_COPY} />
         )
@@ -350,7 +350,7 @@ function RolesAdminView({ owner }: { owner: string }) {
 
       {state.phase === 'error' ? (
         isForbidden(state.err) ? (
-          <OperatorAccessRequired />
+          <SuperAdminRequired />
         ) : (
           <ErrorState err={state.err} onRetry={run} copy={IAM_COPY} />
         )

@@ -188,7 +188,7 @@ test.describe('(B) LIVE — admin gate + real DO data', () => {
     await expect(page).not.toHaveURL(/\/signin/, { timeout: 15_000 })
     // The board (not the operator-access gate) rendered for the SuperAdmin.
     await expect(page.locator('text=/Provider credit|Credit vs paid/i').first()).toBeVisible({ timeout: 30_000 })
-    await expect(page.locator('text=/Operator access required/i')).toHaveCount(0)
+    await expect(page.locator('text=/SuperAdmin access required/i')).toHaveCount(0)
     // Real DO data: the $26k grant / a do-ai card / glm-5.2 usage.
     await expect(page.locator('text=/do-ai|digitalocean/i').first()).toBeVisible({ timeout: 30_000 })
     await page.screenshot({ path: join(SHOTS, 'provider-billing-live-do.png'), fullPage: true })

@@ -16,7 +16,7 @@ import { AdminGrantsApi, type AdminGrant, type GrantSource } from '~/lib/api/adm
 import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
-import { ErrorState, asApiError, isForbidden, OperatorAccessRequired } from '~/components/ui/States'
+import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 
 const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const shortDate = (s: string): string => (s ? (s.split('T')[0] ?? s) : '—')
@@ -129,7 +129,7 @@ export function GrantsModule() {
     }
   }, [load])
 
-  if (err && isForbidden(err)) return <OperatorAccessRequired />
+  if (err && isForbidden(err)) return <SuperAdminRequired />
   if (err) return <YStack p="$4" gap="$4"><PageHeader title="Grants" /><ErrorState err={err} onRetry={load} /></YStack>
 
   const total = rows.reduce((s, r) => s + r.amountCents, 0)

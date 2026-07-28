@@ -1177,7 +1177,7 @@ export const catalog: CatalogEntry[] = [
     // admin toggle — set one org to Enabled for the org-first rollout, then flip the
     // global default. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer;
     // the endpoints are super-admin gated server-side, so a non-admin sees the honest
-    // OperatorAccessRequired panel). Runtime policy lives as editable rows, never env.
+    // SuperAdminRequired panel). Runtime policy lives as editable rows, never env.
     id: 'routing',
     label: 'Routing',
     icon: Route,
@@ -2836,7 +2836,7 @@ export const catalog: CatalogEntry[] = [
     // pod memory pressure, and the named-service status grid. In-console `module`
     // (owns its route), reading the SuperAdmin-gated, allowlisted cloud VM proxy
     // (lib/api/lux-infra.ts → /v1/o11y/vm/query). SUPERADMIN + LUX ONLY: `admin: true`
-    // hides it from every customer and the module renders OperatorAccessRequired for a
+    // hides it from every customer and the module renders SuperAdminRequired for a
     // non-SuperAdmin; `brands: ['lux']` keeps it OFF every non-Lux console (zero
     // cross-brand leak). The cloud proxy (admin(c) + fixed allowlist) is the
     // authoritative server gate. Honest by construction — every value folds real
