@@ -35,7 +35,7 @@ import { FieldRow, FieldText } from '@hanzo/ui/product'
 import { StatusTag } from '@hanzo/ui/product'
 import { PageHeader } from '@hanzo/ui/product'
 import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
-import { CommerceResource } from './CommerceResource'
+import { CommerceResource } from '@hanzo/ui/product'
 import { discountValue, humanizeStatus } from './logic'
 
 const Cell = ({ children }: { children: ReactNode }) => (
