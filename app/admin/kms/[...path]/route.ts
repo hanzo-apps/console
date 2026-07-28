@@ -59,7 +59,12 @@ async function handle(req: NextRequest, segments: string[]): Promise<NextRespons
   if (segments.length !== 1 || segments[0] !== 'secrets') return notFound()
 
   const org = orgFor(gate, req)
-  const base = `${kmsBaseUrl()}/v1/kms/orgs/${encodeURIComponent(org)}/secrets`
+  // The org travels on the IDENTITY channel, never the URL: cloud's KMS surface
+  // is /v1/kms/secrets and reads the acted-on org from the validated principal
+  // (X-Org-Id — for a SuperAdmin, the switched-into org; the same one-predicate
+  // switch every other subsystem honors). URL-addressed orgs were removed
+  // server-side because a path that names a tenant is caller-selectable.
+  const base = `${kmsBaseUrl()}/v1/kms/secrets`
   const q = req.nextUrl.searchParams
   const name = q.get('name') ?? ''
   const path = q.get('path') ?? ''
@@ -105,7 +110,7 @@ async function handle(req: NextRequest, segments: string[]): Promise<NextRespons
     )
   }
 
-  const headers: Record<string, string> = { Authorization: `Bearer ${bearer}`, Accept: 'application/json' }
+  const headers: Record<string, string> = { Authorization: `Bearer ${bearer}`, Accept: 'application/json', 'X-Org-Id': org }
   const init: RequestInit = { method: req.method, headers, cache: 'no-store' }
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
