@@ -1407,7 +1407,7 @@ of session-only reads (get-account, get-cloud-usages) — so it is KEPT, not rep
 The fix is **additive, one session manager, zero regression** (worst case === v8.4.28):
 - **`src/lib/server/session.ts`** — THE token manager (server-only by construction:
   `node:crypto` + `next/server`). Sealed AES-256-GCM (key = HKDF(`IAM_MINT_CLIENT_SECRET`);
-  no-secret → per-process random key, never a constant). Casdoor tokens are ~3.6 KB
+  no-secret → per-process random key, never a constant). IAM tokens are ~3.6 KB
   full-user JWTs (86 claims incl. password hash / TOTP secret) — the ACCESS token and
   the REFRESH token are BOTH that big — so a single cookie is impossible (browser ~4 KB
   per-cookie cap; a real browser silently REJECTS an oversized cookie — a bug curl never
@@ -1470,7 +1470,7 @@ for wrong application (client_id)":
   `/v1/iam/signin`, which the ingress routes to the CLOUD backend (casibase); casibase
   redeems with ITS confidential `hanzo-cloud` client → mismatch. Now the console redeems
   the code ITSELF: on an admin host `iam-login.ts` authorizes with **PKCE** (S256
-  `codeChallenge` in the login body — casdoor stores it with the code), and
+  `codeChallenge` in the login body — IAM stores it with the code), and
   `completeSignIn` posts `{code, codeVerifier}` to the new BFF **`app/auth/signin`**, which
   runs `pkceCodeGrant(client_id=admin-console, code, code_verifier)` with **NO client secret**.
   Verified in IAM source (`object/token_oauth.go` GetAuthorizationCodeToken 880-896): an
@@ -1482,7 +1482,7 @@ for wrong application (client_id)":
 - **`durableSessionClientId(host)`** (session.ts) is the ONE host→client decision:
   admin host → `admin-console` (public — pkceCodeGrant + secretless refreshGrant), else null
   → the confidential `hanzo-console` path. `/auth/refresh` uses it so an admin session
-  refreshes with admin-console (casdoor skips the secret check when it's empty, token.go 469).
+  refreshes with admin-console (IAM skips the secret check when it's empty, token.go 469).
 - The admin session rests on `hz_session` (the code grant returns access + refresh, minted
   at authorize time), which `resolveUser`/`getAdminGate` read FIRST — so the admin console
   works without the casibase cookie. `accountOf` + `applyCookies` extracted to session.ts

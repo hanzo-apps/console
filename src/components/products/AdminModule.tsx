@@ -107,7 +107,7 @@ type Tone = { tone: 'ok' | 'err'; text: string }
 /**
  * Users with full CRUD — create, promote/demote admin, and delete — over the
  * ready IamAdminApi mutations (add/update/delete-user) through the server-gated
- * /admin/iam proxy, scoped to `owner`. This is the casdoor user surface, in
+ * /admin/iam proxy, scoped to `owner`. This is the IAM user surface, in
  * console: no link-out for the common lifecycle. Honest states throughout.
  */
 function UsersAdminView({ owner }: { owner: string }) {

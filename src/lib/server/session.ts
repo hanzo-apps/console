@@ -15,7 +15,7 @@
  * (proactively before expiry + reactively on a 401) via `grant_type=refresh_token`.
  * The casibase cookie stays exactly as-is underneath as the graceful FALLBACK.
  *
- * TWO COOKIES, by necessity (Casdoor tokens are ~3.6 KB full-user JWTs):
+ * TWO COOKIES, by necessity (IAM tokens are ~3.6 KB full-user JWTs):
  *   - `hz_session` (Path=/, ~1 KB): the SEALED IDENTITY — {access-token expiry +
  *     the small projected claims the console reads}. resolveUser + every BFF proxy +
  *     /auth/session GET read this; it is small, so it rides every request with no
@@ -30,7 +30,7 @@
  *   - The refresh token NEVER reaches the browser's JS (httpOnly) and the refresh call
  *     is server-side (BFF). Sealed at rest in the cookie; rotation-aware (IAM rotates
  *     the refresh token one-time-use — we always persist the NEW one; a replay 400s).
- *   - The IAM access token (a Casdoor JWT that packs secret material — password hash,
+ *   - The IAM access token (a JWT that packs secret material — password hash,
  *     TOTP secret) is NEVER stored in a cookie, NEVER logged, NEVER returned to the
  *     client: `sealSession` projects it to the small display/authz claim set and
  *     discards the raw token.
@@ -99,7 +99,7 @@ const cookie = (name: string, value: string, path: string, maxAge: number): Cook
   maxAge,
 })
 
-/** Split a sealed string into ≤CHUNK_BYTES pieces (Casdoor tokens exceed one cookie). */
+/** Split a sealed string into ≤CHUNK_BYTES pieces (IAM tokens exceed one cookie). */
 function chunk(s: string): string[] {
   const out: string[] = []
   for (let i = 0; i < s.length; i += CHUNK_BYTES) out.push(s.slice(i, i + CHUNK_BYTES))
@@ -182,7 +182,7 @@ export function open<T>(sealed: string | undefined | null): T | null {
 
 // ── Identity + refresh (what the cookies carry) ──────────────────────────────────
 
-/** The console-JWT claims the console reads. Casdoor packs the full user object; we
+/** The console-JWT claims the console reads. IAM packs the full user object; we
  *  extract ONLY display/authz fields — never the secret material it also carries. */
 export type ConsoleClaims = {
   owner?: string
@@ -491,7 +491,7 @@ export function durableSessionClientId(host?: string | null): string | null {
 }
 
 /** Project session claims to the client-facing Account (display + admin fields only —
- *  never the secret material Casdoor also packs). `owner === 'admin'` implies
+ *  never the secret material IAM also packs). `owner === 'admin'` implies
  *  SuperAdmin. Shared by /auth/session (GET) and /auth/signin. */
 export function accountOf(c: ConsoleClaims): Account {
   return {
