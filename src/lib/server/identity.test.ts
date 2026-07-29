@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// The confidential client is read at module scope, and the ONE IAM transport
+// refuses to call without it (every route checks `mintConfigured()` first, so a
+// configured client is the production precondition for the mint/issue primitives
+// exercised below). Set before the import — `vi.hoisted` runs ahead of it.
+vi.hoisted(() => {
+  process.env.IAM_MINT_CLIENT_ID = 'hanzo-console'
+  process.env.IAM_MINT_CLIENT_SECRET = 'test-secret'
+})
+
 // Control the console-session claims the resolver sees. (The casibase fallback is
 // exercised by stubbing the get-account fetch below.)
 vi.mock('./session', () => ({ consoleClaims: vi.fn() }))

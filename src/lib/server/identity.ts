@@ -18,7 +18,6 @@
  * Every value here is server-only env (sourced from KMS via the deployment's
  * secret refs) — NEVER `NEXT_PUBLIC_`, never in the browser bundle.
  */
-import { randomUUID } from 'node:crypto'
 import { type NextRequest } from 'next/server'
 
 import { brandFromHost } from '~/config'
@@ -223,64 +222,126 @@ async function resolveSessionUser(
   return { owner, name, id, accessKey, email, emailVerified, isAdmin, isSuperAdmin }
 }
 
-/**
- * Read a user's authoritative identity claims (email + admin flags) from IAM as
- * the confidential client. GET, Basic auth — same credential the mint/issue
- * primitives use. Fail-soft (returns null) so a transient IAM error never opens
- * the admin gate.
- */
-async function iamGetUser(id: string): Promise<UserClaims | null> {
-  if (!mintConfigured()) return null
-  let res: Response
-  try {
-    res = await fetchWithTimeout(`${IAM_URL}/v1/iam/get-user?id=${encodeURIComponent(id)}`, {
-      headers: { Authorization: basicAuth(), Accept: 'application/json' },
-      cache: 'no-store',
-    })
-  } catch {
-    return null
-  }
-  const json = (await res.json().catch(() => null)) as { status?: string; data?: UserClaims } | null
-  if (!res.ok || !json || json.status !== 'ok' || !json.data) return null
-  return json.data
-}
-
 function basicAuth(): string {
   return 'Basic ' + Buffer.from(`${MINT_CLIENT_ID}:${MINT_CLIENT_SECRET}`).toString('base64')
 }
 
 /**
- * POST a privileged IAM primitive as the confidential client, on behalf of a
- * resolved user. Throws on any non-ok envelope so callers map it to a 5xx.
+ * IAM's genuine-absence answer, verbatim (`internal/compat/aliases.go` getHandler).
+ * It arrives as HTTP **200**: `httpx.Err` is 200 by contract — the SDK is told to
+ * "branch on status, not HTTP code" — so absence is an ENVELOPE fact, never a 404.
  */
-async function iamCall<T = Record<string, unknown>>(
+const ABSENT = 'the entity does not exist'
+
+/** An IAM answer we could not act on. `absent` marks the ONE benign kind. */
+class IamError extends Error {
+  constructor(
+    message: string,
+    readonly absent = false,
+  ) {
+    super(message)
+  }
+}
+
+/**
+ * THE IAM call — one transport, one error convention: it returns data or throws.
+ *
+ * IAM answers three DIFFERENT things and they must stay three (v1.33.31 made org
+ * scoping honour-or-refuse in `internal/authz/authz.go` `Scope`):
+ *
+ *   hit      200 `{status:"ok", data}`                       → the data
+ *   absence  200 `{status:"error", msg:"<ABSENT>"}`          → throw, `absent`
+ *   refusal  403 `{status:"error", msg:"forbidden: …"}`      → throw (authz.Deny)
+ *
+ * plus an unreachable IAM and a malformed envelope, which are also throws. Only a
+ * caller for whom "no such row" is a legitimate answer may soften `absent`. A
+ * refusal, a network error and an absence collapsed into one `null` is how a
+ * caller decides a taken slug is free and writes over it, or tells an invitee
+ * their membership was revoked when IAM merely would not answer — so this
+ * function never collapses them.
+ *
+ * `method` is explicit because IAM has param-only POSTs (mint/revoke/issue take
+ * their id in the query and no body). Same shape as cloud's Go client
+ * (`apps/account/iam.go` `do`), so the fleet has ONE IAM call convention.
+ */
+async function iam<T>(
+  method: 'GET' | 'POST',
   path: string,
   query: Record<string, string>,
+  body?: unknown,
 ): Promise<T> {
-  const qs = new URLSearchParams(query).toString()
-  const res = await fetchWithTimeout(`${IAM_URL}${path}?${qs}`, {
-    method: 'POST',
-    headers: { Authorization: basicAuth(), Accept: 'application/json' },
-    cache: 'no-store',
-  })
-  const json = (await res.json().catch(() => null)) as { status?: string; msg?: string; data?: T } | null
-  if (!res.ok || !json || json.status !== 'ok') {
-    throw new Error(json?.msg || `IAM ${path} failed (HTTP ${res.status})`)
+  if (!mintConfigured()) {
+    throw new IamError(`IAM ${path} refused: no confidential client is configured`)
   }
-  return (json.data ?? ({} as T))
+  const qs = new URLSearchParams(query).toString()
+  let res: Response
+  try {
+    res = await fetchWithTimeout(`${IAM_URL}${path}${qs ? `?${qs}` : ''}`, {
+      method,
+      headers: {
+        Authorization: basicAuth(),
+        Accept: 'application/json',
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      cache: 'no-store',
+    })
+  } catch (e) {
+    throw new IamError(`IAM ${path} unreachable: ${e instanceof Error ? e.message : String(e)}`)
+  }
+  const json = (await res.json().catch(() => null)) as
+    | { status?: string; msg?: string; data?: T }
+    | null
+  // A non-2xx is an authorization or transport verdict, never a statement about
+  // whether the row exists.
+  if (!res.ok) throw new IamError(json?.msg || `IAM ${path} failed (HTTP ${res.status})`)
+  if (!json || json.status !== 'ok') {
+    const msg = json?.msg || `IAM ${path} returned an unreadable response`
+    throw new IamError(msg, msg === ABSENT)
+  }
+  return (json.data ?? null) as T
+}
+
+/**
+ * Read a row whose ABSENCE is a legitimate answer: the data, or `null` when IAM
+ * says there is no such row. Every other failure — a refusal, an unreachable IAM,
+ * a malformed envelope — propagates, so `null` here means "IAM says it does not
+ * exist", never "we could not find out".
+ */
+async function iamGetOrAbsent<T>(path: string, query: Record<string, string>): Promise<T | null> {
+  try {
+    return await iam<T>('GET', path, query)
+  } catch (e) {
+    if (e instanceof IamError && e.absent) return null
+    throw e
+  }
+}
+
+/**
+ * A user's authoritative identity claims (email + admin flags), read as the
+ * confidential client. Fail-SOFT by design and safe: the admin gate needs
+ * POSITIVE evidence (a verified brand-domain email AND an IAM admin flag), so
+ * empty claims deny. Softening every failure here can only ever close the gate —
+ * the opposite of the existence probes above, where a softened failure would
+ * authorize a write.
+ */
+async function iamGetUser(id: string): Promise<UserClaims | null> {
+  return iam<UserClaims>('GET', '/v1/iam/get-user', { id }).catch(() => null)
 }
 
 /** (Re)generate the user's `hk-` Cloud API key; returns the new key (shown once). */
 export async function mintUserKey(user: SessionUser): Promise<string> {
-  const data = await iamCall<{ accessKey?: string }>('/v1/iam/mint-user-keys', { id: user.id })
-  const key = data.accessKey ?? ''
+  const data = await iam<{ accessKey?: string } | null>('POST', '/v1/iam/mint-user-keys', {
+    id: user.id,
+  })
+  const key = data?.accessKey ?? ''
   if (!key) throw new Error('IAM did not return an access key')
   return key
 }
 
 /** Clear the user's `hk-` Cloud API key (immediate revoke; gateway cache ~5m). */
 export async function revokeUserKey(user: SessionUser): Promise<void> {
-  await iamCall('/v1/iam/revoke-user-keys', { id: user.id })
+  await iam('POST', '/v1/iam/revoke-user-keys', { id: user.id })
 }
 
 /**
@@ -294,11 +355,19 @@ export async function revokeUserKey(user: SessionUser): Promise<void> {
  * active key (uncopyable, unrevocable, and re-minted as a duplicate). IAM
  * `get-user?id=<owner>/<name>` returns the real `accessKey` (+ the user's
  * `updatedTime`, the last time the key row changed). Basic-auth confidential
- * client, fail-soft: an unreadable IAM leaves the key absent (honest empty),
- * never fabricates one.
+ * client.
+ *
+ * An unreadable IAM must NOT report "no key": that is the very bug above, and a
+ * refusal would recreate it — the page falls back to "Create", the live key is
+ * hidden, and the user mints a duplicate over a key they can no longer revoke. So
+ * only a genuine absence is an honest empty; anything else throws and `GET /keys`
+ * answers 502 (it already maps a throw that way).
  */
 export async function getUserKey(user: SessionUser): Promise<{ accessKey: string; updatedAt: string }> {
-  const u = await iamGetData<{ accessKey?: string; updatedTime?: string }>('/v1/iam/get-user', { id: user.id })
+  const u = await iamGetOrAbsent<{ accessKey?: string; updatedTime?: string }>(
+    '/v1/iam/get-user',
+    { id: user.id },
+  )
   return { accessKey: u?.accessKey ?? '', updatedAt: u?.updatedTime ?? '' }
 }
 
@@ -320,196 +389,20 @@ export async function issueUserToken(
 ): Promise<{ accessToken: string; expiresIn: number }> {
   const query: Record<string, string> = { id: user.id }
   if (audience) query.aud = audience
-  const data = await iamCall<{ accessToken?: string; expiresIn?: number }>('/v1/iam/issue-user-token', query)
-  if (!data.accessToken) throw new Error('IAM did not return a token')
+  const data = await iam<{ accessToken?: string; expiresIn?: number } | null>(
+    'POST',
+    '/v1/iam/issue-user-token',
+    query,
+  )
+  if (!data?.accessToken) throw new Error('IAM did not return a token')
   return { accessToken: data.accessToken, expiresIn: data.expiresIn ?? 0 }
-}
-
-// ── Org onboarding (create org + move the caller into it) ─────────────────────
-// The confidential `hanzo-console` client is allowlisted for BOTH the org-admin
-// (IAM_ORG_ADMIN_APPS) and user-admin (IAM_USER_ADMIN_APPS) capabilities, so it
-// may create an organization and make the signed-in user that org's admin. The
-// cloud backend scopes all data by the user's IAM `owner` (GetEffectiveOrg →
-// session user.Owner), and an IAM user belongs to exactly ONE org, so giving
-// a zero-org user their own org means MOVING them into it (owner=slug,
-// isAdmin=true). The user's password travels with the user row (verification
-// uses user.PasswordType first — object/check.go), so the move never locks them
-// out; we still clone the source org's password/locale settings so the new org
-// is well-formed (and covers a user whose PasswordType is empty).
-
-/** An IAM organization as IAM returns it (only the fields we read/clone). */
-type IamOrganization = {
-  owner?: string
-  name?: string
-  displayName?: string
-  passwordType?: string
-  passwordSalt?: string
-  passwordObfuscatorType?: string
-  passwordObfuscatorKey?: string
-  passwordOptions?: string[]
-  countryCodes?: string[]
-  languages?: string[]
-  defaultAvatar?: string
-  accountItems?: unknown[]
-  [k: string]: unknown
-}
-
-/** GET an IAM resource as the confidential client; null when absent/unreadable. */
-async function iamGetData<T>(path: string, query: Record<string, string>): Promise<T | null> {
-  if (!mintConfigured()) return null
-  const qs = new URLSearchParams(query).toString()
-  let res: Response
-  try {
-    res = await fetchWithTimeout(`${IAM_URL}${path}?${qs}`, {
-      headers: { Authorization: basicAuth(), Accept: 'application/json' },
-      cache: 'no-store',
-    })
-  } catch {
-    return null
-  }
-  const json = (await res.json().catch(() => null)) as { status?: string; data?: T } | null
-  if (!res.ok || !json || json.status !== 'ok' || json.data == null) return null
-  return json.data
-}
-
-/** POST a JSON body to an IAM primitive as the confidential client. */
-async function iamPostBody<T = unknown>(
-  path: string,
-  query: Record<string, string>,
-  body: unknown,
-): Promise<T> {
-  const qs = new URLSearchParams(query).toString()
-  const res = await fetchWithTimeout(`${IAM_URL}${path}${qs ? `?${qs}` : ''}`, {
-    method: 'POST',
-    headers: { Authorization: basicAuth(), Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-  })
-  const json = (await res.json().catch(() => null)) as { status?: string; msg?: string; data?: T } | null
-  if (!res.ok || !json || json.status !== 'ok') {
-    throw new Error(json?.msg || `IAM ${path} failed (HTTP ${res.status})`)
-  }
-  return (json.data ?? ({} as T))
-}
-
-/** Read an organization (owned by the `admin` org) by name; null when absent. */
-export async function getOrganization(name: string): Promise<IamOrganization | null> {
-  return iamGetData<IamOrganization>('/v1/iam/get-organization', { id: `admin/${name}` })
-}
-
-/**
- * Create a customer organization. Clones password + locale settings from the
- * caller's current org (so the org is well-formed and the moved user's login is
- * unaffected) and clears all instance-specific material (apps, logos, master
- * secrets, MFA). The org is owned by the `admin` org; `isPersonal` marks a
- * personal org (the "skip" path).
- */
-export async function createOrganization(opts: {
-  name: string
-  displayName: string
-  personal: boolean
-  /** The caller's current org, cloned for password/locale compatibility. */
-  sourceOwner: string
-}): Promise<void> {
-  const src = await getOrganization(opts.sourceOwner)
-  const org: IamOrganization = {
-    owner: 'admin',
-    name: opts.name,
-    displayName: opts.displayName,
-    createdTime: new Date().toISOString(),
-    isPersonal: opts.personal,
-    // Cloned for compatibility (best-effort; sane IAM defaults otherwise).
-    passwordType: src?.passwordType || 'bcrypt',
-    passwordSalt: src?.passwordSalt || '',
-    passwordObfuscatorType: src?.passwordObfuscatorType || 'Plain',
-    passwordObfuscatorKey: src?.passwordObfuscatorKey || '',
-    passwordOptions: src?.passwordOptions ?? ['AtLeast6'],
-    countryCodes: src?.countryCodes ?? ['US'],
-    languages: src?.languages ?? ['en'],
-    defaultAvatar: src?.defaultAvatar || 'https://cdn.hanzo.ai/img/hanzo-cloud-user.png',
-    accountItems: src?.accountItems ?? [],
-    // Never inherited — each org gets its own (or none) of these.
-    defaultApplication: '',
-    logo: '',
-    logoDark: '',
-    favicon: '',
-    masterPassword: '',
-    defaultPassword: '',
-    masterVerificationCode: '',
-    mfaItems: [],
-    tags: [],
-    websiteUrl: '',
-    enableSoftDeletion: false,
-    isProfilePublic: false,
-  }
-  await iamPostBody('/v1/iam/add-organization', {}, org)
-}
-
-/**
- * Create a brand-new account as the ADMIN of an org (self-serve signup). The org
- * (`opts.org`) must already exist — the caller mints it via `createOrganization`
- * first, so the new user's own personal org carries proper password/locale policy.
- *
- * Password hashing is IAM-side and non-negotiable: we send the plaintext `password`
- * with NO `passwordType`, so casibase's `AddUser` runs `UpdateUserPassword`, which
- * hashes with the org's policy (argon2id, cloned from the brand org) and explicitly
- * REFUSES to store plaintext. We pass an explicit `id` (UUID) so AddUser skips the
- * signup-application lookup a fresh personal org has no default app for.
- */
-export async function createUser(opts: {
-  org: string
-  username: string
-  email: string
-  password: string
-  displayName: string
-  /** The brand app the account signs up through (hygiene; login is by email). */
-  signupApplication: string
-}): Promise<void> {
-  const now = new Date().toISOString()
-  await iamPostBody('/v1/iam/add-user', {}, {
-    owner: opts.org,
-    name: opts.username,
-    id: randomUUID(),
-    type: 'normal-user',
-    // Plaintext in — IAM hashes it (argon2id) and never persists it as-is. Do NOT
-    // set passwordType, or AddUser skips hashing and stores the value verbatim.
-    password: opts.password,
-    displayName: opts.displayName,
-    email: opts.email,
-    emailVerified: false,
-    phone: '',
-    countryCode: '',
-    signupApplication: opts.signupApplication,
-    createdTime: now,
-    updatedTime: now,
-    isAdmin: true,
-    isForbidden: false,
-    isDeleted: false,
-    avatar: '',
-    score: 0,
-    ranking: 0,
-  })
-}
-
-/**
- * Move a user into `org` as that org's admin. Sends the FULL current user object
- * (IAM's update-user overwrites the default column set from the body, so a
- * partial object would blank fields) with owner + isAdmin changed. The caller is
- * always the signed-in user (the route binds the id to the session), so this can
- * only ever move oneself.
- */
-export async function moveUserToOrg(user: SessionUser, org: string): Promise<void> {
-  const current = await iamGetData<Record<string, unknown>>('/v1/iam/get-user', { id: user.id })
-  if (!current) throw new Error('Could not read the current user from IAM')
-  const moved = { ...current, owner: org, isAdmin: true }
-  await iamPostBody('/v1/iam/update-user', { id: user.id }, moved)
 }
 
 // ── Team-invite acceptance (activate a pending member) ───────────────────────
 // An org admin's invite creates a real member row (owner=org, isAdmin=role) with
 // NO password — it can't sign in yet ("pending"). The accept flow lets the invitee
 // set that password themselves via a sealed invite token (see server/invite.ts).
-// Both ops use the SAME confidential client as createUser/moveUserToOrg (already
+// Both ops use the SAME confidential client as the key/token primitives (already
 // allowlisted for user-admin), so no new IAM capability is required.
 
 /** An IAM member row (only the fields the accept flow reads/writes). */
@@ -524,9 +417,17 @@ export type IamMember = {
   [k: string]: unknown
 }
 
-/** Read a member (`<owner>/<name>`) as the confidential client; null when absent. */
+/**
+ * Read a member (`<owner>/<name>`) as the confidential client.
+ *
+ * `null` means IAM says there is no such member — the ONE thing the callers may
+ * treat as "this invite no longer names anyone". A refusal or an unreachable IAM
+ * throws instead, because reporting those as absence tells an invitee their
+ * membership was revoked when IAM simply would not answer, and it is the same
+ * `null` the activation guard reads.
+ */
 export async function getMember(id: string): Promise<IamMember | null> {
-  return iamGetData<IamMember>('/v1/iam/get-user', { id })
+  return iamGetOrAbsent<IamMember>('/v1/iam/get-user', { id })
 }
 
 /**
@@ -554,7 +455,7 @@ export async function activateMember(
   id: string,
   opts: { password: string; displayName?: string; signupApplication?: string },
 ): Promise<void> {
-  const current = await iamGetData<IamMember>('/v1/iam/get-user', { id })
+  const current = await iam<IamMember | null>('GET', '/v1/iam/get-user', { id })
   if (!current) throw new Error('Could not read the member from IAM')
   const updated: IamMember = {
     ...current,
@@ -577,7 +478,7 @@ export async function activateMember(
     updated.signupApplication = opts.signupApplication
     columns.push('signup_application')
   }
-  await iamPostBody('/v1/iam/update-user', { id, columns: columns.join(',') }, updated)
+  await iam('POST', '/v1/iam/update-user', { id, columns: columns.join(',') }, updated)
 }
 
 // ── Admin gate ───────────────────────────────────────────────────────────────
