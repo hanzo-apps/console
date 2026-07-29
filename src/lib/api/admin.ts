@@ -20,7 +20,7 @@ import { makeIamClient, DEFAULT_PAGE_SIZE, qs, type Query, type Paged } from './
 export type { Paged }
 
 /** An IAM organization's theme (`themeData`) — the accent + surface style the org
- *  brands with. Mirrors the Casdoor/IAM `ThemeData` shape. */
+ *  brands with. Mirrors the IAM `ThemeData` shape. */
 export type ThemeData = {
   themeType?: string
   /** Primary accent color (hex), e.g. `#D4D4D4`. */

@@ -83,7 +83,7 @@ export function validateOrgName(input: string): OrgNameResult {
 // The `/auth/signup` BFF creates a brand-new IAM user PLUS their own personal org
 // (as admin) in one shot, then the client signs them in. IAM users always belong
 // to an org (AddUser rejects owner==""), so a "create account, then onboard" split
-// isn't possible against Casdoor — the org is minted here. These helpers are the
+// isn't possible against IAM — the org is minted here. These helpers are the
 // pure naming/validation policy; the route owns the IAM calls + the crypto digest.
 
 /** Minimum password length. Above the cloned org policy (AtLeast6), a safe floor. */
