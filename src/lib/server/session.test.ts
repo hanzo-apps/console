@@ -87,7 +87,7 @@ describe('accessClaims', () => {
 
 describe('sealSession (identity + refresh, browser-safe)', () => {
   it('seals a SMALL identity cookie (projected claims, NOT the ~KB access JWT)', () => {
-    const bigAccess = fakeJwt({ ...Z_CLAIMS, blob: 'x'.repeat(6000) }) // simulate a fat Casdoor token
+    const bigAccess = fakeJwt({ ...Z_CLAIMS, blob: 'x'.repeat(6000) }) // simulate a fat IAM token
     const r = sealSession({ accessToken: bigAccess, refreshToken: 'rt', expiresIn: 3600 })
     expect(r?.expiresInMs).toBe(3600_000)
     expect(r?.claims.name).toBe('z')

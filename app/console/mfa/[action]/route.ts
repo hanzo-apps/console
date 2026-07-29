@@ -2,7 +2,7 @@
  * /console/mfa/<action> — console-native two-factor (TOTP) enrollment BFF.
  *
  * WHY console-native: the console delegated 2FA to hanzo.id's account page, but the
- * custom hanzo.id login worker doesn't establish a Casdoor account session, so a
+ * custom hanzo.id login worker doesn't establish an IAM account session, so a
  * user who signed in through it lands on an account page that can't manage MFA
  * (setup returns "Unauthorized operation"). This closes that gap: the user enrolls
  * 2FA IN the console. We forward each IAM MFA op as the caller's OWN user bearer
@@ -20,7 +20,7 @@ import { fetchWithTimeout } from '~/lib/server/fetch-timeout'
 
 export const runtime = 'nodejs'
 
-const TOTP = 'app' // Casdoor TotpType
+const TOTP = 'app' // IAM TotpType
 
 /**
  * IAM endpoint + the params each action sends. owner/name are ALWAYS included and
