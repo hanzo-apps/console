@@ -8,12 +8,13 @@
  *
  * This is the customer-facing twin of the admin god-view (`/v1/admin/audit`): the
  * SAME tamper-evident, hash-chained store, scoped to the caller. The response is the
- * `{status,data,data2}` envelope (data = rows, data2 = total for pagination), so we
- * read it defensively via `restGet` and never throw on a shape drift.
+ * `{status,data,total}` envelope (data = rows, total for pagination — legacy
+ * emitters send it as `data2`), so we read it defensively via `restGet` and never
+ * throw on a shape drift.
  *
  * Field names mirror the Go `audit.Wire` struct exactly.
  */
-import { restGet, originV1Url } from './client'
+import { restGet, originV1Url, envelopeTotal } from './client'
 
 // ── Defensive coercion ───────────────────────────────────────────────────────
 const num = (v: unknown): number => {
@@ -111,15 +112,15 @@ const buildUrl = (query: AuditQuery): string => {
 
 /**
  * AuditApi.list — the caller's OWN org audit trail, newest first. Reads the
- * `{status,data,data2}` envelope: data = the rows, data2 = the total matching the
- * filter (ignoring pagination) so the UI can page. Org is server-pinned.
+ * `{status,data,total}` envelope (legacy `data2` accepted): data = the rows,
+ * total = the count matching the filter (ignoring pagination) so the UI can
+ * page. Org is server-pinned.
  */
 export const AuditApi = {
   list: (query: AuditQuery = {}): Promise<AuditPage> =>
     restGet<unknown>(buildUrl(query)).then((raw) => {
       const env = asRecord(raw)
       const rows = arrayOf(env.data).map(normalizeEvent)
-      const total = typeof env.data2 === 'number' ? env.data2 : rows.length
-      return { rows, total }
+      return { rows, total: envelopeTotal(env, rows) }
     }),
 }

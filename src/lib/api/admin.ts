@@ -6,7 +6,8 @@
  * `/admin/iam/*` or `/admin/kms/*`, sending only the first-party session cookie;
  * the server route (`app/admin/{iam,kms}/[...path]/route.ts`) enforces the GLOBAL
  * admin gate and forwards to IAM / KMS as the user. IAM speaks the
- * `{status,msg,data,data2}` envelope; KMS speaks plain JSON.
+ * `{status,msg,data,total}` envelope (legacy `data2` count accepted); KMS speaks
+ * plain JSON.
  *
  * Cross-tenant (any org) is global-admin only — a customer managing their OWN org
  * uses `TeamApi` (the `/org/iam` proxy) instead. Both share the ONE envelope

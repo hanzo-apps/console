@@ -71,6 +71,13 @@ describe('AuditApi.list — org-scoped, filtered, paginated', () => {
     expect(page.total).toBe(7)
   })
 
+  it('reads the named total first; legacy data2 is only a fallback', async () => {
+    stubJson({ status: 'ok', data: [{ seq: 1, action: 'a' }], total: 9, data2: 7 })
+    expect((await AuditApi.list()).total).toBe(9)
+    stubJson({ status: 'ok', data: [{ seq: 1, action: 'a' }], total: 9 })
+    expect((await AuditApi.list()).total).toBe(9)
+  })
+
   it('page 1 and unfiltered omit the p/ filter params (clean URL)', async () => {
     const cap = stubJson({ status: 'ok', data: [], data2: 0 })
     await AuditApi.list({ page: 1 })
