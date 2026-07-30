@@ -15,7 +15,7 @@ export function usd(cents: number | null | undefined): string {
 /** Human label for a referral status. */
 export function statusLabel(status: ReferralStatus): string {
   switch (status) {
-    case 'signed_up':
+    case 'signup':
       return 'Signed up'
     case 'qualified':
       return 'Qualified'

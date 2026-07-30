@@ -13,22 +13,22 @@ describe('referrals logic — money/label/tone formatting', () => {
   })
 
   it('labels each status', () => {
-    expect(statusLabel('signed_up')).toBe('Signed up')
+    expect(statusLabel('signup')).toBe('Signed up')
     expect(statusLabel('qualified')).toBe('Qualified')
     expect(statusLabel('credited')).toBe('Credited')
     expect(statusLabel('weird' as never)).toBe('weird')
   })
 
-  it('tones by status (credited positive, qualified warning, signed_up muted)', () => {
+  it('tones by status (credited positive, qualified warning, signup muted)', () => {
     expect(statusTone('credited')).toBe('positive')
     expect(statusTone('qualified')).toBe('warning')
-    expect(statusTone('signed_up')).toBe('muted')
+    expect(statusTone('signup')).toBe('muted')
   })
 
   it('colors a status from the one greyscale map', () => {
-    for (const s of ['credited', 'qualified', 'signed_up'] as const)
+    for (const s of ['credited', 'qualified', 'signup'] as const)
       expect(statusColor(s)).toMatch(/^\$color(9|10|11|12)$/)
-    expect(statusColor('signed_up')).toBe('$color9')
+    expect(statusColor('signup')).toBe('$color9')
   })
 
   it('short-dates a unix second, em-dash for unset', () => {
@@ -43,7 +43,7 @@ describe('referrals logic — money/label/tone formatting', () => {
     expect(progressCaption({ id: 'a', referee: 'x', status: 'qualified', creditsCents: 0, createdAt: 1, qualifiedAt: 1, creditedAt: 0 })).toBe(
       'Qualified — bonus landing',
     )
-    expect(progressCaption({ id: 'a', referee: 'x', status: 'signed_up', creditsCents: 0, createdAt: 1, qualifiedAt: 0, creditedAt: 0 })).toBe(
+    expect(progressCaption({ id: 'a', referee: 'x', status: 'signup', creditsCents: 0, createdAt: 1, qualifiedAt: 0, creditedAt: 0 })).toBe(
       'Signed up — earns when they use Hanzo',
     )
   })

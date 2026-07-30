@@ -49,7 +49,7 @@ export type AdminReferral = {
 
 export type AdminReferralSummary = {
   total: number
-  signedUp: number
+  signup: number
   qualified: number
   credited: number
   grantedCents: number
@@ -69,7 +69,7 @@ function normalizeAdminReferral(v: unknown): AdminReferral {
     referrerOrg: str(r.referrerOrg),
     refereeOrg: str(r.refereeOrg),
     code: str(r.code),
-    status: str(r.status) || 'signed_up',
+    status: str(r.status) || 'signup',
     referrerGrantCents: int(r.referrerGrantCents),
     refereeGrantCents: int(r.refereeGrantCents),
     referrerTxn: str(r.referrerTxn),
@@ -84,7 +84,7 @@ function normalizeSummary(v: unknown): AdminReferralSummary {
   const r = asRecord(v)
   return {
     total: int(r.total),
-    signedUp: int(r.signedUp),
+    signup: int(r.signup),
     qualified: int(r.qualified),
     credited: int(r.credited),
     grantedCents: int(r.grantedCents),

@@ -37,8 +37,8 @@ const arrayUnder = (payload: unknown, keys: string[]): Record<string, unknown>[]
 
 // ── Domain types (mirror cloud clients/referrals JSON tags) ─────────────────
 
-/** A referral advances signed_up → qualified → credited (credited is terminal). */
-export type ReferralStatus = 'signed_up' | 'qualified' | 'credited' | (string & {})
+/** A referral advances signup → qualified → credited (credited is terminal). */
+export type ReferralStatus = 'signup' | 'qualified' | 'credited' | (string & {})
 
 /** One row in the referrer's own list (the people THEY referred). */
 export type MyReferral = {
@@ -53,7 +53,7 @@ export type MyReferral = {
 
 export type ReferralCounts = {
   total: number
-  signedUp: number
+  signup: number
   qualified: number
   credited: number
 }
@@ -85,7 +85,7 @@ export function normalizeMyReferral(v: unknown): MyReferral {
   return {
     id: str(r.id),
     referee: str(r.referee),
-    status: (str(r.status) || 'signed_up') as ReferralStatus,
+    status: (str(r.status) || 'signup') as ReferralStatus,
     creditsCents: int(r.creditsCents),
     createdAt: int(r.createdAt),
     qualifiedAt: int(r.qualifiedAt),
@@ -97,7 +97,7 @@ function normalizeCounts(v: unknown): ReferralCounts {
   const r = asRecord(v)
   return {
     total: int(r.total),
-    signedUp: int(r.signedUp),
+    signup: int(r.signup),
     qualified: int(r.qualified),
     credited: int(r.credited),
   }
@@ -123,7 +123,7 @@ export function normalizeClaim(v: unknown): ClaimResult {
   return {
     id: str(r.id),
     code: str(r.code),
-    status: (str(r.status) || 'signed_up') as ReferralStatus,
+    status: (str(r.status) || 'signup') as ReferralStatus,
     created: r.created === true,
     createdAt: int(r.createdAt),
   }
