@@ -1,6 +1,7 @@
 /**
  * IAM envelope client factory — the ONE typed client for the IAM
- * `{status,msg,data,data2}` envelope, bound to a same-origin gated proxy base.
+ * `{status,msg,data,total}` envelope (legacy `data2` count accepted), bound to a
+ * same-origin gated proxy base.
  *
  * The browser never holds an IAM credential: it calls a SAME-ORIGIN server route
  * (`/admin/iam/*` for cross-tenant global-admin ops, `/org/iam/*` for a customer
@@ -8,11 +9,11 @@
  * the gate + tenant scoping and forwards to IAM as the user. Both speak the same
  * envelope, so this ONE factory serves both (DRY) — only the base path differs.
  */
-import { ApiError } from './client'
+import { ApiError, envelopeTotal } from './client'
 
-type Envelope<T> = { status?: string; msg?: string; data?: T; data2?: unknown }
+type Envelope<T> = { status?: string; msg?: string; data?: T; total?: number; data2?: unknown }
 
-/** Paged result — rows plus the backend's total (data2). */
+/** Paged result — rows plus the backend's total (`total`, legacy `data2`). */
 export type Paged<T> = { rows: T[]; total: number }
 
 export type Query = Record<string, string | number | boolean | undefined | null>
@@ -62,8 +63,7 @@ export function makeIamClient(base: string) {
   async function iamList<T>(segment: string, query: Query): Promise<Paged<T>> {
     const r = await iamReq<T[]>('GET', segment, { query })
     const rows = Array.isArray(r.data) ? r.data : []
-    const total = typeof r.data2 === 'number' ? r.data2 : rows.length
-    return { rows, total }
+    return { rows, total: envelopeTotal(r, rows) }
   }
 
   async function iamOne<T>(segment: string, query: Query): Promise<T> {

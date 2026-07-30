@@ -92,7 +92,8 @@ keyed by `owner/modelName`, so modelName is form-entered, not generated).
 
 One `request()` in `lib/api/client.ts`: always `credentials: 'include'` (the
 backend sets a session cookie at `/v1/signin`), forwards `Accept-Language`,
-unwraps the casibase `{ status, msg, data, data2 }` envelope, throws typed
+unwraps the casibase `{ status, msg, data, total }` envelope (named `total`
+first, legacy `data2` count accepted until the emitters finish renaming), throws typed
 `ApiError` (401/403 carry status). Base URL = `config.cloudUrl` (default
 `https://cloud.hanzo.ai`, override `NEXT_PUBLIC_CLOUD_URL`).
 
