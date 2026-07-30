@@ -20,10 +20,10 @@ describe('Referrals normalizers — real cloud JSON shape, defensive', () => {
       referrerBonusCents: 1000,
       refereeBonusCents: 500,
       creditsEarnedCents: 2000,
-      counts: { total: 3, signedUp: 1, qualified: 0, credited: 2 },
+      counts: { total: 3, signup: 1, qualified: 0, credited: 2 },
       referrals: [
         { id: 'ref_1', referee: 'orgB', status: 'credited', creditsCents: 1000, createdAt: 5, qualifiedAt: 6, creditedAt: 6 },
-        { id: 'ref_2', referee: 'orgC', status: 'signed_up', creditsCents: 0, createdAt: 7, qualifiedAt: 0, creditedAt: 0 },
+        { id: 'ref_2', referee: 'orgC', status: 'signup', creditsCents: 0, createdAt: 7, qualifiedAt: 0, creditedAt: 0 },
       ],
     })
     expect(o).toMatchObject({
@@ -32,7 +32,7 @@ describe('Referrals normalizers — real cloud JSON shape, defensive', () => {
       referrerBonusCents: 1000,
       refereeBonusCents: 500,
       creditsEarnedCents: 2000,
-      counts: { total: 3, signedUp: 1, qualified: 0, credited: 2 },
+      counts: { total: 3, signup: 1, qualified: 0, credited: 2 },
     })
     expect(o.referrals.map((r) => r.id)).toEqual(['ref_1', 'ref_2'])
     expect(o.referrals[0].status).toBe('credited')
@@ -41,23 +41,23 @@ describe('Referrals normalizers — real cloud JSON shape, defensive', () => {
   it('coerces missing/garbage fields to safe defaults (never throws)', () => {
     const o = normalizeOverview(null)
     expect(o).toMatchObject({ code: '', link: '', creditsEarnedCents: 0 })
-    expect(o.counts).toEqual({ total: 0, signedUp: 0, qualified: 0, credited: 0 })
+    expect(o.counts).toEqual({ total: 0, signup: 0, qualified: 0, credited: 0 })
     expect(o.referrals).toEqual([])
     // A row with no id is filtered out of the list.
     expect(normalizeOverview({ referrals: [null, 'x', { id: 'ref_9', referee: 'z' }] }).referrals.map((r) => r.id)).toEqual([
       'ref_9',
     ])
-    // A row defaults status to signed_up.
-    expect(normalizeMyReferral({ id: 'ref_x' }).status).toBe('signed_up')
+    // A row defaults status to signup.
+    expect(normalizeMyReferral({ id: 'ref_x' }).status).toBe('signup')
     // Numeric coercion from strings.
     expect(normalizeMyReferral({ id: 'r', creditsCents: '1500' }).creditsCents).toBe(1500)
   })
 
   it('normalizes a claim result', () => {
-    expect(normalizeClaim({ id: 'ref_1', code: 'ABC', status: 'signed_up', created: true, createdAt: 9 })).toEqual({
+    expect(normalizeClaim({ id: 'ref_1', code: 'ABC', status: 'signup', created: true, createdAt: 9 })).toEqual({
       id: 'ref_1',
       code: 'ABC',
-      status: 'signed_up',
+      status: 'signup',
       created: true,
       createdAt: 9,
     })
@@ -77,7 +77,7 @@ describe('ReferralsApi — hits the /v1/referrals bearer-proxy path', () => {
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
       fetched.push({ url, method: init?.method ?? 'GET' })
       const body = url.endsWith('/claim')
-        ? { id: 'ref_1', code: 'ABC', status: 'signed_up', created: true, createdAt: 1 }
+        ? { id: 'ref_1', code: 'ABC', status: 'signup', created: true, createdAt: 1 }
         : { code: 'ABC', link: 'https://hanzo.ai/?ref=ABC', counts: {}, referrals: [] }
       return Promise.resolve(
         new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }),
