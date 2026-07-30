@@ -2,8 +2,9 @@
 
 The console talks to the unified Hanzo Cloud backend (`hanzoai/cloud`).
 Base URL: `${NEXT_PUBLIC_CLOUD_URL}/v1`. All requests send cookie
-credentials; responses are the envelope `{ status, msg, data, data2 }` (`data2`
-is the total row count on list endpoints).
+credentials; responses are the envelope `{ status, msg, data, total }` (`total`
+is the row count on list endpoints; the legacy `data2` count is still accepted
+as a fallback until every emitter finishes the rename).
 
 Client modules live in `src/lib/api/`.
 

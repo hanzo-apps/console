@@ -5,9 +5,10 @@
  * always included (the backend sets a session cookie at `/v1/iam/signin`), and the
  * Accept-Language header is forwarded so server-side messages localize.
  *
- * The backend wraps every response as `{ status, msg, data, data2 }`. We unwrap
- * it here and throw `ApiError` on `status !== "ok"`, so callers get the payload
- * directly or a typed failure — never a half-checked envelope.
+ * The backend wraps every response as `{ status, msg, data, total }` (legacy
+ * emitters still send the count as `data2`; we read the named field first). We
+ * unwrap it here and throw `ApiError` on `status !== "ok"`, so callers get the
+ * payload directly or a typed failure — never a half-checked envelope.
  */
 import { activeApiBase } from '~/lib/network'
 import { IS_EMBED } from '~/lib/embed'
@@ -22,8 +23,21 @@ export type ApiResponse<T> = {
   status: 'ok' | 'error'
   msg: string
   data: T
-  /** Secondary payload — total row count for list endpoints. */
+  /** Total row count for list endpoints (the named field; absent means absent). */
+  total?: number
+  /** Legacy Casdoor second slot — superseded by `total`; read only as fallback. */
   data2?: unknown
+}
+
+/**
+ * Count from an envelope: the named `total` first, legacy `data2` second, else
+ * the rows themselves. The data2 fallback lives ONLY here and dies with the
+ * legacy emitters.
+ */
+export const envelopeTotal = (env: { total?: unknown; data2?: unknown }, rows: unknown): number => {
+  if (typeof env.total === 'number') return env.total
+  if (typeof env.data2 === 'number') return env.data2
+  return Array.isArray(rows) ? rows.length : 0
 }
 
 export class ApiError extends Error {
@@ -376,12 +390,11 @@ export async function cloudPost<T = string>(path: string, body?: unknown, query?
   return r
 }
 
-/** GET that returns the full envelope (for list endpoints needing `data2` total). */
+/** GET that returns the full envelope (for list endpoints needing the total). */
 export async function getList<T>(path: string, query?: Query): Promise<{ rows: T; total: number }> {
   const r = await request<T>('GET', path, { query })
   if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
-  const total = typeof r.data2 === 'number' ? r.data2 : Array.isArray(r.data) ? r.data.length : 0
-  return { rows: r.data, total }
+  return { rows: r.data, total: envelopeTotal(r, r.data) }
 }
 
 /** POST a JSON body; returns the `msg` (most mutations return ok/affected). */
@@ -393,17 +406,17 @@ export async function post<T = string>(path: string, body?: unknown, query?: Que
 
 /**
  * IAM over the SAME `/v1` path + resilient fetch as every cloud call — IAM's
- * `{status,msg,data,data2}` envelope IS our `ApiResponse`, so there is no second
+ * `{status,msg,data,total}` envelope IS our `ApiResponse`, so there is no second
  * client. These target `/v1/iam/<segment>`, which the cloud IAM edge (org-scoped)
  * serves in the one-binary console and the `/v1` bearer proxy forwards in the split
- * one — ONE path, ONE gate, in both topologies. `iamList` surfaces `data2` (the
- * total) that plain `get` drops.
+ * one — ONE path, ONE gate, in both topologies. `iamList` surfaces the total
+ * (`total`, legacy `data2`) that plain `get` drops.
  */
 export async function iamList<T>(segment: string, query?: Query): Promise<{ rows: T[]; total: number }> {
   const r = await request<T[]>('GET', `iam/${segment}`, { query })
   if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
   const rows = Array.isArray(r.data) ? r.data : []
-  return { rows, total: typeof r.data2 === 'number' ? r.data2 : rows.length }
+  return { rows, total: envelopeTotal(r, rows) }
 }
 
 export async function iamOne<T>(segment: string, query?: Query): Promise<T> {
