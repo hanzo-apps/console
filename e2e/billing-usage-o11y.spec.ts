@@ -132,7 +132,7 @@ test.describe('Money/usage/o11y surface is fail-closed for anonymous (unauthenti
     '/v1/billing/invoices',
     '/v1/billing/usage',
     '/v1/billing/payment-methods',
-    '/v1/billing/spend-alerts',
+    '/v1/billing/alerts',
     '/v1/usage/summary',
     '/v1/get-cloud-usages',
     '/v1/o11y/observations',

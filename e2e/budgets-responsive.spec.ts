@@ -3,7 +3,7 @@
  *
  * Runs against a LOCAL server (BASE_URL=http://localhost:4000) with the whole network
  * mocked (same pattern as blank-audit): `/auth/session` → a global admin so the shell
- * mounts, `/v1/billing/spend-alerts` → real-shaped budget rows (org default + project
+ * mounts, `/v1/billing/alerts` → real-shaped budget rows (org default + project
  * warn + service over + unlimited/rate-limit-only), everything else → an empty-ok
  * envelope.
  *
@@ -39,7 +39,7 @@ const ACCOUNT = {
   signupApplication: 'hanzo-cloud',
 }
 
-/** Real-shaped `/v1/billing/spend-alerts` rows — one per verdict/scope (threshold = cents). */
+/** Real-shaped `/v1/billing/alerts` rows — one per verdict/scope (threshold = cents). */
 const BUDGETS = [
   { id: 'b1', title: 'Org monthly cap', threshold: 500000, currency: 'usd', project: '', service: '', enforce: true, softPct: 80, rateLimitRpm: 0, periodSpentCents: 312000, over: false, warn: false },
   { id: 'b2', title: 'Inference budget', threshold: 200000, currency: 'usd', project: 'acme-prod', service: 'inference', enforce: false, softPct: 75, rateLimitRpm: 600, periodSpentCents: 186000, over: false, warn: true },
@@ -61,8 +61,8 @@ async function mock(route: Route) {
   if (path.startsWith('/auth/')) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
   }
-  // The page under test — the real spend-alerts contract.
-  if (path === '/v1/billing/spend-alerts') {
+  // The page under test — the real alerts contract.
+  if (path === '/v1/billing/alerts') {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(BUDGETS) })
   }
 

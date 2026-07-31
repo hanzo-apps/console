@@ -113,7 +113,7 @@ export type PaymentMethod = {
 /**
  * One spend alert / budget — a threshold (USD cents) that trips when the org's
  * spend crosses it (commerce `spendalert`). This is the ONE real budgets surface:
- * commerce serves `GET/POST /v1/billing/spend-alerts` under the user group (the
+ * commerce serves `GET/POST /v1/billing/alerts` under the user group (the
  * same one billing.hanzo.ai calls), so the console reads + creates real budgets —
  * never a fake form. `triggeredAt` is set by commerce when the threshold trips.
  */
@@ -129,7 +129,7 @@ export type SpendAlert = {
   triggeredAt?: string
   /** ISO creation time. */
   createdAt?: string
-  // ── Scope + enforcement (the spend-alerts extended fields) ──────────────────
+  // ── Scope + enforcement (the alerts extended fields) ──────────────────
   // Forward-compatible: a legacy soft-alert row that predates these lights up with
   // sensible defaults (org-wide, alert-only, softPct 80, no rate limit, zero spent)
   // and the meter/enforce/rate-limit surface activates the moment the backend emits
@@ -473,15 +473,15 @@ export const BillingApi = {
     restDelete(billingProxyV1Url(`payment-methods/${encodeURIComponent(id)}`)),
 
   /**
-   * The org's spend alerts / budgets (`GET /v1/billing/spend-alerts`). The proxy
+   * The org's spend alerts / budgets (`GET /v1/billing/alerts`). The proxy
    * scopes the read to the caller's OWN subject (pins `?user=`), so this returns
    * only the caller's budgets.
    */
   spendAlerts: (): Promise<SpendAlert[]> =>
-    restGet<unknown>(billingProxyV1Url('spend-alerts')).then(normalizeSpendAlerts),
+    restGet<unknown>(billingProxyV1Url('alerts')).then(normalizeSpendAlerts),
 
   /**
-   * Create a spend alert / budget (`POST /v1/billing/spend-alerts`). The subject is
+   * Create a spend alert / budget (`POST /v1/billing/alerts`). The subject is
    * pinned server-side by the proxy (`scopedBillingBody`) — the browser sends only
    * the title + threshold (USD cents) + currency, and cannot create a budget for
    * another tenant. Returns the created alert.
@@ -496,7 +496,7 @@ export const BillingApi = {
     softPct?: number
     rateLimitRpm?: number
   }): Promise<SpendAlert> =>
-    restPost<unknown>(billingProxyV1Url('spend-alerts'), {
+    restPost<unknown>(billingProxyV1Url('alerts'), {
       title: input.title,
       threshold: Math.round(input.thresholdCents),
       currency: (input.currency ?? 'usd').toLowerCase(),
@@ -508,7 +508,7 @@ export const BillingApi = {
     }).then((r) => normalizeSpendAlerts([r])[0]),
 
   /**
-   * Update a budget's cap / scope / enforcement (`PATCH /v1/billing/spend-alerts/:id`).
+   * Update a budget's cap / scope / enforcement (`PATCH /v1/billing/alerts/:id`).
    * Only the provided fields are sent; the subject is pinned server-side by the proxy
    * (a caller can only edit their OWN budgets). Returns the updated alert.
    */
@@ -532,14 +532,14 @@ export const BillingApi = {
     if (patch.enforce !== undefined) body.enforce = patch.enforce
     if (patch.softPct !== undefined) body.softPct = patch.softPct
     if (patch.rateLimitRpm !== undefined) body.rateLimitRpm = patch.rateLimitRpm
-    return restPatch<unknown>(billingProxyV1Url(`spend-alerts/${encodeURIComponent(id)}`), body).then(
+    return restPatch<unknown>(billingProxyV1Url(`alerts/${encodeURIComponent(id)}`), body).then(
       (r) => normalizeSpendAlerts([r])[0],
     )
   },
 
-  /** Remove a budget (`DELETE /v1/billing/spend-alerts/:id`); subject pinned server-side. */
+  /** Remove a budget (`DELETE /v1/billing/alerts/:id`); subject pinned server-side. */
   deleteSpendAlert: (id: string): Promise<void> =>
-    restDelete(billingProxyV1Url(`spend-alerts/${encodeURIComponent(id)}`)),
+    restDelete(billingProxyV1Url(`alerts/${encodeURIComponent(id)}`)),
 
   /**
    * PUBLIC Square Web Payments config for THIS org (`GET /v1/billing/payment-config`):
