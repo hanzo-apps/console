@@ -21,10 +21,12 @@
  *    first-party session cookie rides along (the go:embed cloud binary serves it
  *    natively; the standalone BFF forwards it as the signed-in user). The client
  *    NEVER sends an org/tenant — Cloud stamps it from the validated session.
- *  - `ingestKey` (optional, `NEXT_PUBLIC_EVENT_INGEST_KEY`) — a publishable pk_ key
+ *  - `ingestKey` (optional, `NEXT_PUBLIC_EVENT_INGEST_KEY`) — a publishable pk- key
  *    for LOGGED-OUT / public views (sign-in, marketing faces) so their pageviews +
  *    errors ingest without a session. Unset → logged-in flows via the cookie and
- *    logged-out is best-effort anonymous. Mint one per org via POST /v1/ingest/keys.
+ *    logged-out takes the anonymous lane. Mint one per org via POST /v1/keys with
+ *    {"type":"publishable"}; /v1/ingest/keys is one of the names that 404s. See the
+ *    note on `ingestKey` below for why this console leaves it unset on purpose.
  *  - `dsn` (`NEXT_PUBLIC_HANZO_EVENT_DSN`) — the error plane's own credential,
  *    shaped `https://<key>@api.hanzo.ai/v1/sentry/<project>`. Publishable by design
  *    (it ships in the client bundle). Unset → errors are captured and dropped.
@@ -52,7 +54,30 @@ function consented(): boolean {
   return dnt !== '1' && dnt !== 'yes'
 }
 
-/** Publishable ingest key for logged-out ingestion; empty → same-origin cookie/anon. */
+/**
+ * Publishable ingest key for logged-out ingestion; empty → same-origin cookie/anon.
+ *
+ * It is undefined in every shipped artifact, and that is DELIBERATE — do not "fix"
+ * it by adding a build arg. A `pk-` resolves to exactly ONE org (cloud stamps the
+ * tenant from the key), and this image is brand-agnostic: one build serves
+ * cloud.hanzo.ai, cloud.lux.cloud and cloud.zoo.cloud, with the brand resolved at
+ * RUNTIME from the request hostname (src/config). Baking a key would file every
+ * brand's traffic into whichever org the key belongs to, which is both wrong data
+ * and a cross-tenant leak. It is the same reason Dockerfile bakes no NEXT_PUBLIC_*.
+ *
+ * Signed-in traffic does not need it: `host: ''` posts same-origin, so the
+ * first-party session rides along and cloud resolves the tenant from it at FULL
+ * capability — identify/track already land correctly for a logged-in user.
+ *
+ * What is genuinely unattributed is the LOGGED-OUT lane (sign-in, and the
+ * marketing/ads/social faces), which reaches cloud with no credential and takes the
+ * anonymous lane — pageview and error are stored, track/identify/group are dropped,
+ * and the caller is still answered 200. Closing that needs a PER-HOST key delivered
+ * at RUNTIME, which is a cloud endpoint this console can call on both artifacts
+ * (the standalone Next server and the go:embed SPA) — the `GET /v1/brand?host=`
+ * shape src/config already anticipates. A module-scope const cannot receive it;
+ * the client would have to be built after that resolve.
+ */
 const ingestKey = process.env.NEXT_PUBLIC_EVENT_INGEST_KEY?.trim() || undefined
 
 /** Error-plane credential. Unset → captureError is inert (fail-safe). */
