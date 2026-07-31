@@ -90,7 +90,7 @@ export function resolveRouting(
 export type ComingSoonGroup = { group: string; items: string[] }
 export const COMING_SOON: ComingSoonGroup[] = [
   { group: 'GPUs & cloud', items: ['RunPod', 'Lambda', 'AWS', 'GCP', 'Azure'] },
-  { group: 'Payments', items: ['Stripe', 'Square', 'PayPal'] },
+  { group: 'Payments', items: ['Square', 'PayPal'] },
   { group: 'Ecommerce', items: ['Shopify', 'WooCommerce'] },
   { group: 'Marketing', items: ['Mailchimp', 'HubSpot'] },
   { group: 'Analytics', items: ['Google Analytics', 'Mixpanel', 'PostHog'] },

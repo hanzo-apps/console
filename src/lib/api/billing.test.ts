@@ -125,14 +125,14 @@ describe('BillingApi.usage — real ledger mapping (Cost page)', () => {
 
 /**
  * Subscriptions — read-only over the same per-tenant `/billing/*` proxy. Commerce
- * is Stripe-shaped, so the normalizer must reach the plan name + price from a flat
+ * is a flat nested vendor shape, so the normalizer must reach the plan name + price from a flat
  * `plan`, a nested `plan.nickname`, or the first `items.data[].price`, and must
  * treat `current_period_end` as either a Unix epoch (seconds) or an ISO string.
  */
-describe('BillingApi.subscriptions — Stripe-shaped commerce mapping', () => {
+describe('BillingApi.subscriptions — nested commerce mapping', () => {
   afterEach(teardown)
 
-  it('reads plan/status/quantity/price from a nested Stripe subscription', async () => {
+  it('reads plan/status/quantity/price from a nested subscription', async () => {
     stubJson({
       subscriptions: [
         {
@@ -190,13 +190,13 @@ describe('BillingApi.subscriptions — Stripe-shaped commerce mapping', () => {
 /**
  * Payment methods — read-only + MASKED. The normalizer must surface ONLY the
  * non-sensitive descriptor (brand + last4 + expiry) commerce returns, from either
- * camelCase or Stripe snake_case, and must never produce a PAN/CVV/token (none is
+ * camelCase or snake_case, and must never produce a PAN/CVV/token (none is
  * present in the payload).
  */
 describe('BillingApi.paymentMethods — masked descriptor mapping', () => {
   afterEach(teardown)
 
-  it('reads brand/last4/expiry/default from a nested Stripe card (snake_case)', async () => {
+  it('reads brand/last4/expiry/default from a nested card (snake_case)', async () => {
     stubJson({
       payment_methods: [
         { id: 'pm_1', type: 'card', is_default: true, card: { brand: 'visa', last4: '4242', exp_month: 12, exp_year: 2030 } },
@@ -381,7 +381,7 @@ describe('BillingApi.reactivateSubscription — clears the scheduled cancel', ()
 describe('normalizeSubscriptions — cancel state (cancelAtPeriodEnd / canceledAt)', () => {
   afterEach(teardown)
 
-  it('reads Stripe snake_case cancel_at_period_end + canceled_at', async () => {
+  it('reads snake_case cancel_at_period_end + canceled_at', async () => {
     stubJson({
       subscriptions: [
         { id: 's1', status: 'active', cancel_at_period_end: true, current_period_end: 1893456000 },

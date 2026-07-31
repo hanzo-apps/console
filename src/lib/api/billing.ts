@@ -12,7 +12,7 @@
  * Read-only here: WRITES (paying, adding/removing a payment method, changing a
  * subscription) stay in the brand billing portal (`config.billingUrl`), which the
  * pages link to — the console reads and displays, it does not mutate money state.
- * Shapes are intentionally permissive: commerce's Stripe-shaped payloads are
+ * Shapes are intentionally permissive: commerce's payloads are
  * normalized defensively so a field rename upstream degrades a cell to "—" rather
  * than throwing, and card data is masked to brand + last4 (never a PAN/CVV/token).
  * On a 404/501/401 the caller renders the shared `BackendStateCard` — never
@@ -71,7 +71,7 @@ export type Subscription = {
   id: string
   /** Plan / product name (from the plan nickname or the first subscription item). */
   plan: string
-  /** Commerce/Stripe status — active, trialing, past_due, canceled, etc. */
+  /** Commerce status — active, trialing, past_due, canceled, etc. */
   status?: string
   /** Seats / units, if the subscription reports a quantity. */
   quantity?: number
@@ -236,7 +236,7 @@ const objAt = (r: Record<string, unknown>, key: string): Record<string, unknown>
 
 /**
  * An ISO date from a field that may be an ISO string OR a Unix epoch in SECONDS
- * (Stripe's `current_period_end`) or MILLISECONDS. Returns undefined when absent
+ * (a `current_period_end`-style seconds stamp) or MILLISECONDS. Returns undefined when absent
  * or unparseable — the caller renders "—", never a fabricated date.
  */
 const isoDate = (v: unknown): string | undefined => {
@@ -244,14 +244,14 @@ const isoDate = (v: unknown): string | undefined => {
   if (s) return s
   const n = num(v)
   if (n === undefined || n <= 0) return undefined
-  // < 1e12 ⇒ seconds (Stripe); otherwise already milliseconds.
+  // < 1e12 ⇒ seconds; otherwise already milliseconds.
   const ms = n < 1e12 ? n * 1000 : n
   const d = new Date(ms)
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
 }
 
 /**
- * Roll a commerce/Stripe subscription record into the display shape. The plan name
+ * Roll a commerce subscription record into the display shape. The plan name
  * and price live in different places across shapes: a flat `plan`, a nested
  * `plan.nickname`/`plan.amount`, or the first `items.data[].price` — read every
  * known location, degrade to "—"/undefined, never invent.
@@ -306,7 +306,7 @@ function oneRecord(payload: unknown): Record<string, unknown> {
 }
 
 /**
- * Roll a commerce/Stripe payment-method record into the masked display shape. Reads
+ * Roll a commerce payment-method record into the masked display shape. Reads
  * ONLY the non-sensitive descriptor (brand + last4 + expiry) from `card`/`data` —
  * there is no PAN/CVV/token in this shape and none is ever produced here.
  */
