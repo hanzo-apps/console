@@ -13,7 +13,7 @@
  *   Reports       — cost breakdown by service (model/provider), filterable + charts.
  *   Accounts      — which account pays and in what order: attach an account to the
  *                   org or to one project, and reorder the chain commerce resolves.
- *   Budgets       — create/list spend budgets (real `/v1/billing/spend-alerts`).
+ *   Budgets       — create/list spend budgets (real `/v1/billing/alerts`).
  *   Invoices      — invoice history + download (`/v1/billing/invoices`).
  *   Subscriptions — the org's plans/status/renewal (reuses `SubscriptionsModule`).
  *   Payment       — saved, masked payment methods (reuses `PaymentMethodsModule`).

@@ -23,7 +23,7 @@ describe('csrf (embed ambient-cookie money path)', () => {
   it('csrfRequired is SCOPED to the money-write surfaces cloud gates (no spurious pre-auth mint)', async () => {
     const { csrfRequired } = await import('./csrf')
     // The cloud requireCSRF surfaces (clients/account/account.go) — must require a token.
-    for (const u of ['/v1/iam/keys', '/v1/iam/onboard', '/v1/commerce/topup/wallet', '/v1/billing/spend-alerts', '/v1/commerce/product'])
+    for (const u of ['/v1/iam/keys', '/v1/iam/onboard', '/v1/commerce/topup/wallet', '/v1/billing/alerts', '/v1/commerce/product'])
       expect(csrfRequired('POST', u)).toBe(true)
     // NON-money mutating writes (login/session/control-plane) must NOT trigger the
     // /v1/csrf mint — that pre-auth fetch was the SPA's only console error.

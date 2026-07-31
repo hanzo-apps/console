@@ -2,7 +2,7 @@
 
 /**
  * Budgets & limits — view and set per-scope SPEND CAPS and RATE LIMITS over the REAL
- * commerce spend-alerts API (`GET/POST/PATCH/DELETE /v1/billing/spend-alerts`, the
+ * commerce alerts API (`GET/POST/PATCH/DELETE /v1/billing/alerts`, the
  * user-group endpoints billing.hanzo.ai itself uses), scoped to the caller's OWN
  * subject by the `/billing` proxy (server-pinned — a caller only ever sees/edits their
  * own budgets).
@@ -586,7 +586,7 @@ export function BillingBudgets(_props: { params: Record<string, string> }) {
       />
 
       {state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/billing/spend-alerts" />
+        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/billing/alerts" />
       ) : state.phase === 'loading' ? (
         <LoadingCards />
       ) : (
