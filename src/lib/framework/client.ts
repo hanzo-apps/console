@@ -21,11 +21,15 @@
  */
 import { restGet, restPost, restPut, restDelete, cloudProxyV1Url } from '~/lib/api/client'
 import type {
+  Change,
+  ChangeFeed,
+  ChangeQuery,
   DocType,
   FrameworkDoc,
   ListQuery,
   ModuleInfo,
   InstallResult,
+  Viewer,
 } from './types'
 
 const BASE = 'framework'
@@ -64,6 +68,40 @@ export function listQuery(q?: ListQuery): string {
 }
 
 const url = (path: string): string => cloudProxyV1Url(`${BASE}/${path}`)
+
+/**
+ * Build the change-feed querystring. ONE function for the poll and the stream,
+ * because they are ONE server-side query — the stream is that query in a loop.
+ * Exported for testing.
+ */
+export function changeQuery(q?: ChangeQuery & { watching?: string }): string {
+  const p = new URLSearchParams()
+  if (q?.doctypes?.length) p.set('doctypes', q.doctypes.join(','))
+  if (q?.modules?.length) p.set('modules', q.modules.join(','))
+  if (q?.since) p.set('since', String(q.since))
+  if (q?.limit) p.set('limit', String(q.limit))
+  if (q?.watching) p.set('watching', q.watching)
+  const s = p.toString()
+  return s ? `?${s}` : ''
+}
+
+/** `<DocType>/<name>` — the ONE way a document is named to the live surface.
+ *  A Single needs no name. Split server-side at the FIRST slash. */
+export const watching = (doctype: string, name?: string): string =>
+  name ? `${doctype}/${name}` : doctype
+
+const asChange = (v: unknown): Change => {
+  const r = asRecord(v)
+  return {
+    seq: Number(r.seq ?? 0),
+    doctype: String(r.doctype ?? ''),
+    module: r.module ? String(r.module) : undefined,
+    name: String(r.name ?? ''),
+    action: String(r.action ?? '') as Change['action'],
+    docstatus: Number(r.docstatus ?? 0),
+    at: Number(r.at ?? 0),
+  }
+}
 
 export const FrameworkApi = {
   /** The DocType registry (schemas) — the collection definitions of every app lane. */
@@ -118,6 +156,72 @@ export const FrameworkApi = {
           existing: Array.isArray(r.existing) ? (r.existing as string[]) : [],
         }
       }),
+  },
+
+  /**
+   * The change feed — the ONE way anything here learns a document changed, for
+   * EVERY doctype. `list` is one page; `subscribe` is the same query held open
+   * as Server-Sent Events. A view renders current state from `records.list`,
+   * takes the `cursor` it gets back, and applies changes from there.
+   */
+  changes: {
+    list: (q?: ChangeQuery): Promise<ChangeFeed> =>
+      restGet<unknown>(url(`changes${changeQuery(q)}`)).then((v) => {
+        const r = asRecord(v)
+        return {
+          changes: rows(r.changes ?? v).map(asChange),
+          cursor: Number(r.cursor ?? 0),
+          reset: r.reset === true,
+        }
+      }),
+
+    /**
+     * Hold the feed open. Returns the unsubscribe.
+     *
+     * EventSource, not WebSocket, and it needs no credential: it is a same-origin
+     * GET through the console's `/v1` bearer proxy, so it carries the session
+     * cookie and the ORG is resolved server-side from the minted bearer's owner
+     * claim. A browser can never name its own tenant.
+     *
+     * The browser also resumes for us: each frame's `id` is the change's `seq`,
+     * so a dropped connection reconnects with `Last-Event-ID` and misses nothing.
+     * Passing `watching` additionally declares presence for as long as the
+     * connection lives — that is why no client→server channel is needed.
+     *
+     * `onReset` fires when the cursor fell behind the server's retention window:
+     * refetch current state before applying anything further.
+     */
+    subscribe: (
+      q: (ChangeQuery & { watching?: string }) | undefined,
+      handlers: {
+        onChange: (c: Change) => void
+        onSync?: (cursor: number) => void
+        onReset?: (cursor: number) => void
+        onError?: (e: Event) => void
+      },
+    ): (() => void) => {
+      if (typeof EventSource === 'undefined') return () => {} // SSR: nothing to open
+      const es = new EventSource(url(`stream${changeQuery(q)}`))
+      const cursorOf = (e: MessageEvent): number => Number(asRecord(JSON.parse(e.data)).cursor ?? 0)
+      es.addEventListener('change', (e) => handlers.onChange(asChange(JSON.parse((e as MessageEvent).data))))
+      es.addEventListener('sync', (e) => handlers.onSync?.(cursorOf(e as MessageEvent)))
+      es.addEventListener('reset', (e) => handlers.onReset?.(cursorOf(e as MessageEvent)))
+      if (handlers.onError) es.onerror = handlers.onError
+      return () => es.close()
+    },
+  },
+
+  /**
+   * Who is viewing a document right now. Joins and leaves arrive on the change
+   * feed above as `present`/`away` on the named document; this reads the roster
+   * they point at — the same rule documents follow (the feed says WHAT changed,
+   * the client re-reads the value).
+   */
+  presence: {
+    list: (doctype: string, name?: string): Promise<Viewer[]> =>
+      restGet<unknown>(url(`presence${changeQuery({ watching: watching(doctype, name) })}`)).then((r) =>
+        rows(r).map((v) => ({ user: String(v.user ?? ''), since: Number(v.since ?? 0) })),
+      ),
   },
 
   /** Per-org role assignments (grant editors; the owner is seeded System Manager). */
