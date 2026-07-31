@@ -3,7 +3,7 @@
  * customer snapshot behind the admin.hanzo.ai "SaaS Metrics" board. It is computed
  * IN commerce (the system of record for subscriptions + the usage ledger) from ONE
  * cross-org walk and served at `GET /v1/commerce/metrics/saas`; the console only
- * renders it — no client-side Stripe, no re-aggregation.
+ * renders it — no client-side billing SDK, no re-aggregation.
  *
  * Transport: `originGet('admin/saas', …)` pins the request to the console's OWN
  * origin, terminating at the global-admin-gated `app/admin/saas` proxy, which runs

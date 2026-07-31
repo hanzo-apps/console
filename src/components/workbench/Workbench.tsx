@@ -2,7 +2,7 @@
 
 /**
  * Workbench — the persistent Developers dock at the FOOT of the dashboard (the
- * Stripe-Workbench pattern): a slim always-there bar ("Developers" + a `$` prompt
+ * developer-workbench pattern): a slim always-there bar ("Developers" + a `$` prompt
  * + quick icons) that expands into a bottom drawer of developer tabs, available on
  * EVERY page without leaving it. Desktop-only (lg+ — a pointer-density concern);
  * open state persists per-user via the ONE preferences store.
