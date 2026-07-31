@@ -106,3 +106,66 @@ export interface ListQuery {
 
 /** The redacted-Password marker the engine returns for a set secret. */
 export const REDACTED_MARKER = '__set__'
+
+/* ── realtime ─────────────────────────────────────────────────────────────── */
+
+/**
+ * One committed state change to one document — the unit of the engine's ONE
+ * realtime mechanism (`/v1/framework/{changes,stream}`).
+ *
+ * It is a FACT and carries NO payload: a subscriber that cares re-reads the
+ * document through the ordinary permission-checked `records.get`, so the feed
+ * never becomes a second, weaker read path. `seq` is a total order in commit
+ * order and is what a client resumes from.
+ */
+export interface Change {
+  seq: number
+  doctype: string
+  module?: string
+  name: string
+  action: ChangeAction
+  docstatus: number
+  at: number
+}
+
+/**
+ * What happened. `present`/`away` are ROSTER changes on the named document —
+ * presence rides the same feed, so a subscriber needs no second subscription;
+ * re-read the roster with `presence.list` rather than expecting it in the frame.
+ */
+export type ChangeAction =
+  | 'created'
+  | 'updated'
+  | 'submitted'
+  | 'cancelled'
+  | 'deleted'
+  | 'present'
+  | 'away'
+
+/** One page of the feed. */
+export interface ChangeFeed {
+  changes: Change[]
+  /** Pass as the next `since`. It advances past changes this caller cannot see. */
+  cursor: number
+  /**
+   * The requested cursor fell behind the server's retention window, so changes
+   * between them are gone. Refetch current state, THEN resume from `cursor` —
+   * never patch on top of a state you never had.
+   */
+  reset?: boolean
+}
+
+/** Which changes a subscriber wants. Both narrow; neither can widen what the
+ *  caller's roles already allow, and neither can name another org. */
+export interface ChangeQuery {
+  doctypes?: string[]
+  modules?: string[]
+  since?: number
+  limit?: number
+}
+
+/** One live viewer of a document. */
+export interface Viewer {
+  user: string
+  since: number
+}
