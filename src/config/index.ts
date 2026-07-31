@@ -217,9 +217,12 @@ const HOST_BRANDS: ReadonlyArray<{ suffix: string; brand: BrandId }> = [
   { suffix: 'yotoda.tech', brand: 'yotoda' },
 ]
 
-/** Resolve the brand id from a hostname (port/case-insensitive). Defaults to hanzo. */
+/** Resolve the brand id from a hostname (port/case/trailing-dot-insensitive).
+ *  Defaults to hanzo. Normalization goes through the one `normHost` helper so
+ *  the suffix match can never be softened by a padded/ported/FQDN-dot host
+ *  (a mis-resolve here would swap the admin-gate `adminDomain`). */
 export function brandFromHost(host?: string | null): BrandId {
-  const hostname = (host ?? '').toLowerCase().replace(/:\d+$/, '').trim()
+  const hostname = normHost(host)
   if (hostname) {
     for (const e of HOST_BRANDS) {
       if (hostname === e.suffix || hostname.endsWith('.' + e.suffix)) return e.brand
@@ -234,9 +237,14 @@ function currentHost(): string {
   return process.env.NEXT_PUBLIC_DEFAULT_HOST ?? 'cloud.hanzo.ai'
 }
 
-/** Normalize a host for keying/matching (lowercase, strip port). */
+/** Normalize a host for keying/matching: trim, lowercase, strip trailing port,
+ *  strip the FQDN root dot(s). Order is load-bearing — trim BEFORE the port
+ *  strip so a padded `"host:port "` still loses its port (the `:\d+$` anchor
+ *  would otherwise miss past trailing space); strip the port before the trailing
+ *  dot so an FQDN-with-port collapses to the bare host. Mirrors
+ *  `@hanzo/brand`'s `normalizeHost` (the fleet's one host normalizer). */
 function normHost(host?: string | null): string {
-  return (host ?? '').toLowerCase().replace(/:\d+$/, '').trim()
+  return (host ?? '').trim().toLowerCase().replace(/:\d+$/, '').replace(/\.+$/, '')
 }
 
 /**
