@@ -8,7 +8,7 @@
  *   - POST   /v1/webhooks                 create → the row incl. `secret` (reveal-once)
  *   - PATCH  /v1/webhooks/:id             enable/disable + edit
  *   - DELETE /v1/webhooks/:id             remove
- *   - POST   /v1/webhooks/:id/rotate-secret  → { secret } (reveal-once)
+ *   - POST   /v1/webhooks/:id/secret         → { secret } (reveal-once)
  *   - POST   /v1/webhooks/:id/test        → { delivered, httpStatus, durationMs, error? }
  *   - GET    /v1/webhooks/:id/deliveries  → recent attempts (newest-first)
  *
@@ -436,7 +436,7 @@ export function WebhooksModule({ params }: { params: Record<string, string> }) {
     setBusyId(w.id)
     setActionMsg(null)
     try {
-      const res = await restPost<{ secret?: string }>(cloudProxyV1Url(`webhooks/${enc(w.id)}/rotate-secret`))
+      const res = await restPost<{ secret?: string }>(cloudProxyV1Url(`webhooks/${enc(w.id)}/secret`))
       const secret = str(res?.secret)
       if (secret) setRevealed({ title: 'New signing secret', url: w.url, secret })
       setActionMsg({ tone: 'ok', text: 'Signing secret rotated.' })
