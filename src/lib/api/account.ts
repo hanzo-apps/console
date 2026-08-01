@@ -46,6 +46,13 @@ function accountFromClaims(claims: Record<string, unknown>): Account | null {
   return {
     owner,
     name,
+    // The IAM user id, carried through rather than discarded. It was already
+    // decoded here and used only to BACK-DERIVE owner/name; the stable id itself
+    // was dropped, so nothing downstream could identify this user as the same
+    // one hanzo.ai and hanzo.chat see. Empty on a token that carries no `sub`,
+    // and absent is left absent — never substituted with owner/name, which is a
+    // different id space.
+    userId: sub || undefined,
     type: str('type') ?? 'normal-user',
     displayName: str('displayName') ?? str('display_name'),
     email: str('email'),
