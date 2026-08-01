@@ -240,9 +240,9 @@ export const CLOUD_HEADS: readonly string[] = [
   'fleet',
   'clusters',
   // DO-native: virtual private clouds and managed load balancers — FULL CRUD
-  // (/v1/vpcs[/:id], /v1/load-balancers[/:id]).
+  // (/v1/vpcs[/:id], /v1/balancers[/:id]).
   'vpcs',
-  'load-balancers',
+  'balancers',
   // (`dns` — the managed-DNS head — is declared ONCE above, with the data resources.)
   // Platform aggregates (read-only, derived): deploy targets, CI pipelines, image/
   // binary builds, and versioned releases (/v1/{environments,pipelines,builds,releases}).

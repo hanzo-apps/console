@@ -154,7 +154,7 @@ export function InfraModule({ params }: { params: Record<string, string> }) {
     if (tab === 'clusters') return <ClustersTab data={data} loading={loading} />
     if (tab === 'nodes') return <NodesTab data={data} loading={loading} reload={() => void load(true)} toast={toast} />
     if (tab === 'volumes') return <VolumesTab data={data} loading={loading} reload={() => void load(true)} toast={toast} />
-    if (tab === 'load-balancers') return <LoadBalancersTab data={data} loading={loading} />
+    if (tab === 'balancers') return <LoadBalancersTab data={data} loading={loading} />
     if (tab === 'audit') return <AuditTab data={data} loading={loading} />
     return <OverviewTab data={data} loading={loading} />
   })()

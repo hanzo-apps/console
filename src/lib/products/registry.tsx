@@ -756,7 +756,7 @@ export const catalog: CatalogEntry[] = [
       { slug: 'clusters', label: 'Clusters' },
       { slug: 'nodes', label: 'Nodes' },
       { slug: 'volumes', label: 'Volumes' },
-      { slug: 'load-balancers', label: 'Load balancers' },
+      { slug: 'balancers', label: 'Load balancers' },
       { slug: 'audit', label: 'Audit' },
     ],
   },

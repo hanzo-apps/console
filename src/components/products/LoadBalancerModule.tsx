@@ -6,9 +6,9 @@
  *
  * FULL CRUD over the unified cloud binary via the same-origin user-bearer `/v1`
  * proxy, org resolved from the Bearer owner:
- *   - GET    /v1/load-balancers        list
- *   - POST   /v1/load-balancers        create (name + type + region)
- *   - DELETE /v1/load-balancers/:id    delete
+ *   - GET    /v1/balancers        list
+ *   - POST   /v1/balancers        create (name + type + region)
+ *   - DELETE /v1/balancers/:id    delete
  *
  * When the backend doesn't serve the surface the list load fails and the honest
  * not-configured / unavailable card renders instead of an empty grid; create/delete
@@ -66,7 +66,7 @@ export function LoadBalancerModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<unknown>(cloudProxyV1Url('load-balancers'))
+      const r = await restGet<unknown>(cloudProxyV1Url('balancers'))
       setRows(lbsOf(r))
       setLoadError(null)
     } catch (e) {
@@ -89,7 +89,7 @@ export function LoadBalancerModule(_props: { params: Record<string, string> }) {
     setCreating(true)
     setActionMsg(null)
     try {
-      await restPost(cloudProxyV1Url('load-balancers'), { name: name.trim(), type, region })
+      await restPost(cloudProxyV1Url('balancers'), { name: name.trim(), type, region })
       setActionMsg({ tone: 'ok', text: `Created load balancer "${name.trim()}".` })
       setName('')
       await load()
@@ -104,7 +104,7 @@ export function LoadBalancerModule(_props: { params: Record<string, string> }) {
     if (typeof window !== 'undefined' && !window.confirm(`Delete load balancer "${lb.name || lb.id}"? This cannot be undone.`)) return
     setActionMsg(null)
     try {
-      await restDelete(cloudProxyV1Url(`load-balancers/${enc(lb.id)}`))
+      await restDelete(cloudProxyV1Url(`balancers/${enc(lb.id)}`))
       setActionMsg({ tone: 'ok', text: `Deleted load balancer "${lb.name || lb.id}".` })
       await load()
     } catch (e) {
