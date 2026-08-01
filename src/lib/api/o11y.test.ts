@@ -6,7 +6,7 @@
  *      dash), never a fabricated value, and the `{ status, data }` envelope unwraps.
  *  (2) the REAL O11yApi methods, with the transport + evals mocked, asserting the
  *      FLIP: traces / observations / sessions read the o11y SPAN plane (`/v1/o11y`),
- *      while SCORES + score-configs STAY on `/v1/evals` (the eval artifacts) — the
+ *      while SCORES + rubrics STAY on `/v1/evals` (the eval artifacts) — the
  *      mission's one-way contract.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -172,7 +172,7 @@ describe('O11yApi reads the span plane natively from /v1/o11y', () => {
   })
 })
 
-describe('SCORES + score-configs STAY on /v1/evals (never the o11y span plane)', () => {
+describe('SCORES + rubrics STAY on /v1/evals (never the o11y span plane)', () => {
   beforeEach(() => {
     restGet.mockReset()
     listScoresTyped.mockReset()

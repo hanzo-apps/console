@@ -80,9 +80,9 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/agents/agent-1/runs')).toBe(true)
   })
 
-  it('admits the evals facade (scores/datasets/dataset-items/evaluators/runs)', () => {
+  it('admits the evals facade (scores/datasets/rubrics/evaluators/runs)', () => {
     expect(CLOUD_HEADS).toContain('evals')
-    for (const sub of ['scores', 'datasets', 'dataset-items', 'evaluators', 'runs']) {
+    for (const sub of ['scores', 'datasets', 'rubrics', 'evaluators', 'runs']) {
       expect(allowCloudSurface(`v1/evals/${sub}`)).toBe(true)
     }
     // the bare head + a query-less path both admit
