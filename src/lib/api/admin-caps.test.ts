@@ -8,7 +8,7 @@ vi.mock('./client', () => ({
 }))
 
 import { originGet, originPost, originPatch, originDelete } from './client'
-import { AdminSpendCapsApi, normalizeAdminCap } from './admin-spend-caps'
+import { AdminCapsApi, normalizeAdminCap } from './admin-caps'
 
 const mGet = originGet as unknown as ReturnType<typeof vi.fn>
 const mPost = originPost as unknown as ReturnType<typeof vi.fn>
@@ -76,7 +76,7 @@ describe('normalizeAdminCap', () => {
   })
 })
 
-describe('AdminSpendCapsApi', () => {
+describe('AdminCapsApi', () => {
   beforeEach(() => {
     mGet.mockReset()
     mPost.mockReset()
@@ -89,20 +89,20 @@ describe('AdminSpendCapsApi', () => {
       { id: 'a1', threshold: 100 },
       { id: 'a2', threshold: 200 },
     ])
-    const rows = await AdminSpendCapsApi.list('acme')
-    expect(mGet).toHaveBeenCalledWith('admin/spend-caps', { org: 'acme' })
+    const rows = await AdminCapsApi.list('acme')
+    expect(mGet).toHaveBeenCalledWith('admin/caps', { org: 'acme' })
     expect(rows.map((r) => r.id)).toEqual(['a1', 'a2'])
     expect(rows[0].thresholdCents).toBe(100)
   })
 
   it('list tolerates a non-array payload → honest empty', async () => {
     mGet.mockResolvedValueOnce(null)
-    expect(await AdminSpendCapsApi.list('acme')).toEqual([])
+    expect(await AdminCapsApi.list('acme')).toEqual([])
   })
 
   it('create POSTs the wire body (threshold cents), org-scoped, omitting absent currency', async () => {
     mPost.mockResolvedValueOnce({ id: 'new', threshold: 50000 })
-    await AdminSpendCapsApi.create('acme', {
+    await AdminCapsApi.create('acme', {
       title: 'Cap',
       thresholdCents: 50000,
       project: '',
@@ -112,7 +112,7 @@ describe('AdminSpendCapsApi', () => {
       rateLimitRpm: 0,
     })
     expect(mPost).toHaveBeenCalledWith(
-      'admin/spend-caps',
+      'admin/caps',
       { title: 'Cap', threshold: 50000, project: '', service: '', enforce: true, softPct: 80, rateLimitRpm: 0 },
       { org: 'acme' },
     )
@@ -120,13 +120,13 @@ describe('AdminSpendCapsApi', () => {
 
   it('update PATCHes only the provided fields (partial), org-scoped', async () => {
     mPatch.mockResolvedValueOnce({ id: 'a1', threshold: 100 })
-    await AdminSpendCapsApi.update('acme', 'a1', { thresholdCents: 100 })
-    expect(mPatch).toHaveBeenCalledWith('admin/spend-caps/a1', { threshold: 100 }, { org: 'acme' })
+    await AdminCapsApi.update('acme', 'a1', { thresholdCents: 100 })
+    expect(mPatch).toHaveBeenCalledWith('admin/caps/a1', { threshold: 100 }, { org: 'acme' })
   })
 
   it('remove DELETEs the :id sub-path, org-scoped, and url-encodes the id', async () => {
     mDelete.mockResolvedValueOnce(undefined)
-    await AdminSpendCapsApi.remove('acme', 'a/b')
-    expect(mDelete).toHaveBeenCalledWith('admin/spend-caps/a%2Fb', { org: 'acme' })
+    await AdminCapsApi.remove('acme', 'a/b')
+    expect(mDelete).toHaveBeenCalledWith('admin/caps/a%2Fb', { org: 'acme' })
   })
 })

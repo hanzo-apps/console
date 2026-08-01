@@ -10,7 +10,7 @@
  *   2. CAPS — oversight + override of ANY org's usage caps: pick a target org, list its
  *      spend caps (real threshold / period-spend meter / hard-cap vs alert / rate limit /
  *      when it resets), and create / edit / delete a cap on that org's behalf. Backed by
- *      `GET/POST/PATCH/DELETE /v1/admin/spend-caps?org=<slug>`.
+ *      `GET/POST/PATCH/DELETE /v1/admin/caps?org=<slug>`.
  *
  * All reads/writes terminate at the GLOBAL-ADMIN-GATED `app/admin/aggregate` proxy
  * (`getAdminGate`, fail-closed 403, then a minted user bearer + same-origin CSRF), and
@@ -41,7 +41,7 @@ import {
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { ApiError } from '~/lib/api'
 import { AdminPromosApi, type PlatformPromo } from '~/lib/api/admin-promos'
-import { AdminSpendCapsApi, type AdminSpendCap } from '~/lib/api/admin-spend-caps'
+import { AdminCapsApi, type AdminCap } from '~/lib/api/admin-caps'
 import { fmtInt, fmtUsd } from '~/lib/api/functions'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { EmptyState } from '~/components/ui/EmptyState'
@@ -341,7 +341,7 @@ function CapFields({ form, setForm, disabled }: { form: BudgetForm; setForm: (f:
   )
 }
 
-function CapCard({ org, cap, onChanged }: { org: string; cap: AdminSpendCap; onChanged: () => void }) {
+function CapCard({ org, cap, onChanged }: { org: string; cap: AdminCap; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<BudgetForm>(() => formForAlert(cap))
   const [saving, setSaving] = useState(false)
@@ -367,7 +367,7 @@ function CapCard({ org, cap, onChanged }: { org: string; cap: AdminSpendCap; onC
     setSaving(true)
     setError(null)
     try {
-      await AdminSpendCapsApi.update(org, cap.id, {
+      await AdminCapsApi.update(org, cap.id, {
         title: v.title,
         thresholdCents: v.thresholdCents,
         project: v.project,
@@ -391,7 +391,7 @@ function CapCard({ org, cap, onChanged }: { org: string; cap: AdminSpendCap; onC
     setRemoving(true)
     setError(null)
     try {
-      await AdminSpendCapsApi.remove(org, cap.id)
+      await AdminCapsApi.remove(org, cap.id)
       onChanged()
     } catch (e) {
       const a = asApiError(e)
@@ -499,7 +499,7 @@ function AddCapForm({ org, onDone, onCancel }: { org: string; onDone: () => void
     setSaving(true)
     setError(null)
     try {
-      await AdminSpendCapsApi.create(org, {
+      await AdminCapsApi.create(org, {
         title: v.title,
         thresholdCents: v.thresholdCents,
         project: v.project,
@@ -542,7 +542,7 @@ function AddCapForm({ org, onDone, onCancel }: { org: string; onDone: () => void
 function CapsTab() {
   const [orgInput, setOrgInput] = useState('')
   const [org, setOrg] = useState('')
-  const [state, setState] = useState<Async<AdminSpendCap[]> | null>(null)
+  const [state, setState] = useState<Async<AdminCap[]> | null>(null)
   const [adding, setAdding] = useState(false)
 
   const load = useCallback((slug: string) => {
@@ -551,7 +551,7 @@ function CapsTab() {
     setOrg(s)
     setAdding(false)
     setState({ phase: 'loading' })
-    AdminSpendCapsApi.list(s)
+    AdminCapsApi.list(s)
       .then((data) => setState({ phase: 'ready', data }))
       .catch((e) => setState({ phase: 'error', err: asApiError(e) }))
   }, [])
