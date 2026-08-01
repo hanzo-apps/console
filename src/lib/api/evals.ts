@@ -4,7 +4,7 @@
  * warehouse owned by hanzoai/ai — `hanzo.observations` / `hanzo.cloud_usage`).
  *
  * This is the ONE client for the console's Observe surface: datasets, dataset
- * items, evaluators, score-configs, scores, traces (+ the trace-detail
+ * items, evaluators, rubrics, scores, traces (+ the trace-detail
  * span/observation tree), observations, sessions, dataset runs / experiments,
  * and the dashboard metrics. It is the faithful port target of the upstream
  * observability screens, reskinned to @hanzo/gui.
@@ -115,7 +115,6 @@ export type EvalRunRequest = {
 
 export type CreateDatasetBody = { name: string; description?: string; metadata?: Record<string, unknown> }
 export type CreateDatasetItemBody = {
-  datasetName: string
   input?: unknown
   expectedOutput?: unknown
   metadata?: Record<string, unknown>
@@ -348,7 +347,7 @@ export type EvalSessionDetail = { session: EvalSession; traces: Trace[] }
 
 // ── the eval-orchestration client ─────────────────────────────────────────────
 // SCOPE: this is the /v1/evals eval-ARTIFACT SDK — datasets, evaluators, runs,
-// score-configs, scores, AND the eval-domain trace/observation/session reads (which
+// rubrics, scores, AND the eval-domain trace/observation/session reads (which
 // carry the eval cost/token/score joins raw OTel spans lack). It is NOT the Observe
 // console read plane: as of the gen_ai observation-of-record flip,
 // O11yApi.traces/observations/sessions read the o11y SPAN plane (/v1/o11y), NOT these.
@@ -407,7 +406,7 @@ export const EvalsApi = {
     return { session: base, traces: (res.traces ?? []).map(toTrace) }
   },
 
-  // ---- scores + score-configs (Observe · Scores) ----------------------------
+  // ---- scores + rubrics (Observe · Scores) ----------------------------------
   /** List scores as canonical Score[] (for the scores table + metrics folds). */
   listScoresTyped: async (
     q: { name?: string; runName?: string; traceId?: string; limit?: number } = {},
@@ -421,11 +420,11 @@ export const EvalsApi = {
     return { data: rows<EvalScore>(res) }
   },
   listScoreConfigs: async (): Promise<EvalScoreConfig[]> => {
-    const res = await restGet<{ data?: EvalScoreConfig[] }>(url('score-configs'))
+    const res = await restGet<{ data?: EvalScoreConfig[] }>(url('rubrics'))
     return rows<EvalScoreConfig>(res)
   },
   createScoreConfig: (body: CreateScoreConfigBody): Promise<EvalScoreConfig> =>
-    restPost<EvalScoreConfig>(url('score-configs'), body),
+    restPost<EvalScoreConfig>(url('rubrics'), body),
 
   // ---- datasets + items (Observe · Datasets) --------------------------------
   listDatasets: async (): Promise<EvalDataset[]> => {
@@ -436,11 +435,13 @@ export const EvalsApi = {
   createDataset: (body: CreateDatasetBody): Promise<EvalDataset> => restPost<EvalDataset>(url('datasets'), body),
   deleteDataset: (name: string): Promise<void> => restDelete(url(`datasets/${encodeURIComponent(name)}`)),
   listDatasetItems: async (datasetName: string, limit?: number): Promise<EvalDatasetItem[]> => {
-    const res = await restGet<{ data?: EvalDatasetItem[] }>(url('dataset-items', { datasetName, limit }))
+    const res = await restGet<{ data?: EvalDatasetItem[] }>(
+      url(`datasets/${encodeURIComponent(datasetName)}/items`, { limit }),
+    )
     return rows<EvalDatasetItem>(res)
   },
-  createDatasetItem: (body: CreateDatasetItemBody): Promise<EvalDatasetItem> =>
-    restPost<EvalDatasetItem>(url('dataset-items'), body),
+  createDatasetItem: (datasetName: string, body: CreateDatasetItemBody): Promise<EvalDatasetItem> =>
+    restPost<EvalDatasetItem>(url(`datasets/${encodeURIComponent(datasetName)}/items`), body),
 
   // ---- evaluators -----------------------------------------------------------
   listEvaluators: async (): Promise<EvalEvaluator[]> => {

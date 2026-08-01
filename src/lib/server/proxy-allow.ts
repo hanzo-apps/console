@@ -184,8 +184,8 @@ export const CLOUD_HEADS: readonly string[] = [
   // a cookie-only call 401s, so it routes through /v1 like the rest. Distinct from the
   // admin god-view, which stays on the global-admin aggregate proxy.
   'audit',
-  // Evals facade (cloud clients/eval): /v1/evals/{scores,datasets,dataset-items,
-  // evaluators,runs}. Single-segment sub-paths under the one `evals` head; the
+  // Evals facade (cloud clients/eval): /v1/evals/{scores,datasets[/:name/items],
+  // rubrics,evaluators,runs}. Single-segment sub-paths under the one `evals` head; the
   // facade resolves the console project key pair from the request tenant (the
   // Bearer owner), so routing it through /v1 gives correct per-org scoping —
   // the same reason it must NOT be a cookie-only same-origin call (that 403s).

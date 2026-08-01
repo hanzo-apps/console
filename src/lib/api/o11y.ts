@@ -120,7 +120,7 @@ export type ScoreConfigCategory = { label: string; value: number }
 /**
  * A score config — the definition of a score: its data type and valid range or
  * categories. Numeric configs carry min/max; categorical/boolean carry the
- * allowed categories. Mirrors `/v1/o11y/score-configs`.
+ * allowed categories. Mirrors `/v1/evals/rubrics`.
  */
 export type ScoreConfig = {
   id: string
@@ -408,7 +408,7 @@ const scoreConfigOf = (c: EvalScoreConfig): ScoreConfig => ({
  * DETAIL) read NATIVELY from the o11y gen_ai span plane (`/v1/o11y`, the declared
  * observation-of-record). trace + session DETAIL are composed from the list views
  * filtered by traceId/sessionId (o11y exposes no detail endpoint — the real
- * waterfall without a backend change). SCORES + score-configs + every eval artifact
+ * waterfall without a backend change). SCORES + rubrics + every eval artifact
  * (datasets/evaluators/runs) STAY the eval-orchestration read on `/v1/evals`; the
  * trace detail's inline scores are the eval scores FOR that trace (listScoresTyped by
  * traceId), so nothing is lost. users / annotation-queues / health read the same
@@ -461,7 +461,7 @@ export const O11yApi = {
   observations: async (q: O11yListQuery = {}): Promise<O11yList<Observation>> =>
     asList((await o11yList<O11yObservationWire>('observations', { limit: q.limit, offset: offsetOf(q) })).map(observationOf), q),
 
-  // SCORES + score-configs STAY on /v1/evals (the eval artifacts) — only the span
+  // SCORES + rubrics STAY on /v1/evals (the eval artifacts) — only the span
   // plane (traces/observations/sessions) moved to o11y.
   scores: async (q: O11yListQuery = {}): Promise<O11yList<Score>> =>
     asList(await EvalsApi.listScoresTyped({ limit: q.limit }), q),

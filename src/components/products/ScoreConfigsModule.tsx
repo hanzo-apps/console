@@ -4,7 +4,7 @@
  * Score Configs — list of score definitions (HIP-0106), native on @hanzo/gui.
  *
  * A score config defines a score's data type and its valid range (numeric) or
- * categories (categorical/boolean). Reads the REAL `/v1/o11y/score-configs`
+ * categories (categorical/boolean). Reads the REAL `/v1/evals/rubrics`
  * surface; when the runtime is not initialized (503) or unrouted (404) it shows
  * an honest RuntimeNotice — never fabricated configs. Read-only here; configs are
  * authored where scores are recorded.
