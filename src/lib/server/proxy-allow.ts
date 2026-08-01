@@ -46,7 +46,7 @@ export const CLOUD_HEADS: readonly string[] = [
   // prompts/agents — the single `automations` head admits every sub-path (pieces,
   // flows CRUD + enable/disable/run, runs, mcp). Replaces the retired /v1/auto proxy.
   'automations',
-  // Webhooks (cloud clients/webhooks): /v1/webhooks[/:id[/{deliveries,test,rotate-secret}]].
+  // Webhooks (cloud clients/webhooks): /v1/webhooks[/:id[/{deliveries,test,secret}]].
   // The org's outbound event destinations — the handler resolves the org from the Bearer
   // owner (principal.Tenant) and 403s a cookie-only or forged-header call, so it routes
   // through /v1 exactly like automations/agents. The single `webhooks` head admits every
