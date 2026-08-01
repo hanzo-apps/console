@@ -528,7 +528,7 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
       ) : null}
 
       {active === 'classes' ? (
-        classes.phase === 'error' ? <BackendStateCard state={classes.error} onRetry={refreshClasses} hint="endpoint · GET /v1/captable/share-classes" />
+        classes.phase === 'error' ? <BackendStateCard state={classes.error} onRetry={refreshClasses} hint="endpoint · GET /v1/captable/classes" />
         : classes.phase === 'ready' && classes.data.length === 0 ? (
           <EmptyState icon={Layers} title="No share classes yet" description="Create a share class (Common, Preferred) — certificates and rounds reference it." primary={{ label: 'New share class', onPress: () => setDialog({ kind: 'class' }) }} />
         ) : <DataTable<ShareClass> columns={classCols} rows={classList} loading={classes.phase === 'loading'} rowKey={(c) => c.id} empty="No share classes yet." />

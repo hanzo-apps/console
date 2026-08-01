@@ -15,7 +15,7 @@
  * in `proxy-allow.ts` CLOUD_HEADS.
  *
  * Transport is PLAIN REST (raw JSON, real HTTP status) — the goja bundle's contract.
- * The list shapes are INCONSISTENT by design (stakeholders + share-classes return a
+ * The list shapes are INCONSISTENT by design (stakeholders + classes return a
  * BARE array; shares/options/safes/convertibles/rounds/investments wrap in `{ data }`),
  * so the ONE `rows()` unwrapper tolerates both. The cap-table MATH lives in the backend
  * bundle (`captable.ts`); this client mirrors the wire shapes + derives ONLY the
@@ -520,12 +520,12 @@ export const CapTableApi = {
     remove: (id: string): Promise<void> => restDelete(url(`stakeholders/${enc(id)}`)),
   },
   shareClasses: {
-    list: (): Promise<ShareClass[]> => restGet<unknown>(url('share-classes')).then((p) => rows(p).map(normShareClass)),
-    create: (body: Record<string, unknown>): Promise<void> => restPost<unknown>(url('share-classes'), body).then(() => undefined),
+    list: (): Promise<ShareClass[]> => restGet<unknown>(url('classes')).then((p) => rows(p).map(normShareClass)),
+    create: (body: Record<string, unknown>): Promise<void> => restPost<unknown>(url('classes'), body).then(() => undefined),
   },
   equityPlans: {
-    list: (): Promise<EquityPlan[]> => restGet<unknown>(url('equity-plans')).then((p) => rows(p).map(normEquityPlan)),
-    create: (body: Record<string, unknown>): Promise<void> => restPost<unknown>(url('equity-plans'), body).then(() => undefined),
+    list: (): Promise<EquityPlan[]> => restGet<unknown>(url('plans')).then((p) => rows(p).map(normEquityPlan)),
+    create: (body: Record<string, unknown>): Promise<void> => restPost<unknown>(url('plans'), body).then(() => undefined),
   },
   shares: {
     list: (): Promise<Share[]> => restGet<unknown>(url('shares')).then((p) => rows(p).map(normShare)),

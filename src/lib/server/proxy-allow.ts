@@ -101,8 +101,8 @@ export const CLOUD_HEADS: readonly string[] = [
   // through /v1 exactly like crm — the single `company` head admits the formation
   // read + every stage-action + transition sub-path.
   'company',
-  // Cap table (cloud clients/captable): /v1/captable/{company,stakeholders,share-classes,
-  // equity-plans,shares,options,safes,convertibles,rounds,investments,summary}[/:id].
+  // Cap table (cloud clients/captable): /v1/captable/{company,stakeholders,classes,
+  // plans,shares,options,safes,convertibles,rounds,investments,summary}[/:id].
   // The per-org capitalization ledger on Base/SQLite (HIP-0106); every route resolves
   // the org from the Bearer owner (principal.Org) and 403s a cookie-only call, so it
   // routes through /v1 exactly like crm — the single `captable` head admits every
