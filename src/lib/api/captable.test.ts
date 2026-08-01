@@ -21,7 +21,7 @@ import {
 } from './captable'
 
 describe('rows — tolerates the inconsistent list shapes', () => {
-  it('reads a BARE array (stakeholders, share-classes)', () => {
+  it('reads a BARE array (stakeholders, classes)', () => {
     expect(rows([{ id: '1' }, { id: '2' }])).toHaveLength(2)
   })
   it('reads a {data} envelope (shares, safes, rounds, …)', () => {
