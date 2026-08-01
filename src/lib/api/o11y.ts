@@ -141,7 +141,7 @@ export type ScoreConfig = {
 
 /**
  * An annotation queue — a named work queue of traces/observations to review and
- * score against a set of score configs. Mirrors `/v1/o11y/annotation-queues`.
+ * score against a set of rubrics. Mirrors `/v1/o11y/reviews`.
  */
 export type AnnotationQueue = {
   id: string
@@ -411,7 +411,7 @@ const scoreConfigOf = (c: EvalScoreConfig): ScoreConfig => ({
  * waterfall without a backend change). SCORES + rubrics + every eval artifact
  * (datasets/evaluators/runs) STAY the eval-orchestration read on `/v1/evals`; the
  * trace detail's inline scores are the eval scores FOR that trace (listScoresTyped by
- * traceId), so nothing is lost. users / annotation-queues / health read the same
+ * traceId), so nothing is lost. users / reviews / health read the same
  * `/v1/o11y` surface. Every read surfaces honest states (ApiError → RuntimeNotice /
  * empty) until spans flow and the reverse-proxy resolves — never fabricated rows.
  */
@@ -475,13 +475,13 @@ export const O11yApi = {
   // ── annotation QUEUES have no o11y llmobs equivalent (flat annotations only) —
   //    honest states over the same /v1/o11y surface until a queue runtime exists ──
   annotationQueues: (q: O11yListQuery = {}) =>
-    restGet<O11yList<AnnotationQueue>>(o11yUrl('annotation-queues', { limit: q.limit, page: q.page })),
+    restGet<O11yList<AnnotationQueue>>(o11yUrl('reviews', { limit: q.limit, page: q.page })),
 
   annotationQueue: (id: string) =>
-    restGet<AnnotationQueueDetail>(o11yUrl(`annotation-queues/${encodeURIComponent(id)}`)),
+    restGet<AnnotationQueueDetail>(o11yUrl(`reviews/${encodeURIComponent(id)}`)),
 
   annotationQueueItems: (id: string, q: O11yListQuery = {}) =>
-    restGet<O11yList<AnnotationQueueItem>>(o11yUrl(`annotation-queues/${encodeURIComponent(id)}/items`, { limit: q.limit, page: q.page })),
+    restGet<O11yList<AnnotationQueueItem>>(o11yUrl(`reviews/${encodeURIComponent(id)}/items`, { limit: q.limit, page: q.page })),
 
   /**
    * Liveness of the embedded o11y runtime — `GET /v1/o11y/health` via the `/v1`

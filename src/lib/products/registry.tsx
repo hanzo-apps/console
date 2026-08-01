@@ -3584,7 +3584,7 @@ export const catalog: CatalogEntry[] = [
     routes: [{ path: '', component: ScoreConfigsModule }],
   },
   {
-    // Native — human-review queues on the REAL /v1/o11y/annotation-queues surface.
+    // Native — human-review queues on the REAL /v1/o11y/reviews surface.
     // Read-only list; honest RuntimeNotice when the runtime is not initialized.
     id: 'annotation-queues',
     label: 'Annotation Queues',
