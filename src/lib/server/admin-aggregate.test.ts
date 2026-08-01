@@ -54,11 +54,11 @@ describe('allowAdminSurface — least-privilege admin read surface (v1/admin/<he
     expect(ADMIN_AGGREGATE_HEADS).toContain('promos')
   })
 
-  it('admits the spend-caps oversight surface — the list AND the :id edit/delete sub-path', () => {
-    expect(allowAdminSurface('v1/admin/spend-caps')).toBe(true)
-    // PATCH/DELETE /v1/admin/spend-caps/:id ride the same head via the sub-path rule.
-    expect(allowAdminSurface('v1/admin/spend-caps/alert-123')).toBe(true)
-    expect(ADMIN_AGGREGATE_HEADS).toContain('spend-caps')
+  it('admits the caps oversight surface — the list AND the :id edit/delete sub-path', () => {
+    expect(allowAdminSurface('v1/admin/caps')).toBe(true)
+    // PATCH/DELETE /v1/admin/caps/:id ride the same head via the sub-path rule.
+    expect(allowAdminSurface('v1/admin/caps/alert-123')).toBe(true)
+    expect(ADMIN_AGGREGATE_HEADS).toContain('caps')
   })
 
   it('admits the providers control board — the list AND the two mutation sub-paths', () => {

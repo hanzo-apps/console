@@ -784,7 +784,7 @@ export const catalog: CatalogEntry[] = [
     // admin.hanzo.ai USAGE CAPS & PROMO — the platform config surface for two levers:
     // the single plan PROMO (percent-off applied to paid plans, over `/v1/admin/promos`)
     // and cross-tenant CAP oversight/override (list/create/edit/delete any org's usage
-    // caps over `/v1/admin/spend-caps?org=<slug>`). GLOBAL-ADMIN ONLY (`admin: true` hides
+    // caps over `/v1/admin/caps?org=<slug>`). GLOBAL-ADMIN ONLY (`admin: true` hides
     // it from every customer's nav/palette; both surfaces are server-gated by
     // getAdminGate behind `/admin/aggregate`). A config surface (not money-moving) — the
     // caps model reuses the tenant SpendAlert primitive, so `budgets-logic` is shared, no fork.

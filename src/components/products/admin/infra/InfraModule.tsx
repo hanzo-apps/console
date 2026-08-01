@@ -448,7 +448,7 @@ const TONE_COLOR = { green: '$green11', yellow: '$yellow11', red: '$red11', neut
 
 // fillOf joins the block-storage read onto an inventory volume. The two backends
 // answer different questions about the SAME object — /v1/admin/infra knows whether a
-// volume is referenced (and therefore safe to delete), /v1/admin/block-storage knows
+// volume is referenced (and therefore safe to delete), /v1/admin/volumes knows
 // how full it is — so the board reads both and shows one row. Two boards for one
 // noun is what this replaces; two READS for one row is fine, and each degrades on
 // its own (no fill data → an honest em-dash, never a fabricated 0%).

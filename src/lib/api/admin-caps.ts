@@ -3,7 +3,7 @@
  * (the same spend-alert / budget primitive a tenant manages under Billing → Budgets,
  * but cross-tenant). GLOBAL-ADMIN only.
  *
- * Reads/writes the cloud `/v1/admin/spend-caps` surface (casibase `{status,msg,data}`
+ * Reads/writes the cloud `/v1/admin/caps` surface (casibase `{status,msg,data}`
  * envelope) through `originGet`/`originPost`/`originPatch`/`originDelete` — same-origin,
  * so they terminate at the GLOBAL-ADMIN-GATED `app/admin/aggregate` proxy (`getAdminGate`,
  * fail-closed 403, then a minted user bearer + same-origin CSRF). The target org travels
@@ -21,7 +21,7 @@ import { originGet, originPost, originPatch, originDelete } from './client'
 import type { SpendAlert } from './billing'
 
 /** A tenant spend cap as seen by the operator — the `SpendAlert` + oversight fields. */
-export type AdminSpendCap = SpendAlert & {
+export type AdminCap = SpendAlert & {
   /** The IAM user (`<owner>/<name>`) the cap belongs to, if the backend reports it. */
   userId: string
   /** The billing period the meter covers, `YYYY-MM`. */
@@ -51,8 +51,8 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 const str = (v: unknown): string => (typeof v === 'string' ? v : '')
 const bool = (v: unknown): boolean => v === true || v === 'true' || v === 1
 
-/** Roll one backend spend-cap row into the display `AdminSpendCap`; snake_case tolerant. */
-export function normalizeAdminCap(raw: unknown): AdminSpendCap {
+/** Roll one backend spend-cap row into the display `AdminCap`; snake_case tolerant. */
+export function normalizeAdminCap(raw: unknown): AdminCap {
   const r = asRecord(raw)
   return {
     id: str(r.id) || str(r.alertId),
@@ -90,20 +90,20 @@ function capBody(input: Partial<CapInput>): Record<string, unknown> {
   return b
 }
 
-export const AdminSpendCapsApi = {
-  /** Every spend cap for `org` (`GET /v1/admin/spend-caps?org=<slug>`); honest empty on none. */
-  list: async (org: string): Promise<AdminSpendCap[]> =>
-    arr(await originGet<unknown>('admin/spend-caps', { org })).map(normalizeAdminCap),
+export const AdminCapsApi = {
+  /** Every spend cap for `org` (`GET /v1/admin/caps?org=<slug>`); honest empty on none. */
+  list: async (org: string): Promise<AdminCap[]> =>
+    arr(await originGet<unknown>('admin/caps', { org })).map(normalizeAdminCap),
 
-  /** Create a cap for `org` (`POST /v1/admin/spend-caps?org=<slug>`). */
-  create: async (org: string, input: CapInput): Promise<AdminSpendCap> =>
-    normalizeAdminCap(await originPost<unknown>('admin/spend-caps', capBody(input), { org })),
+  /** Create a cap for `org` (`POST /v1/admin/caps?org=<slug>`). */
+  create: async (org: string, input: CapInput): Promise<AdminCap> =>
+    normalizeAdminCap(await originPost<unknown>('admin/caps', capBody(input), { org })),
 
-  /** Edit a cap (`PATCH /v1/admin/spend-caps/:id?org=<slug>`); a partial of the fields. */
-  update: async (org: string, id: string, patch: Partial<CapInput>): Promise<AdminSpendCap> =>
-    normalizeAdminCap(await originPatch<unknown>(`admin/spend-caps/${encodeURIComponent(id)}`, capBody(patch), { org })),
+  /** Edit a cap (`PATCH /v1/admin/caps/:id?org=<slug>`); a partial of the fields. */
+  update: async (org: string, id: string, patch: Partial<CapInput>): Promise<AdminCap> =>
+    normalizeAdminCap(await originPatch<unknown>(`admin/caps/${encodeURIComponent(id)}`, capBody(patch), { org })),
 
-  /** Remove a cap (`DELETE /v1/admin/spend-caps/:id?org=<slug>`). */
+  /** Remove a cap (`DELETE /v1/admin/caps/:id?org=<slug>`). */
   remove: (org: string, id: string): Promise<void> =>
-    originDelete(`admin/spend-caps/${encodeURIComponent(id)}`, { org }),
+    originDelete(`admin/caps/${encodeURIComponent(id)}`, { org }),
 }

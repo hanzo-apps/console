@@ -24,15 +24,15 @@
  *    is a HEAD like the others; `allowAdminSurface` admits `v1/admin/providers[/...]`,
  *    so both the read and the two mutation sub-paths pass, and NOTHING else does.
  *  - `promos` — the single platform plan promo (GET the current promo; PUT upserts it).
- *  - `spend-caps` — cross-tenant usage-cap oversight/override (GET the list for an org;
- *    POST creates; PATCH/DELETE `spend-caps/:id` edit/remove — all `?org=<slug>`-scoped).
- *    `allowAdminSurface` admits `v1/admin/spend-caps[/...]`, so the `:id` sub-path passes.
+ *  - `caps` — cross-tenant usage-cap oversight/override (GET the list for an org;
+ *    POST creates; PATCH/DELETE `caps/:id` edit/remove — all `?org=<slug>`-scoped).
+ *    `allowAdminSurface` admits `v1/admin/caps[/...]`, so the `:id` sub-path passes.
  *  - `infra` — the DigitalOcean fleet read (GET the snapshot) plus its three mutations:
  *    POST `infra/volumes/:id/snapshot`, DELETE `infra/volumes/:id`, POST
  *    `infra/nodes/:id/cordon`. `allowAdminSurface` admits `v1/admin/infra[/...]`, so
  *    every sub-path passes and nothing outside `v1/admin/<head>` ever does.
  */
-export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'spend-caps', 'block-storage', 'infra'] as const
+export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'caps', 'volumes', 'infra'] as const
 
 const ALLOWED = new Set<string>(ADMIN_AGGREGATE_HEADS)
 
