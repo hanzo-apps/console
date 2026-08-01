@@ -21,8 +21,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2(@hanzo/gui@8.0.0(react-dom@19.2.7(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7)
       '@hanzo/event':
-        specifier: ^0.3.5
-        version: 0.3.6(react@19.2.7)
+        specifier: ^0.3.8
+        version: 0.3.8(react@19.2.7)
       '@hanzo/finance-ui':
         specifier: ~0.1.1
         version: 0.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -770,8 +770,8 @@ packages:
       '@hanzo/gui': '>=7.2.2'
       react: '>=19'
 
-  '@hanzo/event@0.3.6':
-    resolution: {integrity: sha512-LoO0yxKsuto3R/PRwHYhjIeS5sFu63QZi/B1+wT7s+ilSRv2KVtBP45DqT0ZukODYMjDHYryNmovjLjhE6gE4g==}
+  '@hanzo/event@0.3.8':
+    resolution: {integrity: sha512-Mh7+CV2t23x/dircN1Y9Ulm7HE6QWMf9E0/oBrlsILZCS7oP4GY5sGFlO36ZSiUsnbEVJIT21/PZILLPi4JAhQ==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -4716,7 +4716,7 @@ snapshots:
       '@hanzo/gui': 8.0.0(react-dom@19.2.7(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7)
       react: 19.2.7
 
-  '@hanzo/event@0.3.6(react@19.2.7)':
+  '@hanzo/event@0.3.8(react@19.2.7)':
     optionalDependencies:
       react: 19.2.7
 
@@ -4814,7 +4814,7 @@ snapshots:
 
   '@hanzo/observe@0.1.0(react@19.2.7)':
     dependencies:
-      '@hanzo/event': 0.3.6(react@19.2.7)
+      '@hanzo/event': 0.3.8(react@19.2.7)
     optionalDependencies:
       react: 19.2.7
 
@@ -5771,7 +5771,7 @@ snapshots:
 
   '@hanzogui/telemetry@8.0.0(react@19.2.7)':
     dependencies:
-      '@hanzo/event': 0.3.6(react@19.2.7)
+      '@hanzo/event': 0.3.8(react@19.2.7)
       '@hanzo/observe': 0.1.0(react@19.2.7)
       react: 19.2.7
 
