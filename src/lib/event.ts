@@ -17,16 +17,11 @@
  * versions <= 0.3.1 had no envelope code at all.
  *
  * Wiring for the console SPA:
- *  - `host: ''` — SAME-ORIGIN. Events POST to the console's own `/v1/event`, so the
- *    first-party session cookie rides along (the go:embed cloud binary serves it
- *    natively; the standalone BFF forwards it as the signed-in user). The client
- *    NEVER sends an org/tenant — Cloud stamps it from the validated session.
- *  - `ingestKey` (optional, `NEXT_PUBLIC_EVENT_INGEST_KEY`) — a publishable pk- key
- *    for LOGGED-OUT / public views (sign-in, marketing faces) so their pageviews +
- *    errors ingest without a session. Unset → logged-in flows via the cookie and
- *    logged-out takes the anonymous lane. Mint one per org via POST /v1/keys with
- *    {"type":"publishable"}; /v1/ingest/keys is one of the names that 404s. See the
- *    note on `ingestKey` below for why this console leaves it unset on purpose.
+ *  - `host: ''` — SAME-ORIGIN. Events POST to the console's own `/v1/event`. The
+ *    client NEVER sends an org/tenant — Cloud stamps it from the validated bearer.
+ *  - `getToken` — the signed-in visitor's own Hanzo IAM access token. THIS is what
+ *    attributes the stream, and it is the only mechanism that is correct here; see
+ *    the note below for why no publishable key is passed.
  *  - `dsn` (`NEXT_PUBLIC_HANZO_EVENT_DSN`) — the error plane's own credential,
  *    shaped `https://<key>@api.hanzo.ai/v1/sentry/<project>`. Publishable by design
  *    (it ships in the client bundle). Unset → errors are captured and dropped.
@@ -36,13 +31,15 @@
  *    via `reportError`.
  *
  * Consent + PII: the stream is PII-free by construction — a random anon id + the
- * stable `owner/name` actor id (never an email), org never sent. On top of that we
- * honor an explicit browser opt-out (Global Privacy Control / Do-Not-Track): a
+ * IAM user id (never an email), org never sent. On top of that we honor an
+ * explicit browser opt-out (Global Privacy Control / Do-Not-Track): a
  * visitor who signals it is not tracked at all. This is the consent layer for the
  * logged-out marketing/public views.
  */
 import { createAnalytics, type Analytics } from '@hanzo/event'
 import { setTelemetry } from '@hanzo/ui/telemetry'
+
+import { iamAccessToken } from '~/lib/auth/iam'
 
 /** Honor an explicit browser opt-out signal (GPC, then legacy DNT). SSR (no
  *  navigator) defaults to enabled; the browser instance reads the real signal. */
@@ -54,31 +51,38 @@ function consented(): boolean {
   return dnt !== '1' && dnt !== 'yes'
 }
 
-/**
- * Publishable ingest key for logged-out ingestion; empty → same-origin cookie/anon.
- *
- * It is undefined in every shipped artifact, and that is DELIBERATE — do not "fix"
- * it by adding a build arg. A `pk-` resolves to exactly ONE org (cloud stamps the
- * tenant from the key), and this image is brand-agnostic: one build serves
- * cloud.hanzo.ai, cloud.lux.cloud and cloud.zoo.cloud, with the brand resolved at
- * RUNTIME from the request hostname (src/config). Baking a key would file every
- * brand's traffic into whichever org the key belongs to, which is both wrong data
- * and a cross-tenant leak. It is the same reason Dockerfile bakes no NEXT_PUBLIC_*.
- *
- * Signed-in traffic does not need it: `host: ''` posts same-origin, so the
- * first-party session rides along and cloud resolves the tenant from it at FULL
- * capability — identify/track already land correctly for a logged-in user.
- *
- * What is genuinely unattributed is the LOGGED-OUT lane (sign-in, and the
- * marketing/ads/social faces), which reaches cloud with no credential and takes the
- * anonymous lane — pageview and error are stored, track/identify/group are dropped,
- * and the caller is still answered 200. Closing that needs a PER-HOST key delivered
- * at RUNTIME, which is a cloud endpoint this console can call on both artifacts
- * (the standalone Next server and the go:embed SPA) — the `GET /v1/brand?host=`
- * shape src/config already anticipates. A module-scope const cannot receive it;
- * the client would have to be built after that resolve.
- */
-const ingestKey = process.env.NEXT_PUBLIC_EVENT_INGEST_KEY?.trim() || undefined
+// ── No publishable ingest key is passed, and that is DELIBERATE ──────────────
+//
+// Do not "fix" this by adding a build arg or by reading NEXT_PUBLIC_EVENT_INGEST_KEY
+// here.
+//
+// A `pk-` resolves to exactly ONE org (cloud stamps the tenant from the key), and
+// this image is brand-agnostic: one build serves cloud.hanzo.ai, cloud.lux.cloud and
+// cloud.zoo.cloud, with the brand resolved at RUNTIME from the request hostname
+// (src/config). Baking a key would file every brand's — and every customer's —
+// traffic into whichever org the key belongs to, which is both wrong data and a
+// cross-tenant leak. It is the same reason Dockerfile bakes no NEXT_PUBLIC_*.
+//
+// Worse, it would be SILENT: @hanzo/event resolves the outgoing credential as
+// `ingestKey ?? token`, so a key takes PRECEDENCE over the bearer — setting one
+// would OVERRIDE each signed-in user's own identity rather than supplement it.
+//
+// THE COOKIE IS NOT A CREDENTIAL HERE. This file used to claim that posting
+// same-origin let the first-party session ride along, so signed-in traffic landed
+// correctly. It does not. That cookie is the casibase session, while cloud resolves
+// a tenant from a VALIDATED IAM bearer (SanitizeIdentity) — so a cookie-only POST
+// carries no principal. It is not refused: it silently takes the ANONYMOUS lane,
+// which files every row under the `$public` tenant (a partition no org can read) and
+// drops `identify` with a 200 receipt. Production proved it — 498 console rows, all
+// `$public`, zero identified users.
+//
+// `getToken` below is the fix, and it has neither problem: cloud resolves the tenant
+// from the token's OWN owner claim, so each visitor's events land in THEIR org, on
+// every brand host, with no per-brand configuration. Logged-out views carry no token
+// and stay anonymous — the honest outcome for a visitor who has not identified
+// themselves, and still the open question for the public/marketing faces (closing
+// that needs a PER-HOST key resolved at RUNTIME, e.g. the `GET /v1/brand?host=`
+// shape src/config already anticipates; a module-scope const cannot receive it).
 
 /** Error-plane credential. Unset → captureError is inert (fail-safe). */
 const dsn = process.env.NEXT_PUBLIC_HANZO_EVENT_DSN?.trim() || undefined
@@ -91,7 +95,12 @@ const dsn = process.env.NEXT_PUBLIC_HANZO_EVENT_DSN?.trim() || undefined
 export const eventClient: Analytics = createAnalytics({
   product: 'console',
   host: '',
-  ingestKey,
+  // Read through a function, not captured once: this module is a singleton built at
+  // import time, when the visitor is not signed in yet and the token does not exist.
+  // The client calls this at flush time, so a sign-in — and every silent refresh
+  // after it — is picked up with no rebuild. Returns undefined on the server and
+  // when signed out, which is the anonymous path.
+  getToken: () => iamAccessToken() ?? undefined,
   dsn,
   enabled: consented(),
 })

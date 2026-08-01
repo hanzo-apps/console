@@ -132,6 +132,18 @@ export type Message = Owned & {
 export type Account = {
   owner: string
   name: string
+  /**
+   * The Hanzo IAM user id — the OIDC `sub` claim, a UUID. This is the ONE
+   * identifier for this user across every Hanzo property: hanzo.ai and
+   * hanzo.chat know them by the same value.
+   *
+   * `owner`/`name` are the org and the login handle, and their pair (`hanzo/z`)
+   * is an org-relative REFERENCE, not a user id — it changes if either part is
+   * renamed, and it says nothing about the same user on another surface. Use
+   * this for anything that must join across properties; use owner/name for
+   * display and for org-scoped API paths.
+   */
+  userId?: string
   /** casibase user type; "anonymous-user" means no real sign-in. */
   type?: string
   displayName?: string
