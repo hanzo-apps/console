@@ -5,7 +5,7 @@
  * feature). Wired to the REAL cloud `/v1/evals/*` facade, which proxies the
  * console's public dataset API:
  *   - POST /v1/evals/datasets       create a dataset
- *   - POST /v1/evals/dataset-items  add an item (input + expected output)
+ *   - POST /v1/evals/datasets/:name/items  add an item (input + expected output)
  *
  * The gateway does not mount a dataset LIST route yet, so the list area attempts
  * the forward-compatible GET and renders an honest "not available here yet" card
@@ -122,8 +122,7 @@ export function DatasetsModule(_props: { params: Record<string, string> }) {
     setAdding(true)
     setAddMsg(null)
     try {
-      await EvalsApi.createDatasetItem({
-        datasetName: itemDataset.trim(),
+      await EvalsApi.createDatasetItem(itemDataset.trim(), {
         input: parseMaybeJson(input),
         expectedOutput: parseMaybeJson(expected),
       })
@@ -265,7 +264,7 @@ export function DatasetItemsModule(_props: { params: Record<string, string> }) {
 
   const load = useCallback(() => {
     setList({ phase: 'loading' })
-    // Native dataset-items require a datasetName; fetch the org's datasets, then
+    // A dataset item only exists inside a set; fetch the org's datasets, then
     // their items in parallel, and flatten — real rows, never fabricated.
     EvalsApi.listDatasets()
       .then((datasets) =>
@@ -307,7 +306,7 @@ export function DatasetItemsModule(_props: { params: Record<string, string> }) {
         }
       />
       {list.phase === 'error' ? (
-        <BackendStateCard state={list.error} onRetry={load} hint="endpoint · GET /v1/evals/dataset-items" />
+        <BackendStateCard state={list.error} onRetry={load} hint="endpoint · GET /v1/evals/datasets/:name/items" />
       ) : (
         <DataTable
           columns={itemColumns}

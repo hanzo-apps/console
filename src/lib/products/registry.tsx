@@ -3571,7 +3571,7 @@ export const catalog: CatalogEntry[] = [
   },
   {
     // Native — score DEFINITIONS (data type + valid range/categories) on the REAL
-    // /v1/o11y/score-configs surface. Read-only list; honest RuntimeNotice on 503.
+    // /v1/evals/rubrics surface. Read-only list; honest RuntimeNotice on 503.
     id: 'score-configs',
     label: 'Score Configs',
     icon: Ruler,
