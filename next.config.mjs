@@ -100,7 +100,7 @@ const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images'
 const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'caps', 'volumes']
 /**
  * DEV-ONLY: proxy the client's direct-cloud `/v1/{iam,o11y}/*` calls (get-account,
- * annotation-queues/users) to a real cloud backend so `npm run dev` renders the
+ * reviews/users) to a real cloud backend so `npm run dev` renders the
  * authenticated shell locally. Enabled ONLY when `DEV_CLOUD_ORIGIN` is set (never in
  * the built image), so production is unchanged — there the console host's edge routes
  * `/v1` to the console, whose `/v1` catch-all forwards to cloud-api. The request cookie

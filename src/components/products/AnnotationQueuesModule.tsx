@@ -4,7 +4,7 @@
  * Annotation Queues — list of review queues (HIP-0106), native on @hanzo/gui.
  *
  * An annotation queue is a named work queue of traces/observations to review and
- * score against a set of score configs. Reads the REAL `/v1/o11y/annotation-queues`
+ * score against a set of rubrics. Reads the REAL `/v1/o11y/reviews`
  * surface; when the runtime is not initialized (503) or unrouted (404) it shows an
  * honest RuntimeNotice — never fabricated queues. Read-only list here; items are
  * worked in the annotation flow.
