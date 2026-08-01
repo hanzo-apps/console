@@ -7,10 +7,17 @@
  *
  *  - `usePageview` emits a pageview on every path change (the provider fires the
  *    FIRST pageview itself, so this only covers subsequent client navigations).
- *  - `identify` binds the person to the STABLE `owner/name` actor id — the same id
- *    the API client already uses (`setCurrentActor`), never the email — once the
- *    session resolves. The org tenant is stamped server-side from the session, so
- *    we send the user id only. Anonymous placeholder sessions are skipped.
+ *  - `identify` binds the user to their Hanzo IAM user id (`account.userId`, the
+ *    OIDC `sub`) — never the email — once the session resolves. The org tenant is
+ *    stamped server-side from the validated bearer, so we send the user only.
+ *    Anonymous placeholder sessions are skipped.
+ *
+ * WHY NOT `owner/name`. This used to identify by the `${owner}/${name}` actor ref.
+ * That is an org-relative REFERENCE, not a user id: it is a different id space
+ * from the one hanzo.ai and hanzo.chat identify by (the IAM `sub`), so the same
+ * user counted twice the moment they used two Hanzo surfaces — and every
+ * cross-property funnel, retention curve and path silently measured nothing. It
+ * also moves when an org or a login handle is renamed, which rewrites history.
  */
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
@@ -25,11 +32,13 @@ export function AnalyticsBridge() {
 
   const identified = useRef('')
   useEffect(() => {
-    if (!account?.owner || !account?.name || account.type === 'anonymous-user') return
-    const personId = `${account.owner}/${account.name}`
-    if (identified.current === personId) return
-    identified.current = personId
-    analytics.identify(personId)
+    if (account?.type === 'anonymous-user') return
+    // No IAM subject means no IAM user — leave the visitor anonymous rather than
+    // inventing an id for them. Identity flows from the token's own claims.
+    const userId = account?.userId
+    if (!userId || identified.current === userId) return
+    identified.current = userId
+    analytics.identify(userId)
   }, [account, analytics])
 
   return null
