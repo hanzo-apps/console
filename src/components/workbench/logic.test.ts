@@ -51,8 +51,8 @@ describe('inspectorRoute', () => {
     expect(inspectorRoute('trace_z')).toEqual({ path: 'o11y/traces/trace_z', kind: 'trace', label: 'Trace' })
   })
 
-  it('maps an hk-/sk-/pk- key to the account key status (never a secret path)', () => {
-    for (const k of ['hk-abc', 'sk-live-xyz', 'pk-123']) {
+  it('maps an sk-/pk- key to the account key status (never a secret path)', () => {
+    for (const k of ['sk-live-xyz', 'pk-123']) {
       expect(inspectorRoute(k)).toEqual({ path: 'iam/keys', kind: 'key', label: 'API key' })
     }
   })
@@ -67,6 +67,8 @@ describe('inspectorRoute', () => {
     expect(inspectorRoute('https://evil.com/x')).toHaveProperty('error')
     expect(inspectorRoute('agents/../admin')).toHaveProperty('error')
     expect(inspectorRoute('justaword')).toHaveProperty('error')
+    // `sk-` and `pk-` are the only key shapes — any other prefix is unrecognized.
+    expect(inspectorRoute('xk-abc')).toHaveProperty('error')
   })
 })
 

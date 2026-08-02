@@ -66,8 +66,8 @@ function EndpointDetailBody({ endpoint, records, hasLedger }: { endpoint: Endpoi
 
   const call =
     endpoint.kind === 'deployed' && endpoint.url
-      ? `curl ${endpoint.url}/v1/models/${endpoint.name}:predict \\\n  -H "Authorization: Bearer hk-..." \\\n  -d '{"instances": [ ... ]}'`
-      : `curl https://api.${config.iamOrgName === 'hanzo' ? 'hanzo.ai' : `${config.iamOrgName}.cloud`}/v1/chat/completions \\\n  -H "Authorization: Bearer hk-..." \\\n  -d '{"model": "${endpoint.name}", "messages": [{"role":"user","content":"Hello"}]}'`
+      ? `curl ${endpoint.url}/v1/models/${endpoint.name}:predict \\\n  -H "Authorization: Bearer sk-..." \\\n  -d '{"instances": [ ... ]}'`
+      : `curl https://api.${config.iamOrgName === 'hanzo' ? 'hanzo.ai' : `${config.iamOrgName}.cloud`}/v1/chat/completions \\\n  -H "Authorization: Bearer sk-..." \\\n  -d '{"model": "${endpoint.name}", "messages": [{"role":"user","content":"Hello"}]}'`
 
   return (
     <ScrollView>

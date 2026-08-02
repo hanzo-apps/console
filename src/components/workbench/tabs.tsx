@@ -149,7 +149,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
     }
   }, [])
 
-  // Mint (or rotate) the account's real hk- Cloud API key. The secret is returned
+  // Mint (or rotate) the account's real sk- Cloud API key. The secret is returned
   // ONCE by create() and shown once here (copy affordance); status() then reflects
   // the new key's public prefix. Honest error on failure — never a fake key.
   const createKey = async () => {
@@ -178,7 +178,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
           <MetricCard icon={<Activity size={15} />} label="Spend" value={usd(totals.cents)} caption="Charged, last 24h" />
         </XStack>
 
-        {/* API keys — the account's real hk- credential. Create/rotate the key INLINE
+        {/* API keys — the account's real sk- credential. Create/rotate the key INLINE
             (the secret shows ONCE, copy it), or Manage in the full API Keys product. */}
         <Card p="$3" gap="$2" borderWidth={1} borderColor="$borderColor" bg="$color2">
           <XStack items="center" gap="$2" flexWrap="wrap">
@@ -208,8 +208,8 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
             {keyLoading
               ? 'Loading…'
               : key?.hasKey
-                ? `Cloud API key active · ${key.keyPrefix ? `${key.keyPrefix}…` : 'hk-…'}`
-                : 'No Cloud API key yet — create one to call the gateway as Bearer hk-…'}
+                ? `Cloud API key active · ${key.keyPrefix ? `${key.keyPrefix}…` : 'sk-…'}`
+                : 'No Cloud API key yet — create one to call the gateway as Bearer sk-…'}
           </Text>
           {newKey ? (
             <YStack gap="$1" p="$2" rounded="$3" borderWidth={1} borderColor="$color7" bg="$color1">
@@ -245,7 +245,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
             </Text>
           ) : null}
           <Text fontSize="$1" color="$color9">
-            hk- (cloud key) · sk- (provider key) · pk- (publishable) — presented as Authorization: Bearer to api.hanzo.ai.
+            sk- (secret) — presented as Authorization: Bearer to api.hanzo.ai. pk- (publishable) is safe in client code and never authenticates.
           </Text>
         </Card>
 

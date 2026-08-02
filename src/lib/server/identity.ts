@@ -9,7 +9,7 @@
  * IAM mint/issue/revoke primitives are designed for.
  *
  * Two distinct credentials come out of IAM, never mixed:
- *   - the per-user `hk-` Cloud API key (mint/revoke) — the durable credential the
+ *   - the per-user `sk-` Cloud API key (mint/revoke) — the durable credential the
  *     user copies into SDKs/CLI; shown ONCE at creation, then revocable.
  *   - a short-lived, user-bound JWT (issue-user-token) — a forward-and-discard
  *     credential the AI proxy uses to call the gateway on the user's behalf, so
@@ -73,7 +73,7 @@ export type SessionUser = {
   name: string
   /** `<owner>/<name>` — the IAM user id the privileged ops target. */
   id: string
-  /** The user's current `hk-` Cloud API key, if one exists (else ''). */
+  /** The user's current `sk-` Cloud API key, if one exists (else ''). */
   accessKey: string
   /** Email (get-account claim, else IAM get-user). '' when unknown. */
   email: string
@@ -329,7 +329,7 @@ async function iamGetUser(id: string): Promise<UserClaims | null> {
   return iam<UserClaims>('GET', '/v1/iam/get-user', { id }).catch(() => null)
 }
 
-/** (Re)generate the user's `hk-` Cloud API key; returns the new key (shown once). */
+/** (Re)generate the user's `sk-` Cloud API key; returns the new key (shown once). */
 export async function mintUserKey(user: SessionUser): Promise<string> {
   const data = await iam<{ accessKey?: string } | null>('POST', '/v1/iam/mint-user-keys', {
     id: user.id,
@@ -339,16 +339,16 @@ export async function mintUserKey(user: SessionUser): Promise<string> {
   return key
 }
 
-/** Clear the user's `hk-` Cloud API key (immediate revoke; gateway cache ~5m). */
+/** Clear the user's `sk-` Cloud API key (immediate revoke; gateway cache ~5m). */
 export async function revokeUserKey(user: SessionUser): Promise<void> {
   await iam('POST', '/v1/iam/revoke-user-keys', { id: user.id })
 }
 
 /**
- * The user's CURRENT `hk-` key state, read AUTHORITATIVELY from IAM (`get-user`),
+ * The user's CURRENT `sk-` key state, read AUTHORITATIVELY from IAM (`get-user`),
  * not from the cloud `get-account` session claim.
  *
- * Why: the `hk-` key IS `User.AccessKey` in IAM. Minting sets it there (a
+ * Why: the `sk-` key IS `User.AccessKey` in IAM. Minting sets it there (a
  * column-scoped write), but the console's cloud session (`get-account`) does NOT
  * carry the freshly-minted `accessKey` — it returns '' — so `GET /keys` reported
  * `hasKey:false` and the page reverted to the empty "Create" state, hiding an

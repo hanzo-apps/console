@@ -1,5 +1,5 @@
 /**
- * Per-user `hk-` Cloud API key — the SAME-ORIGIN console route (the fix for the
+ * Per-user `sk-` Cloud API key — the SAME-ORIGIN console route (the fix for the
  * API-keys "sign in to manage API keys" / CORS crack).
  *
  * The browser calls this OWN-origin route (`/keys`) with just its first-party
@@ -7,19 +7,19 @@
  * (`resolveUser`) and mints/reads/revokes the key through IAM as the confidential
  * `hanzo-console` client (`identity.ts` `mintUserKey`/`getUserKey`/`revokeUserKey`,
  * over IAM `mint-user-keys`/`get-user`/`revoke-user-keys` — the WORKING key path,
- * verified live). No credential ever reaches the browser; the `hk-` secret is
+ * verified live). No credential ever reaches the browser; the `sk-` secret is
  * returned ONLY by POST (show once).
  *
  * Why not `cloud.hanzo.ai/v1/iam/keys` (the old path): that is a DIFFERENT
  * ORIGIN than console.hanzo.ai, so a browser `fetch` is blocked by CORS ("Failed to
  * fetch") — and cloud-api's own keys handler 501s ("IAM client unset") on this
  * deployment anyway. The IAM confidential-client mint the console already uses for
- * `hk-` keys elsewhere (`app/ai` chat) is the ONE authoritative, same-origin,
+ * `sk-` keys elsewhere (`app/ai` chat) is the ONE authoritative, same-origin,
  * always-working path — so the Org-Settings API-keys surface uses it too (DRY: the
  * exact primitives from `identity.ts`, no new IAM plumbing).
  *
  *   GET    → { hasKey, keyPrefix, createdAt }  (no secret)
- *   POST   → { accessKey }                       (mint/rotate; full hk- shown ONCE)
+ *   POST   → { accessKey }                       (mint/rotate; full sk- shown ONCE)
  *   DELETE → { ok: true }                        (revoke; the old key stops working)
  */
 import { type NextRequest, NextResponse } from 'next/server'
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST — mint (or rotate) the key. Returns the full `hk-` secret ONCE. */
+/** POST — mint (or rotate) the key. Returns the full `sk-` secret ONCE. */
 export async function POST(req: NextRequest) {
   // CSRF: minting mutates (and is billable-adjacent) from the auto-sent cookie —
   // refuse a cross-origin request before any work.

@@ -326,14 +326,14 @@ keep all credentials server-side (the browser only ever sends its session cookie
   embeddings|rerank` (not a general tunnel). `playground.ts` now points at this
   proxy (`<origin>/ai`), so Models/Playground/Chat/cmd+K all work with no key in
   the browser and no rotation on a chat turn.
-- **`app/keys/route.ts`** — per-user `hk-` Cloud API key. POST mint/rotate, DELETE
+- **`app/keys/route.ts`** — per-user `sk-` Cloud API key. POST mint/rotate, DELETE
   revoke, GET status (no secret). Same app-on-behalf pattern via
-  `/v1/iam/mint-user-keys` + `/v1/iam/revoke-user-keys`. The `hk-` secret is shown
+  `/v1/iam/mint-user-keys` + `/v1/iam/revoke-user-keys`. The `sk-` secret is shown
   ONCE (POST). `ApiKeysModule` is now create/copy/rotate/revoke.
 - Shared trust boundary: `src/lib/server/identity.ts` (server-only) — `resolveUser`
   + `mintUserKey`/`revokeUserKey`/`issueUserToken`. The `hanzo-console` client is
   allow-listed in IAM `IAM_KEY_MINT_ALLOWED_APPS`; verified end-to-end that a
-  minted `hk-` key and an issued user JWT both 200 on `api.hanzo.ai/v1/chat/
+  minted `sk-` key and an issued user JWT both 200 on `api.hanzo.ai/v1/chat/
   completions`.
 - **Chat is interactive** (`chat/ChatConversation.tsx`): a real multi-turn
   conversation over `AiApi.chat` (→ the `/ai` proxy), with a Zen default model,
