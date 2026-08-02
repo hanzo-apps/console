@@ -53,9 +53,9 @@ export function renderOutput(value: unknown, maxChars = 20000): string {
 /** A resolved inspect target (a same-origin `/v1` GET) or an honest parse error. */
 export type InspectTarget = { path: string; kind: string; label: string } | { error: string }
 
-/** The `hk-`/`sk-`/`pk-` credential prefixes — there is no GET-by-value, so they
- *  resolve to the account's key STATUS (never the secret). */
-const KEY_PREFIXES = ['hk-', 'sk-', 'pk-']
+/** The `sk-` (secret) and `pk-` (publishable) credential prefixes — there is no
+ *  GET-by-value, so they resolve to the account's key STATUS (never the secret). */
+const KEY_PREFIXES = ['sk-', 'pk-']
 
 /**
  * id-prefix → the `/v1` resource that owns it. The prefixes mirror the object ids
@@ -75,7 +75,7 @@ const ID_ROUTES: { prefixes: string[]; kind: string; label: string; path: (id: s
 
 /**
  * Route an object id (or a bare `resource/name` path) to the same-origin `/v1` GET
- * that reads it. Recognizes the platform's id prefixes, the `hk-/sk-/pk-` key
+ * that reads it. Recognizes the platform's id prefixes, the `sk-/pk-` key
  * prefixes (→ key status, never the secret), and a raw `resource/name` fallback so
  * any object addressable by path (`agents/my-agent`, `models/zen5`) is inspectable.
  * A URL or an unrecognized bare token is refused with an honest message — the
@@ -96,7 +96,7 @@ export function inspectorRoute(input: string): InspectTarget {
     return { path, kind: 'resource', label: 'Resource' }
   }
   return {
-    error: 'Unrecognized id. Try agent_… , fn_… , flow_… , run_… , prompt_… , an hk-/sk-/pk- key, or a resource path like agents/<name>.',
+    error: 'Unrecognized id. Try agent_… , fn_… , flow_… , run_… , prompt_… , an sk-/pk- key, or a resource path like agents/<name>.',
   }
 }
 
@@ -105,7 +105,7 @@ export function inspectorRoute(input: string): InspectTarget {
 /** Normalize a workbench path (`/v1/x`, `v1/x`, `x`) to the bare resource `x`. */
 const bareResource = (path: string): string => path.replace(/^\/+/, '').replace(/^v1\//, '')
 
-/** The `curl` form of a `/v1` GET — the real request, keyed by the account's `hk-` key. */
+/** The `curl` form of a `/v1` GET — the real request, keyed by the account's `sk-` key. */
 export function curlFor(path: string, origin = 'https://api.hanzo.ai'): string {
   return `curl ${origin}/v1/${bareResource(path)} \\\n  -H "Authorization: Bearer $HANZO_API_KEY"`
 }

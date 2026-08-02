@@ -185,7 +185,7 @@ export function o11yServiceFor(entry: CatalogEntry): string | null {
 
 /**
  * AI products that call the unified gateway — their real, product-specific config is
- * the gateway endpoint + credential (an IAM bearer or an `hk-` key). Used for the
+ * the gateway endpoint + credential (an IAM bearer or an `sk-` key). Used for the
  * Settings config of the ones that don't carry a bespoke overview spec.
  */
 const GATEWAY_AI_PRODUCTS = new Set<string>([
@@ -237,7 +237,7 @@ export function settingsConfigFor(entry: CatalogEntry): SettingsConfig {
     return {
       facts: [
         { label: 'Endpoint', value: 'api.hanzo.ai/v1' },
-        { label: 'Auth', value: 'Bearer — IAM token or hk- key' },
+        { label: 'Auth', value: 'Bearer — IAM token or sk- key' },
         { label: 'Compatibility', value: 'OpenAI-compatible' },
       ],
       links: [apiKeys, openSelf],

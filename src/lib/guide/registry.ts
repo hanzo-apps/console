@@ -28,7 +28,7 @@ const usedAny =
 const getKeyStep = (label: string) => ({
   id: 'api-key',
   title: 'Create your API key',
-  body: `Mint a personal \`hk-\` key to call ${label} from your apps, SDKs, and CLI. It is the fastest way to start building.`,
+  body: `Mint a personal \`sk-\` key to call ${label} from your apps, SDKs, and CLI. It is the fastest way to start building.`,
   action: { label: 'Get API key', to: '/api-keys' },
   done: hasKey,
 })

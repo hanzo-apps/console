@@ -75,7 +75,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
     health: { kind: 'platform-app', service: 'gateway' },
     facts: [
       { label: 'Base URL', value: 'api.hanzo.ai/v1' },
-      { label: 'Auth', value: 'IAM bearer / hk- key' },
+      { label: 'Auth', value: 'IAM bearer / sk- key' },
       { label: 'Surface', value: 'OpenAI-compatible /v1' },
     ],
     actions: [
@@ -237,7 +237,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
     facts: [
       { label: 'Base URL', value: 'api.hanzo.ai/v1' },
       { label: 'Spec', value: 'OpenAPI 3' },
-      { label: 'Auth', value: 'Bearer (IAM / hk-)' },
+      { label: 'Auth', value: 'Bearer (IAM / sk-)' },
     ],
     actions: [
       { label: 'Create API key', to: '/api-keys', icon: 'key' },
@@ -250,8 +250,8 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
       },
       {
         heading: 'Authentication',
-        body: 'Every request carries an Authorization: Bearer header — an IAM user token or an hk- Cloud API key minted on the API Keys page.',
-        code: 'Authorization: Bearer hk-...',
+        body: 'Every request carries an Authorization: Bearer header — an IAM user token or an sk- Cloud API key minted on the API Keys page.',
+        code: 'Authorization: Bearer sk-...',
       },
     ],
   },
@@ -344,7 +344,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
     facts: [
       { label: 'Output', value: 'Markdown · text · JSON' },
       { label: 'Rendering', value: 'JS-aware' },
-      { label: 'Auth', value: 'Bearer (IAM / hk-)' },
+      { label: 'Auth', value: 'Bearer (IAM / sk-)' },
     ],
     actions: [
       { label: 'Create API key', to: '/api-keys', icon: 'key' },

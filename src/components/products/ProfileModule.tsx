@@ -6,7 +6,7 @@
  * Reads the REAL account from the session (`get-account`): identity, email, org,
  * and role. Identity mutations (name, password, 2FA) are owned by Hanzo IAM — this
  * deep-links there rather than re-implementing them (never a plaintext password
- * here). The API Keys tab embeds the shared per-user `hk-` credential surface.
+ * here). The API Keys tab embeds the shared per-user `sk-` credential surface.
  * Reached from the footer wallet's user row; also carries Sign out.
  */
 import { SubNav } from '~/components/ui/SubNav'
