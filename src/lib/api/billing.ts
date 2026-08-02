@@ -89,7 +89,7 @@ export type Subscription = {
 }
 
 /**
- * One saved payment method (commerce `/v1/billing/payment-methods`). Carries ONLY
+ * One saved payment method (commerce `/v1/billing/methods`). Carries ONLY
  * the masked, non-sensitive descriptor commerce returns — brand + last4 + expiry.
  * A full PAN / CVV / gateway token is NEVER present in this shape and must never
  * be surfaced; a missing descriptor degrades to "—".
@@ -382,28 +382,10 @@ export type TopupResult = {
   status: string
 }
 
-/**
- * Result of the idempotent welcome-grant (`POST /v1/billing/me/welcome`): `granted`
- * true the FIRST time (with the `amount` in cents, e.g. 500), false thereafter (with
- * a `reason` like `already_granted`). Optional-safe so a shape drift degrades to
- * "not granted" rather than throwing.
- */
-export type WelcomeResult = { granted: boolean; amount?: number; reason?: string }
-
 export const BillingApi = {
   /** Cloud credit balance (USD cents) — same proxy as the Wallet/sidebar. */
   balance: (currency = 'usd'): Promise<CloudBalance> =>
     restGet<CloudBalance>(`${billingProxyV1Url('balance')}?currency=${encodeURIComponent(currency)}`),
-
-  /**
-   * Claim the org's ONE-TIME $5 welcome trial credit (idempotent). Routes through the
-   * per-tenant billing proxy → commerce `POST /v1/billing/me/welcome`, which grants
-   * once per subject (`{granted:true, amount:500}` the first time, `{granted:false,
-   * reason:"already_granted"}` after) — the SELF-HEAL for social-login and pre-existing
-   * $0 accounts the signup-time grant never reached. The proxy pins the caller's OWN
-   * subject server-side, so a browser can only ever claim its own org's grant.
-   */
-  welcome: (): Promise<WelcomeResult> => restPost<WelcomeResult>(billingProxyV1Url('me/welcome')),
 
   /** Metered spend over an optional window (commerce defaults the period). */
   usage: (params?: { start?: string; end?: string }): Promise<Usage> => {
@@ -446,10 +428,10 @@ export const BillingApi = {
 
   /** The org's saved payment methods (masked brand + last4 only). */
   paymentMethods: (): Promise<PaymentMethod[]> =>
-    restGet<unknown>(billingProxyV1Url('payment-methods')).then(normalizePaymentMethods),
+    restGet<unknown>(billingProxyV1Url('methods')).then(normalizePaymentMethods),
 
   /**
-   * Save a card as a payment method (`POST /v1/billing/payment-methods`) from a
+   * Save a card as a payment method (`POST /v1/billing/methods`) from a
    * single-use Square nonce. The RAW PAN NEVER touches our code — the browser
    * tokenizes the card IN Square's iframe and sends ONLY the opaque `token` (nonce)
    * + the method `type`. The proxy pins the billing subject server-side
@@ -457,20 +439,20 @@ export const BillingApi = {
    * method against another tenant. Returns the created (masked) method.
    */
   createPaymentMethod: (input: { type?: string; token: string }): Promise<PaymentMethod> =>
-    restPost<unknown>(billingProxyV1Url('payment-methods'), {
+    restPost<unknown>(billingProxyV1Url('methods'), {
       type: input.type ?? 'card',
       token: input.token,
     }).then((r) => normalizePaymentMethods([oneRecord(r)])[0]),
 
   /**
-   * Detach a saved payment method (`DELETE /v1/billing/payment-methods/:id`). The
+   * Detach a saved payment method (`DELETE /v1/billing/methods/:id`). The
    * proxy authenticates the session, injects the service token, and stamps the
    * caller's OWN subject + `X-Org-Id`; commerce authorizes the delete against that
    * subject and 404s a method the caller doesn't own (defense in depth) — so a
    * browser can never detach another tenant's card by id.
    */
   removePaymentMethod: (id: string): Promise<void> =>
-    restDelete(billingProxyV1Url(`payment-methods/${encodeURIComponent(id)}`)),
+    restDelete(billingProxyV1Url(`methods/${encodeURIComponent(id)}`)),
 
   /**
    * The org's spend alerts / budgets (`GET /v1/billing/alerts`). The proxy
@@ -542,13 +524,13 @@ export const BillingApi = {
     restDelete(billingProxyV1Url(`alerts/${encodeURIComponent(id)}`)),
 
   /**
-   * PUBLIC Square Web Payments config for THIS org (`GET /v1/billing/payment-config`):
+   * PUBLIC Square Web Payments config for THIS org (`GET /v1/billing/settings`):
    * the application id + location id + environment the browser SDK tokenizes a card
    * with. Every field is public (no secret). Commerce resolves sandbox-vs-production
    * through its single SQUARE_ENVIRONMENT authority, so the app id the browser
    * tokenizes with always matches the account commerce will charge.
    */
-  paymentConfig: (): Promise<PaymentConfig> => restGet<PaymentConfig>(billingProxyV1Url('payment-config')),
+  paymentConfig: (): Promise<PaymentConfig> => restGet<PaymentConfig>(billingProxyV1Url('settings')),
 
   /**
    * Charge a Square Web Payments nonce and credit the org's CANONICAL balance

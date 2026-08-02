@@ -6,7 +6,7 @@
  * pattern as `lib/server/ai-proxy.ts`.
  *
  * The threat: commerce filters DIFFERENT billing endpoints on DIFFERENT subject
- * params — subscriptions on `?userId=`, payment-methods on `?customerId=` (or
+ * params — subscriptions on `?userId=`, methods on `?customerId=` (or
  * `?user=`), usage on `?user=`. Pinning only ONE leaves the others UNFILTERED, so
  * a request with no (or a forged) param returns every subject's rows in the
  * namespace. The proxy therefore pins ALL of them to the server-resolved subject.

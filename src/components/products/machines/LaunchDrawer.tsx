@@ -87,7 +87,7 @@ export function LaunchDrawer({
   const [phase, setPhase] = useState<'idle' | 'launching'>('idle')
   const [error, setError] = useState<{ msg: string; needsPay: boolean } | null>(null)
   // Card-on-file gate — GPUs ONLY. `null` = still checking; a CPU machine is never
-  // card-gated (treated as satisfied). FAIL CLOSED: if the payment-methods read errors
+  // card-gated (treated as satisfied). FAIL CLOSED: if the saved-methods read errors
   // we treat it as "no card" so a GPU launch is BLOCKED (never a silent credit fallback).
   const [hasCard, setHasCard] = useState<boolean | null>(kind === 'gpu' ? null : true)
   // The org's spendable CREDIT balance (cents) — funds a CPU/non-GPU launch. `null`
