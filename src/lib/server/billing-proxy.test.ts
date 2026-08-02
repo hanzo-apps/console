@@ -98,7 +98,7 @@ describe('forwardBilling — gates (auth / config / CSRF)', () => {
   it('refuses a cross-origin mutating request (CSRF) with 403, never fetches', async () => {
     const res = await forwardBilling(
       req('DELETE', { headers: { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' } }),
-      ['payment-methods', 'pm_1'],
+      ['methods', 'pm_1'],
     )
     expect(res.status).toBe(403)
     expect(fetchMock).not.toHaveBeenCalled()
@@ -142,11 +142,11 @@ describe('forwardBilling — tenant scoping (every verb pinned to the caller sub
 
   it('proxies DELETE (payment-method detach) — method + scoped query, no forged body', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
-    const res = await forwardBilling(req('DELETE'), ['payment-methods', 'pm_1'])
+    const res = await forwardBilling(req('DELETE'), ['methods', 'pm_1'])
     expect(res.status).toBe(204)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const url = String((fetchMock.mock.calls[0] as unknown[])[0])
-    expect(url.startsWith(`${COMMERCE}/v1/billing/payment-methods/pm_1?`)).toBe(true)
+    expect(url.startsWith(`${COMMERCE}/v1/billing/methods/pm_1?`)).toBe(true)
     const init = calledInit(fetchMock)
     expect(init.method).toBe('DELETE')
     expect(init.body).toBeUndefined() // a bodyless DELETE sends NO body (not '')
@@ -157,7 +157,7 @@ describe('forwardBilling — tenant scoping (every verb pinned to the caller sub
   it('pins the subject onto a WRITE body (create-payment-method) — forged body subject overwritten', async () => {
     await forwardBilling(
       req('POST', { body: JSON.stringify({ type: 'card', token: 'cnon:nonce', userId: 'victim' }) }),
-      ['payment-methods'],
+      ['methods'],
     )
     const init = calledInit(fetchMock)
     const sent = JSON.parse(init.body as string) as Record<string, unknown>

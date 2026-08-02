@@ -8,8 +8,8 @@
  *  - ADD: the card is entered ONLY in Square's cross-origin iframe (the shared
  *    `useSquareCard` capability, same as Add-credits) and tokenized IN THE BROWSER.
  *    We POST only the opaque single-use nonce (`token`) — the RAW PAN never touches
- *    our code, servers, or logs (PCI SAQ-A). `POST /v1/billing/payment-methods`.
- *  - REMOVE: a per-row detach with a confirm — `DELETE /v1/billing/payment-methods/:id`.
+ *    our code, servers, or logs (PCI SAQ-A). `POST /v1/billing/methods`.
+ *  - REMOVE: a per-row detach with a confirm — `DELETE /v1/billing/methods/:id`.
  *    Commerce authorizes the delete against the caller's server-pinned subject.
  *
  * Read-only + masked by construction on display: commerce returns ONLY a
@@ -262,15 +262,15 @@ export function PaymentMethodsModule(_props: { params: Record<string, string> })
             </Text>
           </Card>
         ) : cfg.phase === 'error' ? (
-          <BackendStateCard state={cfg.error} hint="endpoint · GET /v1/billing/payment-config" />
+          <BackendStateCard state={cfg.error} hint="endpoint · GET /v1/billing/settings" />
         ) : !configured ? (
           <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor" maxW={560}>
             <Text fontSize="$4" fontWeight="700" color="$color12">
-              Adding a card isn’t available on this deployment yet
+              No card processor is configured for this organization
             </Text>
             <Text fontSize="$3" color="$color11">
-              No card processor is configured for this organization. You can manage payment methods in the
-              billing portal, or contact support to enable in-console cards.
+              Adding a card in-console needs a payment processor connected to your organization. You can
+              manage payment methods in the billing portal, or contact support to enable in-console cards.
             </Text>
             <XStack>
               <Button size="$3" iconAfter={<ExternalLink size={14} />} onPress={openBillingPortal}>
@@ -348,7 +348,7 @@ export function PaymentMethodsModule(_props: { params: Record<string, string> })
       ) : null}
 
       {methods.phase === 'error' ? (
-        <BackendStateCard state={methods.error} onRetry={load} hint="endpoint · GET /v1/billing/payment-methods" />
+        <BackendStateCard state={methods.error} onRetry={load} hint="endpoint · GET /v1/billing/methods" />
       ) : (
         <DataTable
           columns={columns}

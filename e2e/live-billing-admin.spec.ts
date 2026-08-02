@@ -134,7 +134,7 @@ test.describe('LIVE v8.4.15 — (a) business board + (c) billing dimension', () 
 
   test('(c) billing Reports renders the cost-dimension surface', async ({ page }) => {
     await signIn(page, CONSOLE)
-    // v8.4.16: the data proxy moved to /billing/v1/*, so /billing/reports now falls
+    // The data proxy lives at /v1/billing/*, so /billing/reports now falls
     // through to the SPA (was shadowed by the /billing/[...path] proxy → raw JSON).
     // A hard deep-link must render the Reports UI, not a proxy "not found".
     await page.goto(`${CONSOLE}/billing/reports`, { waitUntil: 'domcontentloaded' })

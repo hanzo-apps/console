@@ -10,7 +10,7 @@
  * billing UI tab URLs (`/billing/reports`, `/billing/invoices`, …) — they differ at
  * the FIRST path segment, so the tab slugs fall through to the SPA.
  *
- * Verbs: GET (reads: balance/usage/invoices/subscriptions/payment-methods, and the
+ * Verbs: GET (reads: balance/usage/invoices/subscriptions/methods, and the
  * per-invoice PDF), POST (writes: top-up, alerts, save-a-method, cancel/
  * reactivate a subscription), PATCH (edit a budget/spend-alert), DELETE (detach a
  * saved payment method, remove a budget). Each is scoped to the caller's OWN org
