@@ -3702,3 +3702,48 @@ and I will not type a password; one SuperAdmin session re-running this spec clos
 that. Untouched and flagged for the caps pass: `MarketplaceModule`'s "CATEGORIES"
 and the palette's own uppercased section labels are `textTransform` sites that
 belong to that lane, not this one.
+
+## Billing calls the route names the server actually registers
+
+Commerce dropped the compound prefixes from its billing routes — the `/v1/billing/`
+namespace already says "billing", so `billing/payment-methods` stuttered. Both servers
+register only the short names, measured against the live edge: `/v1/billing/methods`
+401, `/v1/billing/settings` 403, `/v1/billing/alerts` 403, while `payment-methods`,
+`payment-config` and `spend-alerts` are all 404. The console never followed. Its card
+reads, its card writes and its Square-config read were all addressed at routes that no
+longer exist, so a new user could not add a card — the revenue path was broken in
+production.
+
+The client had already been repointed for alerts, so `payment-methods` (list, save,
+detach) and `payment-config` were the ones still dead. They now build `methods` and
+`settings`. There is deliberately no alias and no fallback: one name per concept.
+
+The tests were part of the defect, not the safety net. Every suite around payment
+methods stubbed a response body and asserted the normalization, so a client pointed at
+a 404 stayed green — the exact reason this survived. The URL is now pinned where the
+request is actually made, including the two reads nothing had ever asserted
+(`methods`, `settings`) and `alerts` beside them. Reverting any of the four short names
+turns the suite red, which was checked rather than assumed.
+
+`POST /v1/billing/me/welcome` and everything feeding it is deleted, not repointed.
+Commerce removed that route on purpose: it was a self-service mint, a browser could
+grant its own org $5, and commerce's own `api/billing/mint_gates_test.go` names it the
+TOCTOU double-mint. Credit is minted only through the mint-gated `POST
+/v1/billing/credit`. The call had been failing silently, so restoring it would have
+re-opened a closed money hole to fix nothing. The trial credit still lands — commerce
+grants it server-side when a card is vaulted, and signup grants it server-side — and
+that path is untouched. `src/lib/billing/welcome.ts` had no callers left at all.
+
+Scope, checked rather than assumed: `/v1/finance/payment-methods` is still 401 (alive)
+and `/v1/finance/methods` is 404, so the finance ledger keeps the compound name — a
+blanket repo-wide rename would have broken it. The Billing Center's tab slugs
+(`/billing/payment-methods`, `/billing/credits`) are console page URLs, not server
+routes, and are unchanged.
+
+Two headlines were lying about which layer failed. "Card top-up isn't available on this
+deployment yet" and "Adding a card isn't available on this deployment yet" both fire
+when the ORG has no Square `applicationId`/`locationId` — a per-organization
+configuration, not a property of the deployment. Both now name the organization, as
+does the onboarding step's "Payments aren't set up", which had the same defect. The
+stale `GET /v1/billing/payment-config` endpoint hints under those cards now read
+`settings`.

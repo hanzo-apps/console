@@ -272,6 +272,39 @@ describe('BillingApi.paymentMethods — masked descriptor mapping', () => {
 })
 
 /**
+ * The commerce route names dropped their compound prefixes — the `/v1/billing/`
+ * namespace already says "billing", so `billing/payment-methods` stuttered. The
+ * server registers ONLY the short names; `payment-methods` and `payment-config` are
+ * 404. These pin the READ urls, which nothing else asserts: every other suite here
+ * stubs a body and checks normalization, so a client pointed at a dead route still
+ * went green — which is exactly how the console kept calling 404s while its tests
+ * passed. One name per concept, pinned where the request is actually made.
+ */
+describe('read paths address the canonical short route names', () => {
+  afterEach(teardown)
+
+  it('GETs the saved methods from /v1/billing/methods (never payment-methods)', async () => {
+    const calls = captureFetch({ paymentMethods: [] })
+    await BillingApi.paymentMethods()
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/methods`)
+    expect(calls[0].init.method ?? 'GET').toBe('GET')
+  })
+
+  it('GETs the card-processor config from /v1/billing/settings (never payment-config)', async () => {
+    const calls = captureFetch({ provider: 'square', applicationId: 'sq-app', locationId: 'sq-loc', environment: 'production', live: true })
+    const cfg = await BillingApi.paymentConfig()
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/settings`)
+    expect(cfg.applicationId).toBe('sq-app')
+  })
+
+  it('GETs the spend alerts from /v1/billing/alerts (never spend-alerts)', async () => {
+    const calls = captureFetch({ alerts: [] })
+    await BillingApi.spendAlerts()
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/alerts`)
+  })
+})
+
+/**
  * Add / remove payment methods (in-console, task D). The card is tokenized in
  * Square's iframe; the client sends ONLY the opaque nonce — NEVER a PAN. These pin
  * the exact request the client makes to the per-tenant `/v1/billing/*` proxy.
@@ -279,12 +312,12 @@ describe('BillingApi.paymentMethods — masked descriptor mapping', () => {
 describe('BillingApi.createPaymentMethod — saves a Square nonce, never a PAN', () => {
   afterEach(teardown)
 
-  it('POSTs { type, token } to /v1/billing/payment-methods and returns the masked method', async () => {
+  it('POSTs { type, token } to /v1/billing/methods and returns the masked method', async () => {
     const calls = captureFetch({ id: 'pm_new', type: 'card', card: { brand: 'visa', last4: '4242', exp_month: 12, exp_year: 2030 } })
     const m = await BillingApi.createPaymentMethod({ type: 'card', token: 'cnon:card-nonce-ok' })
 
     expect(calls).toHaveLength(1)
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/payment-methods`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/methods`)
     expect(calls[0].init.method).toBe('POST')
     const sent = JSON.parse(calls[0].init.body as string) as Record<string, unknown>
     expect(sent).toEqual({ type: 'card', token: 'cnon:card-nonce-ok' })
@@ -324,11 +357,11 @@ describe('BillingApi.createPaymentMethod — saves a Square nonce, never a PAN',
 describe('BillingApi.removePaymentMethod — detaches by id (DELETE)', () => {
   afterEach(teardown)
 
-  it('DELETEs /v1/billing/payment-methods/:id (url-encoded id)', async () => {
+  it('DELETEs /v1/billing/methods/:id (url-encoded id)', async () => {
     const calls = captureFetch({}, 200)
     await BillingApi.removePaymentMethod('pm_1')
     expect(calls).toHaveLength(1)
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/payment-methods/pm_1`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/methods/pm_1`)
     expect(calls[0].init.method).toBe('DELETE')
     expect(calls[0].init.body).toBeUndefined() // a detach carries no body
   })
@@ -336,7 +369,7 @@ describe('BillingApi.removePaymentMethod — detaches by id (DELETE)', () => {
   it('encodes an id with unsafe characters (no path injection)', async () => {
     const calls = captureFetch({}, 204)
     await BillingApi.removePaymentMethod('pm/../secret')
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/payment-methods/pm%2F..%2Fsecret`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/billing/methods/pm%2F..%2Fsecret`)
   })
 })
 

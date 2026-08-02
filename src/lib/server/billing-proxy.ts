@@ -170,7 +170,7 @@ export async function forwardBilling(req: NextRequest, path: string[]): Promise<
   // Path safety — the shared boundary guard (DRY with the bearer proxies). Reject empty,
   // `.`/`..`, ANY `%XX` (single-, double-, N-encoded, overlong) and matrix-param `;`
   // segments on the RAW (pre-normalization) path. A legitimate decoded billing segment
-  // (invoices, pdf, pm_1, subscriptions, payment-methods, inv_123) carries none of these.
+  // (invoices, pdf, pm_1, subscriptions, methods, inv_123) carries none of these.
   const rawPath = path.join('/')
   if (!pathIsClean(rawPath)) {
     return NextResponse.json({ error: 'Invalid billing path.' }, { status: 400 })
@@ -187,7 +187,7 @@ export async function forwardBilling(req: NextRequest, path: string[]): Promise<
 
   // Pin the FULL billing-subject key set to the server-resolved subject, and strip
   // `org`, so the browser can never read another tenant's ledger (subscriptions filter
-  // `userId`, payment-methods `customerId`, usage `user` — pinning only one leaves the
+  // `userId`, methods `customerId`, usage `user` — pinning only one leaves the
   // rest unfiltered). Mirrors commerce's own `billingSubjectKeys`.
   const qs = scopedBillingSearch(req.nextUrl.search, subject)
 

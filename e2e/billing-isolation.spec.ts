@@ -1,12 +1,12 @@
 /**
- * e2e: two-tenant BILLING ISOLATION through the `/billing/*` proxy.
+ * e2e: two-tenant BILLING ISOLATION through the `/v1/billing/*` proxy.
  *
- * The proxy (app/billing/v1/[...path]/route.ts) resolves the billing subject from the
+ * The proxy (app/v1/billing/[...path]/route.ts) resolves the billing subject from the
  * session server-side and pins the full subject-key set (user/userId/customerId) +
  * the X-Org-Id header, so a tenant can only ever read its OWN commerce ledger. This
  * spec proves that end-to-end against the LIVE proxy: two accounts in DIFFERENT orgs
- * each fetch `/billing/subscriptions` (and `/payment-methods`), and we assert the
- * two result sets are disjoint — neither tenant can see the other's rows.
+ * each fetch `/v1/billing/subscriptions` (and `/v1/billing/methods`), and we assert
+ * the two result sets are disjoint — neither tenant can see the other's rows.
  *
  * This is the regression guard for the IDOR RED found (the proxy previously pinned
  * only `?user=` while commerce filters subscriptions on `?userId=`, so subscriptions
@@ -36,11 +36,12 @@ async function signIn(page: Page, email: string, password: string) {
   await page.waitForLoadState('domcontentloaded')
 }
 
-/** Fetch a billing path through the same-origin DATA proxy (`/billing/v1/*`), as the
- *  signed-in browser. (`/billing/<slug>` without `v1/` is a UI tab, served by the SPA.) */
+/** Fetch a billing path through the same-origin DATA proxy (`/v1/billing/*`), as the
+ *  signed-in browser. (`/billing/<slug>` is a UI tab, served by the SPA — it differs at
+ *  the FIRST path segment, so the two never collide.) */
 async function billing(page: Page, path: string): Promise<{ status: number; ids: string[] }> {
   return page.evaluate(async (p) => {
-    const res = await fetch(`/billing/v1/${p}`, { credentials: 'include', headers: { Accept: 'application/json' } })
+    const res = await fetch(`/v1/billing/${p}`, { credentials: 'include', headers: { Accept: 'application/json' } })
     let ids: string[] = []
     try {
       const body = await res.json()
@@ -73,9 +74,9 @@ test.describe('billing is isolated per tenant through the proxy', () => {
     await signIn(pageB, B.email, B.password)
 
     // `invoices` is included because its row ids drive the per-invoice PDF URL
-    // (`/billing/v1/invoices/:id/pdf`) — proving the invoice list is tenant-isolated
+    // (`/v1/billing/invoices/:id/pdf`) — proving the invoice list is tenant-isolated
     // proves a user can only ever build a PDF URL for their OWN org's invoices.
-    for (const path of ['subscriptions', 'payment-methods', 'invoices']) {
+    for (const path of ['subscriptions', 'methods', 'invoices']) {
       const a = await billing(pageA, path)
       const b = await billing(pageB, path)
 

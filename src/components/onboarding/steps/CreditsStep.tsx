@@ -7,8 +7,8 @@
  * browser — the console never sees a PAN. REAL: `BillingApi.paymentConfig` mounts the
  * element (`useSquareCard`), `createPaymentMethod({token})` vaults the card (the
  * commerce handler grants/extends the trial credit as a side-effect, $1 verify-then-
- * void, no charge), `welcome()` claims the fixed starter grant (idempotent), and
- * `balance()` shows the granted balance. Skippable — credits can be added later.
+ * void, no charge), and `balance()` shows the granted balance. Skippable — credits
+ * can be added later.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -70,9 +70,9 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
     try {
       const token = await card.tokenize()
       await BillingApi.createPaymentMethod({ type: 'card', token })
-      // Claim the fixed starter grant too (idempotent server-side); the card-added
-      // handler also extends the trial — both are safe to run.
-      await BillingApi.welcome().catch(() => undefined)
+      // The trial credit is granted SERVER-SIDE as a side-effect of vaulting the card.
+      // The browser never mints its own credit — the only credit mint is the
+      // mint-gated POST /v1/billing/credit, which a tenant session cannot call.
       const bal = await BillingApi.balance().catch(() => balance)
       if (!mounted.current) return
       setBalance(bal)
@@ -121,7 +121,7 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
           <XStack gap="$2" items="center">
             <CreditCard size={18} color="var(--color10)" />
             <Text fontSize="$4" fontWeight="700" color="$color12">
-              Payments aren't set up on this deployment
+              Payments aren't set up for this organization
             </Text>
           </XStack>
           <Text fontSize="$3" color="$color11">

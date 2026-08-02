@@ -195,8 +195,8 @@ try {
     stdio: 'inherit',
     // CONSOLE_EMBED gates the server-side build transforms; NEXT_PUBLIC_CONSOLE_EMBED
     // is inlined into the CLIENT bundle so runtime code (lib/embed.ts → IS_EMBED) can
-    // skip the BFF-only session probes (/auth/refresh|session, /billing welcome) that
-    // don't exist in this static, server-less deployment.
+    // skip the BFF-only session probes (/auth/refresh|session) that don't exist in
+    // this static, server-less deployment.
     env: { ...process.env, CONSOLE_EMBED: '1', NEXT_PUBLIC_CONSOLE_EMBED: '1' },
   })
 

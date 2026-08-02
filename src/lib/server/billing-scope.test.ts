@@ -53,7 +53,7 @@ describe('scopedBillingSearch — pins EVERY subject param to the server subject
     const out = params(scopedBillingSearch('', 'maxpower'))
     expect(out.user).toBe('maxpower')
     expect(out.userId).toBe('maxpower') // subscriptions.go filters on this
-    expect(out.customerId).toBe('maxpower') // payment-methods.go filters on this
+    expect(out.customerId).toBe('maxpower') // the commerce methods handler filters on this
   })
 
   it('OVERWRITES a client-forged subject on every key (no scope-widening)', () => {

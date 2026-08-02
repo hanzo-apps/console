@@ -130,15 +130,15 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
           </Text>
         </Card>
       ) : cfg.phase === 'error' ? (
-        <BackendStateCard state={cfg.error} hint="endpoint · GET /v1/billing/payment-config" />
+        <BackendStateCard state={cfg.error} hint="endpoint · GET /v1/billing/settings" />
       ) : !configured ? (
         <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
           <Text fontSize="$4" fontWeight="700" color="$color12">
-            Card top-up isn’t available on this deployment yet
+            No card processor is configured for this organization
           </Text>
           <Text fontSize="$3" color="$color11">
-            No card processor is configured for this organization. You can top up with crypto below,
-            or contact support to enable card payments.
+            Card top-up needs a payment processor connected to your organization. You can top up with
+            crypto below, or contact support to enable card payments.
           </Text>
         </Card>
       ) : submit.state === 'done' ? (
