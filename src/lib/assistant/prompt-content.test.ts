@@ -98,7 +98,7 @@ describe('buildAssistantPrompt', () => {
   it('leaks no secret, token, or KMS path', () => {
     expect(prompt).not.toMatch(/kms:\/\//)
     expect(prompt).not.toMatch(/Bearer\s+[A-Za-z0-9]/)
-    expect(prompt).not.toMatch(/SERVICE_TOKEN|CLIENT_SECRET|hk-[a-f0-9]/)
+    expect(prompt).not.toMatch(/SERVICE_TOKEN|CLIENT_SECRET|sk-[a-f0-9]/)
   })
 
   it('faithfully includes only the products it is given (gating is the caller\'s job)', () => {

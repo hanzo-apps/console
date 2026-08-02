@@ -1,5 +1,5 @@
 /**
- * Cloud API key client — the per-user `hk-` credential, via the console's OWN
+ * Cloud API key client — the per-user `sk-` credential, via the console's OWN
  * same-origin `/keys` route (`app/keys/route.ts`). The server resolves the user
  * from the first-party session cookie and mints/reads/revokes through IAM as the
  * confidential `hanzo-console` client; the browser only ever sends its cookie.
@@ -30,7 +30,7 @@ export type KeyStatus = {
  *
  * In the go:embed console (`IS_EMBED`) the `app/keys/route.ts` handler is stripped (no
  * Next server → the request falls through to the SPA shell), and the cloud binary serves
- * the canonical `hk-` key surface at `/v1/iam/keys` (clients/account/account.go — GET
+ * the canonical `sk-` key surface at `/v1/iam/keys` (clients/account/account.go — GET
  * status, POST mint, DELETE revoke), resolving the caller from the first-party IAM
  * session cookie. So the embed addresses `<origin>/v1/iam/keys` directly. Non-embed
  * hosts keep the Next `/keys` proxy (confidential mint client).
@@ -74,7 +74,7 @@ async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
 export const KeysApi = {
   /** Whether the account has a key, plus its public prefix (no secret). */
   status: () => keysReq<KeyStatus>('GET'),
-  /** Mint (or rotate) the key; returns the full `hk-` key ONCE. */
+  /** Mint (or rotate) the key; returns the full `sk-` key ONCE. */
   create: () => keysReq<{ accessKey: string }>('POST'),
   /** Revoke the key (the old key stops working). */
   revoke: () => keysReq<{ ok: boolean }>('DELETE'),

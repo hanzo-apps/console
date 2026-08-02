@@ -6,11 +6,11 @@
  * sent — every field present is a real field the OpenAI-compatible gateway
  * accepts, and an omitted field is genuinely omitted (gateway default), never a
  * fabricated value. The cURL targets the public gateway with a bearer placeholder
- * (`$HANZO_API_KEY`), so a developer can copy, paste a real `hk-` key, and run it.
+ * (`$HANZO_API_KEY`), so a developer can copy, paste a real `sk-` key, and run it.
  */
 import type { RunParams } from './params'
 
-/** The public gateway endpoint a copied cURL targets (an `hk-` key works here). */
+/** The public gateway endpoint a copied cURL targets (an `sk-` key works here). */
 export const GATEWAY_URL = 'https://api.hanzo.ai/v1/chat/completions'
 
 /** A message as shown in the preview (text or multimodal content). */

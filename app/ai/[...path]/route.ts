@@ -3,7 +3,7 @@
  *
  * `/v1/chat/completions` (and friends) REQUIRE an `Authorization: Bearer` token; a
  * browser session cookie alone is rejected. Rather than ship the user's durable
- * `hk-` key to the browser, the console calls its OWN origin at the canonical, prefix-free
+ * `sk-` key to the browser, the console calls its OWN origin at the canonical, prefix-free
  * `/v1/<aihead>` (the /v1-first law); `next.config.mjs` dispatches those heads to THIS `/ai`
  * proxy (re-rooting the upstream at `v1/` — invisible to the client). `forwardWithUserBearer`
  * resolves the user, mints a SHORT-LIVED, user-bound IAM token (shared per-user cache in

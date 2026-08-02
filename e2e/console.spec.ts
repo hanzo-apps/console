@@ -14,7 +14,7 @@
  *
  * Run:
  *   HANZO_PASSWORD=xxx pnpm e2e
- *   HANZO_PASSWORD=xxx HANZO_API_KEY=hk-xxx pnpm e2e
+ *   HANZO_PASSWORD=xxx HANZO_API_KEY=sk-xxx pnpm e2e
  */
 import { test, expect, type Page } from '@playwright/test'
 
@@ -151,15 +151,15 @@ test.describe('Hanzo Cloud Console e2e', () => {
 
     if (needsCreate) {
       await createBtn.click()
-      // One-time reveal card with the hk- key
-      await expect(page.locator('text=/hk-/')).toBeVisible({ timeout: 25_000 })
+      // One-time reveal card with the sk- key
+      await expect(page.locator('text=/sk-/')).toBeVisible({ timeout: 25_000 })
       await expect(page.locator('text=/shown only once/i')).toBeVisible()
       await expect(page.locator('button:has-text("Copy")')).toBeVisible()
-      console.log('✓ API key created (hk- one-time reveal shown)')
+      console.log('✓ API key created (sk- one-time reveal shown)')
     } else {
       // Key already exists
       await expect(hasKey).toBeVisible({ timeout: 10_000 })
-      await expect(page.locator('text=/hk-…|hk-[A-Za-z0-9]{3,}/i')).toBeVisible({ timeout: 5_000 })
+      await expect(page.locator('text=/sk-…|sk-[A-Za-z0-9]{3,}/i')).toBeVisible({ timeout: 5_000 })
       console.log('✓ API key already exists (prefix shown)')
     }
   })
@@ -183,19 +183,19 @@ test.describe('Hanzo Cloud Console e2e', () => {
       } else if (await createBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
         await createBtn.click()
       }
-      await expect(page.locator('text=/hk-/')).toBeVisible({ timeout: 25_000 })
+      await expect(page.locator('text=/sk-/')).toBeVisible({ timeout: 25_000 })
 
       // Grab the FULL key from the one-time reveal — never the masked display
-      // (the account card shows `hk-2f18…` with an ellipsis, which is not a
-      // usable credential). Match only a full hk- token (no `…`/`...`).
-      const fullKey = /hk-[A-Za-z0-9._-]{16,}/
+      // (the account card shows `sk-2f18…` with an ellipsis, which is not a
+      // usable credential). Match only a full sk- token (no `…`/`...`).
+      const fullKey = /sk-[A-Za-z0-9._-]{16,}/
       const keyEl = page.locator('[style*="monospace"]').filter({ hasText: fullKey }).first()
       apiKey = (((await keyEl.textContent().catch(() => '')) ?? '').match(fullKey) ?? [''])[0]
       if (!apiKey) {
         const m = ((await page.textContent('body')) ?? '').match(fullKey)
         apiKey = m ? m[0] : ''
       }
-      expect(apiKey, 'Could not extract hk- key from page').toMatch(/^hk-/)
+      expect(apiKey, 'Could not extract sk- key from page').toMatch(/^sk-/)
       console.log(`✓ Extracted key prefix: ${apiKey.slice(0, 11)}…`)
     }
 

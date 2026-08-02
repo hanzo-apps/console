@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * API Keys — create, copy, rotate, and revoke the per-user `hk-` Cloud API key.
+ * API Keys — create, copy, rotate, and revoke the per-user `sk-` Cloud API key.
  *
  * The key is minted server-side (`/keys` route → IAM, app-on-behalf as the
  * confidential console client); the browser only sends its session cookie and
  * never holds a long-lived secret beyond the one-time reveal at creation. This
- * is the real credential the user presents as `Authorization: Bearer hk-…` to
+ * is the real credential the user presents as `Authorization: Bearer sk-…` to
  * the SDKs, CLI, and the api.hanzo.ai gateway.
  *
  * `ApiKeysView` is the bare surface so Settings can embed it as a tab;
@@ -190,7 +190,7 @@ export function ApiKeysView() {
                   Cloud API key
                 </Text>
                 <Text fontSize="$2" color="$color10" style={{ fontFamily: 'monospace' }}>
-                  {status?.keyPrefix ? `${status.keyPrefix}…` : 'hk-…'}
+                  {status?.keyPrefix ? `${status.keyPrefix}…` : 'sk-…'}
                 </Text>
                 {fmtKeyDate(status?.createdAt) ? (
                   <Text fontSize="$1" color="$color10">
@@ -233,7 +233,7 @@ export function ApiKeysView() {
             </XStack>
             <Text fontSize="$3" color="$color11">
               One key for your account, scoped to your organization. Use it as{' '}
-              <Text fontSize="$2" style={{ fontFamily: 'monospace' }}>Authorization: Bearer hk-…</Text> with the SDKs,
+              <Text fontSize="$2" style={{ fontFamily: 'monospace' }}>Authorization: Bearer sk-…</Text> with the SDKs,
               CLI, and the api.hanzo.ai gateway.
             </Text>
             <Button
