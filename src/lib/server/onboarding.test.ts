@@ -10,6 +10,7 @@ import {
   validateSignup,
   deriveUsername,
   displayNameFromEmail,
+  readOnboardRefusal,
   personalOrgFromEmail,
 } from './onboarding'
 
@@ -141,5 +142,38 @@ describe('personalOrgFromEmail', () => {
 
   it('falls back to a "user" base when the local part has no usable chars', () => {
     expect(personalOrgFromEmail('***@x.com', '12345678')).toBe('user-12345678')
+  })
+})
+
+describe('readOnboardRefusal — the two different 409s', () => {
+  it('recovers when the account already has an org: the first-run gate, not the name', () => {
+    // IAM refused because onboarding would orphan the org this account admins. The
+    // customer typed a perfectly free name and got a message about organizations.
+    expect(
+      readOnboardRefusal(409, 'you already have an organization; additional orgs are added separately', 'hanzo'),
+    ).toEqual({ action: 'recover', org: 'hanzo' })
+  })
+
+  it('reports verbatim when the account has NO org: the name really is taken', () => {
+    // Same status, opposite meaning. Nothing to recover into, and the server's
+    // message is the accurate one.
+    expect(readOnboardRefusal(409, 'the organization "coffee-cups" already exists', null)).toEqual({
+      action: 'report',
+      error: 'the organization "coffee-cups" already exists',
+    })
+  })
+
+  it('never recovers on a non-409, even holding an org', () => {
+    expect(readOnboardRefusal(400, '"admin" is reserved. choose a different name', 'hanzo')).toEqual({
+      action: 'report',
+      error: '"admin" is reserved. choose a different name',
+    })
+  })
+
+  it('falls back to a status line when the server sent no message', () => {
+    expect(readOnboardRefusal(500, undefined, null)).toEqual({
+      action: 'report',
+      error: 'Could not create the organization (HTTP 500).',
+    })
   })
 })
