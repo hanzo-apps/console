@@ -1,32 +1,35 @@
 'use client'
 
 /**
- * Scope switcher — the project + network pickers that scope every module.
+ * Scope switcher — the NETWORK picker, and only that.
  *
- * Two chips next to the org switcher: the active PROJECT (or "All projects" for
- * org-level scope) and the active NETWORK. The network picker offers the stock
- * tiers (Mainnet/Testnet/Devnet — the live Hanzo networks), a Local option for a
- * self-hosted cloud binary, and any custom networks the user adds (their own
- * networkID / EVM chainID / RPC / API). Selecting a network writes through
- * `useScope`, which updates the module-level scope the API client reads — so it
- * re-scopes every module (via `X-Environment`) AND retargets chain/RPC/API at once.
- * A "New project" affordance routes to the Projects module; we never fabricate one.
+ * The network is a global MODE, not a place, so it stays its own control in the
+ * top-right while org and project condense into the top-left `ContextSwitcher`.
+ * Its tier dot is a destructive-environment guard (mainnet live green, testnet
+ * caution amber), which is why it keeps a distinct, always-visible chip rather
+ * than folding into a menu you have to open to read.
+ *
+ * The picker offers the stock tiers (Mainnet/Testnet/Devnet — the live Hanzo
+ * networks), a Local option for a self-hosted cloud binary, and any custom
+ * networks the user adds (their own networkID / EVM chainID / RPC / API).
+ * Selecting a network writes through `useScope`, which updates the module-level
+ * scope the API client reads — so it re-scopes every module (via
+ * `X-Environment`) AND retargets chain/RPC/API at once.
  */
-import { useMemo, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
 import { Button, Popover, Text, XStack, YStack } from '@hanzo/gui'
-import { Check, ChevronsUpDown, FolderGit2, Layers, Plus, Trash } from '@hanzogui/lucide-icons-2'
+import { Check, ChevronsUpDown, Layers, Plus, Trash } from '@hanzogui/lucide-icons-2'
 
 import { useScope } from '~/lib/scope-context'
 import { STOCK_ENVIRONMENTS } from '~/lib/scope'
 import { isStockNetwork, parseCustomNetwork, type Network } from '~/lib/network'
 import { FieldText } from '~/components/ui/Field'
+import { MenuRow, type DotColor } from '~/components/ui/MenuRow'
 import { paper } from '~/components/ui/paper'
 
 /** A small dot keyed to the network tier. Monochrome by default; only the genuine
  *  states carry a hue — mainnet is live (green), testnet is a caution (amber). Every
  *  other tier is a neutral off the design ladder (Tamagui $colorN). */
-type DotColor = '$green10' | '$yellow10' | '$color10' | '$color9' | '$color8'
 const NET_DOT: Record<string, DotColor> = {
   mainnet: '$green10',
   testnet: '$yellow10',
@@ -40,59 +43,6 @@ const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 /** The (networkID, evmChainID) subtitle — collapsed when they're equal (sovereign L1). */
 const idSub = (n: Network): string =>
   n.networkID === n.evmChainID ? `Chain ${n.evmChainID}` : `Net ${n.networkID} · Chain ${n.evmChainID}`
-
-function ProjectPicker() {
-  const router = useRouter()
-  const { scope, projects, loadingProjects, selectProject } = useScope()
-  const label = scope.project ? scope.project : 'All projects'
-
-  return (
-    <Popover placement="bottom-end">
-      <Popover.Trigger asChild>
-        <Button size="$2" chromeless icon={<FolderGit2 size={14} />} iconAfter={<ChevronsUpDown size={13} />}>
-          {label}
-        </Button>
-      </Popover.Trigger>
-      <Popover.Content {...paper} p="$2" width={260}>
-        <YStack gap="$0.5">
-          <Text px="$2" py="$1" fontSize="$1" color="$color10" fontWeight="500">
-            Project
-          </Text>
-
-          {/* Org-level scope — no X-Project-Id sent. */}
-          <Row
-            label="All projects"
-            sub="Org-level"
-            active={!scope.project}
-            onPress={() => selectProject(undefined)}
-          />
-
-          {projects.map((p) => (
-            <Row
-              key={p.name}
-              label={p.displayName || p.name}
-              active={scope.project === p.name}
-              onPress={() => selectProject(p.name)}
-            />
-          ))}
-
-          {projects.length === 0 && !loadingProjects ? (
-            <Text px="$2" py="$1.5" fontSize="$2" color="$color10">
-              No projects yet.
-            </Text>
-          ) : null}
-
-          <XStack height={1} bg="$borderColor" my="$1" />
-          <Row
-            label="New project"
-            icon={<Plus size={14} />}
-            onPress={() => router.push('/projects')}
-          />
-        </YStack>
-      </Popover.Content>
-    </Popover>
-  )
-}
 
 const EMPTY_FORM = { label: '', networkID: '', evmChainID: '', rpcEndpoint: '', apiEndpoint: '' }
 
@@ -200,7 +150,7 @@ function NetworkPicker() {
                 Project environments
               </Text>
               {extraEnvs.map((env) => (
-                <Row
+                <MenuRow
                   key={env}
                   label={titleCase(env)}
                   sub="Custom"
@@ -216,7 +166,7 @@ function NetworkPicker() {
           {adding ? (
             <AddNetworkForm taken={takenCustomIds} onAdd={add} onCancel={() => setAdding(false)} />
           ) : (
-            <Row label="Add custom network" icon={<Plus size={14} />} onPress={() => setAdding(true)} />
+            <MenuRow label="Add custom network" icon={<Plus size={14} />} onPress={() => setAdding(true)} />
           )}
         </YStack>
       </Popover.Content>
@@ -263,54 +213,10 @@ function NetworkRow({
   )
 }
 
-/** One selectable row in a picker popover. */
-function Row({
-  label,
-  sub,
-  dot,
-  icon,
-  active,
-  onPress,
-}: {
-  label: string
-  sub?: string
-  dot?: DotColor
-  icon?: ReactNode
-  active?: boolean
-  onPress: () => void
-}) {
-  return (
-    <XStack
-      onPress={onPress}
-      cursor="pointer"
-      items="center"
-      gap="$2"
-      px="$2"
-      py="$2"
-      rounded="$3"
-      hoverStyle={{ bg: '$color4' }}
-    >
-      {dot ? <YStack width={8} height={8} rounded="$10" bg={dot} /> : icon}
-      <YStack flex={1}>
-        <Text fontSize="$2" color="$color12" numberOfLines={1}>
-          {label}
-        </Text>
-        {sub ? (
-          <Text fontSize="$1" color="$color10">
-            {sub}
-          </Text>
-        ) : null}
-      </YStack>
-      {active ? <Check size={14} /> : null}
-    </XStack>
-  )
-}
-
-/** Project + network pickers as a unit (topbar). */
+/** The network picker (topbar). Org + project live in `ContextSwitcher`, top-left. */
 export function ScopeSwitcher() {
   return (
-    <XStack items="center" gap="$1">
-      <ProjectPicker />
+    <XStack items="center" gap="$1" data-testid="switcher-network">
       <NetworkPicker />
     </XStack>
   )

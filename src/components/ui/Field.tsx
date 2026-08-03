@@ -43,12 +43,15 @@ export function FieldText({
   disabled,
   secure,
   placeholder,
+  ariaLabel,
 }: {
   value: string
   onChange: (v: string) => void
   disabled?: boolean
   secure?: boolean
   placeholder?: string
+  /** Accessible name when the field stands alone, with no visible <Field> label. */
+  ariaLabel?: string
 }) {
   return (
     <Input
@@ -57,6 +60,7 @@ export function FieldText({
       disabled={disabled}
       secureTextEntry={secure}
       placeholder={placeholder}
+      aria-label={ariaLabel}
       autoCapitalize="none"
     />
   )
