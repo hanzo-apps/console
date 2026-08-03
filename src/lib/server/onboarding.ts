@@ -144,3 +144,38 @@ export function personalOrgFromEmail(email: string, digestHex: string): string {
   // Leave room for `-` + 8 hex under the max, then trim any trailing `-`.
   return `${base.slice(0, MAX_ORG_SLUG - 9).replace(/-+$/g, '')}-${suffix}`
 }
+
+/**
+ * How to read a REFUSED onboard.
+ *
+ * POST /v1/iam/onboard answers 409 for two different reasons, and they need
+ * opposite handling:
+ *
+ *   1. THE FIRST-RUN GATE — "you already have an organization". Onboarding MOVES
+ *      the caller into the org it founds, so founding a second would orphan the
+ *      one this account already admins, and IAM refuses. The name was never
+ *      looked at.
+ *   2. A NAME GENUINELY OWNED BY ANOTHER TENANT — "the organization X already
+ *      exists".
+ *
+ * The status alone cannot tell them apart, and guessing picks the wrong message
+ * half the time — which is how a refusal that was about ORGANIZATIONS gets read
+ * as a complaint about the NAME the customer just typed. What separates them is
+ * whether this account is itself in an org: only case 1 has an owner to go to.
+ *
+ * So the caller reads the account and passes what it found. `recover` means
+ * "stop apologising and offer the way in"; `report` means the server's own
+ * message is the true one and should be shown verbatim.
+ */
+export type OnboardRefusal =
+  | { action: 'recover'; org: string }
+  | { action: 'report'; error: string }
+
+export function readOnboardRefusal(
+  status: number,
+  serverError: string | undefined,
+  accountOwner: string | null,
+): OnboardRefusal {
+  if (status === 409 && accountOwner) return { action: 'recover', org: accountOwner }
+  return { action: 'report', error: serverError || `Could not create the organization (HTTP ${status}).` }
+}
