@@ -1,50 +1,37 @@
 /**
- * The org state an ADMIN console hands the shared account control.
+ * How the console names the org it is scoped to when no wider list is reachable.
  *
- * `@hanzo/iam`'s own `useOrganizations()` reads the caller's memberships off the
- * access token — right for every product, and structurally unable to express what
- * an admin console does: act in ANY tenant. `OrgState` is a plain interface, so
- * the console supplies its own rather than forking the control.
+ * A regular user's cross-tenant list is admin-gated at the proxy and would 403,
+ * so the honest answer is the one org they are already in, synthesized from the
+ * session rather than fetched. `ContextSwitcher` renders this row directly.
  *
- * A pure function on purpose. The one thing that must never drift is WHICH switch
- * runs: the console's `org-scope.switchOrg`, which persists the scope and reloads
- * so every module refetches under the new `X-Org-Id`. That is the single seam the
- * tenant scoping and its billing attribution hang off, and a second switch minted
- * here would silently bypass it. Passed through by reference, and pinned by a test.
+ * This file used to also build an `OrgState` for `@hanzo/iam`'s account control,
+ * back when the account menu was the thing that switched tenant. Org and project
+ * now condense into the top-left `ContextSwitcher`, and the account menu answers
+ * only "who am I", so that adapter had no caller left and is gone rather than
+ * kept warm. The invariant it existed to protect — that the ONE org switch is
+ * `org-scope.switchOrg`, the seam tenant scoping and billing attribution hang
+ * off — is now pinned directly, by `org-state.test.ts` scanning the source for a
+ * second caller.
  */
-import type { OrgFinder, OrgState } from '@hanzo/iam/react'
 import type { Organization } from '~/lib/api'
 
 /** The scoped org as a row — the honest answer when no wider list is reachable. */
 export function scopedOrgRow(name: string): Organization[] {
   if (!name) return []
-  const displayName = name.charAt(0).toUpperCase() + name.slice(1)
-  return [{ owner: 'admin', name, displayName } as Organization]
+  return [{ owner: 'admin', name, displayName: titleCase(name) } as Organization]
 }
 
-export function adminOrgState(input: {
-  /** The org the console is currently acting in (`org-scope.currentOrg()`). */
-  scoped: string
-  /** The console's cross-tenant search, already gated to what the caller may see. */
-  findOrgs: OrgFinder
-  /** MUST be `org-scope.switchOrg` — never a switch invented here. */
-  switchOrg: (org: string) => void
-}): OrgState {
-  const organizations = scopedOrgRow(input.scoped)
-  return {
-    organizations,
-    roles: {},
-    currentRole: null,
-    currentOrg: organizations[0] ?? null,
-    currentOrgId: input.scoped || null,
-    switchOrg: input.switchOrg,
-    // Projects are the top bar's concern (`ScopeSwitcher`), not the account
-    // control's — one control per question, and no second project picker.
-    projects: [],
-    currentProject: null,
-    currentProjectId: null,
-    switchProject: () => {},
-    isLoading: false,
-    findOrgs: input.findOrgs,
-  }
+/** A slug as a name, without inventing one IAM did not give us. */
+export function titleCase(name: string): string {
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : name
+}
+
+/**
+ * The one-line summary the context switcher shows: the org, then the project
+ * slice of it. Org-level scope has no project, and says so by omission rather
+ * than by printing a placeholder.
+ */
+export function contextLabel(org: string, project?: string): string {
+  return project ? `${org} / ${project}` : org
 }

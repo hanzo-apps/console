@@ -1,10 +1,17 @@
 /**
- * The ONE account control, at the foot of the rail.
+ * The ONE account control, at the foot of the rail — and the ONE org switch.
  *
- * There used to be three: an org switcher at the top of the sidebar, an account
- * popover at the bottom, and a third menu in the mobile drawer — with four ways
- * to sign out between them. This spec pins the replacement: one control, both
- * switchers, at the bottom, in a shell that ships no Tailwind.
+ * There used to be three account-ish menus: an org switcher at the top of the
+ * sidebar, an account popover at the bottom, and a third in the mobile drawer,
+ * with four ways to sign out between them. They became one control that answered
+ * BOTH "who am I" and "where am I".
+ *
+ * They have now been split again, but by QUESTION rather than by accident: the
+ * account control at the foot answers who you are (identity, team, personal
+ * settings, balance, the way out), and `ContextSwitcher` at the TOP-LEFT answers
+ * where you are (organization + project, together, beside the tenant's mark).
+ * So the cross-tenant reach is asserted against the context switcher below, and
+ * the account menu is asserted to no longer offer a tenant at all.
  *
  * Everything is asserted on computed style and geometry. The failure this guards
  * against is a menu that is present in the DOM and unreadable — a library that
@@ -39,6 +46,9 @@ const accountTrigger = (page: Page) => page.getByTestId('nav-user').first()
 
 /** The trigger inside the phone's account sheet — the last mount in the document. */
 const drawerTrigger = (page: Page) => page.getByTestId('nav-user').last()
+
+/** The org + project control at the top-left — the only thing that switches tenant. */
+const contextTrigger = (page: Page) => page.getByTestId('switcher-context').first()
 
 async function mountConsole(page: Page, seen: Scoped[]) {
   // The standalone console reaches the cross-tenant list through its own gated
@@ -182,18 +192,23 @@ test.describe('account control', () => {
     expect(typedInCaps).toEqual([])
   })
 
-  test('the org switcher reaches a tenant the caller is not a member of', async ({ page }) => {
+  test('the context switcher reaches a tenant the caller is not a member of', async ({ page }) => {
     const seen: Scoped[] = []
     await mountConsole(page, seen)
-    await accountTrigger(page).click()
-    await page.locator('[role=menu]').waitFor()
+    // Tenancy is the TOP-LEFT control's job now, not the account menu's.
+    await contextTrigger(page).click()
 
     // Acme is nobody's membership — it exists only in the cross-tenant list an
     // admin may search. A memberships-only switcher could not offer it at all.
     await page.getByLabel('Find an organization').fill('acme')
-    const acme = page.getByRole('option', { name: 'Acme Industrial' })
+    // `radiogroup`/`radio`, not `listbox`/`option`: @hanzo/gui's `role` union is
+    // React Native's a11y set, which carries `option` but NOT `listbox`.
+    const orgList = page.getByRole('radiogroup', { name: 'Organizations' })
+    const acme = orgList.getByRole('radio', { name: 'Acme Industrial' })
     await acme.waitFor()
-    await expect(page.getByRole('option')).toHaveCount(1)
+    // Scoped to the ORG group — the same popover also lists projects, and a bare
+    // getByRole('radio') would silently count those too.
+    await expect(orgList.getByRole('radio')).toHaveCount(1)
 
     await page.screenshot({ path: 'e2e-shots/account-menu-find-org.png', animations: 'disabled' })
 

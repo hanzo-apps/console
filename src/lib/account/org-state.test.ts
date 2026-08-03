@@ -1,54 +1,73 @@
-import { describe, expect, it, vi } from 'vitest'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
 
-import { adminOrgState, scopedOrgRow } from './org-state'
-import { switchOrg } from '~/lib/org-scope'
+import { contextLabel, scopedOrgRow } from './org-state'
 
-describe('adminOrgState', () => {
-  const findOrgs = async () => []
-
-  it('switches through the console org scope and nothing else', () => {
-    // THE money-path invariant. `org-scope.switchOrg` persists the scope and
-    // reloads, so every module refetches under the new `X-Org-Id` — the one seam
-    // tenant scoping and its billing attribution hang off. A switcher that minted
-    // its own would bypass it silently, which is why this is an IDENTITY check and
-    // not a behavioural one: there is one switch, and this is it.
-    expect(adminOrgState({ scoped: 'hanzo', findOrgs, switchOrg }).switchOrg).toBe(switchOrg)
-  })
-
-  it('carries the cross-tenant search through untouched', () => {
-    const state = adminOrgState({ scoped: 'hanzo', findOrgs, switchOrg })
-    expect(state.findOrgs).toBe(findOrgs)
-  })
-
-  it('reports the scoped org as the current one', () => {
-    const state = adminOrgState({ scoped: 'maxpower', findOrgs, switchOrg })
-    expect(state.currentOrgId).toBe('maxpower')
-    expect(state.currentOrg?.name).toBe('maxpower')
-    expect(state.organizations.map((o) => o.name)).toEqual(['maxpower'])
+describe('scopedOrgRow', () => {
+  it('titles a slug without inventing a display name', () => {
+    expect(scopedOrgRow('acme').at(0)?.displayName).toBe('Acme')
+    expect(scopedOrgRow('acme').at(0)?.name).toBe('acme')
   })
 
   it('is honest when nothing is scoped yet', () => {
-    const state = adminOrgState({ scoped: '', findOrgs, switchOrg })
-    expect(state.currentOrgId).toBeNull()
-    expect(state.currentOrg).toBeNull()
-    expect(state.organizations).toEqual([])
-  })
-
-  it('leaves projects to the scope switcher — no second project picker', () => {
-    const state = adminOrgState({ scoped: 'hanzo', findOrgs, switchOrg })
-    expect(state.projects).toEqual([])
-    expect(state.currentProjectId).toBeNull()
-  })
-
-  it('titles a slug without inventing a display name', () => {
-    expect(scopedOrgRow('acme').at(0)?.displayName).toBe('Acme')
     expect(scopedOrgRow('')).toEqual([])
   })
+})
 
-  it('never lists an org it was not given', () => {
-    const spy = vi.fn(async () => [])
-    const state = adminOrgState({ scoped: 'hanzo', findOrgs: spy, switchOrg })
-    expect(state.organizations).toHaveLength(1)
-    expect(spy).not.toHaveBeenCalled()
+describe('contextLabel', () => {
+  it('reads org alone at org-level scope', () => {
+    expect(contextLabel('Hanzo')).toBe('Hanzo')
+    expect(contextLabel('Hanzo', undefined)).toBe('Hanzo')
+  })
+
+  it('reads org / project once a project is chosen', () => {
+    expect(contextLabel('Hanzo', 'atlas')).toBe('Hanzo / atlas')
+  })
+})
+
+/** Every .ts/.tsx under src/, so the scan cannot miss a new caller. */
+function sources(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    if (statSync(p).isDirectory()) sources(p, out)
+    else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) out.push(p)
+  }
+  return out
+}
+
+describe('the one org switch', () => {
+  /**
+   * THE money-path invariant. `org-scope.switchOrg` persists the scope and
+   * reloads, so every module refetches under the new `X-Org-Id` — the one seam
+   * tenant scoping and its billing attribution hang off. A second switcher
+   * elsewhere would bypass it silently, and a UI with the org in two corners is
+   * exactly how that creeps in. So this asserts the STRUCTURE: precisely one
+   * component calls it.
+   */
+  it('has exactly these call sites, and no other', () => {
+    const root = join(import.meta.dirname, '../..')
+    const callers = sources(root)
+      .filter((p) => /switchOrg\s*\(/.test(readFileSync(p, 'utf8')))
+      .map((p) => p.slice(root.length + 1))
+      .sort()
+    expect(callers).toEqual([
+      // The command palette can jump you to a tenant — a search result, not a
+      // corner of the chrome, so it costs the IA nothing.
+      'components/CommandPalette.tsx',
+      // The ONE persistent org control in the shell.
+      'components/ContextSwitcher.tsx',
+      // The definition itself.
+      'lib/org-scope.ts',
+    ])
+  })
+
+  it('is imported from org-scope by every caller, never redefined', () => {
+    const root = join(import.meta.dirname, '../..')
+    for (const rel of ['components/ContextSwitcher.tsx', 'components/CommandPalette.tsx']) {
+      const src = readFileSync(join(root, rel), 'utf8')
+      expect(src, rel).toMatch(/import \{[^}]*\bswitchOrg\b[^}]*\} from '~\/lib\/org-scope'/)
+      expect(src, rel).not.toMatch(/function switchOrg|const switchOrg\s*=/)
+    }
   })
 })

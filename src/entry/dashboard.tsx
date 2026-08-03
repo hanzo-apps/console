@@ -108,6 +108,7 @@ import { AccountMenu } from '~/components/AccountMenu'
 import { BrandMark } from '~/components/ui/BrandLogo'
 import { shellFor, isProductShell } from '~/lib/products/shell'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
+import { ContextSwitcher } from '~/components/ContextSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
 import { voiceSupported } from '~/lib/voice'
 import { WorkbenchDock } from '~/components/workbench/Workbench'
@@ -703,6 +704,12 @@ function SidebarNav({
     // role survives regardless of how a given AT treats display:contents.
     <nav role="navigation" aria-label="Products" style={{ display: 'contents' }}>
       <SidebarBrand collapsed={false} onNavigate={onNavigate} />
+
+      {/* WHERE you are — organization and project in ONE control, directly under
+          the tenant's own mark. The account at the foot answers WHO you are; the
+          network chip in the top-right is a global MODE. Three questions, three
+          controls, each in one place. */}
+      <ContextSwitcher />
 
       {/* Product filter — narrows the whole list; a match from any category jumps
           straight there. Typing hides the section chrome so the list stays scannable. */}

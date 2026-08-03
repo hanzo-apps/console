@@ -1,29 +1,22 @@
 'use client'
 
 /**
- * The account control — who you are, which organization you are acting in, what
- * you have left to spend, and the way out. ONE control, at the foot of the rail.
+ * The account control — WHO you are: identity, your team, your personal
+ * settings, what you have left to spend, and the way out. ONE control, at the
+ * foot of the rail.
+ *
+ * It deliberately does NOT switch tenant. Org and project are one question —
+ * WHERE you are — and they are answered together by `ContextSwitcher` at the
+ * top-left, beside the tenant's own mark. Handing this menu an `orgState` too
+ * would put the org in two corners again, which is the exact confusion the
+ * condensed switcher removes. The cross-tenant reach, the admin-gated org list
+ * and the single `org-scope.switchOrg` money seam all moved there intact; there
+ * is still exactly one org switch in the app.
  *
  * It is `@hanzo/iam`'s `UserMenu`, the same component hanzo.chat mounts, so the
- * identity, the switcher and the behaviour (click-away, Escape, close-before-
- * navigate, never a raw uuid) are shared rather than rebuilt. This file is the
- * ADAPTER — everything the console knows that the SDK does not:
- *
- *  - ORG REACH. `useOrganizations()` reads the caller's memberships off the token
- *    and cannot express what an admin console does: enter ANY tenant. So the
- *    switcher is handed `findOrgs`, backed by the console's existing lazy,
- *    server-paged cross-tenant list (`IamAdminApi.organizations` through the
- *    gated `/admin/iam` proxy) — the same source the full-page org picker uses.
- *    A regular user never fires it: they see their own org, synthesized from the
- *    session, exactly as before. Nothing is fabricated, and nobody's reach widens.
- *
- *  - MONEY. Switching goes through `org-scope.switchOrg` — the console's existing
- *    switch, passed by reference, not reimplemented. It persists the scope and
- *    reloads so every module refetches under the new `X-Org-Id`. That one seam is
- *    where tenant scoping and its billing attribution already live; this file adds
- *    no second switch, no header of its own, and no billing call, so the rule about
- *    which ledger a masquerading admin's spend lands on is exactly where it was.
- *    `org-state.test.ts` pins the identity so a second switch cannot creep in.
+ * identity and the behaviour (click-away, Escape, close-before-navigate, never a
+ * raw uuid) are shared rather than rebuilt. This file is the ADAPTER —
+ * everything the console knows that the SDK does not:
  *
  *  - THEME. The console themes through `@hanzogui/next-theme` (which drives the
  *    Gui tree). That is adapted into the menu's shape rather than mounting IAM's
@@ -32,44 +25,18 @@
  *  - BRAND. The strip at the foot wears THIS host's brand. Passing nothing would
  *    paint a Hanzo mark on a Lux or Zoo console.
  */
-import { useCallback, useMemo } from 'react'
-import { UserMenu, type OrgState, type UserTheme } from '@hanzo/iam/react'
+import { useMemo } from 'react'
+import { UserMenu, type UserTheme } from '@hanzo/iam/react'
 import { useThemeSetting } from '@hanzogui/next-theme'
 
 import { config } from '~/config'
-import { adminOrgState, scopedOrgRow } from '~/lib/account/org-state'
 import { useSession } from '~/lib/auth/session'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { IamAdminApi, type Organization } from '~/lib/api'
-import { ORG_PAGE_SIZE, orgQuery } from '~/lib/org-list'
-import { currentOrg, leaveOrg, switchOrg } from '~/lib/org-scope'
 import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
 
 export function AccountMenu() {
   const { account, signOut } = useSession()
-  // The cross-tenant list is admin-gated at the proxy; a regular user would 403 it,
-  // so they are never asked to. Their own org is the honest answer.
-  const isSuperAdmin = useIsSuperAdmin()
   const { balance } = useCloudBalance()
   const { current, resolvedTheme, set } = useThemeSetting()
-
-  const scoped = currentOrg()
-
-  const findOrgs = useCallback(
-    async (query: string): Promise<Organization[]> => {
-      if (!isSuperAdmin) return scopedOrgRow(scoped)
-      const res = await IamAdminApi.organizations(orgQuery(0, query, ORG_PAGE_SIZE))
-      return res.rows ?? []
-    },
-    [isSuperAdmin, scoped],
-  )
-
-  // The console's own switch, by reference: persist the scope, reload, refetch
-  // under the new X-Org-Id. Pinned in `org-state.test.ts`.
-  const orgState: OrgState = useMemo(
-    () => adminOrgState({ scoped, findOrgs, switchOrg }),
-    [scoped, findOrgs],
-  )
 
   // `system` is a real choice, and the console's provider already understands it.
   const theme: UserTheme = useMemo(
@@ -98,7 +65,6 @@ export function AccountMenu() {
       isAuthenticated
       isLoading={false}
       onSignOut={() => void signOut()}
-      orgState={orgState}
       theme={theme}
       settingsUrl="/profile"
       usageUrl="/billing"
@@ -106,12 +72,10 @@ export function AccountMenu() {
       // Only shown when the backend actually reported a balance — never a fabricated $0.
       balance={cents === null ? undefined : { amountUsd: cents / 100, topUpUrl: config.payUrl }}
       items={[
-        {
-          label: 'All organizations',
-          // De-scope back to the full-page picker, where an org is entered — and
-          // where a new one is created. The dropdown never grew its own form.
-          onSelect: () => leaveOrg(),
-        },
+        // Your people, beside your own settings — the other half of "who am I".
+        // Choosing a DIFFERENT tenant is a different question and lives in the
+        // top-left context switcher, so this menu never re-scopes the console.
+        { label: 'Team', href: '/team' },
         { label: 'Documentation', href: config.docsUrl, external: true, separatorBefore: true },
       ]}
       brand={{ name: config.brandName }}
