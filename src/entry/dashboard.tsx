@@ -880,17 +880,8 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
             </Text>
             <Command size={13} opacity={0.5} />
           </XStack>
-          <Button
-            size="$3"
-            icon={<LayoutGrid size={18} />}
-            onPress={() => {
-              onOpenChange(false)
-              palette.open()
-            }}
-            borderWidth={1}
-            borderColor="$borderColor"
-            aria-label="Apps"
-          />
+          {/* No second "Apps" trigger here either — the search row above opens the
+              very same palette, so one row is the whole affordance. */}
           {/* Explicit close — right-aligned INSIDE the drawer header, always reachable
               on a 390px phone (backdrop/Escape still close too). */}
           <Button
@@ -1061,21 +1052,11 @@ export function Dashboard({ children }: { children: ReactNode }) {
             aria-label="Open navigation"
           />
 
+          {/* The search box IS the app switcher: it calls the same
+              `useCommandPalette().open` the old "Apps" button called, and says so
+              ("Search or jump to… ⌘K"). Two triggers for one palette, side by
+              side, read as two different destinations — so there is now one. */}
           <CommandSearchBox />
-
-          {/* Apps — opens the command palette; icon-only below lg, labeled at lg+. */}
-          <Button
-            size="$3"
-            icon={<LayoutGrid size={18} />}
-            onPress={palette.open}
-            borderWidth={1}
-            borderColor="$borderColor"
-            aria-label="Apps"
-          >
-            <Text display="none" $lg={{ display: 'flex' }}>
-              Apps
-            </Text>
-          </Button>
 
           {/* Talk to Hanzo — a SMALL brand-H opens the assistant in the right sidebar
               (desktop) / sheet (phones); the mic starts a voice session. AI help is one
