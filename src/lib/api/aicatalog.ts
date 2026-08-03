@@ -68,7 +68,7 @@ type LiveModels = { data?: LiveModel[] }
 /**
  * The GUARANTEED catalog base — a checked-in fixture synced from hanzoai/enso-bench
  * `priors/openrouter_models.json` (see `scripts/sync-models.mjs`), imported at BUILD
- * TIME. It makes the catalog browsable (~340 models, capabilities + context + price)
+ * TIME. It makes the catalog browsable (capabilities + context + price)
  * even when the live gateway is unreachable; the live overlay below always wins where
  * it exists. Every field is copied from the prior — nothing here is fabricated.
  */

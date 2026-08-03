@@ -402,7 +402,7 @@ export function ModelCatalogModule(_props: { params: Record<string, string> }) {
   const [plans, setPlans] = useState<Plan[]>([])
   const [selected, setSelected] = useState<CatalogEntry | null>(null)
   // The user's own view of this catalog, persisted with the rest of their
-  // preferences — 85+ models across a dozen families is a list you narrow once and
+  // preferences — the catalog across a dozen families is a list you narrow once and
   // want to find narrowed the same way, on any device. It is never hidden state:
   // the bar renders the query and offers Reset the moment anything is active.
   const list = useList('models')

@@ -90,7 +90,7 @@ export const GUIDES: Record<string, ProductGuide> = {
     id: 'models',
     label: 'Models',
     pitch: {
-      headline: '100+ models. One OpenAI-compatible API.',
+      headline: '400+ models. One OpenAI-compatible API.',
       subhead:
         'Frontier and open models — Zen, Claude, GPT, Llama, and more — behind a single /v1 endpoint. Switch models by changing one string; routing and fallback are built in.',
       points: [

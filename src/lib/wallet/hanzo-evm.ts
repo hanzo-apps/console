@@ -11,7 +11,7 @@
  * Network values mirror the canonical `@hanzo/ai` wallet store (chainId 36963,
  * rpc.hanzo.network); the RPC is env-overridable because the Hanzo L1 EVM RPC
  * path is still settling (the node's default C-Chain currently answers a
- * different id at /ext/bc/C/rpc). HUSD is a Hanzo-USD ERC-20 — its address is
+ * different id at /v1/bc/C/rpc). HUSD is a Hanzo-USD ERC-20 — its address is
  * PUBLIC on-chain data, supplied via `NEXT_PUBLIC_HANZO_HUSD_ADDRESS`. When that
  * is empty (greenfield: HUSD not yet deployed) the UI shows an honest "coming"
  * state and never fabricates a balance.
