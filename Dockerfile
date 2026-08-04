@@ -1,4 +1,4 @@
-# console2 — Hanzo Cloud Console (Next.js 15 + @hanzo/gui). BSD-3-Clause.
+# console2 — Hanzo Cloud Console (Next.js 15 + @hanzo/gui). MIT OR Apache-2.0.
 # NEXT_PUBLIC_* are inlined at build time (browser config), so they are build args.
 FROM public.ecr.aws/docker/library/node:24-alpine AS build
 WORKDIR /app

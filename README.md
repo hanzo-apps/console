@@ -48,4 +48,6 @@ the product-module registry, and the Providers surface). Endpoint reference in
 
 ## License
 
-BSD-3-Clause. Copyright (c) 2026-present, Hanzo AI, Inc.
+`MIT OR Apache-2.0` at your option — see [LICENSE](./LICENSE),
+[LICENSE-MIT](./LICENSE-MIT), [LICENSE-APACHE](./LICENSE-APACHE).
+Copyright (c) 2026-present, Hanzo AI, Inc. Estate-wide licensing standard: HIP-0137 (`hanzoai/hips`).
