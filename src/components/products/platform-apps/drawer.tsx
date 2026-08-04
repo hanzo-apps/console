@@ -413,7 +413,7 @@ const fmt = (n: number, dp = 0): string => new Intl.NumberFormat('en', { notatio
 
 /**
  * Metrics tab — REAL per-service RED metrics from the cloud o11y surface
- * (`GET /v1/o11y/metrics?product=<slug>`): requests, error rate, and p95 latency
+ * (`GET /v1/o11y/product/metrics?product=<slug>`): requests, error rate, and p95 latency
  * over a selectable window, each with its live time-series sparkline. Honest states:
  * loading; o11y-not-connected (503/404/401/403); and "connected · no telemetry yet"
  * when o11y answered but this service emits none. Per-service CPU/memory are not

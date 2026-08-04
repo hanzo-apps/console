@@ -1,13 +1,13 @@
 /**
- * Per-SERVICE metrics from the cloud-native o11y surface — `GET /v1/o11y/metrics`
+ * Per-SERVICE metrics from the cloud-native o11y surface — `GET /v1/o11y/product/metrics`
  * (`hanzoai/cloud` clients/o11y `scope.go` → `handleMetrics`). This is the ONE
  * org-scoped, tenant-isolated per-product telemetry read: the caller names WHICH
  * service's metrics it wants via `?product=<slug>`, and the backend pins the ORG
  * server-side from the validated principal, so a signed-in member only ever sees its
  * OWN org's rows for that product.
  *
- * Transport: the same-origin `/v1` user-bearer BFF (`cloudProxyV1Url('o11y/metrics…')`
- * → `<origin>/v1/o11y/metrics`); the `o11y` head is allow-listed in `proxy-allow.ts`.
+ * Transport: the same-origin `/v1` user-bearer BFF (`cloudProxyV1Url('o11y/product/metrics…')`
+ * → `<origin>/v1/o11y/product/metrics`); the `o11y` head is allow-listed in `proxy-allow.ts`.
  * The endpoint speaks PLAIN REST (raw JSON, real HTTP status), so `restGet` throws a
  * typed `ApiError` carrying the status — a 503 (datastore not connected) / 404 (o11y
  * not routed) / 401·403 (session/access) is surfaced as `connected:false` to the
@@ -120,7 +120,7 @@ export const METRICS_RANGES = [
 
 const metricsUrl = (product: string, rangeSec: number): string => {
   const sp = new URLSearchParams({ product, range: String(Math.max(60, Math.floor(rangeSec))) })
-  return cloudProxyV1Url(`o11y/metrics?${sp.toString()}`)
+  return cloudProxyV1Url(`o11y/product/metrics?${sp.toString()}`)
 }
 
 export const O11yMetricsApi = {
