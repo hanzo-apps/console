@@ -167,7 +167,10 @@ function LinkOut({ href, label }: { href: string; label?: string }) {
     <XStack
       items="center"
       gap="$1"
-      tag="a"
+      // `render`, not `tag`: gui 8 renamed the host-element prop, and gui drops a prop
+      // it does not know without erroring — `tag="a"` type-checked, built, and shipped
+      // a <div>, so this chip was an inert link that nothing reported.
+      render="a"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {...({ href, target: '_blank', rel: 'noopener noreferrer' } as any)}
     >

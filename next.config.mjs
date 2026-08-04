@@ -7,12 +7,16 @@ import { resolveBuildId, readGitSha } from './src/config/build-id.mjs'
 /**
  * Hanzo Cloud Console — Next.js config.
  *
- * Hanzo GUI is consumed at runtime (no optimizing compiler): the published
- * `@hanzogui/next-plugin` has a broken npm dependency (`hanzogui-loader@7.3.0`
- * is unpublished; the available fork renames its exports), so we transpile the
- * Gui ESM packages with Next's built-in `transpilePackages` and let
- * `GuiProvider` inject CSS at runtime. Gui is designed to work this way — the
- * compiler is an optimization, not a requirement.
+ * Hanzo GUI is consumed at runtime (no optimizing compiler): we transpile the Gui
+ * ESM packages with Next's built-in `transpilePackages` and let `GuiProvider`
+ * inject CSS at runtime. Gui is designed to work this way — the compiler is an
+ * optimization, not a requirement.
+ *
+ * (The original reason to avoid `@hanzogui/next-plugin` no longer holds: the loader
+ * it depends on was unpublished at 7.3.0, but 8.x renamed it to `@hanzogui/loader`
+ * and both now ship. Adopting the compiler is therefore a live option — as an
+ * optimization to measure, not a correctness fix, so it is deliberately not bundled
+ * into the 8.x convergence.)
  *
  * `react-native` is aliased to `react-native-web` for the browser.
  *
