@@ -3,7 +3,7 @@
   "version": "8.5.35",
   "packageManager": "pnpm@11.17.0",
   "private": true,
-  "license": "BSD-3-Clause",
+  "license": "MIT OR Apache-2.0",
   "author": "Hanzo AI <dev@hanzo.ai>",
   "description": "Hanzo Cloud Console — unified admin console for Hanzo Cloud and all cloud products.",
   "scripts": {

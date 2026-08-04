@@ -1,7 +1,7 @@
 # console2 — Hanzo Cloud Console
 
 Unified admin console for **Hanzo Cloud** and all cloud products. Our code,
-BSD-3-Clause, built on **@hanzo/gui** (the Tamagui-based cross-platform UI).
+`MIT OR Apache-2.0` (HIP-0137), built on **@hanzo/gui** (the Tamagui-based cross-platform UI).
 NOT an observability-console fork, NOT casibase — it is a clean client over the unified `/v1`
 backend (`hanzoai/cloud`), reached at the ONE Hanzo API endpoint https://api.hanzo.ai/v1/*.
 
