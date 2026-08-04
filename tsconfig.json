@@ -1,16 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "ES2022"
-    ],
+    "lib": ["dom", "dom.iterable", "ES2022"],
     "paths": {
-      "~/*": ["./src/*"],
-      "react-native": [
-        "./react-native-web"
-      ]
+      "~/*": ["./src/*"]
     },
     "strict": true,
     "allowJs": false,
