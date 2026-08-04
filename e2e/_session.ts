@@ -52,8 +52,11 @@ export async function primeSession(page: Page, overrides: Partial<SessionClaims>
   await page.addInitScript(
     ({ org, token }: { org: string; token: string }) => {
       try {
-        sessionStorage.setItem('hanzo_iam_access_token', token)
-        sessionStorage.setItem('hanzo_iam_expires_at', String(Date.now() + 3600_000))
+        // localStorage, not sessionStorage: the `@hanzo/iam` token store is shared
+        // across tabs (that IS the session), so seeding a per-tab area would leave
+        // the SDK reading an empty store and every primed spec signed out.
+        localStorage.setItem('hanzo_iam_access_token', token)
+        localStorage.setItem('hanzo_iam_expires_at', String(Date.now() + 3600_000))
         localStorage.setItem('hanzo.console.org', org)
         localStorage.setItem('hanzo.console.org.selected', '1')
         localStorage.setItem(`hz_onboarding_done:${org}`, '1')
