@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -45,6 +45,9 @@ function guiPackages() {
   // also ships raw TS source.
   return ['@hanzo/gui', '@hanzo/iam-js-sdk', '@hanzo/dash', '@hanzo/data', '@hanzo/canvas', '@hanzo/finance-ui', '@hanzo/usage', '@hanzo/ui', 'react-native-web', ...scoped]
 }
+
+/** A `@hanzogui/<pkg>/<subpath>/index.{js,cjs}` metro-compat shim (see `webpack()`). */
+const GUI_SUBPATH_SHIM = /\/@hanzogui\/([^/]+)\/([^/]+)\/index\.c?js$/
 
 /**
  * Same-origin `/v1/*` — ZERO client-visible prefix (the CTO contract: "no prefix
@@ -206,7 +209,40 @@ const nextConfig = {
   experimental: {
     esmExternals: true,
   },
-  webpack(config) {
+  webpack(config, { webpack }) {
+    // `@hanzogui/*` 8.x ships legacy metro-compat subpath DIRECTORIES (`config/v5/`,
+    // `themes/v5/`, `shorthands/v5/`, …) beside the `exports` map that already names
+    // the real entry. Each holds a CommonJS `index.js` — inside a `"type": "module"`
+    // package. Whatever resolves the directory therefore parses that file as ESM: the
+    // `export *` chain goes opaque ("'defaultConfig' is not exported from
+    // '@hanzogui/config/v5'") and its bare `require('../dist/cjs/v5.cjs')` survives
+    // into the server chunk, where it MODULE_NOT_FOUNDs at prerender (the require is
+    // relative to `.next/server/chunks/`, not to the package).
+    //
+    // So redirect any such shim to the ESM build sitting beside it. Pattern-based, on
+    // the RESOLVED file, so it holds however the request got there — and costs nothing
+    // the day the shims stop shipping.
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(GUI_SUBPATH_SHIM, (data) => {
+        const resource = data.createData?.resource
+        if (!resource) return
+        const shim = GUI_SUBPATH_SHIM.exec(resource)
+        if (!shim) return
+        const esm = `${resource.slice(0, shim.index)}/@hanzogui/${shim[1]}/dist/esm/${shim[2]}.mjs`
+        if (!existsSync(esm)) return
+        // The module's CONTEXT must move with it, or its own relative imports
+        // (`./v5-base.mjs`) keep resolving against the shim directory.
+        data.createData.resource = esm
+        data.createData.userRequest = esm
+        data.createData.context = dirname(esm)
+        data.context = dirname(esm)
+      }),
+    )
+    // @hanzo/ui is consumed from SOURCE via a workspace link. Keep the symlinked path
+    // so its own imports (@hanzo/gui, @hanzogui/*) walk up into the CONSOLE's
+    // node_modules — one Tamagui instance, as the tsconfig `paths` already pin for
+    // types. Resolving the realpath would load a second copy and break theme context.
+    config.resolve.symlinks = false
     config.resolve.alias = {
       ...config.resolve.alias,
       'react-native$': 'react-native-web',
