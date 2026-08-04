@@ -9,11 +9,23 @@
  * itself via PKCE (no client secret). Social providers, email-code, MFA and wallet
  * all live on IAM's hosted login; the console never reconstructs an IdP URL.
  *
- * The SDK stores its tokens in `sessionStorage` (`hanzo_iam_*`). This module exposes
- * a browser-only singleton so the API client can read the bearer synchronously and
- * the session provider / callback route can start + complete the flow. The React
- * `<IamProvider>` (mounted at the root) constructs its OWN `IAM` from the SAME
- * `iamConfig()`, so it shares that token store — the two views stay consistent.
+ * The SDK owns the token store (`hanzo_iam_*`) and picks it: `localStorage`, so the
+ * session belongs to the BROWSER and not to one tab. This module passes no `storage`
+ * — that decision lives in `@hanzo/iam` alone, where every Hanzo surface inherits it.
+ *
+ * It used to pass `window.sessionStorage`, and that was the whole "a new tab is
+ * signed out" defect: a middle-clicked link, a restored window or a `target=_blank`
+ * opened a context that could not see the session the user had just established.
+ * Note this is not a confidentiality trade — both Web Storage areas are readable by
+ * any script on the origin. Credentials that must be unreadable by script belong in
+ * an httpOnly cookie; `src/lib/server/session.ts` already defines that (`hz_session`,
+ * AEAD-sealed) for the server-side half.
+ *
+ * This module exposes a browser-only singleton so the API client can read the bearer
+ * synchronously and the session provider / callback route can start + complete the
+ * flow. The React `<IamProvider>` (mounted at the root) constructs its OWN `IAM` from
+ * the SAME `iamConfig()`, so it shares that token store — the two views stay
+ * consistent.
  */
 import { IAM, type IAMConfig } from '@hanzo/iam/browser'
 
@@ -21,30 +33,6 @@ import { config } from '~/config'
 
 /** Path IAM redirects back to after authorize. */
 export const CALLBACK_PATH = '/auth/callback'
-
-/**
- * An in-memory `Storage` used ONLY during SSR — Next server-renders the `<IamProvider>`
- * client component, and the SDK's constructor falls back to the bare `sessionStorage`
- * global (undefined in Node → ReferenceError) unless a `storage` is supplied. On the
- * client the real `window.sessionStorage` is used, so tokens persist across the redirect.
- */
-function memoryStorage(): Storage {
-  const m = new Map<string, string>()
-  return {
-    get length() {
-      return m.size
-    },
-    clear: () => m.clear(),
-    getItem: (k: string) => (m.has(k) ? (m.get(k) as string) : null),
-    key: (i: number) => Array.from(m.keys())[i] ?? null,
-    removeItem: (k: string) => {
-      m.delete(k)
-    },
-    setItem: (k: string, v: string) => {
-      m.set(k, String(v))
-    },
-  } as Storage
-}
 
 /**
  * The IAM SDK configuration for this host's brand. Shared by the browser singleton
@@ -60,13 +48,12 @@ export function iamConfig(): IAMConfig {
     organization: config.iamOrgName,
     redirectUri: `${typeof window !== 'undefined' ? window.location.origin : ''}${CALLBACK_PATH}`,
     scope: 'openid profile email',
-    storage: typeof window !== 'undefined' ? window.sessionStorage : memoryStorage(),
   }
 }
 
 let sdk: IAM | null = null
 
-/** The browser IAM singleton (browser-only — the SDK touches `window`/`sessionStorage`). */
+/** The browser IAM singleton (browser-only — the SDK touches `window`/`localStorage`). */
 export function iamSdk(): IAM {
   if (typeof window === 'undefined') throw new Error('IAM SDK is browser-only')
   if (!sdk) sdk = new IAM(iamConfig())

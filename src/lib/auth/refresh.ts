@@ -4,7 +4,7 @@
  * Both the proactive timer (SessionProvider) and the reactive 401 handler (the API
  * client) call `refreshSession()`. It delegates to the `@hanzo/iam` SDK's refresh
  * grant (RFC 6749 `refresh_token`) — IAM owns the credential, the console holds only
- * the SDK's sessionStorage token store. There is NO `/auth/refresh` BFF POST any more.
+ * the SDK's token store. There is NO `/auth/refresh` BFF POST any more.
  *
  * SINGLE-FLIGHT is load-bearing, not an optimization: IAM refresh tokens are
  * one-time-use rotating, so two concurrent refreshes would race — the first rotates

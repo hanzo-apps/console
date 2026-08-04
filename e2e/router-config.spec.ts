@@ -128,11 +128,11 @@ async function mock(route: Route) {
 async function openPolicy(page: Page, marker = 'Enabled models') {
   await page.addInitScript((org) => {
     try {
-      // A valid @hanzo/iam session: a non-expired access token in sessionStorage so the
+      // A valid @hanzo/iam session: a non-expired access token in localStorage so the
       // SDK's getValidAccessToken() returns it (userinfo is network-mocked to CLAIMS).
       // Without a future `expires_at` the SDK treats the token as expired → anonymous.
-      sessionStorage.setItem('hanzo_iam_access_token', 'mock-access-token')
-      sessionStorage.setItem('hanzo_iam_expires_at', String(Date.now() + 3600000))
+      localStorage.setItem('hanzo_iam_access_token', 'mock-access-token')
+      localStorage.setItem('hanzo_iam_expires_at', String(Date.now() + 3600000))
 
       localStorage.setItem('hanzo.console.org', org)
       // Scope shows the org PICKER until an org is explicitly entered — the scope
