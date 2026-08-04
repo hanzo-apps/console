@@ -13,7 +13,7 @@ PNPM ?= pnpm
 .PHONY: help build embed test e2e lint typecheck dev clean
 
 help: ## Show this help.
-	@awk 'BEGIN{FS=":.*##";printf "\nUsage: make <target>\n\nTargets:\n"} /^[a-zA-Z_-]+:.*##/{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN{FS=":.*##";printf "\nUsage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_-]+:.*##/{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 build: node_modules ## Build the Next.js app (next build).
 	$(PNPM) build
