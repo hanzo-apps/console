@@ -91,7 +91,21 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
   const split = balanceSplitLabel(balance)
 
   return (
-    <StepShell title="Free trial credits" subtitle="Add a card to unlock free trial credits. No charge now — it just keeps your account ready when the trial ends.">
+    <StepShell
+      title="Free trial credits"
+      subtitle="Add a card to unlock free trial credits. No charge now — it just keeps your account ready when the trial ends."
+      actions={
+        <StepActions
+          onBack={isFirst ? undefined : back}
+          onSkip={phase === 'ready' && !isUnlocked ? skip : undefined}
+          skipLabel="Skip for now"
+          onContinue={next}
+          continueLabel="Continue"
+          continueDisabled={phase === 'ready' && !isUnlocked}
+          busy={adding}
+        />
+      }
+    >
       {phase === 'loading' ? (
         <Card p="$5" items="center" borderWidth={1} borderColor="$borderColor">
           <Spinner size="large" color="$color11" />
@@ -195,16 +209,6 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
           </XStack>
         </Card>
       )}
-
-      <StepActions
-        onBack={isFirst ? undefined : back}
-        onSkip={phase === 'ready' && !isUnlocked ? skip : undefined}
-        skipLabel="Skip for now"
-        onContinue={next}
-        continueLabel="Continue"
-        continueDisabled={phase === 'ready' && !isUnlocked}
-        busy={adding}
-      />
     </StepShell>
   )
 }

@@ -121,7 +121,19 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
   const connectedLabels = connections.map((c) => c.provider).join(', ')
 
   return (
-    <StepShell title="AI access" subtitle="Choose how you want to power AI. You can change or combine these anytime in AI Accounts.">
+    <StepShell
+      title="AI access"
+      subtitle="Choose how you want to power AI. You can change or combine these anytime in AI Accounts."
+      actions={
+        <StepActions
+          onBack={isFirst ? undefined : back}
+          onSkip={skip}
+          skipLabel="Decide later"
+          onContinue={next}
+          continueLabel="Continue"
+        />
+      }
+    >
       <ChoiceCard
         icon={<Wand2 size={20} />}
         title="Let Hanzo power it"
@@ -247,14 +259,6 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
           {err}
         </Text>
       ) : null}
-
-      <StepActions
-        onBack={isFirst ? undefined : back}
-        onSkip={skip}
-        skipLabel="Decide later"
-        onContinue={next}
-        continueLabel="Continue"
-      />
     </StepShell>
   )
 }

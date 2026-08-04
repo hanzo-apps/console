@@ -20,7 +20,7 @@ import { useToast } from '~/components/ui/Toast'
 import { StepShell, StepActions } from '~/components/onboarding/parts'
 import type { StepProps } from '~/components/onboarding/types'
 
-export function TeamStep({ next, back, isFirst }: StepProps) {
+export function TeamStep({ next, skip, back, isFirst }: StepProps) {
   const { account } = useSession()
   const toast = useToast()
   const org = account?.owner || currentOrg()
@@ -63,7 +63,20 @@ export function TeamStep({ next, back, isFirst }: StepProps) {
   }
 
   return (
-    <StepShell title="Your workspace" subtitle="This is where your projects, usage, and billing live. Name it now, or keep the default.">
+    <StepShell
+      title="Your workspace"
+      subtitle="This is where your projects, usage, and billing live. Name it now, or keep the default."
+      actions={
+        <StepActions
+          onBack={isFirst ? undefined : back}
+          onSkip={skip}
+          skipLabel="Keep the default"
+          onContinue={() => void commit()}
+          continueLabel="Continue"
+          busy={busy}
+        />
+      }
+    >
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack gap="$3" items="center">
           <YStack width={44} height={44} rounded="$4" items="center" justify="center" bg="$color3">
@@ -95,13 +108,6 @@ export function TeamStep({ next, back, isFirst }: StepProps) {
           Invite teammates and switch workspaces anytime from the top bar.
         </Text>
       </XStack>
-
-      <StepActions
-        onBack={isFirst ? undefined : back}
-        onContinue={() => void commit()}
-        continueLabel="Continue"
-        busy={busy}
-      />
     </StepShell>
   )
 }
