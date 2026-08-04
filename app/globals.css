@@ -38,7 +38,7 @@ samp {
 
 /* Tabular numerals — metrics, prices, contexts and IDs align on a fixed advance
    width so columns of numbers read cleanly (the dashboard-grade detail). */
-.hz-tnum {
+.tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
@@ -61,7 +61,7 @@ samp {
    (Linear/Stripe): stat tiles, table numeric cells and monospace identifiers read
    as precise, column-aligned data — distinct from Geist prose. One class, whole
    product. `className` forwards to the DOM node on web, so a Gui <Text> can wear it. */
-.hz-mono {
+.mono {
   font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
@@ -129,7 +129,7 @@ html:root.t_dark {
 
   /* Elevation ladder (Material-inspired: ambient + key light). On the true-black
      canvas a cast shadow alone is nearly invisible, so each level pairs a deep
-     shadow with a faint top highlight + a hairline ring (set on .hz-paper) so a
+     shadow with a faint top highlight + a hairline ring (set on .paper) so a
      sheet lifts cleanly off black. Brand-neutral — color stays token-driven. */
   --hz-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.6), 0 1px 1px rgba(0, 0, 0, 0.5);
   --hz-elevation-2: 0 3px 8px rgba(0, 0, 0, 0.62), 0 1px 3px rgba(0, 0, 0, 0.5);
@@ -174,7 +174,7 @@ html:root.t_light {
 /* Motion — a single fade-up entrance (matches the hanzo.ai marketing feel:
    ~0.4s ease-out, small upward travel, staggered by the consumer). One place
    defines it; <FadeIn> applies the class + per-item delay. */
-@keyframes hz-fade-up {
+@keyframes fade-up {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -185,14 +185,14 @@ html:root.t_light {
   }
 }
 
-.hz-fade-up {
-  animation: hz-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+.fade-up {
+  animation: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: transform, opacity;
 }
 
 /* Honor the user's reduced-motion preference — no entrance animation. */
 @media (prefers-reduced-motion: reduce) {
-  .hz-fade-up {
+  .fade-up {
     animation: none;
   }
 }
@@ -201,29 +201,29 @@ html:root.t_light {
    two-level nav slide (transform). One place defines the easing; the shell
    applies the class. `className` forwards to the underlying DOM node on web, so
    the browser transitions the Gui-driven inline width/transform. */
-.hz-collapse {
+.collapse {
   transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: width;
 }
 
-.hz-slide {
+.slide {
   transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
 /* Backdrop cross-fade behind a SlideOver / dialog. */
-.hz-fade {
+.fade {
   transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity;
 }
 
 /* Drag-to-reorder — a pinned row while it is being dragged (pointer DnD). The
-   lifted row gets a subtle lift; siblings ease into place via `.hz-slide`. */
-.hz-drag-item {
+   lifted row gets a subtle lift; siblings ease into place via `.slide`. */
+.drag {
   touch-action: none;
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.hz-drag-item[data-dragging='true'] {
+.drag[data-dragging='true'] {
   transition: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   opacity: 0.96;
@@ -231,10 +231,10 @@ html:root.t_light {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hz-collapse,
-  .hz-slide,
-  .hz-fade,
-  .hz-drag-item {
+  .collapse,
+  .slide,
+  .fade,
+  .drag {
     transition: none;
   }
 }
@@ -280,7 +280,7 @@ html:root.t_light {
    a brief highlight when a tile's number changes. One place defines the easing. */
 
 /* Skeleton shimmer — an honest "loading", never fabricated content. */
-@keyframes hz-shimmer {
+@keyframes shimmer {
   0% {
     background-position: -160px 0;
   }
@@ -289,7 +289,7 @@ html:root.t_light {
   }
 }
 
-.hz-skeleton {
+.skeleton {
   background-color: var(--color3);
   background-image: linear-gradient(
     90deg,
@@ -299,11 +299,11 @@ html:root.t_light {
   );
   background-size: 160px 100%;
   background-repeat: no-repeat;
-  animation: hz-shimmer 1.2s ease-in-out infinite;
+  animation: shimmer 1.2s ease-in-out infinite;
 }
 
 /* Live-feed pulse — the "Live" dot on a streaming panel. */
-@keyframes hz-pulse {
+@keyframes pulse {
   0%,
   100% {
     opacity: 1;
@@ -316,7 +316,7 @@ html:root.t_light {
 }
 
 /* Entrance for a freshly-arrived activity row (staggerless — one row at a time). */
-@keyframes hz-row-in {
+@keyframes row-in {
   from {
     opacity: 0;
     transform: translateY(-6px);
@@ -327,15 +327,15 @@ html:root.t_light {
   }
 }
 
-.hz-row-in {
-  animation: hz-row-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+.row-in {
+  animation: row-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hz-skeleton {
+  .skeleton {
     animation: none;
   }
-  .hz-row-in {
+  .row-in {
     animation: none;
   }
 }
@@ -376,7 +376,7 @@ html:root.t_light {
 }
 
 .hz-rail-dot {
-  animation: hz-pulse 1.5s ease-in-out infinite;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -389,11 +389,11 @@ html:root.t_light {
 
 /* DataTable row — the hover fill eases in/out (Tamagui flips the bg instantly;
    this smooths it to the 140ms ease-out the rest of the product uses). */
-.hz-row {
+.row {
   transition: background-color 140ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
-  .hz-row {
+  .row {
     transition: none;
   }
 }
@@ -406,7 +406,7 @@ html:root.t_light {
    Touch has no hover, so `hover:none` pointers keep it visible: on a phone an
    invisible control is an absent one.
    Doubled selector (`:root .hz-pin.hz-pin`, specificity 0,3,0) for the same reason
-   `.hz-paper` is doubled above: Gui injects its compiled style props at `:root ._x-…`
+   `.paper` is doubled above: Gui injects its compiled style props at `:root ._x-…`
    (0,2,0), so a plain `.hz-pin` loses and the pin paints at full strength forever. */
 :root .hz-pin.hz-pin {
   opacity: 0;
@@ -470,23 +470,23 @@ html:root.t_light {
 
    Each selector is written `:root .hz-x.hz-x` on purpose. @hanzo/gui (Tamagui)
    compiles its own shadow props to an atomic rule it injects at RUNTIME as
-   `:root ._bxsh-…` — specificity (0,2,0). A plain `.hz-paper` is (0,1,0) and loses;
-   `.hz-paper.hz-paper` merely TIES, and a tie is settled by stylesheet order, which
+   `:root ._bxsh-…` — specificity (0,2,0). A plain `.paper` is (0,1,0) and loses;
+   `.paper.paper` merely TIES, and a tie is settled by stylesheet order, which
    runtime injection makes nondeterministic. It lost in practice: an overlay wearing
-   `hz-paper` rendered Tamagui's `0 12px 24px rgba(0,0,0,.33)` instead of this ladder,
+   `paper` rendered Tamagui's `0 12px 24px rgba(0,0,0,.33)` instead of this ladder,
    and on the true-black canvas that shadow is nearly invisible — the sheet did not
    lift off the page. (0,3,0) wins outright, in either order, with no `!important`. */
-:root .hz-elevation-1.hz-elevation-1 { box-shadow: var(--hz-elevation-1); }
-:root .hz-elevation-2.hz-elevation-2 { box-shadow: var(--hz-elevation-2); }
-:root .hz-elevation-3.hz-elevation-3 { box-shadow: var(--hz-elevation-3); }
-:root .hz-elevation-4.hz-elevation-4 { box-shadow: var(--hz-elevation-4); }
-:root .hz-elevation-5.hz-elevation-5 { box-shadow: var(--hz-elevation-5); }
+:root .elevation-1.elevation-1 { box-shadow: var(--hz-elevation-1); }
+:root .elevation-2.elevation-2 { box-shadow: var(--hz-elevation-2); }
+:root .elevation-3.elevation-3 { box-shadow: var(--hz-elevation-3); }
+:root .elevation-4.elevation-4 { box-shadow: var(--hz-elevation-4); }
+:root .elevation-5.elevation-5 { box-shadow: var(--hz-elevation-5); }
 
 /* Paper = an elevated sheet: hairline ring + top highlight + a mid cast shadow, so
    a menu/palette/dialog reads as a physical sheet floating above the page. */
-:root .hz-paper.hz-paper { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-3); }
-:root .hz-paper-4.hz-paper-4 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-4); }
-:root .hz-paper-5.hz-paper-5 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-5); }
+:root .paper.paper { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-3); }
+:root .paper-4.paper-4 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-4); }
+:root .paper-5.paper-5 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-5); }
 
 /* Overlay entrance — a fast, physical scale-fade from the origin (menus, palette,
    dialog, support sheet). 180ms ease-out enter; the overlay's own unmount handles
@@ -515,7 +515,7 @@ html:root.t_light {
    floating-ui anchor exact. The transform-based hz-pop-in stays for the centered
    Dialog surfaces (CommandPalette / FloatingChat), which are NOT
    floating-ui-positioned. Reduced-motion → snap. */
-@keyframes hz-menu-in {
+@keyframes menu-in {
   from {
     opacity: 0;
   }
@@ -523,8 +523,8 @@ html:root.t_light {
     opacity: 1;
   }
 }
-.hz-menu-in {
-  animation: hz-menu-in 140ms ease-out both;
+.menu-in {
+  animation: menu-in 140ms ease-out both;
   will-change: opacity;
 }
 
@@ -564,7 +564,7 @@ html:root.t_light {
 
 @media (prefers-reduced-motion: reduce) {
   .hz-pop-in,
-  .hz-menu-in,
+  .menu-in,
   .hz-scrim-in {
     animation: none;
   }

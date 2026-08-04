@@ -140,7 +140,7 @@ export function CodeBlock({ code, title }: { code: string; title?: string }) {
         <CopyButton text={code} />
       </XStack>
       <YStack p="$3" style={{ overflowX: 'auto' }}>
-        <Text className="hz-mono" fontSize="$2" color="$color12" style={{ whiteSpace: 'pre', display: 'block' }}>
+        <Text className="mono" fontSize="$2" color="$color12" style={{ whiteSpace: 'pre', display: 'block' }}>
           {code}
         </Text>
       </YStack>
@@ -168,7 +168,7 @@ export function Fact({ label, value }: { label: string; value: ReactNode }) {
         {label}
       </Text>
       {typeof value === 'string' ? (
-        <Text fontSize="$2" color="$color12" className="hz-mono">
+        <Text fontSize="$2" color="$color12" className="mono">
           {value}
         </Text>
       ) : (

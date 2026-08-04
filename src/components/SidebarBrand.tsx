@@ -19,7 +19,7 @@
  * The interactive surface is a plain `<div>` (the console's own escape hatch, as
  * used for `<div onScroll>` in OrgSwitcher) so the native `contextmenu` event is
  * guaranteed to fire. The menu reuses the console's one menu surface (a `$color2`
- * paper sheet with the shared `hz-paper hz-menu-in` styling) — no new menu
+ * paper sheet with the shared `paper menu-in` styling) — no new menu
  * system; it is a cursor-anchored overlay (a right-click has no trigger rect to
  * anchor a Popover to).
  */
@@ -67,7 +67,7 @@ function BrandMenu({ x, y, items, onClose }: { x: number; y: number; items: Menu
   return (
     <div ref={ref} role="menu" style={{ position: 'fixed', left, top, zIndex: Z.dropdown }}>
       <YStack
-        className="hz-paper hz-menu-in"
+        className="paper menu-in"
         minW={184}
         p="$1.5"
         gap="$0.5"

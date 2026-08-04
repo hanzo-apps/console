@@ -85,9 +85,9 @@ export function Loader({ label, size = 48 }: { label?: string; size?: number }) 
   return (
     <YStack flex={1} minH="100vh" items="center" justify="center" gap="$3">
       <style>
-        {'@keyframes hz-pulse{0%,100%{opacity:.5}50%{opacity:1}}.hz-pulse{animation:hz-pulse 1.5s ease-in-out infinite;display:inline-flex}'}
+        {'@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}.pulse{animation:pulse 1.5s ease-in-out infinite;display:inline-flex}'}
       </style>
-      <div className="hz-pulse">
+      <div className="pulse">
         <BrandMark size={size} />
       </div>
       {label ? (

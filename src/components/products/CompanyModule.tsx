@@ -301,7 +301,7 @@ function FoundersPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: 
           ))}
           <XStack justify="space-between" items="center" flexWrap="wrap" gap="$2">
             <Button chromeless size="$2" icon={<Plus size={15} />} onPress={add} disabled={busy}>Add founder</Button>
-            <Text fontSize="$2" color={Math.round(totalPct) === 100 ? '$green10' : '$color10'} className="hz-tnum">
+            <Text fontSize="$2" color={Math.round(totalPct) === 100 ? '$green10' : '$color10'} className="tnum">
               Total equity: {totalPct}%
             </Text>
           </XStack>
@@ -369,7 +369,7 @@ function PaymentPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: F
   return (
     <Panel icon={<CreditCard size={20} color="$color11" />} title="Formation fee" blurb="A one-time $999 fee covers document generation and the state filing.">
       <XStack items="baseline" gap="$2">
-        <Text fontSize="$9" fontWeight="600" color="$color12" className="hz-mono">$999</Text>
+        <Text fontSize="$9" fontWeight="600" color="$color12" className="mono">$999</Text>
         <Text fontSize="$3" color="$color10">one-time</Text>
       </XStack>
       {f.paid ? (
@@ -461,7 +461,7 @@ function GenesisPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: F
     <Panel icon={<Landmark size={20} color="$color11" />} title="Equity genesis" blurb="Seed the cap table with the founding allocation and anchor its root on-chain.">
       {recorded ? (
         <YStack gap="$2">
-          <XStack items="center" gap="$2"><Text fontSize="$2" color="$color10">Genesis root:</Text><Text fontSize="$2" className="hz-mono" color="$color12" numberOfLines={1}>{f.genesis!.root}</Text></XStack>
+          <XStack items="center" gap="$2"><Text fontSize="$2" color="$color10">Genesis root:</Text><Text fontSize="$2" className="mono" color="$color12" numberOfLines={1}>{f.genesis!.root}</Text></XStack>
           <XStack items="center" gap="$2"><Text fontSize="$2" color="$color10">Anchor:</Text><StatusTag status={genesisStatusLabel(f.genesis)} /></XStack>
           <Text fontSize="$1" color="$color10">The root is the tamper-evident witness; the on-chain anchor stays honestly pending until the L1 anchor is wired.</Text>
         </YStack>

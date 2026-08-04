@@ -53,7 +53,7 @@ function Lane({ title, used }: { title: string; used?: number }) {
         <Text fontSize="$1" color="$color11">
           {title}
         </Text>
-        <Text fontSize="$1" color="$color12" className="hz-mono">
+        <Text fontSize="$1" color="$color12" className="mono">
           {pctText(used)}
         </Text>
       </XStack>
@@ -68,7 +68,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$3" fontWeight="600" color="$color12" className="hz-mono">
+      <Text fontSize="$3" fontWeight="600" color="$color12" className="mono">
         {value}
       </Text>
     </YStack>
@@ -253,7 +253,7 @@ function CandidateRow({ c, rank, primary }: { c: RouteCandidate; rank: number; p
       flexWrap="wrap"
     >
       <XStack items="center" gap="$2" flex={1} minW={200}>
-        <Text fontSize="$2" color="$color10" className="hz-mono">
+        <Text fontSize="$2" color="$color10" className="mono">
           {rank}
         </Text>
         <Text fontSize="$3" fontWeight="600">
@@ -266,7 +266,7 @@ function CandidateRow({ c, rank, primary }: { c: RouteCandidate; rank: number; p
       </XStack>
       <XStack items="center" gap="$3" flexWrap="wrap">
         <Badge text={billingLabel(c.billing)} tone={c.billing === 'plan' ? toneVar('positive') : undefined} />
-        <Text fontSize="$2" color={c.available ? '$color12' : toneColor('critical')} className="hz-mono">
+        <Text fontSize="$2" color={c.available ? '$color12' : toneColor('critical')} className="mono">
           {c.available ? `${pctText(c.headroomPct)} left` : c.reason || 'unavailable'}
         </Text>
       </XStack>

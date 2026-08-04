@@ -159,7 +159,7 @@ function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }
 /** Small event pill. */
 function EventChip({ children }: { children: string }) {
   return (
-    <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11" className="hz-mono" numberOfLines={1}>
+    <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11" className="mono" numberOfLines={1}>
       {children}
     </Text>
   )
@@ -185,12 +185,12 @@ function SecretReveal({ title, url, secret, onDismiss }: { title: string; url: s
         endpoint <Text fontWeight="700">{url || 'receiver'}</Text> can read it.
       </Text>
       <XStack gap="$2" items="center" flexWrap="wrap">
-        <Text flex={1} minW={200} fontSize="$2" color="$color12" className="hz-mono" style={{ wordBreak: 'break-all' }}>
+        <Text flex={1} minW={200} fontSize="$2" color="$color12" className="mono" style={{ wordBreak: 'break-all' }}>
           {secret}
         </Text>
         <CopyButton value={secret} label="Copy secret" />
       </XStack>
-      <Text fontSize="$1" color="$color10" className="hz-mono">
+      <Text fontSize="$1" color="$color10" className="mono">
         Verify each delivery: {SIGNATURE_SCHEME}
       </Text>
     </Card>
@@ -243,7 +243,7 @@ function DeliveriesPanel({
 
   const columns: Column<Delivery>[] = [
     { key: 'created', header: 'Time', width: 170, render: (d) => shortTime(d.created) },
-    { key: 'subject', header: 'Event', render: (d) => <Text fontSize="$2" className="hz-mono" numberOfLines={1}>{d.subject}</Text> },
+    { key: 'subject', header: 'Event', render: (d) => <Text fontSize="$2" className="mono" numberOfLines={1}>{d.subject}</Text> },
     { key: 'attempt', header: 'Attempt', width: 80, align: 'right', mono: true, render: (d) => `#${d.attempt}` },
     {
       key: 'status',
@@ -252,7 +252,7 @@ function DeliveriesPanel({
       render: (d) => (
         <XStack gap="$2" items="center">
           <StatusTag status={d.status} />
-          {d.httpStatus ? <Text fontSize="$1" color="$color10" className="hz-mono">{d.httpStatus}</Text> : null}
+          {d.httpStatus ? <Text fontSize="$1" color="$color10" className="mono">{d.httpStatus}</Text> : null}
         </XStack>
       ),
     },
@@ -270,7 +270,7 @@ function DeliveriesPanel({
               {lastTest.delivered ? 'Test delivered' : 'Test failed'}
             </Text>
           </XStack>
-          <Text fontSize="$2" color="$color11" className="hz-mono">
+          <Text fontSize="$2" color="$color11" className="mono">
             {lastTest.delivered
               ? `HTTP ${lastTest.httpStatus ?? '—'} · ${lastTest.durationMs != null ? `${lastTest.durationMs}ms` : '—'}`
               : lastTest.error || `HTTP ${lastTest.httpStatus ?? '—'}`}
@@ -488,7 +488,7 @@ export function WebhooksModule({ params }: { params: Record<string, string> }) {
       header: 'Endpoint',
       render: (w) => (
         <YStack gap={2} minW={0}>
-          <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} className="hz-mono">
+          <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} className="mono">
             {w.url || w.id}
           </Text>
           {w.description ? (
@@ -525,7 +525,7 @@ export function WebhooksModule({ params }: { params: Record<string, string> }) {
             header: '7d',
             width: 130,
             render: (w: Webhook) => (
-              <Text fontSize="$2" color="$color11" className="hz-mono">
+              <Text fontSize="$2" color="$color11" className="mono">
                 {w.deliveries7d ?? 0}
                 {w.failures7d ? <Text color="$red10">{` · ${w.failures7d} failed`}</Text> : null}
               </Text>
@@ -626,12 +626,12 @@ export function WebhooksModule({ params }: { params: Record<string, string> }) {
               <YStack gap="$1">
                 <FieldText value={events} onChange={setEvents} placeholder="*  or  commerce.order.created, agent.run.*" />
                 <Text fontSize="$1" color="$color10">
-                  Comma-separated. Use <Text className="hz-mono">*</Text> for every event, or a prefix pattern like{' '}
-                  <Text className="hz-mono">commerce.&gt;</Text> / <Text className="hz-mono">agent.run.*</Text> to match a family.
+                  Comma-separated. Use <Text className="mono">*</Text> for every event, or a prefix pattern like{' '}
+                  <Text className="mono">commerce.&gt;</Text> / <Text className="mono">agent.run.*</Text> to match a family.
                 </Text>
                 <Text fontSize="$1" color="$color10">
-                  Live subjects: <Text className="hz-mono">commerce.order.*</Text> ·{' '}
-                  <Text className="hz-mono">commerce.checkout.*</Text> · <Text className="hz-mono">commerce.&gt;</Text> — more event
+                  Live subjects: <Text className="mono">commerce.order.*</Text> ·{' '}
+                  <Text className="mono">commerce.checkout.*</Text> · <Text className="mono">commerce.&gt;</Text> — more event
                   streams coming.
                 </Text>
               </YStack>
@@ -653,7 +653,7 @@ export function WebhooksModule({ params }: { params: Record<string, string> }) {
               <ShieldCheck size={14} color="$color10" />
               <Text fontSize="$1" color="$color10" flex={1}>
                 On create we return a signing secret ONCE. Verify each delivery with{' '}
-                <Text className="hz-mono">{SIGNATURE_SCHEME}</Text> — compute the HMAC over the timestamped body and compare in
+                <Text className="mono">{SIGNATURE_SCHEME}</Text> — compute the HMAC over the timestamped body and compare in
                 constant time. Failed deliveries are retried with backoff and appear under each endpoint's Logs.
               </Text>
             </XStack>

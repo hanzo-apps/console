@@ -101,7 +101,7 @@ export function ClonePanel({ cloneUrl, sshUrl }: { cloneUrl: string; sshUrl: str
         bg="$color1"
         minW={0}
       >
-        <Text className="hz-mono" fontSize="$2" color="$color12" flex={1} numberOfLines={1} selectable>
+        <Text className="mono" fontSize="$2" color="$color12" flex={1} numberOfLines={1} selectable>
           {value || '—'}
         </Text>
         {value ? <CopyButton value={value} ariaLabel={`Copy ${proto} clone URL`} /> : null}
@@ -161,7 +161,7 @@ export function RefSelector({
           icon={isTag ? <Tag size={14} /> : <GitBranch size={14} />}
           iconAfter={<ChevronDown size={14} opacity={0.6} />}
         >
-          <Text className="hz-mono" fontSize="$2" color="$color12" numberOfLines={1} flex={1}>
+          <Text className="mono" fontSize="$2" color="$color12" numberOfLines={1} flex={1}>
             {active || '—'}
           </Text>
         </Button>
@@ -242,7 +242,7 @@ function RefGroup({
           <XStack width={14} items="center" justify="center">
             {active === r.name ? <Check size={13} /> : null}
           </XStack>
-          <Text className="hz-mono" fontSize="$2" color="$color12" flex={1} numberOfLines={1}>
+          <Text className="mono" fontSize="$2" color="$color12" flex={1} numberOfLines={1}>
             {r.name}
           </Text>
         </XStack>
@@ -267,7 +267,7 @@ export function PathBreadcrumb({
   return (
     <XStack items="center" gap="$1" flexWrap="wrap">
       <Text
-        className="hz-mono"
+        className="mono"
         fontSize="$3"
         fontWeight="700"
         color="$color11"
@@ -285,12 +285,12 @@ export function PathBreadcrumb({
               /
             </Text>
             {last ? (
-              <Text className="hz-mono" fontSize="$3" color="$color12">
+              <Text className="mono" fontSize="$3" color="$color12">
                 {c.name}
               </Text>
             ) : (
               <Text
-                className="hz-mono"
+                className="mono"
                 fontSize="$3"
                 color="$color11"
                 cursor="pointer"

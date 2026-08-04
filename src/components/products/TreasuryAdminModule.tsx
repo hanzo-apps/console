@@ -443,7 +443,7 @@ function JournalPanel({ journal }: { journal: JournalEntry[] }) {
         <YStack gap="$0.5">
           <Text fontSize="$3" color="$color12" numberOfLines={1}>{e.memo || '—'}</Text>
           {e.postings.length ? (
-            <Text fontSize="$1" color="$color9" numberOfLines={1} className="hz-mono">
+            <Text fontSize="$1" color="$color9" numberOfLines={1} className="mono">
               {e.postings.map((p) => `${p.account} ${signedUsd(p.amount)}`).join(' · ')}
             </Text>
           ) : null}
@@ -574,7 +574,7 @@ function Fact({ label, value, mono }: { label: string; value: string; mono?: boo
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$2" color="$color12" className={mono ? 'hz-mono' : undefined}>
+      <Text fontSize="$2" color="$color12" className={mono ? 'mono' : undefined}>
         {value}
       </Text>
     </YStack>

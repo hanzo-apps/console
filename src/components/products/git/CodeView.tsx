@@ -115,7 +115,7 @@ function TreePane({
                 onPress={() => onNavigate(parentPath(path), 'tree')}
               >
                 <ChevronUp size={15} color="$color10" />
-                <Text className="hz-mono" fontSize="$2" color="$color11">
+                <Text className="mono" fontSize="$2" color="$color11">
                   ..
                 </Text>
               </XStack>
@@ -137,7 +137,7 @@ function TreePane({
                 <Text fontSize="$3" color="$color12" flex={1} numberOfLines={1}>
                   {e.name}
                 </Text>
-                <Text className="hz-mono" fontSize="$2" color="$color9">
+                <Text className="mono" fontSize="$2" color="$color9">
                   {e.type === 'blob' ? fmtBytes(e.size) : ''}
                 </Text>
               </XStack>
@@ -185,7 +185,7 @@ function ReadmeCard({ name, refName }: { name: string; refName: string }) {
     <Card borderWidth={1} borderColor="$borderColor" p="$0" overflow="hidden">
       <XStack items="center" gap="$2" px="$3" py="$2" borderBottomWidth={1} borderColor="$borderColor" bg="$color2">
         <FileText size={14} color="$color10" />
-        <Text className="hz-mono" fontSize="$2" color="$color11">
+        <Text className="mono" fontSize="$2" color="$color11">
           {readme.path}
         </Text>
       </XStack>
@@ -252,7 +252,7 @@ function BlobPane({ name, refName, path }: { name: string; refName: string; path
           <Text fontSize="$2" color="$color9">
             ·
           </Text>
-          <Text className="hz-mono" fontSize="$2" color="$color9">
+          <Text className="mono" fontSize="$2" color="$color9">
             {fmtBytes(blob.size)}
           </Text>
           {text != null ? (
@@ -260,7 +260,7 @@ function BlobPane({ name, refName, path }: { name: string; refName: string; path
               <Text fontSize="$2" color="$color9">
                 ·
               </Text>
-              <Text className="hz-mono" fontSize="$2" color="$color9">
+              <Text className="mono" fontSize="$2" color="$color9">
                 {lines.length} {lines.length === 1 ? 'line' : 'lines'}
               </Text>
             </>
@@ -333,7 +333,7 @@ function CodeLines({ lines }: { lines: string[] }) {
         {/* Gutter — right-aligned line numbers, non-selectable. */}
         <YStack py="$2" px="$3" bg="$color2" borderRightWidth={1} borderColor="$borderColor" items="flex-end">
           {lines.map((_, i) => (
-            <Text key={i} className="hz-mono" fontSize="$2" color="$color9" style={{ lineHeight: '20px', userSelect: 'none' }}>
+            <Text key={i} className="mono" fontSize="$2" color="$color9" style={{ lineHeight: '20px', userSelect: 'none' }}>
               {i + 1}
             </Text>
           ))}
@@ -343,7 +343,7 @@ function CodeLines({ lines }: { lines: string[] }) {
           {lines.map((ln, i) => (
             <Text
               key={i}
-              className="hz-mono"
+              className="mono"
               fontSize="$2"
               color="$color12"
               selectable

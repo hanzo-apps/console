@@ -64,7 +64,7 @@ export function CommitsView({ name, refName, path }: { name: string; refName: st
         <XStack px="$3" py="$2" borderBottomWidth={1} borderColor="$borderColor" bg="$color2">
           <Text fontSize="$2" color="$color10">
             History of{' '}
-            <Text className="hz-mono" fontSize="$2" color="$color12">
+            <Text className="mono" fontSize="$2" color="$color12">
               {path}
             </Text>
           </Text>
@@ -97,7 +97,7 @@ export function CommitsView({ name, refName, path }: { name: string; refName: st
             </XStack>
           </YStack>
           <XStack items="center" gap="$1">
-            <Text className="hz-mono" fontSize="$2" color="$color10">
+            <Text className="mono" fontSize="$2" color="$color10">
               {c.shortSha}
             </Text>
             <CopyButton value={c.sha} label="" ariaLabel={`Copy commit ${c.shortSha}`} size="$1" />

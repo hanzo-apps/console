@@ -145,7 +145,7 @@ export function CatalogModule(_props: { params: Record<string, string> }) {
       align: 'right',
       mono: true,
       render: (e) => (
-        <Text fontSize="$3" color="$color12" className="hz-mono">
+        <Text fontSize="$3" color="$color12" className="mono">
           {formatUsd(e.priceCents)}
           <Text fontSize="$1" color="$color10">
             {priceUnit(e.category)}

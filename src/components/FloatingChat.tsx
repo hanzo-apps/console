@@ -153,7 +153,7 @@ function ChatSheet({
         />
         <Dialog.Content
           key="chat-content"
-          className="hz-paper hz-pop-in"
+          className="paper hz-pop-in"
           bordered
           position="absolute"
           bg="$color1"
@@ -251,7 +251,7 @@ function AssistantFab({
     >
       {voiceOk ? (
         <Button
-          className="hz-paper"
+          className="paper"
           size="$3"
           circular
           width={44}
@@ -265,7 +265,7 @@ function AssistantFab({
         />
       ) : null}
       <Button
-        className="hz-paper"
+        className="paper"
         size="$4"
         circular
         width={52}

@@ -520,7 +520,7 @@ function BlueprintPanel({
             <YStack gap="$1">
               {versions.map((v, i) => (
                 <XStack key={`${v.version}:${i}`} gap="$2" items="center" justify="space-between">
-                  <Text fontSize="$1" color="$color11" className="hz-mono">version {v.version || '—'}</Text>
+                  <Text fontSize="$1" color="$color11" className="mono">version {v.version || '—'}</Text>
                   <Text fontSize="$1" color="$color9" numberOfLines={1}>{v.note || (v.savedAt ? new Date(v.savedAt).toLocaleString() : '')}</Text>
                 </XStack>
               ))}

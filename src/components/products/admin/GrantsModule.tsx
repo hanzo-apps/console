@@ -140,7 +140,7 @@ export function GrantsModule() {
     { key: 'org', header: 'Org', render: (r) => (
       <YStack><Text fontSize="$3" color="$color12">{r.orgDisplay || r.org}</Text>{r.orgDisplay && r.org !== r.orgDisplay ? <Text fontSize="$1" color="$color10">{r.org}</Text> : null}</YStack>
     ) },
-    { key: 'amountCents', header: 'Amount', align: 'right', render: (r) => <Text fontSize="$2" color="$green11" className="hz-mono">{usd(r.amountCents)}</Text> },
+    { key: 'amountCents', header: 'Amount', align: 'right', render: (r) => <Text fontSize="$2" color="$green11" className="mono">{usd(r.amountCents)}</Text> },
     { key: 'source', header: 'Source', width: 92, render: (r) => <SourceBadge source={r.source} /> },
     { key: 'reason', header: 'Reason', render: (r) => <Text fontSize="$2" color="$color11">{r.reason || '—'}</Text> },
     { key: 'actor', header: 'Issued by', render: (r) => <Text fontSize="$1" color="$color10">{r.actor || '—'}</Text> },

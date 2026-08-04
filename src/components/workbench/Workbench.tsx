@@ -279,10 +279,10 @@ export function WorkbenchDock() {
             hoverStyle={{ borderColor: '$color8' }}
             onPress={() => openTo('shell')}
           >
-            <Text fontSize="$2" color="$color11" className="hz-mono">
+            <Text fontSize="$2" color="$color11" className="mono">
               $
             </Text>
-            <Text flex={1} fontSize="$2" color="$color10" className="hz-mono" numberOfLines={1}>
+            <Text flex={1} fontSize="$2" color="$color10" className="mono" numberOfLines={1}>
               Run a /v1 command — models, agents, logs…
             </Text>
           </XStack>

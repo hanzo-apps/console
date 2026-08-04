@@ -74,7 +74,7 @@ export function DiscoverPanel({ projects }: { projects: SentryProject[] }) {
         render: (r: DiscoverRow) => {
           const v = r[f]
           return (
-            <Text fontSize="$2" color="$color12" numberOfLines={1} className={numeric ? 'hz-mono' : undefined}>
+            <Text fontSize="$2" color="$color12" numberOfLines={1} className={numeric ? 'mono' : undefined}>
               {typeof v === 'number' ? fmtCount(v) : v || '—'}
             </Text>
           )
@@ -213,7 +213,7 @@ function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () 
       borderColor={on ? '$color8' : '$borderColor'}
       onPress={onPress}
     >
-      <Text fontSize="$1" color={on ? '$color12' : '$color11'} className="hz-mono">
+      <Text fontSize="$1" color={on ? '$color12' : '$color11'} className="mono">
         {label}
       </Text>
     </Button>

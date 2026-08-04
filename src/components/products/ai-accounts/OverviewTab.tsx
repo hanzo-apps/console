@@ -40,7 +40,7 @@ function Lane({ title, used, color }: { title: string; used?: number; color: str
         <Text fontSize="$2" color="$color11">
           {title}
         </Text>
-        <Text fontSize="$2" color="$color12" className="hz-mono">
+        <Text fontSize="$2" color="$color12" className="mono">
           {pctText(used)}
         </Text>
       </XStack>
@@ -126,7 +126,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$5" fontWeight="600" color="$color12" className="hz-mono">
+      <Text fontSize="$5" fontWeight="600" color="$color12" className="mono">
         {value}
       </Text>
     </YStack>

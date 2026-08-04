@@ -98,7 +98,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$4" fontWeight="600" color="$color12" className="hz-mono" numberOfLines={1}>
+      <Text fontSize="$4" fontWeight="600" color="$color12" className="mono" numberOfLines={1}>
         {value}
       </Text>
     </YStack>
@@ -437,10 +437,10 @@ function CapCard({ org, cap, onChanged }: { org: string; cap: AdminCap; onChange
       <YStack gap="$1.5">
         <Meter pct={pct ?? 0} color={meterColor(verdict)} />
         <XStack justify="space-between" gap="$2" flexWrap="wrap">
-          <Text fontSize="$2" color="$color11" className="hz-mono">
+          <Text fontSize="$2" color="$color11" className="mono">
             {fmtUsd(cap.periodSpentCents)} spent
           </Text>
-          <Text fontSize="$2" color="$color10" className="hz-mono">
+          <Text fontSize="$2" color="$color10" className="mono">
             {cap.thresholdCents > 0
               ? `of ${fmtUsd(cap.thresholdCents)} cap${pct !== null ? ` · ${Math.round(pct)}%` : ''}`
               : 'Unlimited spend'}

@@ -127,7 +127,7 @@ function SummaryBar({ zones }: { zones: Zone[] }) {
       {cells.map((c) => (
         <YStack key={c.label} gap="$1" borderWidth={1} borderColor="$borderColor" rounded="$4" px="$4" py="$3" minW={140}>
           <Text fontSize="$1" color="$color10">{c.label}</Text>
-          <Text fontSize="$6" fontWeight="500" className="hz-tnum">{c.value}</Text>
+          <Text fontSize="$6" fontWeight="500" className="tnum">{c.value}</Text>
         </YStack>
       ))}
     </XStack>
@@ -425,8 +425,8 @@ export function DnsModule(_props: { params: Record<string, string> }) {
 
   const recordColumns: Column<DnsRecord>[] = [
     { key: 'name', header: 'Name', render: (r) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{r.name || '@'}</Text> },
-    { key: 'type', header: 'Type', width: 80, render: (r) => <Text fontSize="$2" className="hz-mono" color="$color11">{r.type}</Text> },
-    { key: 'content', header: 'Value', render: (r) => <Text fontSize="$3" className="hz-mono" color="$color12" numberOfLines={1}>{r.content}</Text> },
+    { key: 'type', header: 'Type', width: 80, render: (r) => <Text fontSize="$2" className="mono" color="$color11">{r.type}</Text> },
+    { key: 'content', header: 'Value', render: (r) => <Text fontSize="$3" className="mono" color="$color12" numberOfLines={1}>{r.content}</Text> },
     { key: 'ttl', header: 'TTL', width: 80, align: 'right', mono: true, render: (r) => String(r.ttl) },
     { key: 'priority', header: 'Prio', width: 64, align: 'right', mono: true, render: (r) => (hasPriority(r.type) ? String(r.priority) : '—') },
     { key: 'proxied', header: 'Proxy', width: 110, render: (r) => active ? <ProxiedCell zone={active} record={r} /> : null },

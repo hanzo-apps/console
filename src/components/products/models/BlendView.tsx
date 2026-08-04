@@ -58,7 +58,7 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import type { ApiError } from '~/lib/api'
 
-const TNUM = 'hz-tnum'
+const TNUM = 'tnum'
 
 type Load =
   | { phase: 'loading' }

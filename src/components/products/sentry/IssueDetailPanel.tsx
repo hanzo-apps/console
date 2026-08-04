@@ -65,7 +65,7 @@ export function IssueDetailPanel({ id }: { id: string }) {
     { key: 'level', header: 'Level', width: 90, render: (e) => <Pill label={e.level} tone={levelColor(e.level)} /> },
     { key: 'environment', header: 'Env', width: 110, render: (e) => <Text fontSize="$2" color="$color11">{e.environment || '—'}</Text> },
     { key: 'release', header: 'Release', width: 130, render: (e) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{e.release || '—'}</Text> },
-    { key: 'id', header: 'Event', render: (e) => <Text fontSize="$2" color="$color10" className="hz-mono" numberOfLines={1}>{e.id}</Text> },
+    { key: 'id', header: 'Event', render: (e) => <Text fontSize="$2" color="$color10" className="mono" numberOfLines={1}>{e.id}</Text> },
   ]
 
   return (
@@ -184,14 +184,14 @@ function StackTrace({ event }: { event: SentryEvent | null }) {
         {frames.map((f, i) => (
           <YStack key={i} borderTopWidth={i === 0 ? 0 : 1} borderColor="$borderColor" bg={f.inApp ? '$color2' : undefined}>
             <XStack py="$1.5" px="$2.5" gap="$2" items="baseline">
-              <Text fontSize="$1" color="$color10" className="hz-mono" width={20}>
+              <Text fontSize="$1" color="$color10" className="mono" width={20}>
                 {i}
               </Text>
               <YStack minW={0} flex={1}>
-                <Text fontSize="$2" color="$color12" className="hz-mono" numberOfLines={1}>
+                <Text fontSize="$2" color="$color12" className="mono" numberOfLines={1}>
                   {f.function}
                 </Text>
-                <Text fontSize="$1" color="$color10" className="hz-mono" numberOfLines={1}>
+                <Text fontSize="$1" color="$color10" className="mono" numberOfLines={1}>
                   {(f.module || f.filename || '')}{f.lineno ? `:${f.lineno}` : ''}{f.colno ? `:${f.colno}` : ''}
                 </Text>
               </YStack>
@@ -208,10 +208,10 @@ function StackTrace({ event }: { event: SentryEvent | null }) {
                     const crash = ln === f.lineno
                     return (
                       <XStack key={ln} gap="$2" px="$2" py={1} bg={crash ? 'rgba(220,220,220,0.14)' : undefined}>
-                        <Text fontSize="$1" color="$color10" className="hz-mono" width={36} text="right">
+                        <Text fontSize="$1" color="$color10" className="mono" width={36} text="right">
                           {ln}
                         </Text>
-                        <Text fontSize="$1" color={crash ? toneColor('critical') : '$color11'} className="hz-mono" style={{ whiteSpace: 'pre' }}>
+                        <Text fontSize="$1" color={crash ? toneColor('critical') : '$color11'} className="mono" style={{ whiteSpace: 'pre' }}>
                           {code}
                         </Text>
                       </XStack>
@@ -242,7 +242,7 @@ function Breadcrumbs({ event }: { event: SentryEvent | null }) {
             <Text fontSize="$1" color="$color10" width={64} numberOfLines={1}>
               {b.category || b.type || '—'}
             </Text>
-            <Text fontSize="$2" color="$color12" flex={1} numberOfLines={1} className="hz-mono">
+            <Text fontSize="$2" color="$color12" flex={1} numberOfLines={1} className="mono">
               {b.message || '—'}
             </Text>
             <Text fontSize="$1" color="$color10">
@@ -272,7 +272,7 @@ function TagsCard({ event }: { event: SentryEvent | null }) {
             <Text fontSize="$1" color="$color10" px="$2" py="$1" bg="$color2">
               {t.key}
             </Text>
-            <Text fontSize="$1" color="$color12" px="$2" py="$1" className="hz-mono" numberOfLines={1}>
+            <Text fontSize="$1" color="$color12" px="$2" py="$1" className="mono" numberOfLines={1}>
               {t.value || '—'}
             </Text>
           </XStack>

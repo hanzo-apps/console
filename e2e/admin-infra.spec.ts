@@ -264,7 +264,7 @@ test('infrastructure board renders the fleet, sorts, filters, and gates deletion
   await expect(page.getByText('hanzo-k8s').first()).toBeVisible({ timeout: 15_000 })
 
   // Default sort is Monthly desc → hanzo-k8s ($4,800.00) is first.
-  const clusterRows = page.locator('.hz-row')
+  const clusterRows = page.locator('.row')
   await expect(clusterRows.first()).toContainText('hanzo-k8s')
   const beforeSort = (await clusterRows.first().innerText()).trim()
 
@@ -287,7 +287,7 @@ test('infrastructure board renders the fleet, sorts, filters, and gates deletion
   await expect(page.getByRole('button', { name: 'Cordon' }).first()).toBeVisible()
 
   // Sort by vCPU ascending → a 4-vCPU node leads; descending → an 8-vCPU node leads.
-  const nodeRows = page.locator('.hz-row')
+  const nodeRows = page.locator('.row')
   await page.getByLabel('Sort by vCPU').click()
   await expect(nodeRows.first()).toContainText('s-4vcpu-8gb', { timeout: 10_000 })
   const nodeAsc = (await nodeRows.first().innerText()).trim()
@@ -302,7 +302,7 @@ test('infrastructure board renders the fleet, sorts, filters, and gates deletion
   await expect(page.getByText('295').first()).toBeVisible({ timeout: 15_000 })
 
   await page.getByRole('button', { name: 'Unreferenced', exact: true }).click()
-  const volumeRows = page.locator('.hz-row')
+  const volumeRows = page.locator('.row')
   await expect(volumeRows).toHaveCount(3, { timeout: 10_000 })
   await expect(page.getByText('pvc-abandoned-alpha')).toBeVisible()
   await expect(page.getByText('pvc-abandoned-bravo')).toBeVisible()

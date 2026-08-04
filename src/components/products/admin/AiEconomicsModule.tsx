@@ -150,7 +150,7 @@ function StepFact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text className="hz-mono" fontSize="$5" fontWeight="600" color="$color12">
+      <Text className="mono" fontSize="$5" fontWeight="600" color="$color12">
         {value}
       </Text>
     </YStack>
@@ -306,7 +306,7 @@ export function AiEconomicsModule() {
       align: 'right',
       mono: true,
       render: (r) => (
-        <Text className="hz-mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12">
+        <Text className="mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12">
           {compactNumber(r.requests)}
         </Text>
       ),
@@ -318,7 +318,7 @@ export function AiEconomicsModule() {
       render: (r) => (
         <XStack items="center" gap="$2" justify="flex-end">
           <ShareBar share={r.requestShare} />
-          <Text className="hz-mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12" width={46} text="right">
+          <Text className="mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12" width={46} text="right">
             {(r.requestShare * 100).toFixed(r.requestShare < 0.1 && !r._total ? 1 : 0)}%
           </Text>
         </XStack>
@@ -331,7 +331,7 @@ export function AiEconomicsModule() {
       align: 'right',
       mono: true,
       render: (r) => (
-        <Text className="hz-mono" fontSize="$2" color="$color11">
+        <Text className="mono" fontSize="$2" color="$color11">
           {compactNumber(r.tokens)}
         </Text>
       ),
@@ -342,7 +342,7 @@ export function AiEconomicsModule() {
       align: 'right',
       mono: true,
       render: (r) => (
-        <Text className="hz-mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12">
+        <Text className="mono" fontSize="$2" fontWeight={r._total ? '700' : '400'} color="$color12">
           {usd(r.costCents)}
         </Text>
       ),
@@ -355,9 +355,9 @@ export function AiEconomicsModule() {
   )
   const creditCols: Column<ProviderCredit>[] = [
     { key: 'provider', header: 'Provider', render: (c) => <Text fontSize="$3" color="$color12">{c.provider || '—'}</Text> },
-    { key: 'remainingCents', header: 'Remaining', align: 'right', mono: true, render: (c) => <Text className="hz-mono" fontSize="$2" color={c.hasCredit ? toneColor('positive') : '$color11'}>{usd(c.remainingCents)}</Text> },
-    { key: 'burnCents', header: 'Burn / day', align: 'right', mono: true, render: (c) => <Text className="hz-mono" fontSize="$2" color="$color11">{usd(c.burnCents)}</Text> },
-    { key: 'runwayDays', header: 'Runway', align: 'right', render: (c) => <Text className="hz-mono" fontSize="$2" style={RUNWAY_COLOR[runwayTone(c.runwayDays)] ? { color: RUNWAY_COLOR[runwayTone(c.runwayDays)] } : undefined} color="$color11">{runwayLabel(c.runwayDays)}</Text> },
+    { key: 'remainingCents', header: 'Remaining', align: 'right', mono: true, render: (c) => <Text className="mono" fontSize="$2" color={c.hasCredit ? toneColor('positive') : '$color11'}>{usd(c.remainingCents)}</Text> },
+    { key: 'burnCents', header: 'Burn / day', align: 'right', mono: true, render: (c) => <Text className="mono" fontSize="$2" color="$color11">{usd(c.burnCents)}</Text> },
+    { key: 'runwayDays', header: 'Runway', align: 'right', render: (c) => <Text className="mono" fontSize="$2" style={RUNWAY_COLOR[runwayTone(c.runwayDays)] ? { color: RUNWAY_COLOR[runwayTone(c.runwayDays)] } : undefined} color="$color11">{runwayLabel(c.runwayDays)}</Text> },
   ]
 
   const runCols: Column<EvalDatasetRun>[] = [
@@ -371,13 +371,13 @@ export function AiEconomicsModule() {
       mono: true,
       render: (r) => (
         <XStack items="center" gap="$2" justify="flex-end">
-          <Text className="hz-mono" fontSize="$2" color="$color12" fontWeight="600">{fmtScore(r.avgScore)}</Text>
+          <Text className="mono" fontSize="$2" color="$color12" fontWeight="600">{fmtScore(r.avgScore)}</Text>
           <Text fontSize="$1" color="$color10">{`${compactNumber(r.scored ?? 0)}/${compactNumber(r.items ?? 0)}`}</Text>
         </XStack>
       ),
       width: 132,
     },
-    { key: 'createdAt', header: 'When', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color10">{shortWhen(r.createdAt)}</Text>, width: 84 },
+    { key: 'createdAt', header: 'When', align: 'right', mono: true, render: (r) => <Text className="mono" fontSize="$2" color="$color10">{shortWhen(r.createdAt)}</Text>, width: 84 },
   ]
 
   const marginPct = derived?.grossMarginPct ?? 0
@@ -448,7 +448,7 @@ export function AiEconomicsModule() {
                     <Text fontSize="$1" color="$color10">
                       requests
                     </Text>
-                    <Text className="hz-mono" fontSize="$4" fontWeight="700" color="$color12">
+                    <Text className="mono" fontSize="$4" fontWeight="700" color="$color12">
                       {mix ? compactNumber(mix.total.requests) : '—'}
                     </Text>
                   </YStack>
@@ -535,19 +535,19 @@ export function AiEconomicsModule() {
 
         <NoteCard title="No traffic is harvested for training" testid="training-collection-card">
           <Text fontSize="$3" color="$color11">
-            The metering ledger (<Text className="hz-mono">hanzo.cloud_usage</Text> on our datastore) records one row per
+            The metering ledger (<Text className="mono">hanzo.cloud_usage</Text> on our datastore) records one row per
             inference call with token counts and cost — and <Text fontWeight="700">no prompt or completion content</Text>.
             Nothing collects prompts or completions from live traffic, and there is no consent flag anywhere to do so.
           </Text>
           <Text fontSize="$3" color="$color11">
             The only training data the platform holds is the eval dataset registry below — input/expected pairs a human
-            uploaded — plus whatever an org feeds <Text className="hz-mono">/v1/training</Text> directly. Those are the
+            uploaded — plus whatever an org feeds <Text className="mono">/v1/training</Text> directly. Those are the
             curated sources the router and fine-tunes learn from; the numbers above are the real registry counts, never a
             fabricated pipeline.
           </Text>
           {datasetsErr && !datasets ? (
             <Text fontSize="$2" color="$color10">
-              (Eval registry not reachable on this host right now — counts show once <Text className="hz-mono">/v1/evals</Text> is routed.)
+              (Eval registry not reachable on this host right now — counts show once <Text className="mono">/v1/evals</Text> is routed.)
             </Text>
           ) : null}
         </NoteCard>
@@ -562,7 +562,7 @@ export function AiEconomicsModule() {
           </XStack>
           <Text fontSize="$3" color="$color11">
             The live fine-tune / RL plane (forward-backward + optim steps per client) runs on the engine at{' '}
-            <Text className="hz-mono">api.hanzo.ai/v1/training</Text>, admin-gated. It is not proxied through this console,
+            <Text className="mono">api.hanzo.ai/v1/training</Text>, admin-gated. It is not proxied through this console,
             so client counts are read there directly rather than mirrored here.
           </Text>
           <a href="https://api.hanzo.ai/v1/training/clients" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>

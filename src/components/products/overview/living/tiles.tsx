@@ -100,7 +100,7 @@ export function MetricTileView({ tile, data, loading, live, index }: { tile: Met
       {loading && kpi === undefined ? (
         <SkeletonBar w={110} h={34} />
       ) : (
-        <Text fontSize="$9" fontWeight="500" color="$color12" numberOfLines={1} className="hz-tnum">
+        <Text fontSize="$9" fontWeight="500" color="$color12" numberOfLines={1} className="tnum">
           {kpi === undefined ? '—' : formatMetric(shown, tile.unit)}
         </Text>
       )}
@@ -153,7 +153,7 @@ export function TimeseriesTileView({ tile, data, loading }: { tile: TimeseriesTi
   const total = points.reduce((s, p) => s + p.value, 0)
 
   return (
-    <Panel title={tile.title} actions={points.length ? <Text fontSize="$2" color="$color10" className="hz-tnum">{fmt(total)}</Text> : undefined}>
+    <Panel title={tile.title} actions={points.length ? <Text fontSize="$2" color="$color10" className="tnum">{fmt(total)}</Text> : undefined}>
       {loading && series === undefined ? (
         <SkeletonBar w="100%" h={200} />
       ) : points.length < 2 ? (
@@ -191,7 +191,7 @@ export function DistributionTileView({ tile, data, loading }: { tile: Distributi
             slices={slices}
             center={
               <>
-                <Text fontSize="$5" fontWeight="500" color="$color12" className="hz-tnum">
+                <Text fontSize="$5" fontWeight="500" color="$color12" className="tnum">
                   {fmt(total)}
                 </Text>
                 {tile.centerLabel ? (
@@ -217,10 +217,10 @@ export function DistributionTileView({ tile, data, loading }: { tile: Distributi
                   ) : null}
                 </YStack>
                 <YStack items="flex-end">
-                  <Text fontSize="$3" fontWeight="500" color="$color12" className="hz-tnum">
+                  <Text fontSize="$3" fontWeight="500" color="$color12" className="tnum">
                     {fmt(s.value)}
                   </Text>
-                  <Text fontSize="$1" color="$color10" className="hz-tnum">
+                  <Text fontSize="$1" color="$color10" className="tnum">
                     {Math.round((s.value / total) * 100)}%
                   </Text>
                 </YStack>
@@ -391,7 +391,7 @@ function LiveDot({ on }: { on: boolean }) {
   if (!on) return null
   return (
     <XStack items="center" gap="$1.5">
-      <YStack width={7} height={7} rounded="$10" style={{ backgroundColor: OK, animation: reduced ? undefined : 'hz-pulse 1.6s ease-in-out infinite' }} />
+      <YStack width={7} height={7} rounded="$10" style={{ backgroundColor: OK, animation: reduced ? undefined : 'pulse 1.6s ease-in-out infinite' }} />
       <Text fontSize="$1" color="$color10">
         Live
       </Text>
@@ -403,7 +403,7 @@ function LiveDot({ on }: { on: boolean }) {
 export function SkeletonBar({ w, h, rounded }: { w: number | string; h: number; rounded?: boolean }) {
   return (
     <div
-      className="hz-skeleton"
+      className="skeleton"
       style={{ width: w, height: h, borderRadius: rounded ? '50%' : 8 }}
       aria-hidden
     />

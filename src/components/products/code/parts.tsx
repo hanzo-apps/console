@@ -84,7 +84,7 @@ export function ScoreBar({ score, max }: { score: number; max: number }) {
   const frac = scoreFraction(score, max)
   return (
     <YStack gap="$1" minW={56}>
-      <Text fontSize="$2" color="$color12" className="hz-mono" text="right">
+      <Text fontSize="$2" color="$color12" className="mono" text="right">
         {fmtScore(score)}
       </Text>
       <YStack height={4} rounded="$10" bg="$color4" overflow="hidden">
@@ -98,7 +98,7 @@ export function ScoreBar({ score, max }: { score: number; max: number }) {
 export function RefButton({ loc, onPress }: { loc: { file?: string; line?: number; endLine?: number }; onPress?: () => void }) {
   return (
     <Text
-      className="hz-mono"
+      className="mono"
       fontSize="$2"
       color="$color11"
       numberOfLines={1}
@@ -132,7 +132,7 @@ export function CopyRef({ loc, size = '$1' }: { loc: { repo?: string; file?: str
 export function SnippetLine({ text }: { text: string }) {
   if (!text) return <Text fontSize="$2" color="$color10">—</Text>
   return (
-    <Text className="hz-mono" fontSize="$1" color="$color11" numberOfLines={1}>
+    <Text className="mono" fontSize="$1" color="$color11" numberOfLines={1}>
       {text.replace(/\n+/g, ' ⏎ ').trim()}
     </Text>
   )
@@ -145,7 +145,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$2" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$2" color="$color12" fontWeight="600" numberOfLines={1} className="hz-mono">
+      <Text fontSize="$2" color="$color12" fontWeight="600" numberOfLines={1} className="mono">
         {value}
       </Text>
     </XStack>
@@ -181,7 +181,7 @@ export function SpanDetail({ span }: { span: Span }) {
         </XStack>
         {span.snippet ? (
           <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" bg="$color1" p="$3" style={{ overflowX: 'auto' }}>
-            <Text className="hz-mono" fontSize="$2" color="$color12" style={{ whiteSpace: 'pre' }}>
+            <Text className="mono" fontSize="$2" color="$color12" style={{ whiteSpace: 'pre' }}>
               {span.snippet}
             </Text>
           </YStack>

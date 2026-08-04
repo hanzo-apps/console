@@ -72,7 +72,7 @@ function StatCard({ label, value, sub, spark }: { label: string; value: string; 
   return (
     <YStack flex={1} minW={160} p="$3.5" gap="$1.5" borderWidth={1} borderColor="$borderColor" rounded="$4" bg="$color1">
       <Text fontSize="$2" color="$color11" fontWeight="600">{label}</Text>
-      <Text fontSize="$8" fontWeight="900" color="$color12" numberOfLines={1} className="hz-mono">{value}</Text>
+      <Text fontSize="$8" fontWeight="900" color="$color12" numberOfLines={1} className="mono">{value}</Text>
       {spark && spark.length > 1 ? <Sparkline points={spark} width={148} height={26} /> : null}
       {sub ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{sub}</Text> : null}
     </YStack>

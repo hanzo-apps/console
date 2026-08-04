@@ -259,7 +259,7 @@ function Fact({ label, value, mono }: { label: string; value: string; mono?: boo
       <Text fontSize="$2" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$2" color="$color12" className={mono ? 'hz-mono' : undefined} numberOfLines={1}>
+      <Text fontSize="$2" color="$color12" className={mono ? 'mono' : undefined} numberOfLines={1}>
         {value}
       </Text>
     </XStack>

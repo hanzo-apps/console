@@ -179,7 +179,7 @@ function Ready({ data }: { data: LuxInfra }) {
                       {n.node}
                     </Text>
                     <UtilBar value={n.pct} width={120} />
-                    <Text fontSize="$2" color="$color12" className="hz-mono" width={56} text="right">
+                    <Text fontSize="$2" color="$color12" className="mono" width={56} text="right">
                       {pct1(n.pct)}
                     </Text>
                   </XStack>
@@ -202,7 +202,7 @@ function Ready({ data }: { data: LuxInfra }) {
                         {p.pod}
                       </Text>
                     </XStack>
-                    <Text fontSize="$2" color="$color11" className="hz-mono" width={80} text="right">
+                    <Text fontSize="$2" color="$color11" className="mono" width={80} text="right">
                       {gib(p.bytes)}
                     </Text>
                   </XStack>
@@ -270,7 +270,7 @@ function NetworkPanel({ net }: { net: NetworkSummary }) {
       width: 116,
       align: 'right',
       render: (r) => (
-        <Text fontSize="$2" color={r.bootstrapped ? '$green11' : '$color10'} className="hz-mono">
+        <Text fontSize="$2" color={r.bootstrapped ? '$green11' : '$color10'} className="mono">
           {r.bootstrapped ? 'yes' : 'no'}
         </Text>
       ),
@@ -290,7 +290,7 @@ function NetworkPanel({ net }: { net: NetworkSummary }) {
               </Text>
             </XStack>
           ) : null}
-          <Text fontSize="$2" fontWeight="700" color="$color12" className="hz-mono">
+          <Text fontSize="$2" fontWeight="700" color="$color12" className="mono">
             {nOrDash(net.up)} / {nOrDash(net.total)} up
           </Text>
         </XStack>

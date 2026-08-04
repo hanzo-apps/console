@@ -83,7 +83,7 @@ export function MetricCard({
         </XStack>
         {delta}
       </XStack>
-      <Text className="hz-tnum" fontSize="$8" fontWeight="900" color="$color12" letterSpacing={-0.5} numberOfLines={1}>
+      <Text className="tnum" fontSize="$8" fontWeight="900" color="$color12" letterSpacing={-0.5} numberOfLines={1}>
         {value}
       </Text>
       <XStack items="flex-end" justify="space-between" gap="$2" minH={20}>

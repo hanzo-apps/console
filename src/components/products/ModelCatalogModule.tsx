@@ -55,7 +55,7 @@ import { playgroundPathForModel } from './playground/share'
 import type { ApiError } from '~/lib/api'
 
 /** Tabular-numeral className — fixed-advance digits for the numeric columns. */
-const TNUM = 'hz-tnum'
+const TNUM = 'tnum'
 
 const Pill = ({ label, tone = 'muted' }: { label: string; tone?: 'muted' | 'live' | 'brand' }) => (
   <Text
@@ -358,7 +358,7 @@ const Stat = ({ label, value, divider }: { label: string; value: string; divider
 
 /** A single shimmer bar (honest loading — never fabricated content). */
 const Shimmer = ({ w, h = 12, r = 6 }: { w: number | string; h?: number; r?: number }) => (
-  <div className="hz-skeleton" style={{ width: w, height: h, borderRadius: r }} />
+  <div className="skeleton" style={{ width: w, height: h, borderRadius: r }} />
 )
 
 /** Skeleton family cards — the designed loading state (Linear-grade, no spinner). */
@@ -368,7 +368,7 @@ function CatalogSkeleton() {
       {[0, 1, 2].map((s) => (
         <YStack key={s} rounded="$4" borderWidth={1} borderColor="$borderColor" bg="$color1" overflow="hidden">
           <XStack items="center" gap="$3" px="$3.5" py="$3">
-            <div className="hz-skeleton" style={{ width: 30, height: 30, borderRadius: 8 }} />
+            <div className="skeleton" style={{ width: 30, height: 30, borderRadius: 8 }} />
             <YStack gap="$1.5">
               <Shimmer w={120} h={14} />
               <Shimmer w={72} h={9} />
@@ -377,7 +377,7 @@ function CatalogSkeleton() {
           <YStack px="$3.5" py="$2.5" gap="$3" borderTopWidth={1} borderColor="$borderColor">
             {[0, 1, 2].map((r) => (
               <XStack key={r} items="center" gap="$2.5">
-                <div className="hz-skeleton" style={{ width: 26, height: 26, borderRadius: 7 }} />
+                <div className="skeleton" style={{ width: 26, height: 26, borderRadius: 7 }} />
                 <Shimmer w={180 - r * 24} h={12} />
                 <YStack flex={1} />
                 <Shimmer w={54} h={10} />

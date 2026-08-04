@@ -115,7 +115,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$4" fontWeight="600" color="$color12" className="hz-mono">
+      <Text fontSize="$4" fontWeight="600" color="$color12" className="mono">
         {value}
       </Text>
     </YStack>
@@ -413,10 +413,10 @@ function BudgetCard({ alert, onChanged }: { alert: SpendAlert; onChanged: () => 
       <YStack gap="$1.5">
         <Meter pct={pct ?? 0} color={meterColor(verdict)} />
         <XStack justify="space-between" gap="$2" flexWrap="wrap">
-          <Text fontSize="$2" color="$color11" className="hz-mono">
+          <Text fontSize="$2" color="$color11" className="mono">
             {fmtUsd(alert.periodSpentCents)} spent
           </Text>
-          <Text fontSize="$2" color="$color10" className="hz-mono">
+          <Text fontSize="$2" color="$color10" className="mono">
             {alert.thresholdCents > 0
               ? `of ${fmtUsd(alert.thresholdCents)} cap${pct !== null ? ` · ${Math.round(pct)}%` : ''}`
               : 'Unlimited spend'}
@@ -533,9 +533,9 @@ function LoadingCards() {
     <YStack gap="$3">
       {[0, 1, 2].map((i) => (
         <Card key={i} p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
-          <div className="hz-skeleton" style={{ height: 16, width: '32%', borderRadius: 6 }} aria-hidden />
-          <div className="hz-skeleton" style={{ height: 10, width: '100%', borderRadius: 6 }} aria-hidden />
-          <div className="hz-skeleton" style={{ height: 12, width: '48%', borderRadius: 6 }} aria-hidden />
+          <div className="skeleton" style={{ height: 16, width: '32%', borderRadius: 6 }} aria-hidden />
+          <div className="skeleton" style={{ height: 10, width: '100%', borderRadius: 6 }} aria-hidden />
+          <div className="skeleton" style={{ height: 12, width: '48%', borderRadius: 6 }} aria-hidden />
         </Card>
       ))}
     </YStack>

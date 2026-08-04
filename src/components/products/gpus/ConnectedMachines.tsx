@@ -61,7 +61,7 @@ function UtilCell({ pct }: { pct?: number }) {
   return (
     <XStack items="center" gap="$2" minW={0}>
       <UtilBar value={pct} width={64} />
-      <Text fontSize="$2" color="$color11" className="hz-mono">{pct}%</Text>
+      <Text fontSize="$2" color="$color11" className="mono">{pct}%</Text>
     </XStack>
   )
 }
@@ -98,12 +98,12 @@ function WorkerQueuePanel({
         <Text fontSize="$1" color="$color10" width={64} numberOfLines={1}>{tag}</Text>
         <YStack minW={0} flex={1}>
           <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{job.type || 'job'}</Text>
-          <Text fontSize="$1" color="$color10" numberOfLines={1} className="hz-mono">{job.id}</Text>
+          <Text fontSize="$1" color="$color10" numberOfLines={1} className="mono">{job.id}</Text>
         </YStack>
       </XStack>
       <XStack items="center" gap="$3">
         <JobStatusPill status={job.status} canceling={isCanceling(job)} />
-        <Text fontSize="$2" color="$color11" className="hz-mono" width={72} numberOfLines={1}>{fmtDuration(job.startTime, job.closeTime)}</Text>
+        <Text fontSize="$2" color="$color11" className="mono" width={72} numberOfLines={1}>{fmtDuration(job.startTime, job.closeTime)}</Text>
         <CancelJobButton job={job} onCancel={onCancel} gpuName={gpuName} pending={isCanceling(job)} />
       </XStack>
     </XStack>

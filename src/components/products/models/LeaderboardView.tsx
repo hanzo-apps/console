@@ -42,7 +42,7 @@ import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { PageHeader } from '~/components/ui/PageHeader'
 
-const TNUM = 'hz-tnum'
+const TNUM = 'tnum'
 
 const ALL = '__all__'
 
@@ -343,7 +343,7 @@ export function LeaderboardView() {
 
       <Text fontSize="$1" color="$color10">
         Corpus: hanzoai/enso-bench priors/leaderboard.json. Regenerate with{' '}
-        <Text fontSize="$1" color="$color11" className="hz-mono">
+        <Text fontSize="$1" color="$color11" className="mono">
           node scripts/sync-benchmarks.mjs
         </Text>
         .

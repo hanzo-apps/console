@@ -122,7 +122,7 @@ const issueColumns: Column<Issue>[] = [
     header: 'ID',
     width: 96,
     render: (i) => (
-      <Text className="hz-mono" fontSize="$2" color="$color11" numberOfLines={1}>
+      <Text className="mono" fontSize="$2" color="$color11" numberOfLines={1}>
         {i.identifier}
       </Text>
     ),
@@ -210,7 +210,7 @@ function BoardColumn({ status, issues, onOpen }: { status: Status; issues: Issue
               onPress={() => onOpen(i)}
             >
               <XStack items="center" justify="space-between" gap="$2">
-                <Text className="hz-mono" fontSize="$1" color="$color10">
+                <Text className="mono" fontSize="$1" color="$color10">
                   {i.identifier}
                 </Text>
                 <PriorityTag priority={i.priority} />
@@ -595,7 +595,7 @@ function ProjectsPane({ onOpen }: { onOpen: (p: Project) => void }) {
       header: 'Key',
       width: 110,
       render: (p) => (
-        <Text className="hz-mono" fontSize="$3" fontWeight="600" color="$color12">
+        <Text className="mono" fontSize="$3" fontWeight="600" color="$color12">
           {p.key}
         </Text>
       ),

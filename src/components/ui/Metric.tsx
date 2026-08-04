@@ -125,7 +125,7 @@ export function LegendDot({ color, label, value }: { color: string; label: strin
         </Text>
       </XStack>
       {value != null ? (
-        <Text fontSize="$2" color="$color12" fontWeight="500" className="hz-mono">
+        <Text fontSize="$2" color="$color12" fontWeight="500" className="mono">
           {value}
         </Text>
       ) : null}
@@ -172,7 +172,7 @@ export function MetricCard({
         ) : null}
       </XStack>
       <XStack items="flex-end" justify="space-between" gap="$2">
-        <Text fontSize="$8" fontWeight="500" color="$color12" numberOfLines={1} className="hz-mono">
+        <Text fontSize="$8" fontWeight="500" color="$color12" numberOfLines={1} className="mono">
           {value}
         </Text>
         {spark && spark.length >= 2 ? <Sparkline points={spark} color={sparkColor ?? SERIES[0]} /> : null}

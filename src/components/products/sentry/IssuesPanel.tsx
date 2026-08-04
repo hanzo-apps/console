@@ -85,7 +85,7 @@ export function IssuesPanel({ projects }: { projects: SentryProject[] }) {
               {r.value || r.title || '—'}
             </Text>
             {r.culprit ? (
-              <Text fontSize="$1" color="$color10" numberOfLines={1} className="hz-mono">
+              <Text fontSize="$1" color="$color10" numberOfLines={1} className="mono">
                 {r.culprit}
               </Text>
             ) : null}
@@ -98,8 +98,8 @@ export function IssuesPanel({ projects }: { projects: SentryProject[] }) {
         width: 130,
         render: (r) => (r.stats.length >= 2 ? <Sparkline values={r.stats} color={toneVar('critical')} /> : <Text color="$color10">—</Text>),
       },
-      { key: 'count', header: 'Events', width: 84, align: 'right', mono: true, render: (r) => <Text className="hz-mono">{fmtCount(r.count)}</Text> },
-      { key: 'userCount', header: 'Users', width: 72, align: 'right', mono: true, render: (r) => <Text className="hz-mono">{r.userCount ? fmtCount(r.userCount) : '—'}</Text> },
+      { key: 'count', header: 'Events', width: 84, align: 'right', mono: true, render: (r) => <Text className="mono">{fmtCount(r.count)}</Text> },
+      { key: 'userCount', header: 'Users', width: 72, align: 'right', mono: true, render: (r) => <Text className="mono">{r.userCount ? fmtCount(r.userCount) : '—'}</Text> },
       { key: 'project', header: 'Project', width: 120, render: (r) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{r.project || '—'}</Text> },
       { key: 'lastSeen', header: 'Last seen', width: 104, render: (r) => <Text fontSize="$2" color="$color11">{fmtWhen(r.lastSeen)}</Text> },
       {

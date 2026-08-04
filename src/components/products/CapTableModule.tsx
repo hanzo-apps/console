@@ -101,7 +101,7 @@ function OwnershipDonut({ summary }: { summary: CapTableSummary }) {
   }
   return (
     <XStack gap="$5" items="center" flexWrap="wrap">
-      <Donut slices={slices} size={168} center={<YStack items="center"><Text fontSize="$2" color="$color10">Holders</Text><Text fontSize="$6" fontWeight="600" className="hz-mono">{summary.byStakeholder.length}</Text></YStack>} />
+      <Donut slices={slices} size={168} center={<YStack items="center"><Text fontSize="$2" color="$color10">Holders</Text><Text fontSize="$6" fontWeight="600" className="mono">{summary.byStakeholder.length}</Text></YStack>} />
       <YStack gap="$2" flex={1} minW={220}>
         {slices.slice(0, 8).map((s) => {
           const holder = summary.byStakeholder.find((h) => (h.name || 'Unnamed') === s.label)
@@ -111,7 +111,7 @@ function OwnershipDonut({ summary }: { summary: CapTableSummary }) {
                 <XStack width={10} height={10} rounded="$10" style={{ backgroundColor: s.color }} />
                 <Text fontSize="$2" color="$color12" numberOfLines={1}>{s.label}</Text>
               </XStack>
-              <Text fontSize="$2" color="$color11" className="hz-tnum">{holder ? pct(holder.ownershipPct) : ''}</Text>
+              <Text fontSize="$2" color="$color11" className="tnum">{holder ? pct(holder.ownershipPct) : ''}</Text>
             </XStack>
           )
         })}
@@ -140,10 +140,10 @@ function SummaryTab({ summary }: { summary: CapTableSummary }) {
         <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" flex={1} minW={280}>
           <Text fontSize="$4" fontWeight="500" color="$color12">Convertibles & rounds</Text>
           <YStack gap="$2">
-            <XStack justify="space-between"><Text fontSize="$2" color="$color10">SAFEs</Text><Text fontSize="$2" color="$color12" className="hz-tnum">{conv.safes.count} · {usd(conv.safes.capital)}</Text></XStack>
-            <XStack justify="space-between"><Text fontSize="$2" color="$color10">Convertible notes</Text><Text fontSize="$2" color="$color12" className="hz-tnum">{conv.notes.count} · {usd(conv.notes.capital)}</Text></XStack>
-            <XStack justify="space-between"><Text fontSize="$2" color="$color10">Convertible capital</Text><Text fontSize="$2" color="$color12" className="hz-tnum">{usd(convertibleCapital(summary))}</Text></XStack>
-            <XStack justify="space-between" pt="$2" borderColor="$borderColor" style={{ borderTopWidth: 1 }}><Text fontSize="$2" color="$color10">Rounds</Text><Text fontSize="$2" color="$color12" className="hz-tnum">{summary.rounds.count} · raised {usd(summary.rounds.totalRaised)}</Text></XStack>
+            <XStack justify="space-between"><Text fontSize="$2" color="$color10">SAFEs</Text><Text fontSize="$2" color="$color12" className="tnum">{conv.safes.count} · {usd(conv.safes.capital)}</Text></XStack>
+            <XStack justify="space-between"><Text fontSize="$2" color="$color10">Convertible notes</Text><Text fontSize="$2" color="$color12" className="tnum">{conv.notes.count} · {usd(conv.notes.capital)}</Text></XStack>
+            <XStack justify="space-between"><Text fontSize="$2" color="$color10">Convertible capital</Text><Text fontSize="$2" color="$color12" className="tnum">{usd(convertibleCapital(summary))}</Text></XStack>
+            <XStack justify="space-between" pt="$2" borderColor="$borderColor" style={{ borderTopWidth: 1 }}><Text fontSize="$2" color="$color10">Rounds</Text><Text fontSize="$2" color="$color12" className="tnum">{summary.rounds.count} · raised {usd(summary.rounds.totalRaised)}</Text></XStack>
           </YStack>
         </Card>
       </XStack>
@@ -158,8 +158,8 @@ function SummaryTab({ summary }: { summary: CapTableSummary }) {
             {summary.byShareClass.map((c) => (
               <XStack key={c.shareClassId} px="$2" py="$2" items="center" borderColor="$borderColor" style={{ borderTopWidth: 1 }}>
                 <XStack flex={2} items="center" gap="$2" minW={0}><Text fontSize="$3" color="$color12" numberOfLines={1}>{c.name}</Text><StatusTag status={enumLabel(c.classType)} /></XStack>
-                <Text fontSize="$3" flex={1} className="hz-mono" color="$color12" style={{ textAlign: 'right' }}>{int(c.issued)}</Text>
-                <Text fontSize="$3" flex={1} className="hz-mono" color="$color11" style={{ textAlign: 'right' }}>{int(c.authorized)}</Text>
+                <Text fontSize="$3" flex={1} className="mono" color="$color12" style={{ textAlign: 'right' }}>{int(c.issued)}</Text>
+                <Text fontSize="$3" flex={1} className="mono" color="$color11" style={{ textAlign: 'right' }}>{int(c.authorized)}</Text>
               </XStack>
             ))}
           </YStack>
@@ -453,7 +453,7 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
     { key: 'actions', header: '', width: 56, align: 'right', render: (s) => <Button chromeless width={40} height={40} icon={<Trash2 size={15} />} aria-label="Remove" onPress={() => setDialog({ kind: 'deleteStakeholder', row: s })} /> },
   ]
   const shareCols: Column<Share>[] = [
-    { key: 'cert', header: 'Certificate', render: (s) => <Text fontSize="$3" className="hz-mono" color="$color12" numberOfLines={1}>{s.certificateId}</Text> },
+    { key: 'cert', header: 'Certificate', render: (s) => <Text fontSize="$3" className="mono" color="$color12" numberOfLines={1}>{s.certificateId}</Text> },
     { key: 'holder', header: 'Holder', render: (s) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{s.stakeholderName}</Text> },
     { key: 'class', header: 'Class', width: 150, render: (s) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{s.shareClassName}</Text> },
     { key: 'qty', header: 'Shares', width: 120, align: 'right', mono: true, render: (s) => int(s.quantity) },
@@ -467,7 +467,7 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
     { key: 'votes', header: 'Votes', width: 90, align: 'right', mono: true, render: (c) => int(c.votesPerShare) },
   ]
   const safeCols: Column<Safe>[] = [
-    { key: 'id', header: 'SAFE', render: (s) => <Text fontSize="$3" className="hz-mono" color="$color12" numberOfLines={1}>{s.publicId}</Text> },
+    { key: 'id', header: 'SAFE', render: (s) => <Text fontSize="$3" className="mono" color="$color12" numberOfLines={1}>{s.publicId}</Text> },
     { key: 'holder', header: 'Investor', render: (s) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{s.stakeholderName}</Text> },
     { key: 'capital', header: 'Capital', width: 130, align: 'right', mono: true, render: (s) => usd(s.capital) },
     { key: 'cap', header: 'Cap', width: 130, align: 'right', mono: true, render: (s) => (s.valuationCap ? usd(s.valuationCap) : '—') },

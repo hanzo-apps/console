@@ -77,7 +77,7 @@ export function RepoList() {
         render: (r) => (
           <XStack items="center" gap="$1.5">
             <GitBranch size={12} color="$color9" />
-            <Text className="hz-mono" fontSize="$2" color="$color11" numberOfLines={1}>
+            <Text className="mono" fontSize="$2" color="$color11" numberOfLines={1}>
               {r.defaultBranch || EM}
             </Text>
           </XStack>
@@ -89,7 +89,7 @@ export function RepoList() {
         width: 90,
         align: 'right',
         render: (r) => (
-          <Text fontSize="$3" color="$color10" className="hz-mono">
+          <Text fontSize="$3" color="$color10" className="mono">
             {fmtBytes(r.sizeBytes)}
           </Text>
         ),

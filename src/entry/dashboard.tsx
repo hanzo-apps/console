@@ -981,7 +981,7 @@ export function Dashboard({ children }: { children: ReactNode }) {
             borderRightWidth={1}
             borderColor="$borderColor"
             bg="$color1"
-            className="hz-collapse"
+            className="collapse"
             data-tour="nav"
           >
             <SidebarNav collapsed={collapsed} onNavigate={() => {}} />
@@ -999,7 +999,7 @@ export function Dashboard({ children }: { children: ReactNode }) {
               bg="$color1"
               borderRightWidth={1}
               borderColor="$borderColor"
-              className="hz-elevation-4"
+              className="elevation-4"
               // A flyout is a menu: the ladder's dropdown rung, so the account
               // control it contains (a popover) still paints above it.
               style={{ zIndex: Z.dropdown }}

@@ -59,7 +59,7 @@ export function MembersPanel() {
     { key: 'name', header: 'Member', render: (u) => (
       <YStack minW={0}>
         <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{memberName(u)}</Text>
-        <Text fontSize="$1" color="$color10" numberOfLines={1} className="hz-mono">{u.owner}/{u.name}</Text>
+        <Text fontSize="$1" color="$color10" numberOfLines={1} className="mono">{u.owner}/{u.name}</Text>
       </YStack>
     ) },
     { key: 'email', header: 'Email', render: (u) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{u.email || '—'}</Text> },

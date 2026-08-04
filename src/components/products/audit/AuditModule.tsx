@@ -269,7 +269,7 @@ function KV({ k, v, mono, wrap }: { k: string; v: string; mono?: boolean; wrap?:
   return (
     <XStack gap="$3" items="flex-start" py="$1">
       <Text fontSize="$2" color="$color10" width={92}>{k}</Text>
-      <Text fontSize="$2" color="$color12" flex={1} className={mono ? 'hz-mono' : undefined} numberOfLines={wrap ? undefined : 1}>
+      <Text fontSize="$2" color="$color12" flex={1} className={mono ? 'mono' : undefined} numberOfLines={wrap ? undefined : 1}>
         {v}
       </Text>
     </XStack>

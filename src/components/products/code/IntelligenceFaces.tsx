@@ -114,7 +114,7 @@ export function SearchFace({ scope }: { scope: string }) {
       render: (s) => (
         <XStack items="center" gap="$1.5" minW={0}>
           <KindBadge kind={s.kind} />
-          <Text className="hz-mono" fontSize="$2" color="$color12" numberOfLines={1}>
+          <Text className="mono" fontSize="$2" color="$color12" numberOfLines={1}>
             {s.symbol || '—'}
           </Text>
         </XStack>

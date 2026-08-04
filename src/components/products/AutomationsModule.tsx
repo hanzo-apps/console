@@ -456,7 +456,7 @@ function RunsView() {
   const sum = summarizeRuns(runs)
 
   const columns: Column<FlowRun>[] = [
-    { key: 'id', header: 'Run', render: (r) => <Text fontSize="$2" numberOfLines={1} className="hz-mono">{r.id}</Text> },
+    { key: 'id', header: 'Run', render: (r) => <Text fontSize="$2" numberOfLines={1} className="mono">{r.id}</Text> },
     { key: 'flow', header: 'Flow', render: (r) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{r.flowId}</Text> },
     { key: 'status', header: 'Status', width: 120, render: (r) => <StatusTag status={runStatusText(r.status)} /> },
     { key: 'started', header: 'Started', width: 120, render: (r) => <Text fontSize="$2" color="$color11">{formatWhen(r.startTime)}</Text> },

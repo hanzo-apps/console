@@ -51,9 +51,9 @@ export function LogsPanel({ projects }: { projects: SentryProject[] }) {
   const logs = state.phase === 'ready' ? state.logs : []
 
   const columns: Column<SentryLog>[] = [
-    { key: 'timestamp', header: 'Time', width: 160, render: (l) => <Text fontSize="$2" color="$color11" className="hz-mono">{fmtDateTime(l.timestamp)}</Text> },
+    { key: 'timestamp', header: 'Time', width: 160, render: (l) => <Text fontSize="$2" color="$color11" className="mono">{fmtDateTime(l.timestamp)}</Text> },
     { key: 'level', header: 'Level', width: 92, render: (l) => <Pill label={l.level} tone={logLevelTone(l.level)} /> },
-    { key: 'message', header: 'Message', render: (l) => <Text fontSize="$2" color="$color12" numberOfLines={1} className="hz-mono">{l.message || '—'}</Text> },
+    { key: 'message', header: 'Message', render: (l) => <Text fontSize="$2" color="$color12" numberOfLines={1} className="mono">{l.message || '—'}</Text> },
     { key: 'logger', header: 'Logger', width: 150, render: (l) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{l.logger || '—'}</Text> },
   ]
 
@@ -113,7 +113,7 @@ export function LogsPanel({ projects }: { projects: SentryProject[] }) {
               {detail.project ? <Pill label={detail.project} tone={toneVar('neutral')} /> : null}
             </XStack>
             <YStack borderWidth={1} borderColor="$borderColor" rounded="$3" p="$3" bg="$color1" style={{ overflowX: 'auto' }}>
-              <Text fontSize="$2" color="$color12" className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+              <Text fontSize="$2" color="$color12" className="mono" style={{ whiteSpace: 'pre-wrap' }}>
                 {detail.message || '—'}
               </Text>
             </YStack>
@@ -137,7 +137,7 @@ export function LogsPanel({ projects }: { projects: SentryProject[] }) {
                       <Text fontSize="$1" color="$color10" width={120} numberOfLines={1}>
                         {k}
                       </Text>
-                      <Text fontSize="$1" color="$color12" className="hz-mono" flex={1} numberOfLines={1}>
+                      <Text fontSize="$1" color="$color12" className="mono" flex={1} numberOfLines={1}>
                         {v}
                       </Text>
                     </XStack>

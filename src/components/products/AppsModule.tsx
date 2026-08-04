@@ -141,7 +141,7 @@ function ResourceStat({ icon, label, value, caption }: { icon: ReactNode; label:
         {icon}
         <Text fontSize="$1" color="$color10">{label}</Text>
       </XStack>
-      <Text fontSize="$6" fontWeight="700" color="$color12" numberOfLines={1} className="hz-mono">{value}</Text>
+      <Text fontSize="$6" fontWeight="700" color="$color12" numberOfLines={1} className="mono">{value}</Text>
       {caption ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{caption}</Text> : null}
     </YStack>
   )

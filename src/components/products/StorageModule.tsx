@@ -486,7 +486,7 @@ function Muted({ children }: { children: React.ReactNode }) {
 /** Muted, monospaced, tabular — for timestamps and byte sizes (data, not prose). */
 function MonoMuted({ children }: { children: React.ReactNode }) {
   return (
-    <Text fontSize="$2" color="$color10" numberOfLines={1} className="hz-mono">
+    <Text fontSize="$2" color="$color10" numberOfLines={1} className="mono">
       {children}
     </Text>
   )

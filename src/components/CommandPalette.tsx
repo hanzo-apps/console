@@ -608,7 +608,7 @@ function PaletteDialog({
             menu); a floating 640 box at lg+ on Material paper (real depth). */}
         <Dialog.Content
           key="palette-content"
-          className="hz-paper hz-pop-in"
+          className="paper hz-pop-in"
           bordered
           width="100vw"
           height="100dvh"

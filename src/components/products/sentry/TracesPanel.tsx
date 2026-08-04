@@ -60,9 +60,9 @@ function TraceList({ projects, onOpen }: { projects: SentryProject[]; onOpen: (t
         {t.op || t.service ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{[t.op, t.service].filter(Boolean).join(' · ')}</Text> : null}
       </YStack>
     ) },
-    { key: 'durationMs', header: 'Duration', width: 100, align: 'right', mono: true, render: (t) => <Text className="hz-mono">{fmtDurationMs(t.durationMs)}</Text> },
-    { key: 'spanCount', header: 'Spans', width: 76, align: 'right', mono: true, render: (t) => <Text className="hz-mono">{fmtCount(t.spanCount)}</Text> },
-    { key: 'errorCount', header: 'Errors', width: 76, align: 'right', mono: true, render: (t) => <Text className="hz-mono" style={{ color: t.errorCount > 0 ? toneVar('critical') : undefined }}>{t.errorCount || 0}</Text> },
+    { key: 'durationMs', header: 'Duration', width: 100, align: 'right', mono: true, render: (t) => <Text className="mono">{fmtDurationMs(t.durationMs)}</Text> },
+    { key: 'spanCount', header: 'Spans', width: 76, align: 'right', mono: true, render: (t) => <Text className="mono">{fmtCount(t.spanCount)}</Text> },
+    { key: 'errorCount', header: 'Errors', width: 76, align: 'right', mono: true, render: (t) => <Text className="mono" style={{ color: t.errorCount > 0 ? toneVar('critical') : undefined }}>{t.errorCount || 0}</Text> },
     { key: 'project', header: 'Project', width: 120, render: (t) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{t.project || '—'}</Text> },
     { key: 'timestamp', header: 'When', width: 150, render: (t) => <Text fontSize="$2" color="$color11">{fmtDateTime(t.timestamp)}</Text> },
   ]
@@ -207,7 +207,7 @@ function Waterfall({ spans, traceDurationMs }: { spans: SentrySpan[]; traceDurat
           return (
             <XStack key={s.spanId || i} gap="$2" px="$2.5" py="$1.5" items="center" borderTopWidth={i === 0 ? 0 : 1} borderColor="$borderColor">
               <YStack width={220} minW={220} style={{ paddingLeft: depth * 12 }}>
-                <Text fontSize="$2" color="$color12" numberOfLines={1} className="hz-mono">
+                <Text fontSize="$2" color="$color12" numberOfLines={1} className="mono">
                   {s.op || 'span'}
                 </Text>
                 {s.description ? (
@@ -223,7 +223,7 @@ function Waterfall({ spans, traceDurationMs }: { spans: SentrySpan[]; traceDurat
                   style={{ position: 'absolute', left: `${left}%`, width: `${width}%`, backgroundColor: err ? toneVar('critical') : logLevelTone('info') }}
                 />
               </YStack>
-              <Text width={72} text="right" fontSize="$1" color="$color11" className="hz-mono">
+              <Text width={72} text="right" fontSize="$1" color="$color11" className="mono">
                 {fmtDurationMs(s.durationMs)}
               </Text>
             </XStack>

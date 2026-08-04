@@ -71,7 +71,7 @@ function SummaryBar({ summary }: { summary: Summary }) {
           <Text fontSize="$1" color="$color10">
             {c.label}
           </Text>
-          <Text fontSize="$6" fontWeight="500" className="hz-tnum">
+          <Text fontSize="$6" fontWeight="500" className="tnum">
             {c.value}
           </Text>
         </YStack>

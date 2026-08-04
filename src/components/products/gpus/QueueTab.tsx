@@ -37,7 +37,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   return (
     <YStack flex={1} minW={150} p="$3.5" gap="$1.5" borderWidth={1} borderColor="$borderColor" rounded="$4" bg="$color1">
       <Text fontSize="$2" color="$color11" fontWeight="600">{label}</Text>
-      <Text fontSize="$8" fontWeight="900" color="$color12" numberOfLines={1} className="hz-mono">{value}</Text>
+      <Text fontSize="$8" fontWeight="900" color="$color12" numberOfLines={1} className="mono">{value}</Text>
       {sub ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{sub}</Text> : null}
     </YStack>
   )
@@ -65,15 +65,15 @@ function jobColumns(
       render: (j) => (
         <YStack minW={0}>
           <Text fontSize="$3" fontWeight="700" color="$color12" numberOfLines={1}>{j.type || 'job'}</Text>
-          <Text fontSize="$1" color="$color10" numberOfLines={1} className="hz-mono">{j.id}</Text>
+          <Text fontSize="$1" color="$color10" numberOfLines={1} className="mono">{j.id}</Text>
         </YStack>
       ),
     },
     { key: 'gpu', header: 'GPU', width: 150, render: (j) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{gpuLabel(j, nameOf)}</Text> },
     { key: 'status', header: 'Status', width: 120, render: (j) => <JobStatusPill status={j.status} canceling={isCanceling(j)} /> },
     { key: 'started', header: 'Started', width: 110, render: (j) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{fmtHeartbeat(j.startTime)}</Text> },
-    { key: 'dur', header: 'Duration', width: 100, mono: true, render: (j) => <Text fontSize="$2" color="$color11" className="hz-mono">{fmtDuration(j.startTime, j.closeTime)}</Text> },
-    { key: 'attempt', header: 'Try', width: 56, align: 'right', mono: true, render: (j) => <Text fontSize="$2" color="$color11" className="hz-mono">{j.attempt != null ? String(j.attempt) : DASH}</Text> },
+    { key: 'dur', header: 'Duration', width: 100, mono: true, render: (j) => <Text fontSize="$2" color="$color11" className="mono">{fmtDuration(j.startTime, j.closeTime)}</Text> },
+    { key: 'attempt', header: 'Try', width: 56, align: 'right', mono: true, render: (j) => <Text fontSize="$2" color="$color11" className="mono">{j.attempt != null ? String(j.attempt) : DASH}</Text> },
     {
       key: 'actions',
       header: '',

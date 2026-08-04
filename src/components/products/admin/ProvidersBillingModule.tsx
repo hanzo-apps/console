@@ -11,7 +11,7 @@
  *
  * Two real `/v1/admin` reads (`ProviderBillingApi`), each honest end to end:
  *   1. Per-provider credit cards — remaining balance, burn rate, runway_days, and a
- *      has-credit / paid-only badge. Money is tabular-nums (`hz-mono`).
+ *      has-credit / paid-only badge. Money is tabular-nums (`mono`).
  *   2. Credit-vs-paid usage split — tokens / cost / requests by funding class over a
  *      selectable range (KPI band + donut + table).
  *
@@ -79,7 +79,7 @@ function Fact({ icon, label, value, valueColor }: { icon: React.ReactNode; label
           {label}
         </Text>
       </XStack>
-      <Text className="hz-mono" fontSize="$5" fontWeight="600" color="$color12" style={valueColor ? { color: valueColor } : undefined}>
+      <Text className="mono" fontSize="$5" fontWeight="600" color="$color12" style={valueColor ? { color: valueColor } : undefined}>
         {value}
       </Text>
     </YStack>
@@ -111,11 +111,11 @@ function ProviderCreditCard({ c }: { c: ProviderCredit }) {
       </XStack>
 
       <YStack gap="$0.5">
-        <Text className="hz-mono" fontSize="$9" fontWeight="700" color={c.hasCredit ? toneColor('positive') : '$color12'} numberOfLines={1}>
+        <Text className="mono" fontSize="$9" fontWeight="700" color={c.hasCredit ? toneColor('positive') : '$color12'} numberOfLines={1}>
           {usd(c.remainingCents)}
         </Text>
         <Text fontSize="$2" color="$color10">
-          remaining of <Text className="hz-mono">{usd(c.grantCents)}</Text> granted
+          remaining of <Text className="mono">{usd(c.grantCents)}</Text> granted
         </Text>
       </YStack>
 
@@ -246,9 +246,9 @@ export function ProvidersBillingModule() {
         </XStack>
       ),
     },
-    { key: 'tokens', header: 'Tokens', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color11">{compactNumber(r.tokens)}</Text> },
-    { key: 'costCents', header: 'Cost', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color12">{usd(r.costCents)}</Text> },
-    { key: 'requests', header: 'Requests', align: 'right', mono: true, render: (r) => <Text className="hz-mono" fontSize="$2" color="$color11">{compactNumber(r.requests)}</Text> },
+    { key: 'tokens', header: 'Tokens', align: 'right', mono: true, render: (r) => <Text className="mono" fontSize="$2" color="$color11">{compactNumber(r.tokens)}</Text> },
+    { key: 'costCents', header: 'Cost', align: 'right', mono: true, render: (r) => <Text className="mono" fontSize="$2" color="$color12">{usd(r.costCents)}</Text> },
+    { key: 'requests', header: 'Requests', align: 'right', mono: true, render: (r) => <Text className="mono" fontSize="$2" color="$color11">{compactNumber(r.requests)}</Text> },
   ]
 
   const knownClasses = fold.costSlices // ordered credit→paid→paid_only→byo→other
@@ -350,7 +350,7 @@ export function ProvidersBillingModule() {
                       <Text fontSize="$1" color="$color10">
                         total
                       </Text>
-                      <Text className="hz-mono" fontSize="$4" fontWeight="700" color="$color12">
+                      <Text className="mono" fontSize="$4" fontWeight="700" color="$color12">
                         {usd(fold.total.costCents)}
                       </Text>
                     </YStack>

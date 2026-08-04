@@ -95,11 +95,11 @@ export function ProjectsPanel() {
     { key: 'name', header: 'Project', render: (p) => (
       <YStack minW={0}>
         <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>{p.name || p.slug}</Text>
-        <Text fontSize="$1" color="$color10" numberOfLines={1} className="hz-mono">{p.slug || p.id}</Text>
+        <Text fontSize="$1" color="$color10" numberOfLines={1} className="mono">{p.slug || p.id}</Text>
       </YStack>
     ) },
     { key: 'platform', header: 'Platform', width: 130, render: (p) => <Text fontSize="$2" color="$color11">{p.platform || '—'}</Text> },
-    { key: 'eventCount', header: 'Events', width: 90, align: 'right', mono: true, render: (p) => <Text className="hz-mono">{p.eventCount ? fmtCount(p.eventCount) : '—'}</Text> },
+    { key: 'eventCount', header: 'Events', width: 90, align: 'right', mono: true, render: (p) => <Text className="mono">{p.eventCount ? fmtCount(p.eventCount) : '—'}</Text> },
     { key: 'lastEvent', header: 'Last event', width: 120, render: (p) => <Text fontSize="$2" color="$color11">{p.lastEvent ? fmtWhen(p.lastEvent) : '—'}</Text> },
     { key: 'dateCreated', header: 'Created', width: 130, render: (p) => <Text fontSize="$2" color="$color11">{p.dateCreated ? fmtDateTime(p.dateCreated) : '—'}</Text> },
   ]

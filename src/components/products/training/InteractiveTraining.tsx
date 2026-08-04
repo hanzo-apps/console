@@ -191,7 +191,7 @@ function ClientDetail({ client, onChanged }: { client: TrainingClientDetail; onC
   return (
     <YStack gap="$3">
       <XStack gap="$2" items="center" flexWrap="wrap">
-        <Text fontSize="$5" fontWeight="700" color="$color12" className="hz-mono">{client.id}</Text>
+        <Text fontSize="$5" fontWeight="700" color="$color12" className="mono">{client.id}</Text>
         <StatusTag status={client.status} />
         <Text fontSize="$2" color="$color10">{client.base_model}</Text>
       </XStack>
@@ -252,7 +252,7 @@ function ClientDetail({ client, onChanged }: { client: TrainingClientDetail; onC
             {sampleText !== null ? (
               <YStack gap="$1" p="$3" rounded="$3" bg="$color2" borderWidth={1} borderColor="$borderColor">
                 <Text fontSize="$1" color="$color10">Sampled</Text>
-                <Text fontSize="$3" color="$color12" className="hz-mono">{sampleText || '(empty)'}</Text>
+                <Text fontSize="$3" color="$color12" className="mono">{sampleText || '(empty)'}</Text>
               </YStack>
             ) : null}
             <XStack>
@@ -273,7 +273,7 @@ function ClientDetail({ client, onChanged }: { client: TrainingClientDetail; onC
             {savedPath !== null ? (
               <YStack gap="$1" p="$3" rounded="$3" bg="$color2" borderWidth={1} borderColor="$borderColor">
                 <Text fontSize="$1" color="$color10">Saved (peft)</Text>
-                <Text fontSize="$3" color="$color12" className="hz-mono">{savedPath || '(no path returned)'}</Text>
+                <Text fontSize="$3" color="$color12" className="mono">{savedPath || '(no path returned)'}</Text>
               </YStack>
             ) : null}
             <XStack>
@@ -361,16 +361,16 @@ export function InteractiveTraining() {
       header: 'Client',
       render: (c) => (
         <YStack>
-          <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} className="hz-mono">{c.id}</Text>
+          <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} className="mono">{c.id}</Text>
           <Text fontSize="$1" color="$color10" numberOfLines={1}>{c.base_model || '—'}</Text>
         </YStack>
       ),
     },
     { key: 'status', header: 'Status', width: 110, render: (c) => <StatusTag status={c.status} /> },
-    { key: 'params', header: 'Trainable', width: 120, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="hz-tnum">{fmtInt(c.trainable_params)}</Text> },
-    { key: 'fb', header: 'fwd/bwd', width: 100, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="hz-tnum">{fmtInt(c.forward_backward_calls)}</Text> },
-    { key: 'steps', header: 'Optim steps', width: 110, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="hz-tnum">{fmtInt(c.optim_steps)}</Text> },
-    { key: 'loss', header: 'Last loss', width: 100, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="hz-tnum">{fmtLoss(c.last_loss)}</Text> },
+    { key: 'params', header: 'Trainable', width: 120, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="tnum">{fmtInt(c.trainable_params)}</Text> },
+    { key: 'fb', header: 'fwd/bwd', width: 100, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="tnum">{fmtInt(c.forward_backward_calls)}</Text> },
+    { key: 'steps', header: 'Optim steps', width: 110, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="tnum">{fmtInt(c.optim_steps)}</Text> },
+    { key: 'loss', header: 'Last loss', width: 100, mono: true, align: 'right', render: (c) => <Text fontSize="$3" color="$color11" className="tnum">{fmtLoss(c.last_loss)}</Text> },
     {
       key: 'actions',
       header: '',

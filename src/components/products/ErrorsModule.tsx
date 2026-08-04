@@ -132,14 +132,14 @@ export function ErrorsModule({ params }: { params: Record<string, string> }) {
               {r.value || r.culprit || '—'}
             </Text>
             {r.culprit ? (
-              <Text fontSize="$1" color="$color10" numberOfLines={1} className="hz-mono">
+              <Text fontSize="$1" color="$color10" numberOfLines={1} className="mono">
                 {r.culprit}
               </Text>
             ) : null}
           </YStack>
         ),
       },
-      { key: 'count', header: 'Events', width: 88, align: 'right', mono: true, render: (r) => <Text className="hz-mono">{r.count}</Text> },
+      { key: 'count', header: 'Events', width: 88, align: 'right', mono: true, render: (r) => <Text className="mono">{r.count}</Text> },
       { key: 'serviceName', header: 'Service', width: 150, render: (r) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{r.serviceName || '—'}</Text> },
       { key: 'lastSeen', header: 'Last seen', width: 110, render: (r) => <Text fontSize="$2" color="$color11">{fmtWhen(r.lastSeen)}</Text> },
       {
@@ -243,7 +243,7 @@ function IssueDetailView({ detail, onAct }: { detail: IssueDetail; onAct: (id: s
         {issue.value || issue.culprit || issue.type}
       </Text>
       {issue.culprit ? (
-        <Text fontSize="$2" color="$color11" className="hz-mono">
+        <Text fontSize="$2" color="$color11" className="mono">
           {issue.culprit}
         </Text>
       ) : null}
@@ -299,14 +299,14 @@ function IssueDetailView({ detail, onAct }: { detail: IssueDetail; onAct: (id: s
                   borderColor="$borderColor"
                   bg={f.inApp ? '$color2' : undefined}
                 >
-                  <Text fontSize="$1" color="$color10" className="hz-mono" width={18}>
+                  <Text fontSize="$1" color="$color10" className="mono" width={18}>
                     {i}
                   </Text>
                   <YStack minW={0} flex={1}>
-                    <Text fontSize="$2" color="$color12" className="hz-mono" numberOfLines={1}>
+                    <Text fontSize="$2" color="$color12" className="mono" numberOfLines={1}>
                       {f.function || '<anonymous>'}
                     </Text>
-                    <Text fontSize="$1" color="$color10" className="hz-mono" numberOfLines={1}>
+                    <Text fontSize="$1" color="$color10" className="mono" numberOfLines={1}>
                       {(f.module || f.filename || '')}{f.lineno ? `:${f.lineno}` : ''}
                     </Text>
                   </YStack>
@@ -340,7 +340,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$2" color="$color12" className="hz-mono">
+      <Text fontSize="$2" color="$color12" className="mono">
         {value}
       </Text>
     </YStack>

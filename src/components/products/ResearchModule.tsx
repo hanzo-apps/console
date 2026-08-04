@@ -63,7 +63,7 @@ const countVerdict = (rows: Experiment[], v: Verdict): number => rows.filter((e)
 const COLS: Column<Experiment>[] = [
   { key: 'subject', header: 'Subject', render: (e) => <Text fontSize="$3" fontWeight="500" numberOfLines={1}>{e.subject || '—'}</Text> },
   { key: 'task', header: 'Task', render: (e) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{e.task || '—'}</Text> },
-  { key: 'kind', header: 'Kind', width: 132, render: (e) => <Text fontSize="$2" color="$color10" className="hz-mono" numberOfLines={1}>{e.kind || '—'}</Text> },
+  { key: 'kind', header: 'Kind', width: 132, render: (e) => <Text fontSize="$2" color="$color10" className="mono" numberOfLines={1}>{e.kind || '—'}</Text> },
   { key: 'verdict', header: 'Verdict', width: 116, render: (e) => <VerdictPill verdict={e.meta.verdict} status={e.status} /> },
   {
     key: 'value',
@@ -72,7 +72,7 @@ const COLS: Column<Experiment>[] = [
     align: 'right',
     render: (e) => (
       <YStack items="flex-end">
-        <Text fontSize="$3" color="$color12" className="hz-mono">{fmtValue(e.value)}</Text>
+        <Text fontSize="$3" color="$color12" className="mono">{fmtValue(e.value)}</Text>
         {e.metric ? <Text fontSize="$1" color="$color10" numberOfLines={1}>{e.metric}</Text> : null}
       </YStack>
     ),
@@ -156,7 +156,7 @@ export function ResearchModule() {
                   <YStack key={e.id} gap="$1" borderLeftWidth={2} borderColor="$color11" pl="$3">
                     <XStack items="center" gap="$2" flexWrap="wrap">
                       <Text fontSize="$3" fontWeight="600">{e.subject}</Text>
-                      <Text fontSize="$2" color="$color10" className="hz-mono">{e.task}</Text>
+                      <Text fontSize="$2" color="$color10" className="mono">{e.task}</Text>
                     </XStack>
                     {e.meta.because ? <Text fontSize="$2" color="$color11">{e.meta.because}</Text> : null}
                   </YStack>
@@ -241,7 +241,7 @@ function Detail({ e }: { e: Experiment }) {
               </XStack>
               <YStack gap="$1" pl="$1">
                 {m.log.map((line, i) => (
-                  <Text key={i} fontSize="$2" color="$color11" className="hz-mono">
+                  <Text key={i} fontSize="$2" color="$color11" className="mono">
                     {line}
                   </Text>
                 ))}
@@ -287,7 +287,7 @@ function Fact({ label, value }: { label: string; value: string }) {
       <Text fontSize="$1" color="$color10">
         {label}
       </Text>
-      <Text fontSize="$2" color="$color11" className="hz-mono">
+      <Text fontSize="$2" color="$color11" className="mono">
         {value}
       </Text>
     </XStack>

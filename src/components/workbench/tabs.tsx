@@ -70,7 +70,7 @@ export function Cell({ w, flex, dim, right, children }: { w?: number; flex?: num
       fontSize="$1"
       color={dim ? '$color10' : '$color12'}
       numberOfLines={1}
-      className="hz-mono"
+      className="mono"
       style={right ? { textAlign: 'right' } : undefined}
     >
       {children}
@@ -204,7 +204,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
               </Text>
             </Button>
           </XStack>
-          <Text fontSize="$1" color="$color10" className="hz-mono">
+          <Text fontSize="$1" color="$color10" className="mono">
             {keyLoading
               ? 'Loading…'
               : key?.hasKey
@@ -217,7 +217,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
                 Your new key — copy it now, it is shown only once:
               </Text>
               <XStack gap="$2" items="center">
-                <Text flex={1} fontSize="$1" color="$color12" className="hz-mono" numberOfLines={1}>
+                <Text flex={1} fontSize="$1" color="$color12" className="mono" numberOfLines={1}>
                   {newKey}
                 </Text>
                 <Button
@@ -255,7 +255,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
             <Text fontSize="$2" fontWeight="600" color="$color12">
               API v1
             </Text>
-            <Text fontSize="$1" color="$color10" className="hz-mono">
+            <Text fontSize="$1" color="$color10" className="mono">
               {config.brandName} · {config.cloudUrl.replace(/^https?:\/\//, '')}/v1
             </Text>
           </XStack>
@@ -313,12 +313,12 @@ export function LogsTab({ records }: { records: UsageRecord[] }) {
               ← Logs
             </Text>
           </Button>
-          <Text fontSize="$1" color="$color11" className="hz-mono" numberOfLines={1}>
+          <Text fontSize="$1" color="$color11" className="mono" numberOfLines={1}>
             {open.model || open.notes || open.id}
           </Text>
         </XStack>
         <ScrollView flex={1} minH={0}>
-          <Text p="$3" fontSize="$1" color="$color12" className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+          <Text p="$3" fontSize="$1" color="$color12" className="mono" style={{ whiteSpace: 'pre-wrap' }}>
             {renderOutput({
               id: open.id,
               time: open.at ? new Date(open.at).toISOString() : null,
@@ -349,7 +349,7 @@ export function LogsTab({ records }: { records: UsageRecord[] }) {
           placeholder="Filter by model, status, provider…"
           fontSize="$1"
           color="$color12"
-          className="hz-mono"
+          className="mono"
           autoCapitalize="none"
           autoCorrect={false}
           aria-label="Filter API logs"
@@ -424,7 +424,7 @@ export function EventsTab({ records }: { records: UsageRecord[] }) {
                   width={170}
                   fontSize="$1"
                   numberOfLines={1}
-                  className="hz-mono"
+                  className="mono"
                   color={e.status !== '' && e.status !== 'success' ? toneColor('critical') : '$color11'}
                 >
                   {e.type}
@@ -614,7 +614,7 @@ function AlertsView() {
           <XStack key={a.id} gap="$3" py={3} items="center">
             <Cell flex={1}>{a.name}</Cell>
             <Cell w={90} dim>{a.severity || '—'}</Cell>
-            <Text width={90} fontSize="$1" className="hz-mono" color={a.state === 'firing' ? toneColor('critical') : '$color10'}>
+            <Text width={90} fontSize="$1" className="mono" color={a.state === 'firing' ? toneColor('critical') : '$color10'}>
               {a.state}
             </Text>
           </XStack>
@@ -735,7 +735,7 @@ function InsightsView() {
                   {h.service}
                 </Text>
               </XStack>
-              <Text fontSize="$1" color="$color10" className="hz-mono">
+              <Text fontSize="$1" color="$color10" className="mono">
                 {h.errorRatePct.toFixed(1)}% errors · p99 {h.p99Ms.toFixed(0)}ms · {h.callRate.toFixed(1)} req/s — investigate the error spike.
               </Text>
             </Card>
@@ -746,7 +746,7 @@ function InsightsView() {
             <Text fontSize="$2" fontWeight="600" color="$color12">
               Top exception (24h)
             </Text>
-            <Text fontSize="$1" color="$color10" className="hz-mono">
+            <Text fontSize="$1" color="$color10" className="mono">
               {topError.exceptionType}: {topError.exceptionMessage} · ×{topError.exceptionCount}
               {topError.serviceName ? ` · ${topError.serviceName}` : ''}
             </Text>
@@ -839,7 +839,7 @@ export function InspectorTab({ records }: { records: UsageRecord[] }) {
           placeholder={running ? 'Inspecting…' : 'Inspect any object — agent_… , fn_… , run_… , or agents/<name>'}
           fontSize="$2"
           color="$color12"
-          className="hz-mono"
+          className="mono"
           autoCapitalize="none"
           autoCorrect={false}
           aria-label="Inspector object id"
@@ -851,21 +851,21 @@ export function InspectorTab({ records }: { records: UsageRecord[] }) {
       <ScrollView flex={1} minH={0}>
         <YStack p="$3" gap="$2">
           {result === null ? (
-            <Text fontSize="$1" color="$color10" className="hz-mono">
+            <Text fontSize="$1" color="$color10" className="mono">
               Fetch a Hanzo object by id and see its JSON. Routes by prefix to the right /v1 GET — runs as you, in your org.
             </Text>
           ) : (
             <>
               {result.path ? (
                 <XStack items="center" gap="$2">
-                  <Text fontSize="$1" color="$color11" className="hz-mono">
+                  <Text fontSize="$1" color="$color11" className="mono">
                     {result.label} · GET /v1/{result.path}
                   </Text>
                   <XStack flex={1} />
                   {result.ok ? <CopyBtn value={curlFor(result.path)} label="curl" /> : null}
                 </XStack>
               ) : null}
-              <Text fontSize="$1" color={result.ok ? '$color12' : toneColor('critical')} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+              <Text fontSize="$1" color={result.ok ? '$color12' : toneColor('critical')} className="mono" style={{ whiteSpace: 'pre-wrap' }}>
                 {result.output}
               </Text>
               {related.length > 0 ? (
@@ -960,7 +960,7 @@ export function ShellTab() {
             onPress={() => void run(`GET /v1/${r}`)}
             aria-label={`Run GET /v1/${r}`}
           >
-            <Text fontSize="$1" color="$color11" className="hz-mono">
+            <Text fontSize="$1" color="$color11" className="mono">
               {r}
             </Text>
           </Button>
@@ -970,14 +970,14 @@ export function ShellTab() {
       <ScrollView flex={1} minH={0}>
         <YStack p="$3" gap="$2">
           {entries.length === 0 ? (
-            <Text fontSize="$1" color="$color10" className="hz-mono">
+            <Text fontSize="$1" color="$color10" className="mono">
               Read-only /v1 explorer — pick a resource above or type `GET /v1/models`. Runs as you, in your org.
             </Text>
           ) : null}
           {entries.map((e, i) => (
             <YStack key={i} gap="$1">
               <XStack items="center" gap="$2">
-                <Text fontSize="$1" color="$color11" className="hz-mono" flex={1} numberOfLines={1}>
+                <Text fontSize="$1" color="$color11" className="mono" flex={1} numberOfLines={1}>
                   $ {e.cmd}
                 </Text>
                 {e.ok && e.path ? (
@@ -987,7 +987,7 @@ export function ShellTab() {
                   </>
                 ) : null}
               </XStack>
-              <Text fontSize="$1" color={e.ok ? '$color12' : toneColor('critical')} className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+              <Text fontSize="$1" color={e.ok ? '$color12' : toneColor('critical')} className="mono" style={{ whiteSpace: 'pre-wrap' }}>
                 {e.output}
               </Text>
             </YStack>
@@ -997,7 +997,7 @@ export function ShellTab() {
       </ScrollView>
 
       <XStack items="center" gap="$2" px="$3" height={44} borderTopWidth={1} borderColor="$borderColor">
-        <Text fontSize="$2" color="$color10" className="hz-mono">
+        <Text fontSize="$2" color="$color10" className="mono">
           $
         </Text>
         <Input
@@ -1010,7 +1010,7 @@ export function ShellTab() {
           placeholder={running ? 'Running…' : 'Enter a /v1 command…'}
           fontSize="$2"
           color="$color12"
-          className="hz-mono"
+          className="mono"
           autoCapitalize="none"
           autoCorrect={false}
           aria-label="Workbench shell command"

@@ -131,7 +131,7 @@ export function PlansCatalogModule(_props: { params: Record<string, string> }) {
       align: 'right',
       mono: true,
       render: (p) => (
-        <Text fontSize="$3" color="$color12" className="hz-mono">
+        <Text fontSize="$3" color="$color12" className="mono">
           {priceDisplay(p.price, p.contactSales)}
         </Text>
       ),

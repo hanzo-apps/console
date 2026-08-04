@@ -412,7 +412,7 @@ not add a duplicate Apps/Projects entry.
   `/waitlist`. The server route requires a session and forwards to
   `WAITLIST_URL/v1/waitlist/join`; when `WAITLIST_URL` is unset it returns an
   honest 501 and never fabricates a confirmation.
-- **Motion primitive.** `FadeIn` plus the single `.hz-fade-up` keyframe in
+- **Motion primitive.** `FadeIn` plus the single `.fade-up` keyframe in
   `globals.css` is the shared entrance animation. It honors
   `prefers-reduced-motion`.
 
@@ -585,7 +585,7 @@ component system**, not a one-off. The old bespoke `OverviewModule.tsx` +
   - `LivingOverview.tsx` — the driver: ONE throttled poll loop (floored at 5s, paused when
     hidden OR errored), a `reqRef` race guard, range selector; a background refetch never
     blanks a board that already has real data (last real data stays until new lands); the
-    first-load failure shows the shared `ErrorState`. `.hz-skeleton`/`.hz-pulse`/`.hz-row-in`
+    first-load failure shows the shared `ErrorState`. `.skeleton`/`.pulse`/`.row-in`
     keyframes in `globals.css`, all reduced-motion-guarded.
 - **Backed by REAL `/v1` data, no mocks** (`adapters.ts`, pure, unit-tested): `fromCloudUsage`
   (commerce usage ledger → the platform + AI-usage overviews), `fromAdminOverview`
@@ -2457,7 +2457,7 @@ ships). `backup/*` untouched per policy.
   elevation/paper tokens (`globals.css`), a DRY alphabetical + selected-first product
   sort (`src/lib/products/order.ts` + tests), the mobile nav drawer opening LEFT
   (matching the top-left hamburger) and auto-closing on a product tap, and an
-  opacity-only `hz-menu-in` entrance for floating-ui anchored menus (SelectMenu/ComboBox)
+  opacity-only `menu-in` entrance for floating-ui anchored menus (SelectMenu/ComboBox)
   so a transform-animation never detaches the menu from its trigger (transform-based
   `hz-pop-in` stays for centered Dialog surfaces). @hanzo/gui v5 shorthands only; no
   Svelte/Radix. Includes the recovered in-progress edits from the dev agent's cut-off
@@ -2876,7 +2876,7 @@ backend endpoints.
   if the backend wants epoch/date-only, that's the one line to change).
 - **Module `src/components/products/admin/ProvidersBillingModule.tsx`.** (1) Provider
   credit — a summary band (Remaining / Granted / Burn·day / Min runway) + per-provider
-  cards (remaining balance big in tabular-nums `hz-mono`, burn/day, runway, and a
+  cards (remaining balance big in tabular-nums `mono`, burn/day, runway, and a
   has-credit / paid-only / depleted badge). (2) Credit-vs-paid usage — a `RangeTabs`
   (24h/7d/30d) window, a per-class KPI band (Total + Our credit / Paid / Paid-only /
   BYO with % of spend), a cost-by-funding `Donut` (legend + total center), and a
@@ -3553,7 +3553,7 @@ their having to know about RNW's allow-list. It fails on the unfixed tree.
 
 **No overlay was wearing the elevation ladder.** Gui compiles its shadow props to an
 atomic rule it injects at runtime as `:root ._bxsh-…` — specificity (0,2,0). The
-design-token utilities were plain `.hz-paper` (0,1,0) and lost, so the command
+design-token utilities were plain `.paper` (0,1,0) and lost, so the command
 palette, app launcher, floating chat and three menus rendered Gui's
 `0 12px 24px rgba(0,0,0,.33)` instead of ring + top highlight + `--hz-elevation-3`.
 On the true-black canvas that shadow is nearly invisible — the sheets did not lift off
@@ -3561,10 +3561,10 @@ the page. The utilities are now `:root .hz-x.hz-x` (0,3,0): deterministic in eit
 stylesheet order, no `!important`.
 
 **And every anchored overlay now wears ONE surface.** Eleven `Popover.Content` call
-sites passed Gui's `elevate` while three wore `hz-paper` — one concept, two depths,
+sites passed Gui's `elevate` while three wore `paper` — one concept, two depths,
 plus the same `bordered`/`bg`/`borderColor` triple repeated fourteen times. All
 fourteen now spread `~/components/ui/paper`, which holds the surface, the token
-elevation and the opacity-only `hz-menu-in` entrance in one place. Verified rendering
+elevation and the opacity-only `menu-in` entrance in one place. Verified rendering
 on the scope switcher, the network picker, the model selector, the save-prompt
 popover and the ⌘K palette: opaque, correctly anchored, ring visible, nothing occluded.
 
@@ -3687,7 +3687,7 @@ asserts on where you LAND (`agents`→/agents, `billing`→/billing, `vector`→
 not on DOM order.
 
 **[BUG] The resting pin painted at full strength.** `.hz-pin { opacity: 0 }` lost to
-Gui's compiled `:root ._ops-…` (0,2,0) — the same specificity trap `.hz-paper` hit.
+Gui's compiled `:root ._ops-…` (0,2,0) — the same specificity trap `.paper` hit.
 Fixed by dropping the inline `opacity` prop and doubling the selector
 (`:root .hz-pin.hz-pin`). A broken CSS comment then silently killed the whole rule;
 only the computed-style assertion caught it. Both are now pinned by a test that

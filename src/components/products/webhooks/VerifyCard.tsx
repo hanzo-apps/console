@@ -48,13 +48,13 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   return (
     <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" overflow="hidden">
       <XStack items="center" justify="space-between" px="$3" py="$2" bg="$color2" borderBottomWidth={1} borderColor="$borderColor">
-        <Text fontSize="$1" color="$color10" className="hz-mono">
+        <Text fontSize="$1" color="$color10" className="mono">
           {language}
         </Text>
         <CopyButton value={code} />
       </XStack>
       <YStack style={{ overflowX: 'auto' }} p="$3" bg="$color1">
-        <Text fontSize="$2" color="$color12" className="hz-mono" style={{ whiteSpace: 'pre', display: 'block' }}>
+        <Text fontSize="$2" color="$color12" className="mono" style={{ whiteSpace: 'pre', display: 'block' }}>
           {code}
         </Text>
       </YStack>
@@ -65,7 +65,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
 function HeaderRow({ name, desc }: { name: string; desc: string }) {
   return (
     <XStack gap="$3" items="flex-start" flexWrap="wrap" py="$1">
-      <Text fontSize="$2" color="$color12" className="hz-mono" width={190}>
+      <Text fontSize="$2" color="$color12" className="mono" width={190}>
         {name}
       </Text>
       <Text fontSize="$2" color="$color11" flex={1} minW={200}>
@@ -90,7 +90,7 @@ export function VerifyCard() {
         constant time — verify BEFORE parsing JSON, since a re-serialized body won&apos;t match the signature.
       </Text>
       <YStack borderWidth={1} borderColor="$borderColor" rounded="$3" p="$3" bg="$color1">
-        <Text fontSize="$2" color="$color12" className="hz-mono" style={{ whiteSpace: 'pre-wrap' }}>
+        <Text fontSize="$2" color="$color12" className="mono" style={{ whiteSpace: 'pre-wrap' }}>
           {SIGNATURE_SCHEME}
         </Text>
       </YStack>

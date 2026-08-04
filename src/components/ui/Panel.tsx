@@ -149,7 +149,7 @@ export function Row({
       </YStack>
       {control ?? (
         <Text
-          className={mono ? 'hz-mono' : undefined}
+          className={mono ? 'mono' : undefined}
           fontSize="$3"
           color={text === '—' ? '$color9' : '$color11'}
           numberOfLines={1}
