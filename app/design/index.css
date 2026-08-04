@@ -1,30 +1,28 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Hanzo Design System tokens — VENDORED from hanzoai/design (@hanzo/design).
+   Hanzo Design System tokens — the PUBLISHED @hanzo/design package.
 
-   This directory is the canonical Hanzo design language expressed as CSS custom
-   properties: the monochrome neutral ladder + opacity ladder, the ONLY permitted
-   semantic hues (live/success/warning/error), type scale, 4px spacing ramp,
-   radius, elevation and motion. It is the SINGLE SOURCE OF TRUTH for how every
-   Hanzo surface looks.
+   These were vendored under app/design/ (synced 2026-07-24) only because the
+   package was not yet on npm. It is now (@hanzo/design ≥ 0.4.6), so the console
+   reads the real dependency and can no longer drift a border rework behind the
+   rest of the fleet. The token subpaths are named one by one rather than pulling
+   `@hanzo/design/styles.css`: that entry chains relative `@import url(...)`s that
+   Next's CSS pipeline resolves as modules, not sibling files, so the explicit
+   published subpaths are the resolvable form of the same import.
 
-   @hanzo/design is not yet published to npm, so its token layer is vendored here
-   verbatim (the README's stated contract: "code copies over 1:1"). Do NOT edit
-   these files in the console — edit them in hanzoai/design and re-sync. Synced
-   from hanzoai/design tokens/ on 2026-07-24.
-
-   The console's Tamagui theme (app/globals.css) DERIVES its --colorN ladder and
-   borders from this neutral ladder, so the whole product reads from one palette.
+   Fonts are deliberately NOT imported from the package: the console loads the
+   Geist faces via app/fonts.css, and the `:root` shim below lets the vendored
+   typography roles resolve without a second copy.
    ───────────────────────────────────────────────────────────────────────────── */
-@import './colors.css';
-@import './typography.css';
-@import './spacing.css';
-@import './radius.css';
-@import './elevation.css';
-@import './motion.css';
-@import './z.css';
+@import '@hanzo/design/tokens/colors.css';
+@import '@hanzo/design/tokens/typography.css';
+@import '@hanzo/design/tokens/spacing.css';
+@import '@hanzo/design/tokens/radius.css';
+@import '@hanzo/design/tokens/elevation.css';
+@import '@hanzo/design/tokens/motion.css';
+@import '@hanzo/design/tokens/z.css';
 
 /* Font families — the console loads the Geist faces via app/fonts.css; these vars
-   let the vendored typography roles (--type-*) resolve without re-importing fonts. */
+   let the typography roles (--type-*) resolve without re-importing fonts. */
 :root {
   --font-sans: 'Geist', 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-sans);

@@ -20,6 +20,9 @@ importers:
       '@hanzo/data':
         specifier: ^1.2.2
         version: 1.2.2(@hanzo/gui@8.0.0(react-dom@19.2.7(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7)
+      '@hanzo/design':
+        specifier: ^0.4.6
+        version: 0.4.6
       '@hanzo/event':
         specifier: ^0.3.8
         version: 0.3.8(react@19.2.7)
@@ -772,6 +775,10 @@ packages:
     peerDependencies:
       '@hanzo/gui': '>=7.2.2'
       react: '>=19'
+
+  '@hanzo/design@0.4.6':
+    resolution: {integrity: sha512-kRjnGKsGqMfGTg2kMUv+pPRDryarYk85rMOoblIqshFIZJp48pCKYcdv1DmfxbNyKm+7CqvqD1NjY3HhNPUQ/A==}
+    hasBin: true
 
   '@hanzo/event@0.3.8':
     resolution: {integrity: sha512-Mh7+CV2t23x/dircN1Y9Ulm7HE6QWMf9E0/oBrlsILZCS7oP4GY5sGFlO36ZSiUsnbEVJIT21/PZILLPi4JAhQ==}
@@ -4761,6 +4768,8 @@ snapshots:
     dependencies:
       '@hanzo/gui': 8.0.0(react-dom@19.2.7(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7)
       react: 19.2.7
+
+  '@hanzo/design@0.4.6': {}
 
   '@hanzo/event@0.3.8(react@19.2.7)':
     optionalDependencies:
