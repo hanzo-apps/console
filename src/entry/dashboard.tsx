@@ -25,8 +25,9 @@
  * push the content) — the classic rail + flyout. On phones the sidebar is a LEFT
  * drawer (hamburger) instead; the collapse/rail is a desktop concern.
  *
- * The assistant docks: a floating bubble by default, or a PERMANENT right column
- * when docked (`useFloatingChat().docked`), which this shell reserves at `lg+`.
+ * The assistant is opened from its OWN floating control bottom-right (`FloatingChat`),
+ * never from this topbar; all this shell owns about it is `docked`, which reserves the
+ * PERMANENT right column at `lg+`.
  *
  * Every product icon carries a tasteful per-product COLOR, recolorable/pinnable from
  * the customize pane — all persisted per-user via the account-backed preferences.
@@ -59,7 +60,6 @@ import {
   LayoutGrid,
   Lock,
   Menu,
-  Mic,
   PanelLeft,
   Plus,
   Repeat,
@@ -110,7 +110,6 @@ import { shellFor, isProductShell } from '~/lib/products/shell'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { ContextSwitcher } from '~/components/ContextSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
-import { voiceSupported } from '~/lib/voice'
 import { WorkbenchDock } from '~/components/workbench/Workbench'
 import { Z } from '~/lib/z'
 
@@ -938,12 +937,10 @@ export function Dashboard({ children }: { children: ReactNode }) {
   // drawer, dock), never a route change.
   const router = useRouter()
   const { get, set } = usePreferences()
-  const palette = useCommandPalette()
-  // The assistant: `docked` reserves the right column; `openChat` (the small brand-H)
-  // opens it as the right sidebar; `startVoice` (the mic) opens it AND starts listening.
-  const { docked, openChat, startVoice } = useFloatingChat()
-  // Show the mic only where the browser can actually listen (no dead control).
-  const [voiceOk] = useState(() => voiceSupported())
+  // The assistant: `docked` is the only thing the SHELL owns about it — it reserves
+  // the right column at lg+. Opening it belongs to the assistant's own floating
+  // control (`AssistantFab`), not to this topbar.
+  const { docked } = useFloatingChat()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   // Collapsed-rail hover flyout (desktop only): the full sidebar overlays the content
@@ -1058,30 +1055,10 @@ export function Dashboard({ children }: { children: ReactNode }) {
               side, read as two different destinations — so there is now one. */}
           <CommandSearchBox />
 
-          {/* Talk to Hanzo — a SMALL brand-H opens the assistant in the right sidebar
-              (desktop) / sheet (phones); the mic starts a voice session. AI help is one
-              small press away, while the user's OWN brand still leads the chrome
-              (top-left). Shown on every viewport. Replaces the old floating circle. */}
-          <Button
-            size="$3"
-            chromeless
-            borderWidth={1}
-            borderColor="$borderColor"
-            icon={<BrandMark size={16} />}
-            onPress={openChat}
-            aria-label="Chat with Hanzo"
-          />
-          {voiceOk ? (
-            <Button
-              size="$3"
-              chromeless
-              borderWidth={1}
-              borderColor="$borderColor"
-              icon={<Mic size={17} />}
-              onPress={startVoice}
-              aria-label="Talk to Hanzo"
-            />
-          ) : null}
+          {/* The assistant is NOT here. Chat and voice live together in the one
+              floating control bottom-right (`AssistantFab` in `FloatingChat`), where
+              the assistant itself appears — so the topbar carries navigation and
+              account chrome only, and the user's OWN brand leads it (top-left). */}
 
           {/* Spacer — pushes the right-side controls to the edge at lg+. Below lg the
               search box fills the row (two flex:1 siblings would halve it). */}

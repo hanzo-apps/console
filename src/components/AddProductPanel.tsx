@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * All products — the directory where you curate your sidebar. Every Hanzo product
- * is always available on demand; this panel lists the FULL catalog the viewer may
- * see (brand-scoped, admin surfaces gated), grouped by category, each row with a
- * PIN toggle that promotes/removes it from the sidebar's Pinned quick-access section
- * (via `usePins`). Rendered in the shared DetailPane (opened from the sidebar's
- * "All products" row).
+ * All products — the directory of every Hanzo app, where you OPEN one and where you
+ * curate your sidebar. Every product is always available on demand; this panel lists
+ * the FULL catalog the viewer may see (brand-scoped, admin surfaces gated), grouped
+ * by category. A row OPENS its app; the pin toggle beside it promotes/removes it from
+ * the sidebar's Pinned quick-access section (via `usePins`). Rendered in the shared
+ * DetailPane (opened from the sidebar's "All products" row).
  *
  * Honest by construction: pinning is instant + optimistic (persisted through the
  * account preferences store — no async error state). Products with REAL org usage
@@ -15,12 +15,15 @@
  * the badges/filter degrade away — never a fabricated "in use".
  */
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, Plus, Search, Star } from '@hanzogui/lucide-icons-2'
 
 import { visibleCatalogByCategory, type CatalogEntry, type ProductIcon } from '~/lib/products/registry'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { usePins, useProductColors } from '~/lib/products/pins'
+import { openProduct } from '~/lib/products/open'
+import { useDetailPane } from '~/components/DetailPane'
 import { fetchUsageRecords } from '~/lib/api/aimetrics'
 import { inUseProductIds } from '~/lib/products/product-usage'
 import { asColor } from '~/components/ui/color'
@@ -41,23 +44,51 @@ function InUseBadge() {
   )
 }
 
-/** One catalog row: icon · label/description (+ In-use badge) · pin toggle. */
+/**
+ * One catalog row: icon · label/description (+ In-use badge) · pin toggle.
+ *
+ * The row itself OPENS the product. It used to be an inert `XStack` — a plain div
+ * with `cursor: auto`, no role and no handler — so the one place in the console that
+ * lists every app was a directory you could not walk: the only live control in the
+ * row was the pin. Opening is delegated to the shared `openProduct`, the ONE opener
+ * every other surface (sidebar, ⌘K, category page) already routes through.
+ *
+ * Pin stays a SEPARATE control on the same row, so curating never navigates and
+ * navigating never curates. It stops the press from bubbling into the row for the
+ * same reason.
+ */
 function ProductRow({
   entry,
   color,
   pinned,
   inUse,
+  onOpen,
   onToggle,
 }: {
   entry: CatalogEntry
   color: string
   pinned: boolean
   inUse: boolean
+  onOpen: () => void
   onToggle: () => void
 }) {
   const Icon = entry.icon
   return (
-    <XStack items="center" gap="$3" py="$2" px="$2" rounded="$3" minH={44} hoverStyle={{ bg: '$color2' }}>
+    <XStack
+      role="button"
+      tabIndex={0}
+      onPress={onOpen}
+      cursor="pointer"
+      items="center"
+      gap="$3"
+      py="$2"
+      px="$2"
+      rounded="$3"
+      minH={44}
+      hoverStyle={{ bg: '$color2' }}
+      focusStyle={{ bg: '$color2' }}
+      aria-label={`Open ${entry.label}`}
+    >
       <YStack width={32} height={32} rounded="$3" bg="$color3" items="center" justify="center">
         <Icon size={16} color={asColor(color)} />
       </YStack>
@@ -73,7 +104,10 @@ function ProductRow({
       <Button
         size="$2"
         icon={pinned ? <Star size={15} /> : <Plus size={15} />}
-        onPress={onToggle}
+        onPress={(e?: { stopPropagation?: () => void }) => {
+          e?.stopPropagation?.()
+          onToggle()
+        }}
         bg={pinned ? '$color5' : 'transparent'}
         borderWidth={1}
         borderColor="$borderColor"
@@ -121,6 +155,15 @@ export function AddProductPanel() {
   const showAdmin = useIsSuperAdmin()
   const { isPinned, toggle } = usePins()
   const { colorOf } = useProductColors()
+  const router = useRouter()
+  const detail = useDetailPane()
+  // Opening an app takes you to it: navigate, then close the pane you launched from
+  // (it is a directory, not a destination — leaving it open would cover the page it
+  // just opened).
+  const openEntry = (entry: CatalogEntry) => {
+    openProduct(entry, (path) => router.push(path))
+    detail.close()
+  }
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   // Real org usage signal. `null` = not (yet) known; a Set (even empty) = a real
@@ -236,6 +279,7 @@ export function AddProductPanel() {
                 color={colorOf(entry.id)}
                 pinned={isPinned(entry.id)}
                 inUse={inUse?.has(entry.id) ?? false}
+                onOpen={() => openEntry(entry)}
                 onToggle={() => toggle(entry.id)}
               />
             ))}

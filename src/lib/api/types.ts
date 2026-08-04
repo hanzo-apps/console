@@ -155,6 +155,15 @@ export type Account = {
   /** Arbitrary per-user key/value store on the IAM account. Cross-product,
    * cross-device user customizations live here under `hanzo.preferences`. */
   properties?: Record<string, string>
+  /**
+   * When the identity token carrying these claims was minted (`iat`, SECONDS).
+   *
+   * `properties` is a SNAPSHOT taken at that instant, not a live read — nothing
+   * serves a GET for it — so anything written afterwards is newer than what is
+   * here. Preference reconciliation needs that ordering; without it a snapshot
+   * silently re-asserted itself over the user's more recent changes.
+   */
+  issuedAt?: number
   [key: string]: unknown
 }
 
