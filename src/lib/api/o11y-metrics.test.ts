@@ -62,11 +62,11 @@ describe('normalizeServiceMetrics', () => {
 describe('O11yMetricsApi.service', () => {
   beforeEach(() => restGet.mockReset())
 
-  it('GETs /v1/o11y/metrics with the product + range and maps the body', async () => {
+  it('GETs /v1/o11y/product/metrics with the product + range and maps the body', async () => {
     restGet.mockResolvedValueOnce(body)
     const m = await O11yMetricsApi.service('iam', { rangeSec: 3600 })
     const url = restGet.mock.calls[0][0] as string
-    expect(url).toContain('/v1/o11y/metrics')
+    expect(url).toContain('/v1/o11y/product/metrics')
     expect(url).toContain('product=iam')
     expect(url).toContain('range=3600')
     expect(m.connected).toBe(true)
