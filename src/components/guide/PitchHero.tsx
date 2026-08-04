@@ -143,8 +143,12 @@ export function PitchHero({ guide }: { guide: ProductGuide }) {
             </Text>
           </YStack>
           <XStack gap="$2" items="center">
+            {/* Neutral, not filled: the ONE filled action in this card is the
+                checklist's ACTIVE step below — the thing to do next. A white "Take
+                the tour" beside it made two buttons compete for the same emphasis,
+                and the tour is the aside. */}
             {tourSteps.length ? (
-              <Button size="$2" theme="light" icon={<Compass size={14} />} onPress={() => setTourOpen(true)}>
+              <Button size="$2" icon={<Compass size={14} />} onPress={() => setTourOpen(true)}>
                 Take the tour
               </Button>
             ) : null}
