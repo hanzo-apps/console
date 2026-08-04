@@ -7,14 +7,26 @@
  *
  * Content is DERIVED from the real product taxonomy (categoriesForBrand +
  * CATEGORY_SUMMARY), brand-scoped via getBrand — so it is honest (every tile is a
- * real category the platform ships) and white-labels for free. The primary CTA is
- * the ONE sign-in surface (/signin); "Learn more" goes to the brand's own site.
+ * real category the platform ships) and white-labels for free. "Learn more" goes to
+ * the brand's own site.
+ *
+ * The CTAs START the sign-in rather than routing to `/signin`. That page's entire
+ * content is one button that does exactly this, so sending a visitor there spent a
+ * click and a page load to ask "did you mean it?" — and this is the second such
+ * question already, since they clicked "Sign in" on cloud.hanzo.ai to arrive here.
+ *
+ * `/signin` stays, and is still the ONE sign-in surface: it is where the guarded
+ * entry sends an anon visitor (entry/auth.tsx), where sign-out lands, and what a
+ * bookmark or a deep link resolves to. It is not auto-redirected on load — after an
+ * explicit sign-out IAM may still hold a session, so an automatic authorize would
+ * silently sign the user back in and make signing out impossible. The button there
+ * is meaningful; the hop to reach it was not.
  */
-import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { HanzoHeader, HANZO_PRODUCT_CATEGORIES, findSurfaceByHost, type HanzoSurface } from '@hanzogui/shell'
 
 import { config } from '~/config'
+import { signinRedirect } from '~/lib/auth/iam'
 import { getBrand } from '~/lib/branding/brands'
 import { categoriesForBrand, CATEGORY_SUMMARY } from '~/lib/products/brand-scope'
 import { landingSurface } from '~/lib/products/landing-surface'
@@ -61,12 +73,11 @@ const CTA_SECONDARY = {
 } as const
 
 export function PublicLanding() {
-  const router = useRouter()
   const brand = getBrand()
   const categories = categoriesForBrand(brand.id).filter((c) => c !== 'Settings')
 
   const signIn = (
-    <Button size="$3" onPress={() => router.push('/signin')}>
+    <Button size="$3" onPress={() => void signinRedirect()}>
       Sign in
     </Button>
   )
@@ -130,7 +141,7 @@ export function PublicLanding() {
           <Button
             size="$4"
             {...CTA_PRIMARY}
-            onPress={() => router.push('/signin')}
+            onPress={() => void signinRedirect()}
           >
             Get started
           </Button>
