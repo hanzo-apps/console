@@ -1,7 +1,7 @@
 /**
  * THE stacking ladder — the one place a layer is named.
  *
- * `app/design/z.css` has always declared this ladder (base · raised · sticky ·
+ * `@hanzo/design/tokens/z.css` declares this ladder (base · raised · sticky ·
  * header · dropdown · overlay · modal · popover · toast). It was read in ZERO
  * places: every overlay in the console reached for a literal instead, and the
  * literals had drifted to 1000, 1100, 9999, 100000, 100001 and 100002 — a race
