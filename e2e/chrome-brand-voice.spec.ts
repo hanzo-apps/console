@@ -1,11 +1,12 @@
 /**
  * e2e: brand-forward chrome + voice — mocked-network render proof.
  *
- * The Chrome wave: the big floating chat CIRCLE was removed; the assistant now opens
- * from the TOPBAR (a small brand-H "Chat with Hanzo" + a "Talk to Hanzo" mic), the
- * top-left SidebarBrand renders the org's own logo (white-label), and the Developers
- * dock is drag-resizable with a live "Create key". This spec proves all of it in a
- * browser.
+ * The Chrome wave: the big floating chat CIRCLE was removed; the assistant opens from
+ * ONE control — a floating bottom-right cluster (a brand-H "Ask Hanzo" + a "Talk to
+ * Hanzo" mic, `AssistantFab`), NOT the topbar, which carries navigation and account
+ * chrome only. The top-left SidebarBrand renders the org's own logo (white-label), and
+ * the Developers dock is drag-resizable with a live "Create key". This spec proves all
+ * of it in a browser.
  *
  * Same harness as workbench.spec (the closest sibling): a LOCAL server with the
  * network mocked. `primeSession` seeds the IAM-PKCE identity AND the first-run gates
@@ -13,7 +14,7 @@
  * real-shaped ledger rows for the dock's Overview, `/v1/models` → a small catalog for
  * the assistant's model list; everything else → an empty-ok envelope.
  *
- * Voice gotcha: headless chromium ships NO webkitSpeechRecognition, so the topbar mic
+ * Voice gotcha: headless chromium ships NO webkitSpeechRecognition, so the mic
  * (rendered only when `voiceSupported()`) would be absent for an environment reason,
  * not a code one. A tiny, inert Web Speech stub is injected BEFORE load
  * (`installVoiceStub`) so `voiceSupported()` is deterministically true and the mic
@@ -107,20 +108,20 @@ function installVoiceStub(page: Page) {
   })
 }
 
-/** Prime + navigate; the topbar brand-H is on EVERY viewport, so it is the mount signal. */
+/** Prime + navigate; the floating brand-H is on EVERY viewport, so it is the mount signal. */
 async function openHome(page: Page, waitForMount = true) {
   await installVoiceStub(page)
   await page.route('**/*', mock)
   await primeSession(page)
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
   if (waitForMount) {
-    await expect(page.locator('[aria-label="Chat with Hanzo"]').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('[aria-label="Ask Hanzo"]').first()).toBeVisible({ timeout: 20_000 })
   }
 }
 
 test.beforeAll(() => mkdirSync(SHOTS, { recursive: true }))
 
-test('the floating circle is gone; the topbar carries chat + voice, the sidebar brand + docked assistant + Developers dock work', async ({ browser }) => {
+test('one floating control carries chat + voice; the topbar carries neither; sidebar brand + docked assistant + Developers dock work', async ({ browser }) => {
   // laptop (≥ lg 1024): the persistent sidebar, the Developers dock, and the docked
   // assistant column are all present (they are desktop-only concerns).
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
@@ -130,10 +131,18 @@ test('the floating circle is gone; the topbar carries chat + voice, the sidebar 
   // 1. The OLD floating circle is GONE — the bubble that covered page content.
   await expect(page.locator('[aria-label="Open AI assistant"]')).toHaveCount(0)
 
-  // 2. Topbar: the small brand-H "Chat with Hanzo" AND the "Talk to Hanzo" mic, both
-  //    visible (the mic renders because the Web Speech stub makes voiceSupported() true).
-  await expect(page.locator('[aria-label="Chat with Hanzo"]').first()).toBeVisible()
-  await expect(page.locator('[aria-label="Talk to Hanzo"]').first()).toBeVisible()
+  // 2. ONE floating control, bottom-right: the brand-H "Ask Hanzo" AND the "Talk to
+  //    Hanzo" mic (the mic renders because the Web Speech stub makes voiceSupported()
+  //    true) — and the topbar carries no assistant control at all. The two used to live
+  //    up there beside the search box, which put the assistant in a third place.
+  //    Scoped to the control itself: the assistant's own composer carries a mic with
+  //    the same label, mounted-but-hidden until the panel opens, so a bare
+  //    `[aria-label="Talk to Hanzo"]` matches that one first and reads "hidden".
+  const fab = page.getByTestId('assistant-fab')
+  await expect(fab.locator('[aria-label="Ask Hanzo"]')).toBeVisible()
+  await expect(fab.locator('[aria-label="Talk to Hanzo"]')).toBeVisible()
+  await expect(page.locator('.hz-topbar [aria-label="Ask Hanzo"]')).toHaveCount(0)
+  await expect(page.locator('.hz-topbar [aria-label="Talk to Hanzo"]')).toHaveCount(0)
 
   // 3. The top-left SidebarBrand renders the org logo / BrandMark (an <img> or <svg>).
   const brand = page.locator('[aria-label*="right-click for brand menu"]').first()
@@ -147,15 +156,18 @@ test('the floating circle is gone; the topbar carries chat + voice, the sidebar 
   await expect(page.locator('[title="Drag to resize"]').first()).toBeVisible()
   await expect(page.locator('text=Create key').first()).toBeVisible({ timeout: 15_000 })
 
-  // 5. Clicking "Chat with Hanzo" opens the DOCKED assistant surface — the "Assistant"
-  //    header + its Undock control appear (uniquely the docked panel at lg+).
-  await page.locator('[aria-label="Chat with Hanzo"]').first().click()
+  // 5. Clicking "Ask Hanzo" opens the DOCKED assistant surface — the "Assistant"
+  //    header + its Undock control appear (uniquely the docked panel at lg+). The
+  //    floating control then steps aside: at lg+ the docked column IS the assistant,
+  //    so keeping a button to open it on top of itself would be a second way in.
+  await fab.locator('[aria-label="Ask Hanzo"]').click()
   await expect(page.locator('[aria-label^="Undock"]').first()).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('Assistant', { exact: true }).filter({ visible: true }).first()).toBeVisible()
+  await expect(page.locator('[aria-label="Ask Hanzo"]')).toHaveCount(0)
 
-  // 6. The mic is wired: "Talk to Hanzo" → startVoice → the conversation opens the
-  //    recognition (voiceSignal effect → voice.start() → the stub records the call).
-  await page.locator('[aria-label="Talk to Hanzo"]').first().click()
+  // 6. The mic is wired: "Talk to Hanzo" (now the open conversation's own) → the
+  //    recognition opens (voice.start() → the stub records the call).
+  await page.locator('[aria-label="Talk to Hanzo"]').filter({ visible: true }).first().click()
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { __voiceStarted?: number }).__voiceStarted ?? 0), { timeout: 15_000 })
     .toBeGreaterThan(0)
@@ -179,7 +191,7 @@ test('renders across breakpoints with no horizontal body scroll on a phone; scre
     // (real render, or an honest blank shell if the sandbox can't paint the SPA).
     await openHome(page, false)
     await page
-      .locator('[aria-label="Chat with Hanzo"]')
+      .locator('[aria-label="Ask Hanzo"]')
       .first()
       .waitFor({ state: 'visible', timeout: 20_000 })
       .catch(() => {})

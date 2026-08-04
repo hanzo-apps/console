@@ -47,9 +47,18 @@ type PreferencesState = {
 const PreferencesContext = createContext<PreferencesState | null>(null)
 
 const cacheKey = (name: string | undefined) => `hanzo.console2.prefs.${name ?? 'anon'}`
+/** When the SERVER last confirmed a write for this user — the stamp that lets the
+ *  merge order the cache against the identity token's snapshot. */
+const stampKey = (name: string | undefined) => `${cacheKey(name)}.writtenAt`
 
 const readCache = (name: string | undefined): Preferences =>
   typeof window === 'undefined' ? {} : parsePrefs(window.localStorage.getItem(cacheKey(name)))
+
+const readStamp = (name: string | undefined): number | undefined => {
+  if (typeof window === 'undefined') return undefined
+  const n = Number(window.localStorage.getItem(stampKey(name)))
+  return Number.isFinite(n) && n > 0 ? n : undefined
+}
 
 export function Preferences({ children }: { children: ReactNode }) {
   const { account } = useSession()
@@ -65,10 +74,14 @@ export function Preferences({ children }: { children: ReactNode }) {
       return
     }
     // …then reconcile: the account wins for every key it CARRIES, and the cache
-    // keeps the keys it is silent about. Writing the MERGE back to the cache is
-    // what makes a customization survive the next reload — overwriting the cache
-    // with the account's view alone is precisely what used to lose it.
-    const merged = mergePrefs(cached, parsePrefs(account.properties?.[PREFS_PROPERTY]))
+    // keeps the keys it is silent about — unless the cache holds a server-confirmed
+    // write NEWER than the account's snapshot, which is minted at sign-in and
+    // therefore blind to everything saved since. Writing the MERGE back to the cache
+    // is what makes a customization survive the next reload.
+    const merged = mergePrefs(cached, parsePrefs(account.properties?.[PREFS_PROPERTY]), {
+      tokenIssuedAt: account.issuedAt,
+      cacheWrittenAt: readStamp(name),
+    })
     setPrefs(merged)
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(cacheKey(name), JSON.stringify(merged))
@@ -83,9 +96,18 @@ export function Preferences({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(cacheKey(name), JSON.stringify(next))
         }
-        // Write-through to the account (self-scoped server-side). Optimistic:
-        // a failure leaves the local + cache view; the next load reconciles.
-        void AccountApi.updatePreferences({ [key]: value }).catch(() => {})
+        // Write-through to the account (self-scoped server-side). Optimistic in the
+        // UI, but only a write the SERVER acknowledged is stamped — that stamp is
+        // what out-ranks the token's older snapshot on the next load, so a save that
+        // never landed must not earn it. A failure leaves the local + cache view and
+        // the account stays authoritative; the next load reconciles honestly.
+        void AccountApi.updatePreferences({ [key]: value })
+          .then(() => {
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(stampKey(name), String(Date.now()))
+            }
+          })
+          .catch(() => {})
         return next
       })
     },
