@@ -6,7 +6,7 @@
  * code-exchange / durable-console-session path any more — the IAM PKCE token is the
  * single credential (the API client carries it as a Bearer on every `/v1` call).
  */
-import { patch, post } from './client'
+import { ApiError, patch, post, postForm } from './client'
 import {
   iamValidAccessToken,
   iamUserInfo,
@@ -119,5 +119,21 @@ export const AccountApi = {
   ): Promise<Record<string, unknown>> => {
     const r = await patch<Record<string, unknown>>('ai/preferences', partial)
     return r.data ?? {}
+  },
+
+  /**
+   * Set the signed-in user's profile photo. Returns the URL it is served from,
+   * which cloud has already written onto the IAM user row — so the change is
+   * visible to every product, not just this tab.
+   *
+   * Self-scoped on the backend: the subject comes from the validated token, so
+   * there is no way to name a different user's photo.
+   */
+  setAvatar: async (file: File): Promise<string> => {
+    const form = new FormData()
+    form.append('file', file, file.name)
+    const r = await postForm<{ avatar?: string }>('avatar', form)
+    if (!r.avatar) throw new ApiError('The server accepted the photo but returned no URL')
+    return r.avatar
   },
 }
