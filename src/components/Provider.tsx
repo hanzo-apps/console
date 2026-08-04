@@ -8,15 +8,13 @@ import { useMemo, type ReactNode } from 'react'
 import { GuiProvider } from '@hanzo/gui'
 import { NextThemeProvider, useRootTheme } from '@hanzogui/next-theme'
 import { registerDefaultFields, registerField } from '@hanzo/data'
-import { AnalyticsProvider } from '@hanzo/event/react'
 import { IamProvider } from '@hanzo/iam/react'
 
 import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
 import { iamConfig } from '~/lib/auth/iam'
 import { EntitlementsProvider } from '~/lib/entitlements-context'
-import { eventClient } from '~/lib/event'
-import { AnalyticsBridge } from './Analytics'
+import { AnalyticsBridge, TelemetrySurface } from './Analytics'
 import { OrgAccentProvider } from './OrgAccentProvider'
 import { RichTextDisplay, RichTextInput } from './fields/RichTextField'
 
@@ -64,16 +62,15 @@ export function Provider({ children }: { children: ReactNode }) {
         {/* Entitlements live inside the session (they read the signed-in account +
             active org scope) so the sidebar/palette gate from ONE fetch. */}
         <EntitlementsProvider>
-          {/* Analytics lives INSIDE the session so `identify` binds the signed-in
-              actor. The ONE shared `eventClient` (same-origin /v1/event; the tenant is
-              stamped server-side, so the client never sends an org) is also referenced
-              by the error boundaries, so every signal rides one stream. The provider
-              fires the first pageview (autoPageview); `AnalyticsBridge` wires the
-              per-navigation pageviews + identity. */}
-          <AnalyticsProvider client={eventClient}>
+          {/* Telemetry lives INSIDE the session so `identify` binds the signed-in
+              actor. `TelemetrySurface` is the ONE provider — pageviews, errors,
+              interaction capture, consent — and it mounts @hanzo/event internally,
+              so `useAnalytics()` call sites share its client. `AnalyticsBridge`
+              adds only identity; the provider owns pageviews. */}
+          <TelemetrySurface>
             <AnalyticsBridge />
             {children}
-          </AnalyticsProvider>
+          </TelemetrySurface>
         </EntitlementsProvider>
       </SessionProvider>
       </IamProvider>

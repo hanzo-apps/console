@@ -1,40 +1,38 @@
 'use client'
 
 /**
- * Bridges the console session + App-Router navigation into the shared analytics
- * client (`@hanzo/event`). Rendered once, inside both `SessionProvider` and
- * `AnalyticsProvider` (see `Provider.tsx`), it renders nothing.
+ * The console's telemetry surface — the ONE Hanzo telemetry provider, plus the one
+ * thing it deliberately leaves to the app.
  *
- *  - `usePageview` emits a pageview on every path change (the provider fires the
- *    FIRST pageview itself, so this only covers subsequent client navigations).
- *  - `identify` binds the user to their Hanzo IAM user id (`account.userId`, the
- *    OIDC `sub`) once the session resolves, AND carries the attributes that make
- *    that id legible. Anonymous placeholder sessions are skipped.
+ * `TelemetrySurface` mounts `@hanzogui/telemetry`, which owns the whole plane for
+ * this subtree: pageviews (including SPA route changes), `window.onerror` +
+ * `unhandledrejection`, React render errors (its internal boundary REPORTS and
+ * re-throws, so the app's own error UI still decides what the user sees), lazily
+ * imported interaction capture, and DNT/GPC consent. It replaces the hand-rolled
+ * `<AnalyticsProvider>` + bridge + boundary combo; it mounts @hanzo/event's
+ * `AnalyticsProvider` internally with its own client, so every existing
+ * `useAnalytics()` call site keeps working against that ONE client and one stream.
+ * `product="console"` is all the configuration there is — @hanzo/event's DSN
+ * registry resolves the hanzo-console Sentry project from it, so the error plane
+ * needs no `dsn` prop and no env var.
  *
- * WHY NOT `owner/name`. This used to identify by the `${owner}/${name}` actor ref.
- * That is an org-relative REFERENCE, not a user id: it is a different id space
- * from the one hanzo.ai and hanzo.chat identify by (the IAM `sub`), so the same
- * user counted twice the moment they used two Hanzo surfaces — and every
- * cross-property funnel, retention curve and path silently measured nothing. It
- * also moves when an org or a login handle is renamed, which rewrites history.
+ * It reads `usePathname()` ITSELF rather than taking a `path` prop from `Provider`:
+ * `Provider` memoizes its tree on `children`, so a path read up there would be
+ * baked into the cached element and go stale on the first client navigation.
  *
- * WHY TRAITS. A bare `identify(id)` writes a user id and nothing else, so the
- * warehouse held a population of opaque subjects: every funnel could count users
- * but no one could say WHICH user, and answering "who hit this error" meant a
- * manual IAM lookup per row. Email and name are FIRST-PARTY facts about our own
- * users — they arrive in the same IAM claims this file already decodes to get the
- * id, and were simply dropped on the floor. Sent as traits they are exactly as
- * sensitive as they were in the token, and the id stays the join key.
- *
- * WHAT IS STILL NOT SENT: the org. The tenant is stamped SERVER-SIDE from the
- * validated bearer, so org-level cohorts are already queryable — and a tenant the
- * client can name is a tenant the client can get wrong. Traits describe the user,
- * never the scope they are trusted with.
+ * `AnalyticsBridge` is the one thing TelemetryProvider does NOT do — `identify`.
+ * It binds the person to the STABLE `owner/name` actor id (the same id the API
+ * client uses via `setCurrentActor`), never the email, once the session resolves.
+ * The org tenant is stamped server-side from the session, so we send the user id
+ * only, and anonymous placeholder sessions are skipped. It renders nothing and
+ * emits NO pageview — the provider owns those, and a second emitter would
+ * double-count every route.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { useAnalytics, usePageview } from '@hanzo/event/react'
+import { TelemetryProvider, useTelemetry } from '@hanzogui/telemetry'
 
+import { iamAccessToken } from '~/lib/auth/iam'
 import { useSession } from '~/lib/auth/session'
 import { type Account } from '~/lib/api/types'
 
@@ -49,21 +47,30 @@ export function identityTraits(account: Account): Record<string, unknown> {
   return traits
 }
 
+export function TelemetrySurface({ children }: { children: ReactNode }) {
+  const path = usePathname()
+  // @hanzo/iam (PKCE) is the console's ONE credential and it is a BEARER — the same
+  // token `lib/api/client.ts` puts on every call — so telemetry authenticates the
+  // same way rather than relying on a cookie the ingest host would never receive.
+  return (
+    <TelemetryProvider product="console" path={path} getToken={iamAccessToken}>
+      {children}
+    </TelemetryProvider>
+  )
+}
+
 export function AnalyticsBridge() {
-  const analytics = useAnalytics()
+  const telemetry = useTelemetry()
   const { account } = useSession()
-  usePageview(usePathname())
 
   const identified = useRef('')
   useEffect(() => {
-    if (!account || account.type === 'anonymous-user') return
-    // No IAM subject means no IAM user — leave the visitor anonymous rather than
-    // inventing an id for them. Identity flows from the token's own claims.
-    const userId = account.userId
-    if (!userId || identified.current === userId) return
-    identified.current = userId
-    analytics.identify(userId, identityTraits(account))
-  }, [account, analytics])
+    if (!account?.owner || !account?.name || account.type === 'anonymous-user') return
+    const personId = `${account.owner}/${account.name}`
+    if (identified.current === personId) return
+    identified.current = personId
+    telemetry.identify(personId)
+  }, [account, telemetry])
 
   return null
 }
