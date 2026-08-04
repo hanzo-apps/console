@@ -58,7 +58,7 @@ export function overviewSection(brand: string): string {
     'The product families (each is a category in the catalog below):',
     '- **AI** — Hanzo serves its own **Zen** family of open models (the default) alongside leading third-party models through ONE gateway (api.hanzo.ai). Browse the live list in **Models** (/models) or try any of them in the **Playground** (/playground); also Agents, Inference, Embeddings, and Prompts.',
     '- **Compute** — on-demand **GPUs** (H100/A100), managed **Containers**, serverless **Functions**, durable **Tasks**, **Machines**, and **Kubernetes**.',
-    '- **Training** — **Fine-tuning** and **ML Pipelines** (Kubeflow) to build and tune your own models.',
+    '- **Training** — **Fine-tuning** to build and tune your own models on your own data.',
     '- **Data** — managed primitives: **Base** (a realtime backend — spin up per-org Bases with content types, records, and auth), **Vector** (embeddings + semantic search), **SQL**, **KV** (key-value cache/queues), **S3** object storage, **DocDB** (documents), **Datastore** (wide-column analytics), and **Memory**.',
     '- **Security** — **IAM** (orgs, users, RBAC), **KMS** (encryption keys), **Secrets**, **Authz**, **HSM**, **MPC**, and **Audit**.',
     '- **Network / Platform / Dev** — Gateway, DNS, CDN, VPC; ship-and-run pipelines (**Projects**, **Builds**, **Registry** at ghcr.io/hanzoai, **Releases**); and developer tooling (**CLI**, **SDKs** for Python/TypeScript/Go/Rust, **API**, **API Keys**).',
