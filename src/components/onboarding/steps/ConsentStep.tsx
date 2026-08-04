@@ -33,7 +33,17 @@ export function ConsentStep({ state, patch, next, back, isFirst }: StepProps) {
   }
 
   return (
-    <StepShell title="Data & consent" subtitle={`A couple of choices about how ${config.brandName} handles your data.`}>
+    <StepShell
+      title="Data & consent"
+      subtitle={`A couple of choices about how ${config.brandName} handles your data.`}
+      actions={
+        // No Skip here on purpose: accepting the Terms is not optional, so an
+        // affordance that skips past them would be dishonest. Continue stays
+        // disabled until the box is ticked. The data-sharing choice beside it IS
+        // optional and defaults to off — leaving it alone is the skip.
+        <StepActions onBack={isFirst ? undefined : back} onContinue={commit} continueDisabled={!agreed} />
+      }
+    >
       <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
         <XStack gap="$3" items="flex-start" justify="space-between">
           <XStack gap="$3" items="center" flex={1} minW={0}>
@@ -80,7 +90,6 @@ export function ConsentStep({ state, patch, next, back, isFirst }: StepProps) {
         </Text>
       ) : null}
 
-      <StepActions onBack={isFirst ? undefined : back} onContinue={commit} continueDisabled={!agreed} />
     </StepShell>
   )
 }
