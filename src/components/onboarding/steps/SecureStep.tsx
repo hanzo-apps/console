@@ -62,7 +62,21 @@ export function SecureStep({ next, skip, back, isFirst }: StepProps) {
   }
 
   return (
-    <StepShell title="Secure your account" subtitle="Add two-factor authentication so a stolen password isn't enough to sign in.">
+    <StepShell
+      title="Secure your account"
+      subtitle="Add two-factor authentication so a stolen password isn't enough to sign in."
+      actions={
+        <StepActions
+          onBack={isFirst ? undefined : back}
+          onSkip={enabled ? undefined : skip}
+          skipLabel="Skip securing my account"
+          onContinue={next}
+          continueLabel="Continue"
+          continueDisabled={!enabled}
+          busy={busy}
+        />
+      }
+    >
       {enabled ? (
         <Card p="$4" gap="$3" borderWidth={1} borderColor="$green7" bg="$green2">
           <XStack gap="$2" items="center">
@@ -161,16 +175,6 @@ export function SecureStep({ next, skip, back, isFirst }: StepProps) {
           </XStack>
         </Card>
       )}
-
-      <StepActions
-        onBack={isFirst ? undefined : back}
-        onSkip={enabled ? undefined : skip}
-        skipLabel="Skip securing my account"
-        onContinue={next}
-        continueLabel="Continue"
-        continueDisabled={!enabled}
-        busy={busy}
-      />
     </StepShell>
   )
 }

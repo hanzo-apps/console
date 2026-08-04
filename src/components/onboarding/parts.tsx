@@ -14,26 +14,46 @@ import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { ONBOARDING_STEPS, type StepId, type StepStatus } from '~/lib/onboarding/steps'
 
 /** Title + subtitle header + body for one step. */
+/**
+ * The content area's reserved height. Every step's body occupies at least this
+ * much, so `actions` lands at the SAME y on every step and Continue never moves
+ * under the pointer between steps — the whole reason actions is a slot on the
+ * shell rather than the last child a step happens to render.
+ *
+ * A taller step still grows (the area is flex), so this reserves space without
+ * capping it.
+ */
+const CONTENT_MIN_HEIGHT = 320
+
 export function StepShell({
   title,
   subtitle,
   children,
+  actions,
 }: {
   title: string
   subtitle: string
   children: ReactNode
+  /**
+   * The step's StepActions. It is a SLOT, not a child, so the shell decides
+   * where it sits — one placement for every step, decided in one place.
+   */
+  actions?: ReactNode
 }) {
   return (
     <YStack gap="$4" flex={1} minW={0}>
       <YStack gap="$1.5">
-        <Text fontSize="$8" fontWeight="800" color="$color12">
+        <Text testID="onboarding-step-title" fontSize="$8" fontWeight="800" color="$color12">
           {title}
         </Text>
         <Text fontSize="$4" color="$color11">
           {subtitle}
         </Text>
       </YStack>
-      {children}
+      <YStack gap="$4" flex={1} minH={CONTENT_MIN_HEIGHT}>
+        {children}
+      </YStack>
+      {actions}
     </YStack>
   )
 }
@@ -61,7 +81,7 @@ export function StepActions({
   busy?: boolean
 }) {
   return (
-    <XStack gap="$3" items="center" justify="space-between" flexWrap="wrap" pt="$2">
+    <XStack testID="onboarding-actions" gap="$3" items="center" justify="space-between" flexWrap="wrap" pt="$2">
       <XStack>
         {onBack ? (
           <Button size="$3" chromeless disabled={busy} icon={<ArrowLeft size={16} />} onPress={onBack}>
