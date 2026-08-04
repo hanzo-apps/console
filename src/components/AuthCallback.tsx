@@ -22,12 +22,13 @@ import { useIam } from '@hanzo/iam/react'
 import { Button, Text, YStack } from '@hanzo/gui'
 
 import { Loader } from '~/components/ui/Loader'
-import { takeReturnTo } from '~/lib/auth/iam'
+import { takeReturnTo, startReauth } from '~/lib/auth/iam'
+import { classifyCallback, type CallbackVerdict } from '~/lib/auth/callback-error'
 
 export function AuthCallback() {
   const router = useRouter()
   const { handleCallback } = useIam()
-  const [error, setError] = useState<string | null>(null)
+  const [verdict, setVerdict] = useState<CallbackVerdict | null>(null)
   // The OAuth `code` is SINGLE-USE and the SDK removes the PKCE verifier BEFORE the
   // token fetch, so the exchange must fire EXACTLY ONCE. Without this guard, React
   // StrictMode's double-invoke (or any `handleCallback` identity change re-running the
@@ -47,20 +48,37 @@ export function AuthCallback() {
         window.location.assign(takeReturnTo())
       })
       .catch(() => {
-        if (!cancelled) setError('Sign-in failed.')
+        if (cancelled) return
+        // The SDK is the AUTHORITY on whether a callback is a sign-in — it validates
+        // `state` before honouring an error branch, so an attacker-supplied
+        // /callback?error=… cannot mint a session. It reports every refusal the same
+        // way, though, so this screen used to say "Sign-in failed." to someone who had
+        // merely cancelled a consent screen. Read the code for WORDING only; the
+        // decision was already made above.
+        setVerdict(
+          classifyCallback(typeof window === 'undefined' ? '' : window.location.search) ?? {
+            kind: 'failed',
+            message: 'Sign-in failed.',
+          },
+        )
       })
     return () => {
       cancelled = true
     }
   }, [handleCallback])
 
-  if (error) {
+  if (verdict) {
+    // A refusal is not always a fault. Only a genuine failure is worded as one, and
+    // the two benign outcomes lead with the action that actually resolves them.
+    const retry = verdict.kind === 'failed' ? 'Back to sign in' : 'Sign in'
     return (
       <YStack flex={1} minH="100vh" items="center" justify="center" gap="$3">
         <Text color="$color12" fontWeight="600">
-          {error}
+          {verdict.message}
         </Text>
-        <Button onPress={() => router.replace('/signin')}>Back to sign in</Button>
+        <Button onPress={() => (verdict.kind === 'failed' ? router.replace('/signin') : startReauth())}>
+          {retry}
+        </Button>
       </YStack>
     )
   }
