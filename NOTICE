@@ -39,3 +39,38 @@ Langfuse EE / commercial ("ee") code is neither used nor referenced.
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
+
+------------------------------------------------------------------------
+Vendored MIT-licensed code
+------------------------------------------------------------------------
+
+Portions of this software are derived from upstream MIT-licensed code. Those
+copyright notices are retained here per the MIT License's terms; they were
+previously carried in LICENSE, which is reserved for this project's own
+BSD-3-Clause grant.
+
+  Copyright (c) 2020 Nate Wienert            (Tamagui)
+  Copyright (c) 2015-present, Nicolas Gallagher.  (react-native-web)
+  Copyright (c) 2015-present, Facebook, Inc.      (react-native-web)
+  Copyright (c) 2021 Radix                    (Radix UI)
+  Copyright (c) 2017 Carmelo Pullara
+  Copyright (c) 2018 Framer B.V.              (Framer Motion)
+  Copyright (c) 2022 WorkOS
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
