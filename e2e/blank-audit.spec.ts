@@ -40,7 +40,7 @@ const CANONICAL_IDS: string[] = JSON.parse(readFileSync(join(process.cwd(), 'e2e
  * are NOT registry ids — they must resolve via SLUG_ALIASES to a real module (never
  * a 404 blank). Auditing them here proves the alias map end-to-end against the real app.
  */
-const ALIAS_SLUGS = ['traces', 'deploy', 'plans-pricing', 'wallets', 'model-catalog', 'fine-tuning', 'web-search', 'mlpipelines', 'kubeflow']
+const ALIAS_SLUGS = ['traces', 'deploy', 'plans-pricing', 'wallets', 'model-catalog', 'fine-tuning', 'web-search']
 const IDS: string[] = [...CANONICAL_IDS, ...ALIAS_SLUGS]
 
 /** A global-admin (sees every surface) or a tenant customer (Dave/maxpower shape). */

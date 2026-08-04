@@ -1,6 +1,6 @@
 /**
- * Same-origin proxy to the cloud ML/training surface on hanzoai/ai (`/v1/train/*`,
- * `/v1/ml/models`, and the fine-tuning broker `/v1/finetune/*`).
+ * Same-origin proxy to the cloud ML/training surface (`/v1/ml/models` and the
+ * fine-tuning broker `/v1/finetune/*`).
  *
  * The console's Training page calls its OWN origin (`/training/...`) with just the
  * first-party session cookie; this server handler resolves the signed-in user from
@@ -11,16 +11,16 @@
  * this is user-scoped (resolveUser), NOT the control-plane admin gate the `/paas`
  * proxy uses. The cloud backend resolves the org from the token's `owner` claim (and
  * the X-Org-Id the plain-REST train sub-service reads), so a caller can only ever
- * touch their own org's jobs. `POST /v1/train/jobs` is billing-gated by the live
- * ResourceMeter and returns 402 on an unfunded org — that status flows straight back
- * so the UI can surface it honestly.
+ * touch their own org's jobs. `POST /v1/finetune/jobs` is billing-gated upstream and
+ * returns 402 on an unfunded org — that status flows straight back so the UI can
+ * surface it honestly.
  *
  * Why a Bearer and NOT the cookie (the fix for the "Not enabled" 403): cloud-api's
- * `/v1/train/*` authorizes on a VALIDATED JWT principal and returns 403 "no validated
+ * `/v1/*` authorizes on a VALIDATED JWT principal and returns 403 "no validated
  * principal" for a cookie-only call — the raw casibase session cookie is NOT a
  * principal it accepts (only the sanitizer's cookie-token names or a Bearer). Minting
  * the same user-bound token the `/v1` proxy uses is the ONE way a signed-in tenant
- * reaches the train surface; the cookie is deliberately dropped upstream (it can't
+ * reaches this surface; the cookie is deliberately dropped upstream (it can't
  * authenticate, and a cookie + JWT together risks the public-gateway 431).
  *
  * Least privilege: only the explicit ML/training sub-paths are forwarded; anything
@@ -44,14 +44,9 @@ const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud.hanzo.svc.
 
 /** The exact `/v1/<...>` ML/training sub-paths the console is allowed to reach. */
 const ALLOWED = new Set([
-  // mlsvc — the canonical training surface (task #40 ResourceMeter gates POST jobs).
-  'train/jobs',
-  'train/experiments',
+  // Model serving — the org's deployed kserve InferenceServices.
   'ml/models',
-  // Real Kubeflow control-plane probe (which operators/CRDs are actually served).
-  // Read-only; 503 + body flows through so the UI can report a degraded plane.
-  'train/health',
-  // fine-tuning broker (custom-data runs, HF search) — sibling surface.
+  // fine-tuning broker (custom-data runs, HF search) — the ONE training door.
   'finetune/jobs',
   'finetune/job',
   'finetune/cancel',
@@ -68,7 +63,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     return NextResponse.json({ status: 'error', msg: 'Not found' }, { status: 404 })
   }
 
-  // CSRF: `POST /train/jobs` mutates (and bills) from the auto-sent cookie — refuse a
+  // CSRF: `POST /finetune/jobs` mutates (and bills) from the auto-sent cookie — refuse a
   // cross-origin one before any work (safe reads pass).
   const csrf = csrfRefusal(req, 'casibase')
   if (csrf) return csrf
@@ -82,7 +77,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   }
 
   // Mint a short-lived, user-bound Bearer (the SAME per-user cache the `/v1`
-  // proxy uses). cloud-api's `/v1/train/*` 403s a cookie-only call ("no validated
+  // proxy uses). cloud-api's `/v1/*` 403s a cookie-only call ("no validated
   // principal"); a Bearer is the one credential it accepts. Fail CLOSED with 502 if
   // the token can't be minted — never fall through to an unauthenticated forward.
   let bearer: string

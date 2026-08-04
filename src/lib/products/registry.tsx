@@ -230,7 +230,6 @@ import { ContainersModule } from '~/components/products/ContainersModule'
 import { MachinesModule } from '~/components/products/MachinesModule'
 import { GpusModule, GpusOverview } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
-import { KubeflowModule } from '~/components/products/KubeflowModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
 import { MissionControlModule } from '~/components/products/MissionControlModule'
@@ -359,7 +358,7 @@ export type ProductSubpage = {
  * Decisions:
  *   - `Deploy` was renamed `Platform` (the ship-and-run pipeline: Projects,
  *     Environments, Builds, Registry, Releases, Pipelines).
- *   - `Training` is a new group (Fine-tuning + ML Pipelines/Kubeflow), split out
+ *   - `Training` is a new group (Fine-tuning), split out
  *     of AI so model *building* is its own axis.
  *   - `Compute` is the infra axis: Kubernetes, Containers, Tasks, Functions,
  *     GPUs, Machines, Edge, Clusters, Applications. `Tasks` (durable workflows)
@@ -1326,27 +1325,6 @@ export const catalog: CatalogEntry[] = [
       { slug: 'models', label: 'Models' },
       { slug: 'configs', label: 'Configs' },
     ],
-  },
-  {
-    // ML Pipelines (Kubeflow) — the read-only orchestration + control-plane view
-    // over the live cloud mlsvc bridge (hanzoai/cloud clients/ml), which fronts the
-    // Kubeflow-family CRDs as REST: Katib Experiments are the pipelines, trainer
-    // TrainJobs are the runs, and /v1/train/health is a real operator/CRD probe.
-    // Grouped with Fine-tuning under Training (the model-building axis); honest
-    // states until the Kubeflow control plane reports.
-    // The id IS the URL slug: `ml-pipelines` matches the product name (Kubeflow is
-    // the engine, named in the description) so `/ml-pipelines` is the canonical
-    // route — the old `/kubeflow` still resolves via SLUG_ALIASES (match-core).
-    id: 'ml-pipelines',
-    label: 'ML Pipelines',
-    icon: Blocks,
-    description: 'Orchestrated training and evaluation pipelines (Kubeflow).',
-    gcp: 'Vertex AI Pipelines',
-    category: 'Training',
-    status: 'enabled',
-    docs: `${DOCS}/pipelines`,
-    kind: 'module',
-    routes: [{ path: '', component: KubeflowModule }],
   },
   {
     // The embeddings product — generate, store, and search vector embeddings.
