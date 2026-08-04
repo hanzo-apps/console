@@ -307,6 +307,44 @@ export async function get<T>(path: string, query?: Query): Promise<T> {
 }
 
 /**
+ * POST a multipart form — the ONE upload door.
+ *
+ * It exists because `request` JSON-encodes its body, so a file cannot travel
+ * that way. Everything else is shared: the SAME `authedFetch` (bearer + refresh)
+ * and the SAME `baseHeaders` tenant stamp every other call carries, so an upload
+ * is org/project-scoped exactly like a read.
+ *
+ * `Content-Type` is deliberately DELETED rather than set: the browser must write
+ * it itself so it carries the multipart boundary. Setting it by hand produces a
+ * body no server can parse.
+ *
+ * The response is a plain `/v1` JSON object (not the casibase envelope), and an
+ * error body's `error`/`message` is surfaced verbatim — a failed upload should
+ * say what the server said, not "Request failed".
+ */
+export async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const headers = { ...baseHeaders(false) }
+  delete (headers as Record<string, string>)['Content-Type']
+  let res: Response
+  try {
+    res = await authedFetch(buildUrl(path), { method: 'POST', credentials: 'include', headers, body: form })
+  } catch (e) {
+    throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
+  }
+  const body = (await res.json().catch(() => null)) as
+    | (T & { error?: unknown; message?: unknown })
+    | null
+  if (!res.ok) {
+    const reason = [body?.error, body?.message].find((v) => typeof v === 'string' && v) as
+      | string
+      | undefined
+    throw new ApiError(reason || `Request failed (HTTP ${res.status})`, res.status)
+  }
+  if (!body) throw new ApiError(`Invalid response from server (HTTP ${res.status})`, res.status)
+  return body as T
+}
+
+/**
  * Envelope GET pinned to the console's OWN origin (`<origin>/v1/<path>`), so it
  * always hits a same-origin rewrite → hardened server proxy, NEVER the direct-cloud
  * `NEXT_PUBLIC_CLOUD_URL` override. Used by the admin AGGREGATE reads
