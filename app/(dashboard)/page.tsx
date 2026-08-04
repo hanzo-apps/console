@@ -22,7 +22,6 @@ import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import type { IconLike } from '~/components/ui/color'
 import { useProductColors } from '~/lib/products/pins'
@@ -148,13 +147,19 @@ function PrimaryActionTile({
         {description}
       </Text>
       <XStack>
-        <PrimaryButton
+        {/* Neutral, not filled. These three tiles are PEERS — a menu of things you can
+            do, not a call to action — so three white buttons side by side gave the
+            screen three primaries and therefore none. The one filled action on this
+            page is the getting-started card's active step: the thing to do NEXT. */}
+        <Button
           size="$3"
+          borderWidth={1}
+          borderColor="$borderColor"
           iconAfter={external ? <ExternalLink size={15} /> : <ArrowRight size={15} />}
           onPress={onPress}
         >
           {ctaLabel}
-        </PrimaryButton>
+        </Button>
       </XStack>
     </Card>
   )
