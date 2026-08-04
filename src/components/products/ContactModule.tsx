@@ -124,10 +124,12 @@ export function ContactModule() {
 
 function ChannelCard({ channel }: { channel: Channel }) {
   const { icon: Icon, title, body, href, cta } = channel
-  // The Card IS the flex item — and the link, via tag="a" (Stacks pass href/target
+  // The Card IS the flex item — and the link, via render="a" (Stacks pass href/target
   // through on web). Keeps layout on one node; no non-flex Anchor wrapper.
+  // `render`, not gui 7's `tag`: gui drops an unknown prop silently, so `tag` rendered
+  // a <div> and every contact channel — mailto included — was a dead card.
   const link = href
-    ? { tag: 'a' as const, href, target: href.startsWith('mailto:') ? undefined : '_blank', rel: 'noopener noreferrer', cursor: 'pointer' as const, textDecorationLine: 'none' as const }
+    ? { render: 'a' as const, href, target: href.startsWith('mailto:') ? undefined : '_blank', rel: 'noopener noreferrer', cursor: 'pointer' as const, textDecorationLine: 'none' as const }
     : {}
   return (
     <Card
