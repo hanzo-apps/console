@@ -11,13 +11,13 @@
  */
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Avatar, Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Check, Copy, ExternalLink, KeyRound, LogOut, ShieldCheck } from '@hanzogui/lucide-icons-2'
+import { Camera, Check, Copy, ExternalLink, KeyRound, LogOut, ShieldCheck } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
-import { ApiError } from '~/lib/api'
+import { AccountApi, ApiError } from '~/lib/api'
 import { MfaApi, type MfaSetup } from '~/lib/api/mfa'
 import { PageHeader } from '~/components/ui/PageHeader'
 import { FieldRow } from '~/components/ui/Field'
@@ -53,24 +53,124 @@ function ManageInIam({ label = 'Edit in IAM' }: { label?: string }) {
   )
 }
 
+/**
+ * The profile photo, and the control that changes it.
+ *
+ * The photo used to be read-only here — the card rendered `avatar` and offered
+ * "Edit in IAM", which links to an IAM that has no way to set one either (its
+ * only writers are federation and SCIM). So a password signup had a monogram and
+ * no way out of it.
+ *
+ * DOWNSCALED IN THE BROWSER before upload. A phone original is several MB and
+ * would be served to every viewer of every page that shows this face; 512px is
+ * larger than any surface renders it. The server still caps the body — this is
+ * the courtesy, not the guard. A source the canvas cannot decode is sent
+ * verbatim rather than dropped, and the server's format check is the authority.
+ */
+const PHOTO_EDGE = 512
+
+async function downscale(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file)
+  try {
+    const scale = Math.min(1, PHOTO_EDGE / Math.max(bitmap.width, bitmap.height))
+    if (scale === 1) return file
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    // PNG keeps transparency and is on the server's allow-list. A canvas that
+    // refuses to encode yields null — send the original rather than nothing.
+    const out = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'))
+    return out ?? file
+  } finally {
+    bitmap.close()
+  }
+}
+
+function PhotoCard() {
+  const { account, reload } = useSession()
+  const name = account?.displayName || account?.name || 'Account'
+  const [photo, setPhoto] = useState<string | undefined>(
+    typeof account?.avatar === 'string' ? account.avatar : undefined,
+  )
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const picker = useRef<HTMLInputElement>(null)
+
+  const choose = async (file: File | undefined) => {
+    if (!file) return
+    setBusy(true)
+    setErr(null)
+    try {
+      let body: File = file
+      try {
+        const small = await downscale(file)
+        body = small === file ? file : new File([small], 'photo.png', { type: 'image/png' })
+      } catch {
+        /* undecodable here — let the server judge the original */
+      }
+      const url = await AccountApi.setAvatar(body)
+      // Show the new photo immediately; the URL is content-addressed, so this can
+      // never be a stale cache of the old one.
+      setPhoto(url)
+      // And re-read the session so every other surface in this tab agrees.
+      void reload()
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not update your photo.')
+    } finally {
+      setBusy(false)
+      if (picker.current) picker.current.value = ''
+    }
+  }
+
+  return (
+    <YStack gap="$2">
+      <XStack gap="$3" items="center">
+        <Avatar circular size={56}>
+          {photo ? <Avatar.Image accessibilityLabel={name} src={photo} /> : null}
+          <Avatar.Fallback bg="$color5" items="center" justify="center">
+            <Text fontSize="$5" fontWeight="800" color="$color12">{initials(name)}</Text>
+          </Avatar.Fallback>
+        </Avatar>
+        <YStack flex={1}>
+          <Text fontSize="$6" fontWeight="800" color="$color12">{name}</Text>
+          <Text fontSize="$3" color="$color11">{account?.email || '—'}</Text>
+        </YStack>
+        <Button
+          size="$2"
+          disabled={busy}
+          icon={busy ? <Spinner size="small" /> : <Camera size={15} />}
+          onPress={() => picker.current?.click()}
+        >
+          {photo ? 'Change photo' : 'Add photo'}
+        </Button>
+      </XStack>
+      {/* The file input is the real control; the Button is its label. Kept in the
+          DOM (not display:none) so assistive tech can still reach it. */}
+      <input
+        ref={picker}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp"
+        aria-label="Profile photo"
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+        onChange={(e) => void choose(e.target.files?.[0])}
+      />
+      {err ? <Text fontSize="$2" color="$red10">{err}</Text> : null}
+    </YStack>
+  )
+}
+
 function AccountTab() {
   const { account, signOut } = useSession()
-  const name = account?.displayName || account?.name || 'Account'
-  const avatar = typeof account?.avatar === 'string' ? account.avatar : undefined
 
   return (
     <YStack gap="$5">
       <Card p="$4" gap="$4" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
         <XStack gap="$3" items="center">
-          <Avatar circular size={56}>
-            {avatar ? <Avatar.Image accessibilityLabel={name} src={avatar} /> : null}
-            <Avatar.Fallback bg="$color5" items="center" justify="center">
-              <Text fontSize="$5" fontWeight="800" color="$color12">{initials(name)}</Text>
-            </Avatar.Fallback>
-          </Avatar>
           <YStack flex={1}>
-            <Text fontSize="$6" fontWeight="800" color="$color12">{name}</Text>
-            <Text fontSize="$3" color="$color11">{account?.email || '—'}</Text>
+            <PhotoCard />
           </YStack>
           <ManageInIam />
         </XStack>
