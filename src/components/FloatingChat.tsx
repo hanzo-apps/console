@@ -17,6 +17,14 @@
  * `<lg` the assistant is ALWAYS the floating bubble/sheet regardless of the dock
  * choice; `docked` only reserves the right column at `lg+`.
  *
+ * The assistant has ONE entry point and it lives HERE: `AssistantFab`, a floating
+ * control fixed bottom-right over every dashboard page. It used to be two small
+ * buttons in the topbar (a brand-H and a mic), which put the assistant in a third
+ * place — beside the search box, competing with the org/theme/alert chrome — while
+ * this module owned every other shape it can take. Chat and voice are the same
+ * surface opened two ways, so they sit together, in the corner the assistant
+ * actually appears in.
+ *
  * Every shape REUSES the one working chat surface (`ChatConversation` → `AiApi.chat`
  * → the keyless `/ai` proxy → /v1/chat/completions). Nothing about AI is rebuilt
  * here; this is purely the container. "History" deep-links to the full `/chat` page.
@@ -26,12 +34,13 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Dialog, Text, VisuallyHidden, XStack, YStack } from '@hanzo/gui'
-import { PanelRight, PanelRightClose, Sparkles, X } from '@hanzogui/lucide-icons-2'
+import { Mic, PanelRight, PanelRightClose, Sparkles, X } from '@hanzogui/lucide-icons-2'
 
 import { ChatConversation } from '~/components/products/chat/ChatConversation'
-// NB: the old `BrandMark` bubble import was removed with the floating circle — the
-// assistant now opens from the topbar's small brand-H + mic controls.
+import { BrandMark } from '~/components/ui/BrandLogo'
 import { usePreferences } from '~/lib/products/preferences'
+import { voiceSupported } from '~/lib/voice'
+import { Z } from '~/lib/z'
 
 type FloatingChatApi = {
   isOpen: boolean
@@ -205,6 +214,74 @@ function ChatSheet({
 }
 
 /**
+ * The floating assistant control — bottom-right, on every dashboard page.
+ *
+ * Two ways into one surface, side by side: the brand mark opens the assistant (the
+ * docked right column on a laptop, the full sheet on a phone) and the mic opens it
+ * listening. The mic renders only where the browser can actually listen, so there is
+ * never a dead control.
+ *
+ * It sits ABOVE the Developers dock at `lg+` (that dock's collapsed bar is 44px and
+ * exists only there), and it is suppressed exactly where the assistant is already on
+ * screen: while the sheet is open, on the pages that ARE a composer (`/chat`,
+ * `/playground`), and — at `lg+` only — while the assistant is docked as a column.
+ * The `lg+` half of that rule is a CSS media prop rather than a JS branch, so SSR and
+ * first paint agree.
+ */
+function AssistantFab({
+  docked,
+  onOpen,
+  onVoice,
+}: {
+  docked: boolean
+  onOpen: () => void
+  onVoice: () => void
+}) {
+  const [voiceOk] = useState(() => voiceSupported())
+  return (
+    <XStack
+      testID="assistant-fab"
+      position="fixed"
+      r={20}
+      b={20}
+      $lg={{ b: 64, display: docked ? 'none' : 'flex' }}
+      items="center"
+      gap="$2"
+      style={{ zIndex: Z.raised }}
+    >
+      {voiceOk ? (
+        <Button
+          className="hz-paper"
+          size="$3"
+          circular
+          width={44}
+          height={44}
+          bg="$color2"
+          borderWidth={1}
+          borderColor="$borderColor"
+          icon={<Mic size={18} />}
+          onPress={onVoice}
+          aria-label="Talk to Hanzo"
+        />
+      ) : null}
+      <Button
+        className="hz-paper"
+        size="$4"
+        circular
+        width={52}
+        height={52}
+        bg="$color2"
+        borderWidth={1}
+        borderColor="$borderColor"
+        icon={<BrandMark size={22} />}
+        onPress={onOpen}
+        aria-label="Ask Hanzo"
+      />
+    </XStack>
+  )
+}
+
+/**
  * The DOCKED assistant — a permanent right column. Rendered by `Dashboard`
  * inside the layout's reserved right rail (lg+ only), so it reserves space beside
  * the content instead of floating over it. Undock returns to the floating bubble.
@@ -292,16 +369,14 @@ export function Chat({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{ isOpen, open, close, toggle, docked, setDocked, ask, seed, openChat, startVoice, voiceSignal }}>
       {children}
 
-      {/* The bubble — fixed bottom-right over every page. Hidden while open (the
-          sheet's own close is the single dismiss). Hidden on the chat/playground
-          surfaces (would overlap the page composer). At lg+ it is ALSO hidden when
-          docked (the permanent column is the surface); on phones it always shows,
-          since docking has no room there. */}
-      {/* NO floating bubble — the big circle that covered page content is gone. The
-          assistant is opened from the topbar (the small brand-H "chat" control + the
-          "talk to Hanzo" mic), so the user's OWN brand leads the chrome and AI help is
-          one small press away. `open`/`toggle`/`ask` still drive it programmatically
-          (e.g. the Code hub's "Ask AI"). */}
+      {/* The assistant's ONE entry point — bottom-right, over every page. Hidden
+          while the sheet is open (its own close is the single dismiss) and on the
+          pages that ARE a composer; at lg+ also hidden while docked (the permanent
+          column is the surface). `open`/`toggle`/`ask` still drive the assistant
+          programmatically (e.g. the Code hub's "Ask AI"). */}
+      {isOpen || onChatSurface ? null : (
+        <AssistantFab docked={docked} onOpen={openChat} onVoice={startVoice} />
+      )}
 
       {/* The floating sheet. Suppressed on the full chat/playground surfaces (the page
           IS the composer) and, at lg+, while docked (the right column is the surface);

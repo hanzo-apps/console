@@ -60,6 +60,9 @@ function accountFromClaims(claims: Record<string, unknown>): Account | null {
     organization: owner,
     isAdmin: claims['isAdmin'] === true || claims['is_admin'] === true,
     properties: props && typeof props === 'object' ? (props as Record<string, string>) : undefined,
+    // The token's own mint time — the instant `properties` was snapshotted. Carried
+    // so preference reconciliation can order that snapshot against a later write.
+    issuedAt: typeof claims['iat'] === 'number' ? (claims['iat'] as number) : undefined,
   }
 }
 

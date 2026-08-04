@@ -27,12 +27,24 @@ export type SessionClaims = {
   email?: string
   displayName?: string
   isAdmin?: boolean
+  /** The IAM user's property bag — where `hanzo.preferences` rides as a SNAPSHOT. */
+  properties?: Record<string, string>
+  /** When the token was minted (`iat`, seconds). Defaults to now; set it in the past
+   *  to reproduce the production case where the snapshot predates a later write. */
+  issuedAt?: number
 }
 
-const b64 = (o: object): string => Buffer.from(JSON.stringify(o)).toString('base64')
+/**
+ * base64URL — what a JWT segment actually is. Plain base64 was close enough while the
+ * payloads were tiny, but `+` and `/` appear as soon as one grows (a `properties` bag
+ * is enough), and a strict decoder rejects the token outright: the SDK reports signed
+ * out and the app sits on its loader forever.
+ */
+const b64 = (o: object): string =>
+  Buffer.from(JSON.stringify(o)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
 /** The default identity render specs run as — a hanzo-org admin. */
-export const DEFAULT_CLAIMS: Required<SessionClaims> = {
+export const DEFAULT_CLAIMS: Required<Omit<SessionClaims, 'properties' | 'issuedAt'>> = {
   owner: 'hanzo',
   name: 'z',
   email: 'z@hanzo.ai',
@@ -40,15 +52,16 @@ export const DEFAULT_CLAIMS: Required<SessionClaims> = {
   isAdmin: true,
 }
 
-/** An unsigned JWT whose payload carries the claims + a far-future `exp`. */
-export function forgeToken(claims: Required<SessionClaims>): string {
-  const payload = { ...claims, sub: `${claims.owner}/${claims.name}`, exp: Math.floor(Date.now() / 1000) + 3600 }
+/** An unsigned JWT whose payload carries the claims, an `iat` and a far-future `exp`. */
+export function forgeToken(claims: SessionClaims): string {
+  const iat = claims.issuedAt ?? Math.floor(Date.now() / 1000)
+  const payload = { ...claims, sub: `${claims.owner}/${claims.name}`, iat, exp: iat + 86_400 }
   return `${b64({ alg: 'none' })}.${b64(payload)}.x`
 }
 
 /** Seed tokens + gate keys and register the IAM endpoint mocks. */
 export async function primeSession(page: Page, overrides: Partial<SessionClaims> = {}): Promise<void> {
-  const claims: Required<SessionClaims> = { ...DEFAULT_CLAIMS, ...overrides }
+  const claims: SessionClaims = { ...DEFAULT_CLAIMS, ...overrides }
   await page.addInitScript(
     ({ org, token }: { org: string; token: string }) => {
       try {

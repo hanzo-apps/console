@@ -3747,3 +3747,89 @@ configuration, not a property of the deployment. Both now name the organization,
 does the onboarding step's "Payments aren't set up", which had the same defect. The
 stale `GET /v1/billing/payment-config` endpoint hints under those cards now read
 `settings`.
+
+## The assistant has one home, and the app directory is one you can walk
+
+Three fixes to the console's own chrome. Each root cause was measured in a browser
+on computed style, geometry or where the browser lands — never inferred from source.
+
+**The assistant lived in a third place.** `FloatingChat` owned every shape the
+assistant can take (the sheet, the docked column, the dock state) except the way
+in, which was two small buttons in the TOPBAR — a brand-H "Chat with Hanzo" and a
+"Talk to Hanzo" mic — wedged between the search box and the org/theme/alert
+cluster. On a 390px phone that put five controls in the header and squeezed the
+search field to "Search or jump…". Both controls moved into `AssistantFab`, one
+floating cluster fixed bottom-right, in the corner the assistant actually appears
+in. Chat and voice are the same surface opened two ways, so they sit together.
+Nothing about the assistant was rewritten: the FAB calls the same `openChat` /
+`startVoice` the topbar called, and `open`/`toggle`/`ask` still drive it
+programmatically (the Code hub's "Ask AI").
+
+It is suppressed exactly where the assistant is already on screen — while the
+sheet is open, on the pages that ARE a composer, and, at `lg+` only, while it is
+docked as a column. That last half is a CSS media prop rather than a JS branch so
+SSR and first paint agree, and it sits above the Developers dock (whose collapsed
+bar is 44px and exists only at `lg+`).
+
+**[BUG, measured] All products was a directory you could not walk.** The pane that
+lists every Hanzo app — the sidebar's "All products", the one place the whole
+catalog is browsable — rendered each app as an inert `XStack`: a plain `DIV` with
+`role=null` and `cursor: auto`, no handler, no pointer affordance. Measured, not
+read. The only live control in the row was the pin, so a user could curate the
+sidebar but could not open anything from the list. The row now opens its app
+through the shared `openProduct` — the ONE opener the sidebar, ⌘K and the category
+pages already route through — and closes the pane behind it, because a directory is
+not a destination. Pin stays a separate control on the same row and stops the press
+from bubbling: curating never navigates, navigating never curates.
+
+**[BUG] A pin made after sign-in was thrown away on the next reload.** Preferences
+are read off `properties['hanzo.preferences']` in the IAM access token's claims — a
+SNAPSHOT taken when that token was minted. An earlier lane fixed the case where the
+snapshot is SILENT about a key. The other half was never closed: once a user has
+saved anything, the next token CARRIES a snapshot, and the merge let it win over a
+newer local write. So the second pin onward read as pinned and was gone after F5.
+
+The merge is now told the ordering it was missing. `Account` carries the token's
+own `iat`; the provider stamps `…prefs.<user>.writtenAt` when — and only when — the
+SERVER acknowledges a write; `mergePrefs(cached, fromAccount, order)` lets the cache
+win only when a confirmed write is newer than the snapshot. Last writer wins, and
+both writers are now identifiable. A fresh device (no cache, no stamp) and a fresh
+sign-in (token minted after the write) both still take the account wholesale, so
+cross-device is preserved. Stamping only server-confirmed writes is what keeps this
+from being localStorage impersonating a backend: a save that never landed earns
+nothing and the account stays authoritative.
+
+**Backend gap, named rather than papered over.** There is no READ for this
+document. `PATCH /v1/ai/preferences` (hanzoai/ai `UpdatePreferences`) writes it to
+the IAM user's `properties['hanzo.preferences']` and returns the merged result;
+nothing serves a GET, so the token's snapshot is the only read the console has. The
+smallest seam that removes the ordering problem entirely is `GET
+/v1/ai/preferences` returning that property after the handler's existing
+`refreshSessionUser` — the write path already does every part of it. Better still
+is `GET/PATCH /v1/prefs` (hanzoai/cloud `apps/prefs`), the canonical cross-surface
+plane, which answers 503 on api.hanzo.ai today.
+
+**House rule: one filled CTA.** Counted by computed background luminance on the
+rendered home, not by reading JSX: FIVE white-filled buttons competed — "Take the
+tour", the getting-started card's active step, and all three `PrimaryActionTile`
+CTAs (two of them saying "Get API key"). The same measurement now returns ONE: the
+checklist's ACTIVE step, the thing to do next. The tour is a neutral aside beside its
+dismiss, and the three tiles are neutral because they are PEERS — a menu of things
+you can do, not a call to action, and three primaries are none.
+
+**Verification.** `tsc --noEmit` clean; `vitest` 3175 passed / 8 skipped (256 files,
++6 ordering tests). RED→GREEN proven both ways: disabling `cacheIsNewer` turns the
+two new ordering tests red and the browser test with it. `e2e/assistant-fab-and-apps.spec.ts`
+(4 tests, 1440 and 390) asserts the control's BOX is in the bottom-right quadrant and
+≥44px, that `.hz-topbar` carries no assistant control, that clicking an app in All
+products LANDS on `/agents`, and that a pin survives a reload under a token whose
+snapshot is an hour old. `e2e/chrome-brand-voice.spec.ts` was retargeted, not
+deleted — every claim it made still holds, only the location moved.
+
+Two spec gotchas worth keeping. `_session.ts`'s `b64` emitted plain base64; that is
+fine while a forged payload is tiny, but `+`/`/` appear as soon as one grows (a
+`properties` bag is enough) and a strict decoder rejects the token outright — the SDK
+reports signed out and the app sits on its loader forever. It emits base64URL now,
+which is what a JWT segment actually is. And the assistant's composer carries its own
+mic with the same `Talk to Hanzo` label, mounted-but-hidden until the panel opens, so
+a bare attribute locator matches that one first: scope to `getByTestId('assistant-fab')`.
