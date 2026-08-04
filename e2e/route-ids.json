@@ -18,7 +18,6 @@
 "agents",
 "inference",
 "finetuning",
-"ml-pipelines",
 "embeddings",
 "evals",
 "gpus",

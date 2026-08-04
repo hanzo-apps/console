@@ -69,11 +69,6 @@ export function entryMatches(e: CatalogEntry, query: string): boolean {
  *
  * `auto`/`automation` → `automations` (the ONE native Automations module; the
  * external auto.hanzo.ai engine + its `/v1/auto` proxy are retired), and
- * `mlpipelines`/`kubeflow` → `ml-pipelines` (the old engine-named slug stays live
- * for any existing bookmark after the id rename). An alias only resolves to
- * SOMETHING truthful — a real module route or an external launch — never a fake.
- *
- * The rest close the gap between the product's HUMAN name (what an external doc,
  * bookmark, the CTO's e2e list, or a hand-typed URL uses) and its canonical `id`,
  * which was the single biggest source of "half the pages are blank": a slug with
  * no matching id resolved to `notfound` → a Next 404 the operator read as a blank
@@ -86,8 +81,6 @@ export function entryMatches(e: CatalogEntry, query: string): boolean {
 export const SLUG_ALIASES: Record<string, string> = {
   auto: 'automations',
   automation: 'automations',
-  mlpipelines: 'ml-pipelines',
-  kubeflow: 'ml-pipelines',
   traces: 'o11y',
   deploy: 'app-platform',
   'plans-pricing': 'plans',
@@ -280,7 +273,7 @@ export function resolveProductView(
   slugIn: string[],
 ): ProductView {
   // Canonicalize a conventional/aliased slug (e.g. `/automation` → `auto`,
-  // `/kubeflow` → `ml-pipelines`) up front, so aliasing lives in exactly one place
+  // up front, so aliasing lives in exactly one place
   // and every branch below reasons over the canonical id — no dead alias URL.
   const slug = canonicalSlug(slugIn)
 

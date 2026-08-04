@@ -145,9 +145,6 @@ const tasks = mod('tasks', {
   ],
 })
 const providers = mod('providers', { admin: true })
-// The real ML Pipelines module, id === the canonical `ml-pipelines` slug — the
-// alias target for `mlpipelines`/`kubeflow`.
-const mlPipelines = mod('ml-pipelines', { label: 'ML Pipelines', category: 'Training' })
 // The ONE native Automations module — `/auto` and `/automation` alias to it (the
 // external auto.hanzo.ai engine + its `/v1/auto` proxy are retired).
 const automations = mod('automations', { label: 'Automations', category: 'AI' })
@@ -179,7 +176,7 @@ const finetuning = mod('finetuning', { label: 'Fine-tuning', category: 'Training
 const websearch = mod('websearch', { label: 'Web Search', category: 'AI' })
 const code = mod('code', { label: 'Code', category: 'Dev' })
 
-const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, mlPipelines, automations, luxExplorer, o11y, appPlatform, plans, wallet, finetuning, websearch, code, nonModule]
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, automations, luxExplorer, o11y, appPlatform, plans, wallet, finetuning, websearch, code, nonModule]
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {
@@ -321,8 +318,6 @@ describe('canonicalSlug — conventional URLs map to the canonical entry id', ()
   it('rewrites only the head segment, preserving the rest', () => {
     expect(canonicalSlug(['auto'])).toEqual(['automations'])
     expect(canonicalSlug(['automation'])).toEqual(['automations'])
-    expect(canonicalSlug(['mlpipelines'])).toEqual(['ml-pipelines'])
-    expect(canonicalSlug(['kubeflow', 'status'])).toEqual(['ml-pipelines', 'status'])
   })
   it('maps the human product slugs the console/e2e/bookmarks use to the canonical id', () => {
     // These six were the biggest "blank" source: a human slug ≠ registry id → 404.
@@ -363,14 +358,6 @@ describe('resolveProductView — aliases + external resolve (never a 404 nav ite
     const v = view(['auto'])
     if (v.kind === 'route') expect(v.matched.module.id).toBe('automations')
   })
-  it('ML Pipelines resolves at its canonical slug AND its aliases (mlpipelines/kubeflow)', () => {
-    expect(view(['ml-pipelines']).kind).toBe('route')
-    expect(view(['mlpipelines']).kind).toBe('route')
-    expect(view(['kubeflow']).kind).toBe('route')
-    // The alias resolves to the SAME real module, its index route.
-    const v = view(['kubeflow'])
-    if (v.kind === 'route') expect(v.matched.module.id).toBe('ml-pipelines')
-  })
   it('every human product slug resolves to its real module (never a 404 blank)', () => {
     const cases: [string, string][] = [
       ['traces', 'o11y'],
@@ -386,12 +373,6 @@ describe('resolveProductView — aliases + external resolve (never a 404 nav ite
       expect(v.kind, `/${slug} must resolve`).toBe('route')
       if (v.kind === 'route') expect(v.matched.module.id).toBe(id)
     }
-  })
-  it('an aliased base sub-page still routes to the shared per-product view', () => {
-    // /kubeflow/status → ml-pipelines/status → the shared per-product sub-page.
-    const v = view(['kubeflow', 'status'])
-    expect(v.kind).toBe('subpage')
-    if (v.kind === 'subpage') expect(v.entry.id).toBe('ml-pipelines')
   })
 })
 
