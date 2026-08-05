@@ -39,9 +39,10 @@ function surfaceOf(): Exclude<Surface, null> {
   const path = window.location.pathname
   if (path === '/signin') return 'signin'
   if (path.startsWith('/auth/callback')) return 'callback'
-  // `/` is the public marketing landing on a consumer host; an admin host keeps its
-  // silent-SSO bounce (guarded → /signin), never the marketing page.
-  if (path === '/' && !isAdminHost(window.location.host)) return 'landing'
+  // Everything else, `/` included, is the app — gated. The console is the APPLICATION;
+  // the marketing face of Hanzo Cloud is cloud.hanzo.ai. Serving a SECOND copy of it
+  // here is what made signing in look broken: cloud.hanzo.ai's "Sign in" landed on a
+  // page wearing the byte-identical shared header, so the click read as a re-render.
   return 'guarded'
 }
 
