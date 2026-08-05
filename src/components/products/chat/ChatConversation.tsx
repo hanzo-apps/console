@@ -214,7 +214,7 @@ export function ChatConversation({
             (m) =>
               m ||
               ids.find((x) => x.toLowerCase() === DEFAULT_MODEL) ||
-              ids.find((x) => /zen/i.test(x)) ||
+              ids.find((x) => /enso/i.test(x)) ||
               ids[0],
           )
       })
@@ -512,7 +512,7 @@ export function ChatConversation({
               ref={inputRef as never}
               value={input}
               onChangeText={setInput}
-              placeholder={`Message ${model || 'the assistant'}…`}
+              placeholder="Ask anything. Do anything."
               numberOfLines={compact ? 2 : 3}
               disabled={sending}
               borderWidth={0}

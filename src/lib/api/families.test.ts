@@ -176,9 +176,14 @@ describe('groupByFamily — Zen first, do-ai vendors surfaced, nothing dropped',
     expect(names).toContain('zen3-vl')
   })
 
-  it('surfaces the non-premium default (zen5-flash) first among available Zen models', () => {
-    expect(groups.find((g) => g.id === 'zen')!.models[0].name).toBe(DEFAULT_MODEL)
-    expect(DEFAULT_MODEL).toBe('zen5-flash')
+  it("defaults to the house family's free rung, and sorts it first in its own family", () => {
+    // Enso is the house frontier family and its free rung is what an unchosen
+    // caller gets — so a trial balance still answers on the first message.
+    expect(DEFAULT_MODEL).toBe('enso-flash')
+    const ensoFlash = m({ name: 'enso-flash', available: true })
+    const ensoUltra = m({ name: 'enso-ultra', available: true })
+    const enso = groupByFamily([ensoUltra, ensoFlash]).find((g) => g.id === 'enso')!
+    expect(enso.models[0].name).toBe(DEFAULT_MODEL)
   })
 
   it('counts totals correctly', () => {
