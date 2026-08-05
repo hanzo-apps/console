@@ -264,3 +264,54 @@ describe('fetchPlans — honest-empty when gated', () => {
     expect(plans.map((p) => p.id)).toEqual(['pro'])
   })
 })
+
+describe('fetchCatalog — the routing id is what the gateway serves (tail alias)', () => {
+  const haiku: RichModel = {
+    id: 'anthropic/claude-haiku-4.5',
+    name: 'Anthropic: Claude Haiku 4.5',
+    provider: 'Anthropic',
+    contextWindow: 200000,
+    pricing: { input: 1, output: 5 },
+  }
+  const opus: RichModel = {
+    id: 'anthropic/claude-opus-4.6',
+    name: 'Anthropic: Claude Opus 4.6',
+    provider: 'Anthropic',
+    contextWindow: 200000,
+    pricing: { input: 5, output: 25 },
+  }
+  beforeEach(() => {
+    ;(globalThis as { window?: unknown }).window = {
+      location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
+      localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    }
+    vi.stubGlobal('fetch', (url: string) => {
+      const body = url.includes('pricing')
+        ? { models: [haiku, opus] }
+        : // The gateway routes the BARE ids, not the bundle's openrouter spelling.
+          { object: 'list', data: [{ id: 'claude-haiku-4.5' }, { id: 'claude-opus-4.6' }] }
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }))
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (globalThis as { window?: unknown }).window
+  })
+
+  it('rewrites a bundle id to the live tail so the picker submits what routes', async () => {
+    const cat = await fetchCatalog()
+    const h = cat.find((m) => m.name === 'Anthropic: Claude Haiku 4.5')!
+    expect(h.id).toBe('claude-haiku-4.5') // NOT anthropic/claude-haiku-4.5 — that 404s
+    expect(h.available).toBe(true)
+    // The live-only merge must not append a duplicate bare row for it.
+    expect(cat.filter((m) => modelId(m) === 'claude-haiku-4.5')).toHaveLength(1)
+  })
+
+  it('derives premium from frontier pricing when the bundle omits the flag', async () => {
+    const cat = await fetchCatalog()
+    const h = cat.find((m) => modelId(m) === 'claude-haiku-4.5')!
+    const o = cat.find((m) => modelId(m) === 'claude-opus-4.6')!
+    expect(h.premium).toBeFalsy() // $1/$5 — under both bars
+    expect(o.premium).toBe(true) // $5/$25 — the Opus class gates behind a plan
+  })
+})

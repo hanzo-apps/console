@@ -79,6 +79,22 @@ const liveKey = (m: { id?: string | null; name?: string }): string =>
   (m.id ?? m.name ?? '').trim().toLowerCase()
 
 /**
+ * Premium = the catalog says so, or the price does. The bundle rarely carries
+ * the flag, so frontier-priced models (input ≥ $5/Mtok or output ≥ $25/Mtok —
+ * every Opus generation qualifies at $5/$25 or $15/$75; Sonnet at $3/$15 and
+ * Haiku at $1/$5 stay under both bars) count as premium by price. The flag
+ * drives the picker's Pro gate and keeps default-model away from a 402 on a
+ * trial balance — the GATEWAY remains the enforcement point; this is the
+ * honest rendering of it.
+ */
+export function isPremium(m: RichModel): boolean {
+  if (m.premium) return true
+  const input = m.pricing?.input
+  const output = m.pricing?.output
+  return (typeof input === 'number' && input >= 5) || (typeof output === 'number' && output >= 25)
+}
+
+/**
  * Merge two catalog sources by stable id, PRIMARY winning field-by-field: a model in
  * both keeps `primary`'s fields and inherits only the keys `primary` lacks from
  * `secondary`; a model only in `secondary` is appended. So live pricing always
@@ -166,13 +182,28 @@ export async function fetchCatalog(): Promise<CatalogEntry[]> {
   const liveSet = new Set(liveArr.map(liveKey).filter(Boolean))
   // The fixture is the base; live pricing wins where it overlaps, and fills the rest.
   const catModels = mergeById(cat.models ?? [], FIXTURE_MODELS)
-  const catKeys = new Set(catModels.map((m) => modelId(m).toLowerCase()))
-  const entries: CatalogEntry[] = catModels.map((m) => ({
-    ...m,
+  const entries: CatalogEntry[] = catModels.map((m) => {
+    const id = modelId(m).toLowerCase()
     // Cross-reference by the stable id (third-party) AND the display name (Zen),
     // so both record shapes resolve their live-availability correctly.
-    available: liveSet.has(modelId(m).toLowerCase()) || liveSet.has((m.name ?? '').toLowerCase()),
-  }))
+    if (liveSet.has(id) || liveSet.has((m.name ?? '').toLowerCase())) {
+      return { ...m, premium: isPremium(m), available: true }
+    }
+    // The gateway routes MANY catalog models under the bare tail of their
+    // openrouter-style id: the bundle says `anthropic/claude-haiku-4.5`, the
+    // gateway serves `claude-haiku-4.5`. The id the picker submits must be the
+    // id the gateway routes — a rich row keeping its bundle spelling is how the
+    // playground offered Claude Haiku 4.5 and then errored running it.
+    const slash = id.lastIndexOf('/')
+    const tail = slash >= 0 ? id.slice(slash + 1) : ''
+    if (tail && liveSet.has(tail)) {
+      const rawId = (m.id ?? '').trim()
+      return { ...m, id: rawId.slice(rawId.lastIndexOf('/') + 1), premium: isPremium(m), available: true }
+    }
+    return { ...m, premium: isPremium(m), available: false }
+  })
+  const catKeys = new Set(catModels.map((m) => modelId(m).toLowerCase()))
+  for (const e of entries) catKeys.add(modelId(e).toLowerCase())
   // Merge live-only models the pricing overlay doesn't carry — the CURRENT Zen set
   // (zen5-flash/coder/nano-*) the older bundle omits, and EVERY model when pricing
   // is down. They are servable now, so they list Available under their family.
