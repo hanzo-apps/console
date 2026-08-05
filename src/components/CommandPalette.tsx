@@ -77,6 +77,7 @@ import { commandBarSystemPrompt, hanzoAssistantSystemPrompt } from '~/lib/assist
 import { searchDestinations, type Destination } from '~/lib/products/search'
 import { DEFAULT_GROUP_LABEL, pinnedFirst } from '~/lib/products/pins-core'
 import { usePins, useProductColors } from '~/lib/products/pins'
+import { useAppsBeta } from '~/lib/products/beta'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
@@ -364,6 +365,7 @@ function PaletteDialog({
   const router = useRouter()
   const { signOut } = useSession()
   const showAdmin = useIsSuperAdmin()
+  const showBeta = useAppsBeta(showAdmin)
   const { colorOf } = useProductColors()
   const pins = usePins()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
@@ -439,7 +441,7 @@ function PaletteDialog({
   // a search, so the ranked branch is left strictly alone.
   const destResults = useMemo(() => {
     if (mode !== 'catalog') return []
-    const found = searchDestinations(query, showAdmin, null)
+    const found = searchDestinations(query, showAdmin, null, showBeta)
     if (sub) return found.slice(0, 50)
     return pinnedFirst(found, (d) => (d.kind === 'product' ? d.entry.id : ''), pins.pinnedIds)
   }, [mode, query, sub, showAdmin, pins.pinnedIds])

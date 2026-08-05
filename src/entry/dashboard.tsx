@@ -87,6 +87,7 @@ import { ConsoleFooter } from '~/components/ConsoleFooter'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
+import { useAppsBeta } from '~/lib/products/beta'
 import { orderEntries } from '~/lib/products/order'
 import { categoryIsOpen, toggleCategory, NAV_OPEN_PREF, EMPTY_OPEN, type CategoryOpen } from '~/lib/products/nav-accordion'
 import { usePreferences } from '~/lib/products/preferences'
@@ -456,6 +457,7 @@ function SidebarNav({
   const { colorOf } = useProductColors()
   const detail = useDetailPane()
   const showAdmin = useIsSuperAdmin()
+  const showBeta = useAppsBeta(showAdmin)
   // Entitlement scope: currently ungated in prod (the endpoint 404s → `enabled` is
   // null → the full catalog shows), matching "every product is always available".
   const { enabled } = useEntitlements()
@@ -545,11 +547,11 @@ function SidebarNav({
           ...g,
           entries: g.entries.filter((e) => {
             const found = findEntry(e.id)
-            return Boolean(found) && (showAdmin || !found!.admin)
+            return Boolean(found) && (showAdmin || !found!.admin) && (showBeta || !found!.beta)
           }),
         }))
         .filter((g) => g.entries.length > 0),
-    [view, showAdmin],
+    [view, showAdmin, showBeta],
   )
 
   // Within-scope ordering is CONTINUOUS ALPHABETICAL with the SELECTED product pinned
@@ -557,10 +559,14 @@ function SidebarNav({
   // canonical order; only the items inside each are alphabetized + selected-first.
   const groups = useMemo(
     () =>
-      visibleCatalogByCategory(showAdmin, enabled)
+      // Search is DISCOVERY: while a query is typed the entitlement scope opens
+      // to the whole catalog — the point of searching is finding what you do
+      // not have yet — while the admin and beta gates keep holding. The resting
+      // rail stays scoped to the org's enabled set.
+      visibleCatalogByCategory(showAdmin, filtering ? null : enabled, showBeta)
         .map((g) => ({ category: g.category, entries: orderEntries(g.entries.filter((e) => entryMatches(e, q)), activeId) }))
         .filter((g) => g.entries.length > 0),
-    [q, showAdmin, enabled, activeId],
+    [q, filtering, showAdmin, showBeta, enabled, activeId],
   )
 
   // ── Product-shell face — the nav IS the root module's sub-pages ────────────
@@ -634,7 +640,7 @@ function SidebarNav({
     const seen = new Set<string>()
     for (const id of [...pinnedIds, ...(activeId ? [activeId] : [])]) {
       const e = findEntry(id)
-      if (e && !seen.has(id) && (showAdmin || !e.admin)) {
+      if (e && !seen.has(id) && (showAdmin || !e.admin) && (showBeta || !e.beta)) {
         seen.add(id)
         railIds.push(id)
       }

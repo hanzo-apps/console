@@ -84,6 +84,22 @@ export function filterEntitled<T extends { id: string }>(
  * semantics so the UI can optimistically preview a change with the same result the
  * backend would compute. Remove wins over add for the same id in one patch.
  */
+/**
+ * Keep only the entries a viewer's BETA standing admits. Pure and generic like
+ * `filterEntitled`, and the same one-predicate rule: a superadmin sees
+ * everything, a beta org sees everything, everyone else loses `beta: true`
+ * entries. Fails CLOSED — callers that have not asked the enablement plane
+ * pass `showBeta: false` and beta surfaces stay hidden.
+ */
+export function filterBeta<T extends { beta?: boolean }>(
+  entries: readonly T[],
+  showBeta: boolean,
+  showAdmin: boolean,
+): T[] {
+  if (showAdmin || showBeta) return [...entries]
+  return entries.filter((e) => e.beta !== true)
+}
+
 export function nextEnabled(current: readonly string[], patch: EntitlementPatch): string[] {
   const set = new Set<string>(current)
   for (const id of patch.add ?? []) if (id) set.add(id)

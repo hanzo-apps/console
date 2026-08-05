@@ -87,12 +87,14 @@ function scoreDestination(q: string, d: Destination): number {
  * deep sub-page jumps ("queues" → Compute › Tasks › Queues). `showAdmin` gates
  * admin-only surfaces so a customer can't jump to what they can't see.
  */
-export function searchDestinations(query: string, showAdmin = true, enabled?: string[] | null): Destination[] {
+export function searchDestinations(query: string, showAdmin = true, enabled?: string[] | null, showBeta = false): Destination[] {
   const q = query.trim().toLowerCase()
   // Scope to the visible catalog (brand + billing-only shell + entitlements), then
   // gate admin — so ⌘K jumps match exactly what the nav shows (billing-only offers
-  // only billing; a customer only what their org has enabled).
-  const all = destinationsFor(visibleCatalog(showAdmin, enabled), showAdmin)
+  // only billing; a customer only what their org has enabled). A TYPED query is
+  // DISCOVERY: the entitlement scope opens to the whole catalog — searching is
+  // for finding what you do not have yet — while admin and beta keep holding.
+  const all = destinationsFor(visibleCatalog(showAdmin, q ? null : enabled, showBeta), showAdmin)
   if (!q) return all.filter((d) => d.kind === 'product')
   return all
     .map((d) => ({ d, s: scoreDestination(q, d) }))
