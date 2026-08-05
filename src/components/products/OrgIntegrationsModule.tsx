@@ -20,7 +20,7 @@
  * on this deployment (`available`) or already connected are listed, so every card
  * has a live Connect/Disconnect action — no dead-end.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Cable, Plug, RefreshCw, GitBranch } from '@hanzogui/lucide-icons-2'
@@ -151,21 +151,30 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
 
   // Handle the OAuth callback return. The provider callback 302s the browser to
   // /integrations?connected=<id>&account=<label> (success) or ?error=<id>&reason=<msg>.
-  // Read the primitives (stable by value) so this runs once per return; the guard +
-  // the router.replace that strips the params keep it from re-toasting on refetch.
+  //
+  // The latch is what makes this ONE-SHOT, and it is not belt-and-braces. Stripping
+  // the params with router.replace cannot do it alone: the replace is asynchronous, so
+  // every render between raising the toast and the URL actually changing still reads
+  // `connected` and would toast again. This effect also calls load(), whose state
+  // updates cause exactly those renders. A latch says "this return was handled" once
+  // and stays true regardless of how many times the effect is re-entered, or why.
   const connectedId = search.get('connected')
   const erroredId = search.get('error')
   const account = search.get('account')
   const reason = search.get('reason')
+  const handledReturn = useRef(false)
   useEffect(() => {
     if (!connectedId && !erroredId) return
+    if (handledReturn.current) return
+    handledReturn.current = true
     if (connectedId) {
       toast.success(`Connected ${connectedId}`, account ? `Account: ${account}` : undefined)
       load()
     } else if (erroredId) {
       toast.error(`Could not connect ${erroredId}`, reason || 'The connection could not be completed.')
     }
-    // Strip the callback params so a refresh/refetch doesn't re-toast.
+    // The latch covers this mount; stripping the params covers the NEXT one, so a
+    // refresh or a back-navigation does not replay a connection that already happened.
     router.replace('/integrations')
   }, [connectedId, erroredId, account, reason, toast, router, load])
 
