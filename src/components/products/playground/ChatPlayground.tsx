@@ -18,6 +18,8 @@ import { XStack, YStack } from '@hanzo/gui'
 import { useSession } from '~/lib/auth/session'
 import { useComposer } from './useComposer'
 import { useModels, pricingOf, defaultModelId } from './useModels'
+import { modelId } from '~/lib/api/aicatalog'
+import { usePlanGate } from './usePlanGate'
 import { useChatRun } from './useChatRun'
 import { Composer } from './Composer'
 import { ResponsePanel } from './ResponsePanel'
@@ -39,7 +41,18 @@ import { BackendStateCard } from '@hanzo/ui/product'
 export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
   const composer = useComposer()
   const models = useModels()
+  const gate = usePlanGate()
   const run = useChatRun()
+  // What the picker OFFERS is what this org can actually run: models the
+  // gateway routes right now, minus premium ones on an unpaid org (the
+  // gateway 402s those; offering them would be the lying toast in picker
+  // form). When the live set is empty — a gateway outage — fall back to the
+  // full catalog so the picker never renders empty, and let runs answer.
+  const offered = useMemo(() => {
+    const live = models.entries.filter((m) => m.available)
+    const pool = live.length ? live : models.entries
+    return gate.paid ? pool : pool.filter((m) => !m.premium)
+  }, [models.entries, gate.paid])
   const { account } = useSession()
   // Per-user history key (org-qualified username), '' until the session resolves.
   const userKey = account ? `${account.owner}/${account.name}` : ''
@@ -63,22 +76,27 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
   // present, else picking a sensible Zen-first default. Runs once.
   const seeded = useRef(false)
   useEffect(() => {
-    if (seeded.current || models.phase === 'loading') return
+    if (seeded.current || models.phase === 'loading' || !gate.resolved) return
+    // Seed from the OFFERED pool: the default must be a model this org can
+    // actually run, so a free org never boots onto a premium row.
+    const offeredIds = new Set(offered.map((m) => modelId(m)))
+    const pool = models.options.filter((o) => offeredIds.has(o.id))
+    const seedOptions = pool.length ? pool : models.options
     const token =
       typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get(SHARE_PARAM) : null
     const shared = token ? decodeShare(token) : null
     if (shared) {
       composer.loadShare(shared)
-      if (!shared.model && models.options.length) composer.setModel(defaultModelId(models.options))
+      if (!shared.model && seedOptions.length) composer.setModel(defaultModelId(seedOptions))
       seeded.current = true
-    } else if (models.options.length) {
-      composer.setModel(defaultModelId(models.options))
+    } else if (seedOptions.length) {
+      composer.setModel(defaultModelId(seedOptions))
       seeded.current = true
     }
     // else: catalog error with no share link — leave unseeded so a Retry still
     // seeds the promoted default once the catalog resolves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [models.phase])
+  }, [models.phase, gate.resolved])
 
   const turns: ComposerMsg[] = composer.messages.map((m) => ({ role: m.role, content: m.content }))
 
@@ -213,7 +231,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
               <Composer
                 composer={composer}
                 mode={mode}
-                models={models.entries}
+                models={offered}
                 modelsLoading={models.phase === 'loading'}
                 running={run.running}
                 onRun={() => void onRun()}
