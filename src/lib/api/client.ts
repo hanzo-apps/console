@@ -697,6 +697,35 @@ export const restPostRaw = <T>(
     return parseRestResponse<T>(res)
   })()
 
+/**
+ * POST a JSON body and hand back the RAW `Response`, for a caller that must read the
+ * body itself as it arrives — a Server-Sent-Events completion read chunk-by-chunk, or
+ * audio bytes taken as a Blob. It is the ONLY door for those: the parsing helpers above
+ * consume the body, so a caller that needs the stream cannot use them, and a caller that
+ * reaches for `fetch` instead leaves this file — which is where identity lives. Going
+ * through `authedFetch` + `baseHeaders` is therefore the whole point: a streamed
+ * completion carries the same Bearer, tenant stamp and silent 401-refresh a plain one
+ * does. Nothing is parsed here; status handling belongs to the caller reading the body.
+ */
+export async function restStream(
+  url: string,
+  body: unknown,
+  opts: { headers?: Record<string, string>; signal?: AbortSignal } = {},
+): Promise<Response> {
+  try {
+    return await authedFetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { ...baseHeaders(body !== undefined), ...opts.headers },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: opts.signal,
+      cache: 'no-store',
+    })
+  } catch (e) {
+    throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
+  }
+}
+
 /** REST GET on a full URL (build it with `v1Url`). */
 export const restGet = <T>(url: string): Promise<T> => restRequest<T>('GET', url) as Promise<T>
 

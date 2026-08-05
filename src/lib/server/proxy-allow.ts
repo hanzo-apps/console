@@ -366,6 +366,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // user bearer forwards it as the signed-in user. The primary go:embed console hits
   // cloud's /v1/event natively (the BFF is pruned there).
   'event',
+  // User preferences (cloud apps/prefs): GET + PATCH /v1/prefs — the caller's OWN
+  // document (theme, pinned nav) following them across every Hanzo surface. The
+  // subject is the `<owner>/<name>` identity built from the validated Bearer and is
+  // the mandatory predicate on both verbs, so it routes through /v1 exactly like
+  // agents/prompts. There is no path to another user's document, which is why the
+  // head admits no sub-path beyond the one it serves.
+  'prefs',
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */

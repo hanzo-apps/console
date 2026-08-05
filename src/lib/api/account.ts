@@ -6,7 +6,7 @@
  * code-exchange / durable-console-session path any more — the IAM PKCE token is the
  * single credential (the API client carries it as a Bearer on every `/v1` call).
  */
-import { ApiError, patch, post, postForm } from './client'
+import { ApiError, originV1Url, post, postForm, restGet, restPatch } from './client'
 import {
   iamValidAccessToken,
   iamUserInfo,
@@ -19,6 +19,22 @@ import { type Account } from './types'
 /** Result of resolving the current session: the account + the IAM access-token
  *  lifetime (seconds) so the provider can arm its proactive refresh timer. */
 export type SessionResult = { account: Account | null; expiresIn: number | null }
+
+/**
+ * The cross-surface per-user preference plane (cloud `apps/prefs`): GET reads the
+ * caller's own document, PATCH merges keys into it, and both authenticate on the
+ * Bearer the client already attaches.
+ *
+ * It replaces `ai/preferences`, which is the AI gateway's casibase handler and
+ * authenticates on a casibase SESSION — no Bearer satisfies it, so every save from
+ * this console was refused with "Please sign in first" while the user was signed in.
+ * That endpoint also had no read at all, which is why preferences used to be recovered
+ * from a snapshot of the identity token's claims; this one answers both halves.
+ */
+const PREFS_PATH = 'prefs'
+
+/** The prefs plane's wire shape — the document plus when it was last written. */
+type PrefsDocument = { prefs?: Record<string, unknown>; updatedAt?: number }
 
 /** Project the IAM OIDC userinfo claims onto the console `Account` shape. */
 function accountFromClaims(claims: Record<string, unknown>): Account | null {
@@ -60,9 +76,6 @@ function accountFromClaims(claims: Record<string, unknown>): Account | null {
     organization: owner,
     isAdmin: claims['isAdmin'] === true || claims['is_admin'] === true,
     properties: props && typeof props === 'object' ? (props as Record<string, string>) : undefined,
-    // The token's own mint time — the instant `properties` was snapshotted. Carried
-    // so preference reconciliation can order that snapshot against a later write.
-    issuedAt: typeof claims['iat'] === 'number' ? (claims['iat'] as number) : undefined,
   }
 }
 
@@ -111,17 +124,29 @@ export const AccountApi = {
   },
 
   /**
-   * Persist a partial set of cross-product user preferences onto the account.
-   * Self-scoped on the backend (writes ONLY the caller's own IAM-user
-   * properties, derived from the token — never the body). Top-level keys are
-   * shallow-merged server-side. Returns the merged preferences object so other
-   * products' keys are preserved in the local view.
+   * The caller's own cross-product preference document — theme, pinned nav, and
+   * whatever else a surface saves. `{}` when nothing has been saved yet (a 200 with
+   * an empty document, never a 404), so a first-time user still renders.
+   */
+  preferences: async (): Promise<Record<string, unknown>> => {
+    const r = await restGet<PrefsDocument>(originV1Url(PREFS_PATH))
+    return r?.prefs ?? {}
+  },
+
+  /**
+   * Save the preference keys this surface owns, leaving every other key alone: the
+   * merge is shallow and server-side, so two products (or two tabs) do not clobber
+   * each other. Returns the whole document after the merge.
+   *
+   * Self-scoped on the backend — the subject is the `<owner>/<name>` identity built
+   * from the validated Bearer and is the mandatory predicate on the write, so there is
+   * no path to another user's preferences.
    */
   updatePreferences: async (
     partial: Record<string, unknown>,
   ): Promise<Record<string, unknown>> => {
-    const r = await patch<Record<string, unknown>>('ai/preferences', partial)
-    return r.data ?? {}
+    const r = await restPatch<PrefsDocument>(originV1Url(PREFS_PATH), partial)
+    return r?.prefs ?? {}
   },
 
   /**

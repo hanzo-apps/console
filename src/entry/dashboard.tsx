@@ -26,8 +26,8 @@
  * drawer (hamburger) instead; the collapse/rail is a desktop concern.
  *
  * The assistant is opened from its OWN floating control bottom-right (`FloatingChat`),
- * never from this topbar; all this shell owns about it is `docked`, which reserves the
- * PERMANENT right column at `lg+`.
+ * never from this topbar; all this shell owns about it is `column`, which reserves the
+ * PERMANENT right column when the assistant is that column.
  *
  * Every product icon carries a tasteful per-product COLOR, recolorable/pinnable from
  * the customize pane — all persisted per-user via the account-backed preferences.
@@ -937,10 +937,10 @@ export function Dashboard({ children }: { children: ReactNode }) {
   // drawer, dock), never a route change.
   const router = useRouter()
   const { get, set } = usePreferences()
-  // The assistant: `docked` is the only thing the SHELL owns about it — it reserves
-  // the right column at lg+. Opening it belongs to the assistant's own floating
+  // The assistant: `column` is the only thing the SHELL owns about it — it reserves
+  // the width beside the content. Opening it belongs to the assistant's own floating
   // control (`AssistantFab`), not to this topbar.
-  const { docked } = useFloatingChat()
+  const { column } = useFloatingChat()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   // Collapsed-rail hover flyout (desktop only): the full sidebar overlays the content
@@ -1065,17 +1065,13 @@ export function Dashboard({ children }: { children: ReactNode }) {
           <XStack display="none" $lg={{ display: 'flex' }} flex={1} />
 
           {/* Full topbar controls — shown only at lg+. The bar carries navigation
-              only: status, docs, and the cross-app launcher. Theme lives in the
-              account menu, alerts at /alerts, and the network picker in the
-              account drawer — production is the default environment, so the
-              environment is chrome you open, not chrome you wear. */}
+              only: status and docs. Theme lives in the account menu, alerts at
+              /alerts, and the network picker and app launcher in the account drawer
+              — production is the default environment, so the environment is chrome
+              you open, not chrome you wear. */}
           <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
             <SystemStatusBadge />
             <Button size="$2" chromeless icon={<CircleHelp size={16} />} onPress={openDocs} aria-label="Documentation" />
-            {/* The cross-app launcher, from the shared shell — the same one chat
-                and every other Hanzo surface carries. ⌘K stays with the command
-                palette; the launcher must not claim it too. */}
-            <HanzoAppLauncher currentApp="console" align="right" quickSwitchKey={false} />
           </XStack>
 
           {/* Account drawer trigger — every viewport. The drawer is where the
@@ -1107,25 +1103,27 @@ export function Dashboard({ children }: { children: ReactNode }) {
         <WorkbenchDock />
       </YStack>
 
-      {/* Docked assistant — a PERMANENT right column (lg+ only). Reserves its own
-          width beside the content; toggled from the assistant header. On phones the
-          assistant stays the floating bubble/sheet (no room for a column). */}
-      <YStack
-        display="none"
-        $lg={{ display: docked ? 'flex' : 'none' }}
-        width={DOCK_W}
-        minW={DOCK_W}
-        borderLeftWidth={1}
-        borderColor="$borderColor"
-        bg="$color1"
-      >
-        <DockedChatPanel />
-      </YStack>
+      {/* Docked assistant — a PERMANENT right column. Reserves its own width beside
+          the content; toggled from the assistant header. Rendered only when it IS the
+          assistant, so a narrow viewport (where the sheet serves instead) does not
+          also hold a second, invisible conversation. */}
+      {column ? (
+        <YStack width={DOCK_W} minW={DOCK_W} borderLeftWidth={1} borderColor="$borderColor" bg="$color1">
+          <DockedChatPanel />
+        </YStack>
+      ) : null}
 
       {/* Account drawer — the SAME account control as the rail foot, so identity,
           tenancy, theme, billing and sign-out read identically everywhere. The
           occasional controls sit beside it: the environment picker (production
-          is the default, switching it is a deliberate act) and notifications. */}
+          is the default, switching it is a deliberate act), notifications, and the
+          cross-app launcher.
+
+          The launcher lives HERE and only here. It used to sit in the lg+ topbar
+          group, which is display:none on a phone — so the grid of the other Hanzo
+          apps was unreachable from the console on the viewport most likely to want
+          it. This drawer's trigger is on EVERY viewport, which makes one launcher
+          serve them all rather than a second copy serving the small one. */}
       <SlideOver open={menuOpen} onClose={() => setMenuOpen(false)} side="right" size={320} title="Account">
         <YStack gap="$2" className="hz-touch-target">
           <AccountMenu />
@@ -1140,6 +1138,15 @@ export function Dashboard({ children }: { children: ReactNode }) {
           >
             Notifications
           </Button>
+          {/* From the shared shell — the same launcher chat and every other Hanzo
+              surface carries. ⌘K stays with the command palette; the launcher
+              must not claim it too. */}
+          <XStack items="center" gap="$2">
+            <HanzoAppLauncher currentApp="console" align="right" quickSwitchKey={false} />
+            <Text fontSize="$3" color="$color11">
+              Hanzo apps
+            </Text>
+          </XStack>
         </YStack>
       </SlideOver>
     </XStack>

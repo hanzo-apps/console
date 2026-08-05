@@ -26,13 +26,13 @@ import { EVENTS } from '@hanzo/event'
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { DEFAULT_MODEL } from '~/lib/api/families'
 import { useRecentModels } from '~/lib/models/recent'
-import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
+import { hanzoAssistantSystemPrompt, assistantState, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
 import { useVoice } from '~/lib/voice'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { config } from '~/config'
 import { Markdown } from './markdown'
 import { splitThinking } from './thinking'
-import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { BackendStateCard, PageHeader, type BackendState } from '@hanzo/ui/product'
 
 /** The sparkle medallion that marks an assistant turn (and the welcome screen). */
 function SparkleAvatar({ size = 28 }: { size?: number }) {
@@ -289,7 +289,7 @@ export function ChatConversation({
         const last = m[m.length - 1]
         return last && last.role === 'assistant' && !last.content ? m.slice(0, -1) : m
       })
-      if (!ctrl.signal.aborted) setError(classifyBackend(e))
+      if (!ctrl.signal.aborted) setError(assistantState(e))
     } finally {
       if (abortRef.current === ctrl) abortRef.current = null
       setSending(false)
