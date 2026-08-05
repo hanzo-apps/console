@@ -10,14 +10,25 @@
  * catalog still works (the free-text "Use …" row) so a model can always be chosen even
  * before the catalog loads.
  *
- * ONE WAY, PER REPO. The canonical unified selector is `@hanzo/ui/models` `ModelSelector`
- * (the shadcn/Tailwind build). The console runs @hanzo/gui (Tamagui), NOT that build, so
- * this is its faithful twin: SAME contract (`{ models, value, onChange, size, chatOnly }`),
- * SAME UX (family order + headers + premium chip + search + monochrome), SAME family
- * taxonomy (`~/lib/api/families` `groupModelsByFamily`, mirroring `@hanzo/ui/models`
- * `groupModelsByFamily`). When the console migrates to the shadcn design system this
- * component is a drop-in swap. Fed from the live catalog (`useModelCatalog` →
- * `aicatalog.fetchCatalog`); it never hardcodes a model list.
+ * ONE WAY, PER REPO — and the reason there are still two is now down to ONE thing.
+ * `@hanzo/ui/models` `ModelSelector` is the canonical unified selector. It is NO LONGER
+ * the shadcn/Tailwind build this comment used to describe: at 8.0.56 it imports
+ * @hanzo/gui and @hanzogui/lucide-icons-2, carries no Radix and no class strings, so the
+ * "console runs Tamagui, that build doesn't" objection is gone. The contract already
+ * matches (`{ models, value, onChange, size, chatOnly, disabled, placeholder }`).
+ *
+ * Two things still stand in the way, and neither is styling:
+ *   1. ENTRY SHAPE. This takes `CatalogEntry` (`{ name, id?, provider?, context? |
+ *      contextWindow? }`); the package takes `ModelCatalogEntry` (`{ id, owned_by?,
+ *      context_window?, modality? }`). An adapter is small but it is real, and it
+ *      decides family grouping, so it needs checking against `~/lib/api/families`.
+ *   2. LOGOS. The rows here render `ui/ProviderLogo`, which draws curated per-family
+ *      brand marks. The package's selector renders none, and the package's own
+ *      ProviderLogo falls back to initials for all but two providers — the same gap
+ *      that keeps ui/ProviderLogo local. Close that upstream and this file can go.
+ *
+ * Fed from the live catalog (`useModelCatalog` → `aicatalog.fetchCatalog`); it never
+ * hardcodes a model list.
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Button, Input, Popover, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
