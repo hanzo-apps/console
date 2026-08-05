@@ -40,14 +40,11 @@ describe('resolve(session) → stage', () => {
       expect(at({ surface: 'signin' })).toBe('signin')
       expect(at({ surface: 'signin', authed: true })).toBe('signin')
     })
-    it('anonymous on the landing surface → signin (public marketing landing)', () => {
-      expect(at({ surface: 'landing', authed: false })).toBe('signin')
-    })
-    it('anonymous on a guarded surface → signin (redirect to /signin)', () => {
+    it('anonymous on a guarded surface → signin (Auth starts the IAM hop)', () => {
       expect(at({ surface: 'guarded', authed: false })).toBe('signin')
     })
-    it('authed on the landing surface advances past signin', () => {
-      expect(at({ surface: 'landing', authed: true })).toBe('ready')
+    it('authed on a guarded surface advances past signin', () => {
+      expect(at({ surface: 'guarded', authed: true })).toBe('ready')
     })
   })
 
@@ -106,7 +103,7 @@ describe('resolve(session) → stage', () => {
  * cannot leak to an unauthed / org-less session — these sweeps prove `resolve` can't.
  */
 describe('fail-closed — resolve NEVER yields ready when it must not', () => {
-  const SURFACES: Surface[] = ['callback', 'signin', 'landing', 'guarded', null]
+  const SURFACES: Surface[] = ['callback', 'signin', 'guarded', null]
   const BOOLS = [true, false]
   const ENTERED: Array<boolean | null> = [true, false, null]
 
@@ -149,7 +146,7 @@ describe('fail-closed — resolve NEVER yields ready when it must not', () => {
                 expect(authed).toBe(true)
                 expect(owner).not.toBe('')
                 expect(entered).toBe(true)
-                expect(surface === 'landing' || surface === 'guarded').toBe(true)
+                expect(surface).toBe('guarded')
               }
             }
   })
