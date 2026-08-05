@@ -59,8 +59,8 @@ const CHANNELS: Channel[] = [
     icon: MessageCircle,
     title: 'Join Our Discord',
     body: 'Chat live with developers and other users from our community.',
-    href: 'https://discord.gg/hanzo',
-    cta: 'discord.gg/hanzo',
+    href: 'https://discord.gg/CJCyAsm9Vr',
+    cta: 'discord.gg/CJCyAsm9Vr',
   },
   {
     icon: Linkedin,

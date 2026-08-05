@@ -54,7 +54,7 @@ export function ResourceRail({ config, onViewCode }: { config: ProductLandingCon
 
       <LandingCard title="Need help?" p="$3">
         <YStack gap="$0.5">
-          <ActionRow icon={<MessageSquare size={15} />} label="Community" sub="Join the Discord" onPress={() => openExternal('https://discord.gg/hanzo')} />
+          <ActionRow icon={<MessageSquare size={15} />} label="Community" sub="Join the Discord" onPress={() => openExternal('https://discord.gg/CJCyAsm9Vr')} />
           <ActionRow icon={<LifeBuoy size={15} />} label="Contact Support" sub={`support@${apex}`} onPress={() => openExternal(supportMailto(docs))} />
         </YStack>
       </LandingCard>
