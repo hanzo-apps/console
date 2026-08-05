@@ -22,11 +22,13 @@ export type Stage = 'signin' | 'waitlist' | 'org' | 'onboard' | 'ready'
  * Which entry surface the URL is, resolved AFTER mount (the served SPA shell is the `/`
  * route for every path, so the real path is only knowable client-side). `null` until then.
  *   - `callback` — `/auth/callback`: complete the PKCE exchange (before any guard bounce).
- *   - `signin`   — `/signin`: the sign-in experience owns the screen.
- *   - `landing`  — `/` on a consumer host: the public marketing page for an anon visitor.
- *   - `guarded`  — anything else: the app, gated; an anon visitor is bounced to `/signin`.
+ *   - `signin`   — `/signin`: the sign-in experience owns the screen. The ONE surface that
+ *     never auto-authorizes: sign-out lands here, and IAM may still hold its own session,
+ *     so an automatic authorize would silently sign the user back in.
+ *   - `guarded`  — everything else, `/` included: the app, gated. An anon visitor STARTS
+ *     the IAM hop here rather than being parked on an interstitial.
  */
-export type Surface = 'callback' | 'signin' | 'landing' | 'guarded' | null
+export type Surface = 'callback' | 'signin' | 'guarded' | null
 
 /** Everything the stage decision reads. Plain values — no hooks, no JSX, no React. */
 export interface Session {
