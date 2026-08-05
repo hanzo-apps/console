@@ -102,3 +102,17 @@ describe('resolveTour', () => {
     expect(resolveTour(steps, sig({ hasApiKey: true })).map((s) => s.id)).toEqual(['a']) // has key → dropped
   })
 })
+
+
+// The tour card must never render beside a full-width checklist row — "right
+// of the row" is the far viewport edge, and step one of every guide tour
+// rendered clipped off-screen there.
+it('a checklist tour step places BELOW its row, never beside it', () => {
+  const guide = { id: 'chat', pitch: { title: '', sub: '', points: [] }, steps: [] } as never
+  const resolved = [
+    { step: { id: 'api-key', title: 't', body: 'b' }, done: false },
+  ] as never[]
+  for (const st of buildTourFromSteps(guide, resolved as never)) {
+    expect(st.placement).toBe('bottom')
+  }
+})
