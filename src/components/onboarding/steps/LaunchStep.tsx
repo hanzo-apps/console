@@ -30,11 +30,11 @@ export function LaunchStep({ finish, back, isFirst }: StepProps) {
         <XStack gap="$2" items="center">
           <PartyPopper size={20} color="var(--green11)" />
           <Text fontSize="$5" fontWeight="700" color="$green11">
-            Your workspace is set up
+            Your organization is set up
           </Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
-          Two-factor, consent, workspace, credits, and AI access are all configured.
+          Two-factor, consent, organization, credits, and AI access are all configured.
         </Text>
       </Card>
 

@@ -33,7 +33,7 @@ const TEAM_COPY: HonestCopy = {
   notFound:
     'Member management (IAM) is not routed on this host yet. It appears automatically once the deployment proxies /org/iam to Hanzo IAM.',
   unauthorized:
-    'Managing members requires an organization admin. You can view the team; ask an admin to make changes.',
+    'Managing members requires an organization admin. You can view members; ask an admin to make changes.',
 }
 
 const fmtDate = (v?: string): string => {
@@ -450,7 +450,7 @@ function MembersTab({ org, canManage }: { org: string; canManage: boolean }) {
       {!canManage ? (
         <Card p="$3" gap="$1" borderWidth={1} borderColor="$borderColor" maxWidth={640}>
           <Text fontSize="$2" color="$color11">
-            You can view the team. Inviting, changing roles, and removing members requires an organization admin.
+            You can view members. Inviting, changing roles, and removing members requires an organization admin.
           </Text>
         </Card>
       ) : null}
@@ -526,7 +526,7 @@ export function TeamModule({ params }: { params: Record<string, string> }) {
   return (
     <>
       <PageHeader
-        title="Team"
+        title="Members"
         subtitle={`Members and roles for ${org === config.iamOrgName ? 'your organization' : org}.`}
       />
       <SubNav id="team" />

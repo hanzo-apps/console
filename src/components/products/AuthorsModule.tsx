@@ -119,7 +119,7 @@ function AuthorConnect({ onConnected }: { onConnected: () => void }) {
         <Text fontSize="$3" color="$color11">
           The OSS Author program pays you an ongoing share of the platform spend of every organization that deploys your
           open-source project on Hanzo. Connect GitHub, verify the repositories you own, and earn your share every period —
-          for as long as teams build on your work. New authors are reviewed by our team before earnings begin.
+          for as long as organizations build on your work. New authors are reviewed by our team before earnings begin.
         </Text>
         <YStack gap="$1">
           <FieldRow label="GitHub login (optional)">

@@ -99,7 +99,7 @@ export function ReferralsAdminModule() {
         <EmptyState
           icon={Gift}
           title="No referrals yet"
-          description="Referrals appear here as customers share their link and new teams sign up."
+          description="Referrals appear here as customers share their link and new organizations sign up."
           bullets={[
             'Source: GET /v1/admin/referrals — the cloud referrals store (Base/SQLite), global-admin only.',
             'Run a sweep to qualify-check pending referrals and grant the ones that now qualify.',

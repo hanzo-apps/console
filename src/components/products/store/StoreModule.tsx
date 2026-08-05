@@ -42,7 +42,7 @@ function PayoutBanner() {
             Open source developer? Earn up to 20%.
           </Text>
           <Text fontSize="$2" color="$color11">
-            Every time a team runs your project on {config.brandName}, you earn up to 20% of the
+            Every time an organization runs your project on {config.brandName}, you earn up to 20% of the
             compute margin — paid to your Hanzo wallet, for as long as it runs.
           </Text>
         </YStack>

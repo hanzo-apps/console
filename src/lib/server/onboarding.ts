@@ -123,7 +123,7 @@ export function displayNameFromEmail(email: string): string {
   const local = (email.includes('@') ? email.slice(0, email.indexOf('@')) : email)
     .replace(/[._-]+/g, ' ')
     .trim()
-  return local ? local.replace(/\b\w/g, (c) => c.toUpperCase()) : 'Workspace'
+  return local ? local.replace(/\b\w/g, (c) => c.toUpperCase()) : 'Organization'
 }
 
 /**

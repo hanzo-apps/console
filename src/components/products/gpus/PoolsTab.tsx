@@ -49,8 +49,8 @@ export function PoolsTab() {
         <EmptyState
           icon={Layers}
           title="No GPU pools yet"
-          description="Pools group GPU capacity for scheduling, quota, and fair-share across teams. Create a pool once a GPU provider or cluster is connected."
-          bullets={['Assign clusters or nodes to a pool', 'Set per-team quota and priority']}
+          description="Pools group GPU capacity for scheduling, quota, and fair-share across orgs. Create a pool once a GPU provider or cluster is connected."
+          bullets={['Assign clusters or nodes to a pool', 'Set per-org quota and priority']}
         />
       ) : (
         <DataTable columns={columns} rows={state.pools} rowKey={(p) => p.id} empty="No GPU pools yet." />

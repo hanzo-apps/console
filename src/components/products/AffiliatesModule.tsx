@@ -200,7 +200,7 @@ function AffiliateDashboard({
           </Text>
         ) : (
           <Text fontSize="$3" color="$color11">
-            Share your link. Every team that signs up through it earns you {ratePct(data.rateBps)} of their spend, every
+            Share your link. Every organization that signs up through it earns you {ratePct(data.rateBps)} of their spend, every
             period.
           </Text>
         )}

@@ -2660,7 +2660,7 @@ export const catalog: CatalogEntry[] = [
     id: 'referrals',
     label: 'Referrals',
     icon: Gift,
-    description: 'Share your referral link and earn cloud credit when teams get started.',
+    description: 'Share your referral link and earn cloud credit when organizations get started.',
     category: 'Web3',
     status: 'enabled',
     repo: 'hanzoai/cloud',
@@ -3680,7 +3680,7 @@ export const catalog: CatalogEntry[] = [
   //    manage their OWN org (not only a global admin), tenant-isolated server-side.
   {
     id: 'team',
-    label: 'Team',
+    label: 'Members',
     icon: Users,
     description: 'Organization members and roles — invite, assign roles, remove.',
     gcp: 'IAM & Admin',

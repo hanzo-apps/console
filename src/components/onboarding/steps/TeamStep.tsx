@@ -1,11 +1,11 @@
 'use client'
 
 /**
- * Step 3 — Your workspace. Confirms the org the user is in (created at first-run
+ * Step 3 — Your organization. Confirms the org the user is in (created at first-run
  * org onboarding) and lets them optionally NAME it. REAL: reads/writes the org via
  * the org-admin `TeamApi` (`get-organization` / `update-organization`, pinned to the
  * caller's own org server-side). Renaming is best-effort — a read/write failure never
- * blocks the flow (the workspace already exists).
+ * blocks the flow (the organization already exists).
  */
 import { useEffect, useState } from 'react'
 import { Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -52,9 +52,9 @@ export function TeamStep({ next, skip, back, isFirst }: StepProps) {
       setBusy(true)
       try {
         await TeamApi.updateOrganization({ ...record, displayName: name })
-        toast.success('Workspace renamed', name)
+        toast.success('Organization renamed', name)
       } catch (e) {
-        toast.error('Could not rename the workspace', e instanceof ApiError ? e.message : undefined)
+        toast.error('Could not rename the organization', e instanceof ApiError ? e.message : undefined)
       } finally {
         setBusy(false)
       }
@@ -64,7 +64,7 @@ export function TeamStep({ next, skip, back, isFirst }: StepProps) {
 
   return (
     <StepShell
-      title="Your workspace"
+      title="Your organization"
       subtitle="This is where your projects, usage, and billing live. Name it now, or keep the default."
       actions={
         <StepActions
@@ -95,7 +95,7 @@ export function TeamStep({ next, skip, back, isFirst }: StepProps) {
         {record ? (
           <YStack gap="$1.5">
             <Text fontSize="$2" color="$color11" fontWeight="600">
-              Workspace name
+              Organization name
             </Text>
             <Input value={displayName} onChangeText={setDisplayName} placeholder="Acme Inc" autoCapitalize="words" />
           </YStack>
@@ -105,7 +105,7 @@ export function TeamStep({ next, skip, back, isFirst }: StepProps) {
       <XStack gap="$2" items="center">
         <Users size={16} color="var(--color10)" />
         <Text fontSize="$2" color="$color10">
-          Invite teammates and switch workspaces anytime from the top bar.
+          Invite teammates and switch organizations anytime from the top bar.
         </Text>
       </XStack>
     </StepShell>
