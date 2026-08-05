@@ -595,9 +595,9 @@ function SidebarNav({
               {shell.wordmark}
             </Text>
           </XStack>
-        ) : (
-          <SidebarBrand collapsed={collapsed} onNavigate={onNavigate} />
-        )}
+        ) : collapsed ? (
+          <SidebarBrand collapsed onNavigate={onNavigate} />
+        ) : null}
         <ScrollView flex={1}>
           <YStack gap="$1">
             {subs.map((sp) => {
@@ -679,7 +679,6 @@ function SidebarNav({
   if (drilled && activeEntry) {
     return (
       <>
-        <SidebarBrand collapsed={false} onNavigate={onNavigate} />
         <DrillNav
           entry={activeEntry}
           subs={activeSubs}
@@ -703,12 +702,13 @@ function SidebarNav({
     // effect (the children keep their parent's flex context), and the explicit
     // role survives regardless of how a given AT treats display:contents.
     <nav role="navigation" aria-label="Products" style={{ display: 'contents' }}>
-      <SidebarBrand collapsed={false} onNavigate={onNavigate} />
-
-      {/* WHERE you are — organization and project in ONE control, directly under
-          the tenant's own mark. The account at the foot answers WHO you are; the
-          network chip in the top-right is a global MODE. Three questions, three
-          controls, each in one place. */}
+      {/* WHERE you are — organization and project in ONE control, and the FIRST
+          thing in the rail: the org's own logo (when IAM carries one) or its
+          name IS the mark, so a separate brand row above it said the same thing
+          twice. The account at the foot answers WHO you are; the network chip
+          in the top-right is a global MODE. Three questions, three controls,
+          each in one place. The collapsed icon rail keeps its mark — there is
+          no switcher to carry the identity there. */}
       <ContextSwitcher />
 
       {/* Product filter — narrows the whole list; a match from any category jumps

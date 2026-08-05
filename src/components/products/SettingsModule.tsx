@@ -13,7 +13,7 @@
  */
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, ExternalLink, Lock, Users } from '@hanzogui/lucide-icons-2'
@@ -26,6 +26,37 @@ import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
 import { FieldRow, FieldSwitch, FieldText, PageHeader } from '@hanzo/ui/product'
+
+/**
+ * Read a chosen logo file into a compact data URL the IAM `logo` string can
+ * carry. An SVG passes through verbatim (it is already small and scales);
+ * a raster is downscaled to 64px tall on a canvas — twice the largest render
+ * (the 28px settings preview, the 22px switcher row) — so a 4MB photo becomes
+ * a few KB. The cap refuses anything that still encodes large, because a
+ * megabyte logo would ride EVERY IAM org read from then on.
+ */
+const LOGO_DATA_CAP = 140 * 1024
+async function fileToLogoDataUrl(file: File): Promise<string> {
+  if (file.type === 'image/svg+xml') {
+    const text = await file.text()
+    const url = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(text)))}`
+    if (url.length > LOGO_DATA_CAP) throw new Error('That SVG is too large for a logo — simplify it or host it and paste the URL')
+    return url
+  }
+  const bitmap = await createImageBitmap(file)
+  const h = Math.min(64, bitmap.height)
+  const w = Math.round((bitmap.width / bitmap.height) * h)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Could not read the image')
+  ctx.drawImage(bitmap, 0, 0, w, h)
+  const url = canvas.toDataURL('image/png')
+  if (url.length > LOGO_DATA_CAP) throw new Error('That image is too complex for a logo — use a simpler mark or host it and paste the URL')
+  return url
+}
+
 
 const IAM_COPY: HonestCopy = {
   notFound:
@@ -191,6 +222,7 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
   const [displayName, setDisplayName] = useState(org.displayName ?? '')
   const [websiteUrl, setWebsiteUrl] = useState(org.websiteUrl ?? '')
   const [logo, setLogo] = useState(org.logo ?? '')
+  const logoFileRef = useRef<HTMLInputElement>(null)
   const [favicon, setFavicon] = useState(org.favicon ?? '')
   const [colorPrimary, setColorPrimary] = useState(org.themeData?.colorPrimary ?? '')
   const [themeEnabled, setThemeEnabled] = useState(!!org.themeData?.isEnabled)
@@ -252,9 +284,37 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
         <FieldRow label="Website">
           <FieldText value={websiteUrl} onChange={(v) => onEdit(() => setWebsiteUrl(v))} disabled={ro} placeholder="https://…" />
         </FieldRow>
-        <FieldRow label="Logo URL">
+        <FieldRow label="Logo">
           <YStack gap="$2">
-            <FieldText value={logo} onChange={(v) => onEdit(() => setLogo(v))} disabled={ro} placeholder="https://…/logo.svg" />
+            <XStack gap="$2" items="center" flexWrap="wrap">
+              <YStack flex={1} minW={220}>
+                <FieldText value={logo} onChange={(v) => onEdit(() => setLogo(v))} disabled={ro} placeholder="https://…/logo.svg" />
+              </YStack>
+              {/* Upload: the file becomes a compact data URL in the SAME field,
+                  so one value, one save path, one preview serve it either way. */}
+              <Button
+                size="$2"
+                disabled={ro}
+                onPress={() => logoFileRef.current?.click()}
+                aria-label="Upload a logo image"
+              >
+                Upload
+              </Button>
+              <input
+                ref={logoFileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ''
+                  if (!f) return
+                  fileToLogoDataUrl(f)
+                    .then((url) => onEdit(() => setLogo(url)))
+                    .catch((err) => setSave({ phase: 'error', err: asApiError(err) }))
+                }}
+              />
+            </XStack>
             {logo.trim() ? (
               // Arbitrary external org logo URL — raw <img> (next/image would need a
               // per-tenant remote allow-list). Matches BrandLogo's own preview.
