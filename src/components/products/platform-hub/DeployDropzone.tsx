@@ -11,10 +11,10 @@ import { useRef, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { FileArchive, FolderUp, TriangleAlert, UploadCloud } from '@hanzogui/lucide-icons-2'
 
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { ARTIFACT_GZIP } from '~/lib/api/platform-sites'
 import { filesToTarGz, gzipSupported } from '~/lib/deploy/archive'
 import { readDrop, readInputFiles, type DropResult } from '~/lib/deploy/drop'
+import { PrimaryButton } from '@hanzo/ui/product'
 
 export function DeployDropzone({
   busy,

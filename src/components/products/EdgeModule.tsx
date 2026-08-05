@@ -13,12 +13,9 @@ import { Button, Spinner, Text, XStack } from '@hanzo/gui'
 import { RefreshCw, Radio } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { PlatformStateCard } from './platform/state'
 import { useResourceList } from './useResourceList'
+import { DataTable, EmptyState, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 type EdgeNode = {
   id: string

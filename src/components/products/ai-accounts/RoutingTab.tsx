@@ -19,12 +19,10 @@ import { Route, Check, Copy, BookOpen, Newspaper, Sparkles } from '@hanzogui/luc
 import { config } from '~/config'
 import { AiAccountsApi } from '~/lib/api/ai-accounts'
 import { resolveRouting, type OrgRoutingDefaults } from '~/lib/products/ai-accounts'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { FieldSwitch } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, FieldSwitch, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

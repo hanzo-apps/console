@@ -48,16 +48,13 @@ import {
 } from './router/logic'
 import { RouterPolicyEditor } from './RouterPolicyEditor'
 import { AiUsagePanels } from './usage/AiUsagePanels'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { Loader } from '~/components/ui/Loader'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { Donut, LineChart, type Slice } from '~/components/ui/Charts'
 import { RAMP } from '~/lib/theme/ramp'
-import { FieldSwitch } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
+import { BackendStateCard, EmptyState, FieldSwitch, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 // Monochrome accent — design --neutral-300 (the console is monochrome by construction).
 const ACCENT = 'var(--color11)'

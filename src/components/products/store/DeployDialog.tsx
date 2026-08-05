@@ -21,11 +21,9 @@ import { config } from '~/config'
 import { type OssApp } from '~/lib/api/oss-apps'
 import { PaasApi, type PaasDeployment } from '~/lib/api/paas'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldSelect } from '~/components/ui/Field'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { asApiError } from '~/components/ui/States'
 import { slugify } from './logic'
+import { FieldRow, FieldSelect, PrimaryButton, StatusTag } from '@hanzo/ui/product'
 
 /** A short, collision-resistant suffix so the project/app slug is always unique. */
 const shortId = () => Math.random().toString(36).slice(2, 8)

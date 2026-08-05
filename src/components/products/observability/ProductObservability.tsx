@@ -21,9 +21,9 @@ import { Activity, ArrowUpRight, ScrollText, Waypoints } from '@hanzogui/lucide-
 
 import { ApmApi, apmWindow, type LogRow, type ServiceHealth, type TraceSpan } from '~/lib/api/apm'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { RuntimeNotice } from '~/components/products/observability/RuntimeNotice'
 import { formatMetric } from '~/components/products/overview/living/logic'
+import { DataTable, type Column } from '@hanzo/ui/product'
 
 const RANGES: { label: string; seconds: number }[] = [
   { label: '15m', seconds: 900 },

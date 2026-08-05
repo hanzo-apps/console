@@ -19,11 +19,11 @@ import { Activity, RefreshCw, TrendingUp, UserPlus, Users } from '@hanzogui/luci
 
 import { ApiError } from '~/lib/api'
 import { AdminCockpitApi, type AnalyticsData } from '~/lib/api/admin-cockpit'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { LineChart, BarChart, type ChartPoint } from '~/components/ui/Charts'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { toneVar } from '~/components/ui/tone'
+import { PageHeader } from '@hanzo/ui/product'
 
 type Range = '7d' | '30d' | '90d' | 'all'
 const RANGES: { key: Range; label: string }[] = [

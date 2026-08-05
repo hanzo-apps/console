@@ -25,17 +25,13 @@ import { Boxes, Pencil, Plus, RefreshCw, Save, Star, Trash2, TriangleAlert } fro
 import { ApiError } from '~/lib/api'
 import { PlansAdminApi, type Plan, type PlanInput } from '~/lib/api/plans-admin'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldSelect, FieldSwitch, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 import { MetadataEditor } from './pricing/MetadataEditor'
 import { centsToInput, distinctCategories, formatUsd, inputToCents, metadataToRows, type MetadataRow, rowsToMetadata } from './catalog/logic'
 import { annualDisplay, PLAN_CATEGORIES, priceDisplay } from './plans/logic'
 import { toneVar } from '~/components/ui/tone'
+import { ConfirmDelete, DataTable, FieldRow, FieldSelect, FieldSwitch, FieldText, FieldTextArea, PageHeader, PrimaryButton, type Column } from '@hanzo/ui/product'
 
 const PLANS_COPY: HonestCopy = {
   notFound:

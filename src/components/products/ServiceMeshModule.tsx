@@ -13,11 +13,9 @@
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { PlatformStateCard } from './platform/state'
 import { useResourceList } from './useResourceList'
+import { DataTable, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 type MeshService = {
   id: string

@@ -16,9 +16,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { DataTable, type FieldDefinition } from '@hanzo/data'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { ApiError } from '~/lib/api/client'
+import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** One blockchain network as the bootnode `/v1/networks` API returns it. */
 interface BootnodeNetwork {

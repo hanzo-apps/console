@@ -16,15 +16,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Boxes, Plus, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { Loader } from '~/components/ui/Loader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType } from '~/lib/framework/types'
 import { moduleDoctypes } from '~/lib/framework/fields'
 import { CollectionBuilder } from './CollectionBuilder'
+import { BackendStateCard, EmptyState, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 export interface CollectionsBrowserProps {
   client: FrameworkClient

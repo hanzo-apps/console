@@ -39,8 +39,8 @@ import {
   type AgentStatus,
 } from '~/lib/api/agents'
 import { Donut, BarRows, type Slice } from '~/components/ui/Charts'
-import { asColor } from '~/components/ui/color'
 import { toneVar, type Tone } from '~/components/ui/tone'
+import { asColor } from '@hanzo/ui/product'
 
 /** Status → tone — one source of truth for the pill dot + the health donut. */
 export const STATUS_TONE: Record<AgentStatus, Tone> = {

@@ -30,10 +30,9 @@ import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistan
 import { useVoice } from '~/lib/voice'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { Markdown } from './markdown'
 import { splitThinking } from './thinking'
+import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** The sparkle medallion that marks an assistant turn (and the welcome screen). */
 function SparkleAvatar({ size = 28 }: { size?: number }) {

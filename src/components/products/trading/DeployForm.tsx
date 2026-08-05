@@ -10,10 +10,6 @@
 import { useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { PaasApi } from '~/lib/api/paas'
 import {
   type BotTemplate,
@@ -21,6 +17,7 @@ import {
   validateBotDeploy,
   toCreateAppInput,
 } from '~/lib/products/trading/templates'
+import { FieldRow, FieldSelect, FieldText, PageHeader, PrimaryButton, StatusTag } from '@hanzo/ui/product'
 
 /** Ensure a project exists for the org's trading bots and return its slug. */
 async function ensureTradingProject(): Promise<string> {

@@ -19,9 +19,9 @@ import { ArrowUp, Check, Copy, RefreshCw, Share2, Terminal, Users } from '@hanzo
 
 import { branding } from '~/config'
 import { HanzoMark, Loader } from '~/components/ui/Loader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { useSession } from '~/lib/auth/session'
 import { type WaitlistStatus } from '~/lib/auth/waitlist'
+import { PrimaryButton } from '@hanzo/ui/product'
 
 /** The node one-liner + docs — env-overridable, honest defaults to hanzo.network. */
 const NODE_CMD = process.env.NEXT_PUBLIC_HANZOD_INSTALL ?? 'curl -fsSL https://hanzo.network/up | sh'

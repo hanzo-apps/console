@@ -21,11 +21,10 @@ import { Ban, Boxes, CheckCircle2, Globe, IdCard, Play, RefreshCw, Server } from
 
 import { ApiError, IamAdminApi, TenantsApi, DOKS_REGIONS, DOKS_NODE_SIZES, type IamApplication, type TenantDomain } from '~/lib/api'
 import { AdminCockpitApi } from '~/lib/api/admin-cockpit'
-import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { packageAppId, packageHost, SERVICE_LABELS, type Package } from './packages'
 import { ActionNotice, classifyAction, NotConnectedPanel, type ActionOutcome } from './state'
 import type { Tenant } from './model'
+import { FieldRow, FieldSelect, FieldText, StatusTag } from '@hanzo/ui/product'
 
 /** Section wrapper — a titled card with an icon. */
 function Section({ icon: Icon, title, children }: { icon: typeof Server; title: string; children: React.ReactNode }) {

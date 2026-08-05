@@ -20,12 +20,11 @@ import {
   type SessionDetail,
   type Trace,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { DetailRow } from './observability/parts'
 import { fmtCost, fmtDate, fmtLatency } from './observability/format'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const PAGE_LIMIT = 50
 

@@ -24,8 +24,6 @@ import {
   type Priority,
   type NewIssue,
 } from '~/lib/api/tracker'
-import { FieldRow, FieldText, FieldTextArea, FieldSelect } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { asApiError } from '~/components/ui/States'
 import { useToast } from '~/components/ui/Toast'
 import {
@@ -39,6 +37,7 @@ import {
   linkedPRs,
 } from './logic'
 import { StatusIcon, KindIcon, SourceBadge, Identifier, PriorityIcon } from './atoms'
+import { FieldRow, FieldSelect, FieldText, FieldTextArea, PrimaryButton } from '@hanzo/ui/product'
 
 /** The default coding-agent ref an issue is handed to (assignee). */
 const AGENT_REF = 'hanzo'

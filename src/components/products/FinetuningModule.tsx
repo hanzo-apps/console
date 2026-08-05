@@ -24,15 +24,12 @@ import { TrainApi, type TrainJob, type TrainExperiment, type MlModel } from '~/l
 import { usd } from '~/lib/api/compute'
 import { currentOrg } from '~/lib/org-scope'
 import { loadConfigs, removeConfig, onConfigsChange, type TrainingConfig } from '~/lib/training-configs'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { MetricCard, UtilBar, SERIES } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { NewTrainingPanel } from './training/NewTrainingPanel'
 import { InteractiveTraining } from './training/InteractiveTraining'
+import { BackendStateCard, DataTable, PageHeader, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

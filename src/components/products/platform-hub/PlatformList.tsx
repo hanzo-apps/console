@@ -18,14 +18,9 @@ import { ProjectApi, type Project } from '~/lib/api/projects'
 import { PlatformSitesApi, type Site } from '~/lib/api/platform-sites'
 import { crossSurfaceLinks } from '~/lib/products/cross-surface'
 import { checkProjectName, fmtWhen, siteSlugForProject } from './logic'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { useToast } from '~/components/ui/Toast'
+import { DataTable, EmptyState, FieldRow, FieldText, FieldTextArea, PageHeader, PrimaryButton, StatusTag, type Column } from '@hanzo/ui/product'
 
 const openExt = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')

@@ -22,10 +22,6 @@ import {
 } from '~/lib/api/platform-apps'
 import { METRICS_RANGES, O11yMetricsApi, type ServiceMetrics } from '~/lib/api/o11y-metrics'
 import { ApiError } from '~/lib/api'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldText } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { DomainsPanel } from '../paas/DomainsPanel'
 import { isTerminalPhase, railwayPhase } from '../paas/railway'
 import { usePoll } from '../overview/living/hooks'
@@ -44,6 +40,7 @@ import {
   type EnvDraft,
 } from './logic'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, FieldText, PrimaryButton, StatusTag, type Column } from '@hanzo/ui/product'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 

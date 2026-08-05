@@ -35,12 +35,10 @@ import {
   type Top,
 } from '~/lib/api/analytics'
 import { fmtUsd, fmtInt } from '~/lib/api/functions'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart, Donut, type ChartPoint, type Slice } from '~/components/ui/Charts'
 import { RAMP } from '~/lib/theme/ramp'
-import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
 import { MetricCard } from './functions/parts'
+import { BackendStateCard, DataTable, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const fmtPct = (n: number): string => (Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '—')
 

@@ -12,9 +12,9 @@
 import { useCallback, useRef, useState } from 'react'
 
 import { ApiError, type ChatUsage } from '~/lib/api'
-import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { runColumn, type RunInput } from './runner'
 import type { RunPhase, RunResult } from './types'
+import { classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 export type ChatRunState = {
   phase: RunPhase

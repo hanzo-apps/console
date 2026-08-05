@@ -16,14 +16,11 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { BadgeCheck, Check, Coins, Copy, HandCoins, Handshake, RefreshCw, Users, Wallet } from '@hanzogui/lucide-icons-2'
 
 import { AffiliatesApi, type AffiliateOverview } from '~/lib/api/affiliates'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldText } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { payoutMethodLabel, ratePct, shortDate, statusLabel, statusColor, usd } from './affiliates/logic'
 import { EarningsPanel, LinksPanel, LeaderboardPanel } from './affiliates/panels'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, FieldRow, FieldText, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

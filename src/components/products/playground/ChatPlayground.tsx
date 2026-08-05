@@ -15,7 +15,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { XStack, YStack } from '@hanzo/gui'
 
-import { BackendStateCard } from '~/components/ui/BackendState'
 import { useSession } from '~/lib/auth/session'
 import { useComposer } from './useComposer'
 import { useModels, pricingOf, defaultModelId } from './useModels'
@@ -35,6 +34,7 @@ import { loadHistory, saveRun, clearHistory, type HistoryEntry } from './history
 import { loadSaved, removeSaved, type SavedPrompt } from './prompts'
 import { decodeShare, SHARE_PARAM } from './share'
 import type { Example } from './examples'
+import { BackendStateCard } from '@hanzo/ui/product'
 
 export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
   const composer = useComposer()

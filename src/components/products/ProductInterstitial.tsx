@@ -23,7 +23,7 @@ import { config } from '~/config'
 import { findEntry } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
 import { OSS_PROGRAM, githubUrl, DOCS_URL } from '~/lib/oss-program'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { PageHeader } from '@hanzo/ui/product'
 
 const open = (url: string) => {
   if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener')

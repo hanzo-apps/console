@@ -20,11 +20,9 @@ import {
   fmtRelative,
   type ServerlessFunction,
 } from '~/lib/api/functions'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { Pager } from '~/components/products/observability/Pager'
-import { FieldSelect } from '~/components/ui/Field'
 import { paper } from '~/components/ui/paper'
+import { DataTable, FieldSelect, StatusTag, type Column } from '@hanzo/ui/product'
 
 const PAGE_SIZE = 10
 

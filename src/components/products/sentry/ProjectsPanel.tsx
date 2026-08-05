@@ -13,15 +13,12 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { KeyRound, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { SentryApi, type SentryProject } from '~/lib/api/sentry'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { ErrorState, asApiError } from '~/components/ui/States'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { CodeBlock, Fact } from './parts'
 import { fmtWhen, fmtDateTime, fmtCount, sdkSnippet, ingestUrl } from './logic'
 import { toneColor } from '~/components/ui/tone'
+import { DataTable, FieldRow, FieldSelect, FieldText, PageHeader, PrimaryButton, type Column } from '@hanzo/ui/product'
 
 const PLATFORMS = ['javascript', 'node', 'python', 'go', 'ruby', 'java', 'php', 'rust', 'dotnet', 'other']
 

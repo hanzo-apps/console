@@ -15,12 +15,10 @@ import { Plus } from '@hanzogui/lucide-icons-2'
 import { ApiError, PlatformApi, DOKS_REGIONS, DOKS_NODE_SIZES, type Cluster } from '~/lib/api'
 import { GPU_NODE_SIZES, gpuSpecOf } from '~/lib/api/compute'
 import { currentOrg } from '~/lib/org-scope'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldSelect } from '~/components/ui/Field'
 import { PlatformStateCard } from '../platform/state'
 import type { ComputeData } from './state'
 import { toneColor } from '~/components/ui/tone'
+import { DataTable, FieldRow, FieldSelect, StatusTag, type Column } from '@hanzo/ui/product'
 
 const NODE_SIZES = [...GPU_NODE_SIZES, ...DOKS_NODE_SIZES]
 

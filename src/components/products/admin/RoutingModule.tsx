@@ -34,10 +34,9 @@ import {
   type RoutingState,
 } from '~/lib/api/org-settings'
 import { getBrand } from '~/lib/branding/brands'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
+import { EmptyState, PageHeader } from '@hanzo/ui/product'
 
 const STATES: RoutingState[] = ['inherit', 'enabled', 'disabled']
 const LABEL: Record<RoutingState, string> = { inherit: 'Inherit', enabled: 'Enabled', disabled: 'Disabled' }

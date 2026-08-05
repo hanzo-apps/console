@@ -17,13 +17,9 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, Github, RefreshCw, DownloadCloud, Lock } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, GitHubApi, type GitHubRepo } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyRead, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
 import { repoStatusLabel, pendingRepoNames } from '~/components/products/integrations/logic'
+import { BackendStateCard, EmptyState, PageHeader, PrimaryButton, StatusTag, classifyRead, type BackendState } from '@hanzo/ui/product'
 
 function RepoRow({
   r,

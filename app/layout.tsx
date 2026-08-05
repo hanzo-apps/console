@@ -4,6 +4,11 @@ import '@hanzogui/core/reset.css'
 // source of truth. Imported BEFORE globals.css so the console's Tamagui theme can
 // derive its ladder from the design neutral/semantic tokens.
 import './design/index.css'
+// The motion/skeleton classes `@hanzo/ui/product` components emit (`skeleton`,
+// `row`, `tnum`, `fade-up`, `drag`). Console's own markup still names the `hz-`
+// prefixed twins in globals.css below; these are the package's, and without this
+// import a DataTable's skeleton, row hover and tabular figures render unstyled.
+import '@hanzo/ui/styles/motion.css'
 import './globals.css'
 
 import type { Metadata, Viewport } from 'next'

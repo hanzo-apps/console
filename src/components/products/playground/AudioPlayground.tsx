@@ -12,11 +12,10 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Volume2, Clock } from '@hanzogui/lucide-icons-2'
 
 import { PlaygroundApi } from '~/lib/api'
-import { FieldRow, FieldSelect, FieldTextArea } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { ModelSelect } from './ModelSelect'
 import { useCatalog, defaultModels } from './useCatalog'
 import { formatLatency } from './cost'
+import { BackendStateCard, FieldRow, FieldSelect, FieldTextArea, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const now = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 const VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']

@@ -52,9 +52,7 @@ import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { useEntitlements } from '~/lib/entitlements-context'
 import { useProductColors } from '~/lib/products/pins'
 import { categoryColorHex } from '~/lib/products/colors'
-import { asColor } from '~/components/ui/color'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FadeIn } from '~/components/ui/FadeIn'
+import { FadeIn, PageHeader, asColor } from '@hanzo/ui/product'
 
 /** A representative icon per category (presentational — kept out of the taxonomy layer). */
 const CATEGORY_ICON: Record<ProductCategory, ProductIcon> = {

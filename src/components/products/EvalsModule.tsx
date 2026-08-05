@@ -10,9 +10,9 @@
  */
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { EvalRunView } from './evals/EvalRunView'
 import { EvalScoresView } from './evals/EvalScoresView'
+import { PageHeader } from '@hanzo/ui/product'
 
 export function EvalsModule({ params }: { params: Record<string, string> }) {
   const tab = productSubpageSlug('evals', params.tab)

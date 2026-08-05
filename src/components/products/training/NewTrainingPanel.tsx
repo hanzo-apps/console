@@ -19,8 +19,8 @@ import { TrainApi, TRAIN_TYPES, TRAIN_PRESETS, TRAIN_GPUS, type CreateTrainJobIn
 import { fetchCatalog, modelId, isZen, type CatalogEntry } from '~/lib/api/aicatalog'
 import { saveConfig } from '~/lib/training-configs'
 import { usd } from '~/lib/api/compute'
-import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
 import { toneColor } from '~/components/ui/tone'
+import { FieldRow, FieldSelect, FieldText } from '@hanzo/ui/product'
 
 /** Realistic base models to train from: available + text, our own Zen first. */
 function baseModelOptions(cat: CatalogEntry[]): string[] {

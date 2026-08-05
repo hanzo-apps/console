@@ -25,12 +25,9 @@ import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
+import { DataTable, FieldRow, FieldSelect, FieldText, PageHeader, PrimaryButton, type Column } from '@hanzo/ui/product'
 
 const TEAM_COPY: HonestCopy = {
   notFound:

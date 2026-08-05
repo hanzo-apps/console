@@ -52,14 +52,11 @@ import {
   type Structure,
   type Jurisdiction,
 } from '~/lib/api/company'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldText, FieldOptionSelect } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { FieldOptionSelect } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { useToast } from '~/components/ui/Toast'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { BackendStateCard, FieldRow, FieldText, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async =
   | { phase: 'loading' }

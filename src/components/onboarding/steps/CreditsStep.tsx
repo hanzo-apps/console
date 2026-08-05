@@ -19,10 +19,10 @@ import type { CloudBalance } from '~/lib/api/wallet'
 import { useSquareCard } from '~/lib/billing/use-square-card'
 import { trialCents, spendableCents, balanceSplitLabel, invalidateBalance } from '~/lib/billing/live-balance'
 import { ApiError } from '~/lib/api/client'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { useToast } from '~/components/ui/Toast'
 import { StepShell, StepActions } from '~/components/onboarding/parts'
 import type { StepProps } from '~/components/onboarding/types'
+import { PrimaryButton } from '@hanzo/ui/product'
 
 const usd = (c: number): string => `$${(c / 100).toFixed(2)}`
 

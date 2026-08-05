@@ -15,10 +15,8 @@ import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { restGet } from '~/lib/api/client'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { DataTable, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 const paas = (path: string) => `/paas/${path.replace(/^\/+/, '')}`
 

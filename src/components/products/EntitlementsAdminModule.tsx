@@ -22,12 +22,9 @@ import { visibleCatalog } from '~/lib/products/registry'
 import { EntitlementsApi } from '~/lib/entitlements'
 import { currentOrg } from '~/lib/org-scope'
 import { useProductColors } from '~/lib/products/pins'
-import { asColor } from '~/components/ui/color'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldSwitch } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend } from '~/components/ui/BackendState'
 import { entitlementRows, togglePatch, enabledCount, type EntitlementRow } from './entitlements/logic'
 import type { CatalogEntry } from '~/lib/products/registry'
+import { BackendStateCard, FieldSwitch, PageHeader, asColor, classifyBackend } from '@hanzo/ui/product'
 
 function Row({
   row,

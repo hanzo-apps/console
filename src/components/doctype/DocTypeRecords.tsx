@@ -19,12 +19,12 @@ import { Button } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 import { RecordsView, type FieldDefinition, type SelectOption } from '@hanzo/data'
 
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType, FrameworkDoc } from '~/lib/framework/types'
 import { docTypeToFields, toRecord, enrichLinks, savePayload, isMediaDoctype, hasProjectField, PROJECT_FIELD } from '~/lib/framework/fields'
 import { loadLinkOptions, makeFieldOptions } from './data'
 import { MediaGrid } from './MediaGrid'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type LoadState =
   | { phase: 'loading' }

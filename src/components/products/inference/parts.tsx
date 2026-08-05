@@ -11,10 +11,10 @@ import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Search, TrendingDown, TrendingUp } from '@hanzogui/lucide-icons-2'
 
 import { Sparkline } from '~/components/ui/Charts'
-import { asColor } from '~/components/ui/color'
 import { toneVar } from '~/components/ui/tone'
 import { RAMP } from '~/lib/theme/ramp'
 import { fmtDelta } from './logic'
+import { asColor } from '@hanzo/ui/product'
 
 /** The console's monochrome accent — the lead step of the shared categorical scale. */
 export const ACCENT = RAMP[1]

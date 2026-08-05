@@ -36,12 +36,12 @@ import { categorize, featured, applyFilters, marketStats, listingTitle } from '.
 import { playgroundPathForModel } from './playground/share'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { brandForModel, brandLabel } from '~/components/ui/brand'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
 import { Filters } from '~/components/ui/Filters'
 import { useList } from '~/lib/list'
 import type { ApiError } from '~/lib/api'
+import { PageHeader } from '@hanzo/ui/product'
 
 /** The "Verified" pill for our first-party (Zen) listings. */
 const VerifiedBadge = () => (

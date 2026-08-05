@@ -19,9 +19,8 @@ import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { AccountApi, ApiError } from '~/lib/api'
 import { MfaApi, type MfaSetup } from '~/lib/api/mfa'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldRow } from '~/components/ui/Field'
 import { ApiKeysView } from './ApiKeysModule'
+import { FieldRow, PageHeader } from '@hanzo/ui/product'
 
 /** A labeled read-only value row; dim em-dash when empty. */
 function InfoRow({ label, value }: { label: string; value?: string | number | boolean | null }) {

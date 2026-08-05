@@ -20,11 +20,11 @@ import { Activity, AlertTriangle, Boxes, Building2, Coins, Cpu, Gauge, ScrollTex
 
 import { AdminO11yApi, type FleetO11y, type O11yRange } from '~/lib/api/admin-o11y'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { asApiError, ErrorState, SuperAdminRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { formatMetric } from '~/components/products/overview/living/logic'
+import { DataTable, type Column } from '@hanzo/ui/product'
 
 const RANGES: O11yRange[] = ['24h', '7d', '30d']
 const pct1 = (v: number): string => (Number.isFinite(v) ? `${v.toFixed(1)}%` : '—')

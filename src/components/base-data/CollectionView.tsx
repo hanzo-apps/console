@@ -20,9 +20,9 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, TriangleAlert } from '@hanzogui/lucide-icons-2'
 import { RecordsView, type FieldDefinition } from '@hanzo/data'
 
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { BaseDataApi, type BaseRecord } from '~/lib/base-data/api'
 import { baseCollectionToFields } from '~/lib/base-data/fields'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type LoadState =
   | { phase: 'loading' }

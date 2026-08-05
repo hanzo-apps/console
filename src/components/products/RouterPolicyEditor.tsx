@@ -30,12 +30,9 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Route, Save, RotateCcw, Gauge, ListChecks, Check } from '@hanzogui/lucide-icons-2'
 
 import { RouterPolicyApi, type RouterPolicy, type RouterModel } from '~/lib/api/router'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { FieldRow, FieldText, FieldSlider } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
+import { BackendStateCard, FieldRow, FieldSlider, FieldText, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

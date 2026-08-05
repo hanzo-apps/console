@@ -23,11 +23,11 @@ import { FlaskConical, CheckCircle2, CircleSlash, FolderGit2, ListChecks, Coins,
 
 import { ResearchApi, type Experiment, type Totals, type Verdict } from '~/lib/api/research'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { asApiError, ErrorState, SuperAdminRequired } from '~/components/ui/States'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { fmtValue, fmtDate, rowKeyOf } from './research-fmt'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, type Column } from '@hanzo/ui/product'
 
 type State = { loading: boolean; error: unknown; totals: Totals | null; experiments: Experiment[] }
 

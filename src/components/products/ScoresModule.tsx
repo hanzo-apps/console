@@ -13,12 +13,11 @@ import { Button, Text, XStack } from '@hanzo/gui'
 import { ChevronRight, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { O11yApi, type O11yPageMeta, type Score } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { Badge } from './observability/parts'
 import { fmtDate, scoreValue } from './observability/format'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const PAGE_LIMIT = 50
 

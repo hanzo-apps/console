@@ -15,9 +15,8 @@
 import { YStack } from '@hanzo/gui'
 import { FinanceDashboard } from '@hanzo/finance-ui'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend } from '~/components/ui/BackendState'
 import { financeClient } from '~/lib/api/finance-ledger'
+import { BackendStateCard, PageHeader, classifyBackend } from '@hanzo/ui/product'
 
 export function FinanceModule(_props: { params: Record<string, string> }) {
   return (

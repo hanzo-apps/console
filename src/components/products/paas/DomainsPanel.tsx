@@ -14,10 +14,8 @@ import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, Copy, ExternalLink, Globe, Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { PaasApi, type PaasDomain } from '~/lib/api/paas'
-import { FieldText } from '~/components/ui/Field'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { canRemoveDomain, classifyPaasError, domainStatusLabel, isPendingCustom, orderDomains } from './logic'
+import { FieldText, PrimaryButton, StatusTag } from '@hanzo/ui/product'
 
 const openUrl = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')

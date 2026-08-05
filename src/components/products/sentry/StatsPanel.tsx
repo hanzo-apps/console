@@ -11,7 +11,6 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, AlertTriangle, Percent, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { SentryApi, type Period, type StatPoint, type SentryProject } from '~/lib/api/sentry'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { LineChart, BarChart } from '~/components/ui/Charts'
@@ -19,6 +18,7 @@ import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker } from './parts'
 import { statsToPoints, statsTotal, fmtCount } from './logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { PageHeader } from '@hanzo/ui/product'
 
 type State =
   | { phase: 'loading' }

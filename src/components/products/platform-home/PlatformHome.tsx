@@ -17,11 +17,10 @@ import { ArrowRight, BarChart3, Container, Rocket, Store, Zap } from '@hanzogui/
 import { config } from '~/config'
 import { fetchOssApps, type OssApp } from '~/lib/api/oss-apps'
 import { ProductIcon } from '~/components/ui/ProductIcon'
-import type { IconLike } from '~/components/ui/color'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { PlatformList } from '~/components/products/platform-hub/PlatformList'
 import { AppsRow } from '~/components/products/store/AppsRow'
 import { featuredApps } from '~/components/products/store/logic'
+import { PrimaryButton, type IconLike } from '@hanzo/ui/product'
 
 /** A compact, whole-card-clickable deploy shortcut. */
 function DeployTile({

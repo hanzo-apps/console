@@ -1,3 +1,4 @@
+import { FieldSelect, FieldText } from '@hanzo/ui/product'
 'use client'
 
 /**
@@ -5,7 +6,6 @@
  * free-text id fallback when the catalog is unavailable, so a model can always be
  * chosen (and a hand-typed id stays selectable even if it isn't in the list).
  */
-import { FieldSelect, FieldText } from '~/components/ui/Field'
 
 export function ModelSelect({
   value,

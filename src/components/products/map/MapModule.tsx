@@ -24,14 +24,13 @@ import { ServiceDetailDrawer, type DrawerTab, type ServiceEdgeData, type Service
 
 import { PaasApi, type PaasAppWithProject } from '~/lib/api/paas'
 import { ProvisioningApi, type ResourceKind } from '~/lib/api/provisioning'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
 import { usePoll, useReducedMotion } from '~/components/products/overview/living/hooks'
 import { capabilityFor } from '~/lib/products/subsystems'
 import { renderServiceIcon } from '~/components/products/platform-apps/icons'
 import { buildGraph, summarize, type MapGraph, type MapNodeData, type NodeStatus, type ResourceWithKind } from './graph'
+import { EmptyState, PageHeader } from '@hanzo/ui/product'
 
 const RESOURCE_KINDS: ResourceKind[] = ['sql', 'vector', 'kv', 'search', 's3', 'datastore', 'docdb']
 const POLL_MS = 15_000

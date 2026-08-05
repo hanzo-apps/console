@@ -15,8 +15,8 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, Copy } from '@hanzogui/lucide-icons-2'
 
 import { fmtScore, fullRef, locRef, scoreFraction, type Citation, type Span } from '~/lib/api/code'
-import { asColor } from '~/components/ui/color'
 import { RAMP } from '~/lib/theme/ramp'
+import { asColor } from '@hanzo/ui/product'
 
 /** A titled dashboard card — the ONE panel wrapper the board composes. */
 export function Panel({

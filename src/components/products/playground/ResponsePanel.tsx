@@ -14,11 +14,11 @@ import { useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Copy, Check, ThumbsUp, ThumbsDown, Square } from '@hanzogui/lucide-icons-2'
 
-import { BackendStateCard } from '~/components/ui/BackendState'
 import { MarkdownView } from './MarkdownView'
 import { costOf, formatLatency, formatTokens, formatUsd, tokensPerSecond } from './cost'
 import type { ChatRun } from './useChatRun'
 import type { ModelPricing } from '~/lib/api'
+import { BackendStateCard } from '@hanzo/ui/product'
 
 type Tab = 'response' | 'logs'
 

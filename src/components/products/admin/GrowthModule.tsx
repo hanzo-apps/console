@@ -60,19 +60,15 @@ import {
   type Step,
   type Strategy,
 } from '~/lib/guide/client'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard, UtilBar, LegendDot } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { Donut, type Slice } from '~/components/ui/Charts'
 import { RAMP } from '~/lib/theme/ramp'
-import { asColor } from '~/components/ui/color'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
-import { BackendStateCard, classifyRead } from '~/components/ui/BackendState'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
 import { toneColor } from '~/components/ui/tone'
 import { toneVar } from '~/components/ui/tone'
+import { BackendStateCard, EmptyState, FieldRow, FieldText, FieldTextArea, PageHeader, asColor, classifyRead } from '@hanzo/ui/product'
 
 // ── semantic palette (deliberately separate from the brand accent) ──────────
 const ON = toneVar('positive') // enabled / on-track

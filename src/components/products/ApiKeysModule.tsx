@@ -22,8 +22,8 @@ import { EVENTS } from '@hanzo/event'
 import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState } from '~/components/ui/States'
+import { PageHeader } from '@hanzo/ui/product'
 
 // The docs site serves everything under the `/docs` base path (a bare
 // `docs.hanzo.ai/<slug>` 404s), so the API reference is `/docs/api` — white-labeled

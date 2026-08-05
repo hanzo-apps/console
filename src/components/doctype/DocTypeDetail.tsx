@@ -19,12 +19,11 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, Ban, Globe, Pencil, PenOff, Save, Send, Trash2, TriangleAlert, X } from '@hanzogui/lucide-icons-2'
 import { RecordDetail, RecordForm, type FieldDefinition, type SelectOption } from '@hanzo/data'
 
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType, FrameworkDoc } from '~/lib/framework/types'
 import { docTypeToFields, toRecord, enrichLinks, savePayload, newDraft, statusField, titleOf, hasProjectField, PROJECT_FIELD } from '~/lib/framework/fields'
 import { loadLinkOptions, makeFieldOptions } from './data'
+import { BackendStateCard, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 export interface DocTypeDetailProps {
   client: FrameworkClient

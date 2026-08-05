@@ -17,9 +17,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Spinner, Text, XStack } from '@hanzo/gui'
 
 import { restGet } from '~/lib/api/client'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
+import { DataTable, StatusTag, type Column } from '@hanzo/ui/product'
 
 export type Rec = Record<string, unknown>
 

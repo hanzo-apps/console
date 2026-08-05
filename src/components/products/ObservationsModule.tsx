@@ -11,12 +11,10 @@ import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { O11yApi, type Observation, type O11yPageMeta } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { fmtDate } from './observability/format'
+import { DataTable, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 const PAGE_LIMIT = 50
 

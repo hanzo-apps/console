@@ -16,7 +16,6 @@ import { ArrowLeft, CircleDot, GitBranch, GitPullRequest, Play, Rocket } from '@
 
 import { GitApi, type RefList, type Repo } from '~/lib/api/git'
 import { fmtBytes } from '~/lib/api/agents'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import {
   ClonePanel,
   ComingSoonTab,
@@ -30,6 +29,7 @@ import { CodeView } from './CodeView'
 import { CommitsView } from './CommitsView'
 import { AgentActions } from '../code/AgentActions'
 import { askRepoPrompt, CODE_BASE } from '../code/hub-logic'
+import { BackendStateCard, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** The Repositories face of the Code hub — where the back link + repo rows live. */
 const REPOS_BASE = `${CODE_BASE}/repos`

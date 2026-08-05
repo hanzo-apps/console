@@ -35,11 +35,9 @@ import { CheckCircle2, RefreshCw, Star, XCircle } from '@hanzogui/lucide-icons-2
 import { ApiError } from '~/lib/api'
 import { ProviderAdminApi, deriveHealth, type AdminProvider, type ProviderHealth } from '~/lib/api/provider-admin'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldSwitch } from '~/components/ui/Field'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
+import { DataTable, FieldSwitch, PageHeader, type Column } from '@hanzo/ui/product'
 
 /** Provider-board guidance for the honest 404 / unauthorized states. */
 const PROVIDERS_COPY: HonestCopy = {

@@ -17,8 +17,6 @@ import { InferenceApi } from '~/lib/api/inference'
 import { ApiError } from '~/lib/api'
 import type { UsageRecord } from '~/lib/api/aimetrics'
 import { LineChart } from '~/components/ui/Charts'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { AccentButton, StatusDot } from './parts'
 import {
   endpointDailyRequests,
@@ -30,6 +28,7 @@ import {
   type LogLine,
 } from './logic'
 import { toneVar } from '~/components/ui/tone'
+import { PrimaryButton, StatusTag } from '@hanzo/ui/product'
 
 /** A label/value fact row. */
 function Fact({ label, value }: { label: string; value: ReactNode }) {

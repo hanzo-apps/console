@@ -29,9 +29,7 @@ import { BillingApi, type PaymentConfig } from '~/lib/api/billing'
 import { isLiveSquareEnv, dollarsToCents, validateTopupCents, PRESET_TOPUP_USD } from '~/lib/billing/square'
 import { useSquareCard } from '~/lib/billing/use-square-card'
 import { useCloudBalance, spendableCents, invalidateBalance, balanceSplitLabel } from '~/lib/billing/live-balance'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 

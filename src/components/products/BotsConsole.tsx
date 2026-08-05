@@ -31,8 +31,7 @@ import { Bot, Cpu, ExternalLink, Monitor, Play, RefreshCw, Square, Terminal } fr
 
 import { ApiError } from '~/lib/api'
 import { BotsApi, type BotRunRow, type BotSurface } from '~/lib/api/bots'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { PageHeader, StatusTag } from '@hanzo/ui/product'
 
 /** Statuses a run can't be stopped from — the Stop button is disabled on these. */
 const TERMINAL = new Set([

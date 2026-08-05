@@ -27,11 +27,10 @@ import { BookOpen, Plus, RefreshCw, Terminal } from '@hanzogui/lucide-icons-2'
 import { config } from '~/config'
 import { useReloadOnFocus } from '~/lib/use-reload-on-focus'
 import { FunctionsApi, type ServerlessFunction } from '~/lib/api/functions'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
 import { EngineBadge } from './functions/parts'
 import { FunctionsBrowser } from './functions/FunctionsBrowser'
 import { DeploymentsTab, TriggersTab, SecretsTab, SettingsTab } from './functions/tabs'
+import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const openExternal = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')

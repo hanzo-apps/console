@@ -25,8 +25,6 @@ import { PlatformApi, type Cluster } from '~/lib/api'
 import { BillingApi, type Usage } from '~/lib/api/billing'
 import { ComputeApi, type Gpu, type GpuAlert, type UsageLedger } from '~/lib/api/compute'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { interpretPlatformError } from './platform/state'
 import { livingOverviewModule } from './overview/living/LivingOverviewModule'
 import { CustomerGpus } from './gpus/CustomerGpus'
@@ -42,6 +40,7 @@ import { PricingTab } from './gpus/PricingTab'
 import { AlertsTab } from './gpus/AlertsTab'
 import { SettingsTab } from './gpus/SettingsTab'
 import type { Async, ComputeData } from './gpus/state'
+import { PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** Load every real source once; tabs read the typed state and stay presentational. */
 function useComputeData(): ComputeData {

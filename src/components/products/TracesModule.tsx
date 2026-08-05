@@ -22,13 +22,12 @@ import {
   type Trace,
   type TraceDetail,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { Badge, DetailRow, JsonCard, Tags } from './observability/parts'
 import { SpanTree } from './observability/SpanTree'
 import { elapsed, fmtCost, fmtDate, fmtLatency, fmtTokens, scoreValue } from './observability/format'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const PAGE_LIMIT = 50
 

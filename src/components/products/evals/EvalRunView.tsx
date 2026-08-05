@@ -13,13 +13,11 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Play } from '@hanzogui/lucide-icons-2'
 
 import { EvalsApi, type EvalRunSummary, type EvalItemResult } from '~/lib/api'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { ModelSelector } from '../ModelSelector'
 import { useModelCatalog } from '../useModelCatalog'
 import { groupByFamily } from '~/lib/api/families'
 import { modelId } from '~/lib/api/aicatalog'
+import { BackendStateCard, DataTable, FieldRow, FieldText, FieldTextArea, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const itemColumns: Column<EvalItemResult>[] = [
   { key: 'itemId', header: 'Item', width: 150, render: (r) => (

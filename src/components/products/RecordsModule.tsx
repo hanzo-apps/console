@@ -23,12 +23,11 @@ import { useRouter } from 'next/navigation'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, ChevronRight, Table, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { CollectionView } from '~/components/base-data/CollectionView'
 import { RecordDetailView } from '~/components/base-data/RecordDetailView'
 import { BaseDataApi } from '~/lib/base-data/api'
 import { baseCollectionToFields, type BaseCollection } from '~/lib/base-data/fields'
+import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** Product base path — must match the registry entry id (`records`). */
 const RECORDS_PATH = '/records'

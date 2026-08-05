@@ -18,10 +18,8 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Search } from '@hanzogui/lucide-icons-2'
 
 import { EmbeddingsApi, type EmbeddingHit, type SearchMode } from '~/lib/api/embeddings'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldSelect, FieldSlider, FieldTextArea } from '~/components/ui/Field'
 import { embeddingModelDimension, type Collection } from './logic'
+import { BackendStateCard, FieldRow, FieldSelect, FieldSlider, FieldTextArea, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Sub = 'search' | 'inspect'
 type Results =

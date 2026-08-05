@@ -11,9 +11,7 @@ import { useRouter } from 'next/navigation'
 
 import type { CatalogEntry, ProductSubpage } from '~/lib/products/registry'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FadeIn } from '~/components/ui/FadeIn'
+import { EmptyState, FadeIn, PageHeader } from '@hanzo/ui/product'
 
 export function AdminManagedNotice({
   entry,

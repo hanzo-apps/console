@@ -27,10 +27,7 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, BarChart3, Check, Download, Library, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { PromptsApi, type Prompt, type PromptMetricRow, type CatalogEntry } from '~/lib/api/prompts'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, DataTable, FieldRow, FieldText, FieldTextArea, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

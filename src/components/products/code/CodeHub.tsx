@@ -19,10 +19,10 @@ import { useRouter } from 'next/navigation'
 import { Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Code2 } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
 import { RepoList } from '../git/RepoList'
 import { SearchFace, AskFace } from './IntelligenceFaces'
 import { CODE_BASE, HUB_TABS, HUB_TAB_LABEL, type HubTab } from './hub-logic'
+import { PageHeader } from '@hanzo/ui/product'
 
 /** The in-page tab strip (Repositories · Search · Ask) — the gitea-style top navbar. */
 function HubTabs({ active, onSelect }: { active: HubTab; onSelect: (t: HubTab) => void }) {

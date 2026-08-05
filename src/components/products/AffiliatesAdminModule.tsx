@@ -15,15 +15,12 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { BadgeCheck, Ban, Coins, HandCoins, Handshake, Percent, RefreshCw, Users, Wallet, Zap } from '@hanzogui/lucide-icons-2'
 
 import { AdminAffiliatesApi, type AdminAffiliate, type AdminAffiliatesView, type SweepResult } from '~/lib/api/admin-affiliates'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 import { dollarsToCents, percentToBps, ratePct, shortDate, statusLabel, statusColor, usd } from './affiliates/logic'
 import { toneColor } from '~/components/ui/tone'
+import { EmptyState, FieldRow, FieldSelect, FieldText, PageHeader, PrimaryButton } from '@hanzo/ui/product'
 
 /** The backend caps the DIRECT (L1) rate at 9300 bps so the L1+L2+L3 schedule ≤ 100% of margin. */
 const MAX_RATE_BPS = 9300

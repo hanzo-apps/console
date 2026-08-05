@@ -48,13 +48,12 @@ import {
 } from '~/lib/api/families'
 import { useRecentModels } from '~/lib/models/recent'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { Filters } from '~/components/ui/Filters'
 import { useList } from '~/lib/list'
-import { FadeIn } from '~/components/ui/FadeIn'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { playgroundPathForModel } from './playground/share'
 import type { ApiError } from '~/lib/api'
+import { FadeIn, PageHeader } from '@hanzo/ui/product'
 
 /** Tabular-numeral className — fixed-advance digits for the numeric columns. */
 const TNUM = 'hz-tnum'

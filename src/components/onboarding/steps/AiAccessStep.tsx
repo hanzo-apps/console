@@ -24,12 +24,11 @@ import { Wand2, KeyRound, LogIn, Check, Plus } from '@hanzogui/lucide-icons-2'
 import { AiAccountsApi } from '~/lib/api/ai-accounts'
 import { AiConnectionsApi, AI_CONNECTION_PROVIDERS, type AiConnection, type AiConnectionProvider } from '~/lib/api/ai-connections'
 import { ApiError } from '~/lib/api/client'
-import { FieldSelect, FieldText } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { useToast } from '~/components/ui/Toast'
 import { ChoiceCard, StepShell, StepActions } from '~/components/onboarding/parts'
 import { withAiChoice, type AiChoice } from '~/lib/onboarding/steps'
 import type { StepProps } from '~/components/onboarding/types'
+import { FieldSelect, FieldText, PrimaryButton } from '@hanzo/ui/product'
 
 const providerLabel = (id: AiConnectionProvider): string => AI_CONNECTION_PROVIDERS.find((p) => p.id === id)?.label ?? id
 const providerFromLabel = (label: string): AiConnectionProvider =>

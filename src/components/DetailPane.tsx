@@ -28,8 +28,8 @@ import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import { X } from '@hanzogui/lucide-icons-2'
 
 import { SlideOver } from '~/components/ui/SlideOver'
-import { asColor, type IconLike } from '~/components/ui/color'
 import { Z } from '~/lib/z'
+import { asColor, type IconLike } from '@hanzo/ui/product'
 
 export type DetailDescriptor = {
   /** Pane title (the item's name). */

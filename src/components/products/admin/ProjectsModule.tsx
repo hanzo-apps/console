@@ -14,10 +14,9 @@ import { Boxes, ExternalLink, Network, RefreshCw, Building2 } from '@hanzogui/lu
 
 import { ApiError } from '~/lib/api'
 import { AdminProjectsApi, groupByOrg, type ProjectRow } from '~/lib/api/admin-projects'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const shortDate = (s: string): string => (s ? (s.split('T')[0] ?? s) : '—')
 

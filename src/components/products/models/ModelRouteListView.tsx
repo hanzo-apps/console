@@ -6,8 +6,7 @@ import { Plus, Trash } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ModelRouteApi, type ModelRoute } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const Tag = ({ on, on_label, off_label }: { on?: boolean; on_label: string; off_label: string }) => (
   <Text

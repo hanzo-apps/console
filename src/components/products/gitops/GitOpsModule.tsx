@@ -28,11 +28,8 @@ import { GitopsApi, type Application, type HealthStatus } from '~/lib/api/gitops
 import { GitApi } from '~/lib/api/git'
 import { BuildsApi } from '~/lib/api/builds'
 import { ApiError } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { Loader } from '~/components/ui/Loader'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { FieldText } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
 import { SuperAdminRequired, ErrorState, asApiError, isForbidden, type HonestCopy } from '~/components/ui/States'
 import { usePoll, useReducedMotion } from '../overview/living/hooks'
@@ -52,6 +49,7 @@ import {
 } from './logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
 import { Z } from '~/lib/z'
+import { EmptyState, FieldText, PageHeader } from '@hanzo/ui/product'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 

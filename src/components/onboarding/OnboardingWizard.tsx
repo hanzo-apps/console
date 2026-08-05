@@ -22,7 +22,6 @@ import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { usePreferences } from '~/lib/products/preferences'
 import { BrandMark } from '~/components/ui/BrandLogo'
-import { FadeIn } from '~/components/ui/FadeIn'
 import {
   ONBOARDING_STEPS,
   LAST_INDEX,
@@ -42,6 +41,7 @@ import { TeamStep } from '~/components/onboarding/steps/TeamStep'
 import { CreditsStep } from '~/components/onboarding/steps/CreditsStep'
 import { AiAccessStep } from '~/components/onboarding/steps/AiAccessStep'
 import { LaunchStep } from '~/components/onboarding/steps/LaunchStep'
+import { FadeIn } from '@hanzo/ui/product'
 
 const STEP_COMPONENTS: Record<StepId, (p: StepProps) => ReactNode> = {
   secure: SecureStep,

@@ -14,15 +14,13 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, AlertTriangle, RefreshCw, TrendingUp, Users } from '@hanzogui/lucide-icons-2'
 
 import { SentryApi, type IssueStatus, type Period, type SentryIssue, type SentryProject } from '~/lib/api/sentry'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { Sparkline, Donut } from '~/components/ui/Charts'
 import { ErrorState, asApiError } from '~/components/ui/States'
-import { FieldSelect } from '~/components/ui/Field'
 import { PeriodPicker, ProjectPicker, SearchInput } from './parts'
 import { summarizeIssues, levelSlices, fmtWhen, fmtCount, statusTone, ISSUE_SORTS } from './logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { DataTable, FieldSelect, PageHeader, type Column } from '@hanzo/ui/product'
 
 const STATUS_TABS: { label: string; status: '' | IssueStatus }[] = [
   { label: 'Unresolved', status: 'unresolved' },

@@ -22,9 +22,6 @@ import { RefreshCw, Search, X, Download } from '@hanzogui/lucide-icons-2'
 import { fetchUsageRecords, withinRange, type UsageRecord, type RangeKey } from '~/lib/api/aimetrics'
 import { exportCSV } from '~/lib/csv'
 import { findEntry } from '~/lib/products/registry'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { BarChart, Donut, type Slice } from '~/components/ui/Charts'
 import { RAMP, OTHER } from '~/lib/theme/ramp'
 import {
@@ -38,6 +35,7 @@ import {
   type SpendGroup,
 } from './logic'
 import { RangeTabs } from './RangeTabs'
+import { BackendStateCard, DataTable, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 const DIM_LABEL: Record<SpendDimension, string> = { model: 'Model', provider: 'Provider', product: 'Product', agent: 'Agent' }

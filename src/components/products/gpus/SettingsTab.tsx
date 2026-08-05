@@ -10,8 +10,8 @@ import { KeyRound, Server } from '@hanzogui/lucide-icons-2'
 
 import { currentOrg } from '~/lib/org-scope'
 import { config } from '~/config'
-import { FieldRow } from '~/components/ui/Field'
 import { HintButton } from './charts'
+import { FieldRow } from '@hanzo/ui/product'
 
 const Row = ({ label, value }: { label: string; value: string }) => (
   <FieldRow label={label}>

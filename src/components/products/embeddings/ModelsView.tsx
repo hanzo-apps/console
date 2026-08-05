@@ -13,11 +13,9 @@ import { RefreshCw, Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { EmbeddingsApi, type EmbeddingResult } from '~/lib/api/embeddings'
 import { type CatalogModel, providerLabels } from '~/lib/api'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldSelect, FieldTextArea } from '~/components/ui/Field'
 import { embeddingModelDimension } from './logic'
+import { DataTable, FieldRow, FieldSelect, FieldTextArea, PrimaryButton, type Column } from '@hanzo/ui/product'
 
 const fmtPrice = (perM?: number): string => {
   if (perM == null) return '—'

@@ -33,14 +33,12 @@ import {
   type Opportunity,
   type Summary,
 } from '~/lib/api/crm'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import {
   COMPANY_FIELDS, CONTACT_FIELDS, OPPORTUNITY_FIELDS,
   companyRecord, contactRecord, opportunityRecord,
   companyOptions, companyNameLookup,
 } from './crm/collections'
+import { BackendStateCard, FieldRow, FieldSelect, FieldText, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

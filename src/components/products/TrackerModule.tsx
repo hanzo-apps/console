@@ -47,15 +47,14 @@ import { TrackerApi, type Project, type Issue } from '~/lib/api/tracker'
 import { restPost, originV1Url } from '~/lib/api/client'
 import { ApiError } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { FieldRow, FieldSelect } from '~/components/ui/Field'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { useToast } from '~/components/ui/Toast'
 import { myIssues, isTypingTarget } from './tracker/logic'
 import { IssuesView, TeamsView, CyclesView, RoadmapView, TeamHeader } from './tracker/views'
 import { IssueDetail } from './tracker/IssueDetail'
 import { TrackerCommand, type Command } from './tracker/TrackerCommand'
+import { FieldRow, FieldSelect, PageHeader } from '@hanzo/ui/product'
 
 type Editing = { mode: 'create' } | { mode: 'edit'; issue: Issue }
 

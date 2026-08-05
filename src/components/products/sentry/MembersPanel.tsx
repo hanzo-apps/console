@@ -15,13 +15,12 @@ import { Building2, RefreshCw, Settings2, Users } from '@hanzogui/lucide-icons-2
 import { TeamApi } from '~/lib/api/team'
 import type { IamUser, Organization, Role } from '~/lib/api/admin'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { MetricCard } from '~/components/ui/Metric'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Pill, Fact } from './parts'
 import { fmtDateTime } from './logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 type Data = { org: Organization | null; members: IamUser[]; roles: Role[] }
 type State = { phase: 'loading' } | { phase: 'error'; error: unknown } | { phase: 'ready'; data: Data }

@@ -77,13 +77,12 @@ import { commandBarSystemPrompt, hanzoAssistantSystemPrompt } from '~/lib/assist
 import { searchDestinations, type Destination } from '~/lib/products/search'
 import { DEFAULT_GROUP_LABEL, pinnedFirst } from '~/lib/products/pins-core'
 import { usePins, useProductColors } from '~/lib/products/pins'
-import { asColor } from '~/components/ui/color'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, asColor, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 

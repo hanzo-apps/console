@@ -16,9 +16,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, Download, DollarSign, Wallet, CalendarDays, Hash, Activity, Server, Cpu } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { BarChart, Donut, type ChartPoint, type Slice } from '~/components/ui/Charts'
 import { RAMP, OTHER } from '~/lib/theme/ramp'
 import { MetricCard, LegendDot } from '~/components/ui/Metric'
@@ -29,6 +26,7 @@ import { UsageSummaryApi, type UsageSummary, type CategorySpend } from '~/lib/ap
 import { VisorApi, type VisorMachine } from '~/lib/api/visor'
 import { exportCSV } from '~/lib/csv'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { BackendStateCard, DataTable, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const usd = (cents: number): string => {
   const d = cents / 100

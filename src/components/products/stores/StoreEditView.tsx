@@ -5,15 +5,8 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError, StoreApi, type Store } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import {
-  FieldRow,
-  FieldText,
-  FieldTextArea,
-  FieldSelect,
-  FieldSwitch,
-} from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { SPLIT_OPTIONS, SEARCH_OPTIONS, STATE_OPTIONS } from './logic'
+import { FieldRow, FieldSelect, FieldSwitch, FieldText, FieldTextArea, PageHeader } from '@hanzo/ui/product'
 
 /** Store editor. Loaded by owner/name. Mirrors StoreEditPage.js core fields. */
 export function StoreEditView({ name, onDone }: { name: string; onDone: () => void }) {

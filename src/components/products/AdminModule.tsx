@@ -23,10 +23,8 @@ import {
 } from '~/lib/api/admin'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText } from '~/components/ui/Field'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
+import { DataTable, FieldRow, FieldText, PageHeader, type Column } from '@hanzo/ui/product'
 
 /** IAM-specific guidance for the honest 404 / unauthorized states. */
 const IAM_COPY: HonestCopy = {

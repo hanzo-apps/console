@@ -39,13 +39,13 @@ import { findEntry, type CatalogEntry, type ProductIcon as IconType } from '~/li
 import { PlatformApi, type PlatformApp } from '~/lib/api/platform'
 import { useProductColors } from '~/lib/products/pins'
 import { interpretPlatformError, type PlatformError } from '~/components/products/platform/state'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import type { OverviewAction, OverviewSpec } from './spec'
 import { resolveSpec } from './resolve'
 import { o11yServiceFor } from '~/components/products/subpage/sources'
 import { ProductObservability } from '~/components/products/observability/ProductObservability'
 import { toneVar } from '~/components/ui/tone'
+import { PageHeader } from '@hanzo/ui/product'
 
 /** Map a spec action's icon name to a real Lucide icon (kept out of the data layer). */
 const ACTION_ICON: Record<NonNullable<OverviewAction['icon']>, IconType> = {

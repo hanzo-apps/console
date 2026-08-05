@@ -26,15 +26,8 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Blocks, ListChecks, Play, Plus, Power, RefreshCw, Trash2, Workflow } from '@hanzogui/lucide-icons-2'
 
 import { AutomationsApi, type AutomationFlow, type FlowRun, type Piece } from '~/lib/api/automations'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldSelect, FieldText } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { StatusTag } from '~/components/ui/StatusTag'
 import {
   authLabel,
   capabilitySummary,
@@ -49,6 +42,7 @@ import {
   validateFlowName,
 } from './automations/logic'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, DataTable, EmptyState, FieldSelect, FieldText, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 /** Cap the rendered connector cards; search/category narrow the rest (honest note). */
 const CATALOG_RENDER_CAP = 240

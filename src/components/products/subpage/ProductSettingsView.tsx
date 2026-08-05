@@ -24,9 +24,9 @@ import type { CatalogEntry } from '~/lib/products/registry'
 import { config } from '~/config'
 import { githubUrl } from '~/lib/oss-program'
 import { PlatformApi, type PlatformApp } from '~/lib/api/platform'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { Panel, Row } from '~/components/ui/Panel'
 import { settingsConfigFor, subpageSourcesFor } from './sources'
+import { PageHeader } from '@hanzo/ui/product'
 
 const openExternal = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')

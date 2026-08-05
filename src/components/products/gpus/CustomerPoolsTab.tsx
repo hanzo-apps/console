@@ -14,11 +14,9 @@ import { Layers } from '@hanzogui/lucide-icons-2'
 
 import { fmtInt, type GpuPool } from '~/lib/api/compute'
 import type { Cluster } from '~/lib/api'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { gpuPoolsFromClusters } from './customer-logic'
 import type { Async } from './state'
+import { DataTable, EmptyState, StatusTag, type Column } from '@hanzo/ui/product'
 
 const columns: Column<GpuPool>[] = [
   { key: 'name', header: 'Pool', render: (p) => <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{p.name || p.id}</Text> },

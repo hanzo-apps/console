@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CloudModelApi, type CatalogModel } from '~/lib/api'
-import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type State =
   | { phase: 'loading' }

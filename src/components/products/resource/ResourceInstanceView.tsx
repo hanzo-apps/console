@@ -16,13 +16,11 @@ import { ArrowLeft, BookOpen, ExternalLink, Github, KeyRound, LayoutDashboard, R
 
 import { ApiError, ProvisioningApi, type Resource, type ResourceKind } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
 
 import { connectSnippet, docsUrl, endpoint, provisionSnippet, repoUrl, specFor } from './logic'
 import { DetailRow, openHref, SectionCard, SnippetBlock, TabBar, type TabDef } from './parts'
+import { BackendStateCard, PageHeader, StatusTag, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const fmtDate = (v?: string): string => {
   if (!v) return '—'

@@ -24,12 +24,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, Boxes, ExternalLink, Plus, Server, Trash2 } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { BaseTenantsApi, type BaseInstance } from '~/lib/base-data/tenants'
 import { ApiError } from '~/lib/api'
 import {
@@ -43,6 +37,7 @@ import {
   statusOf,
   baseHref,
 } from './bases-logic'
+import { BackendStateCard, EmptyState, FieldRow, FieldSelect, FieldText, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** Product base path — must match the registry entry id (`base`). */
 const BASE_PATH = '/base'
