@@ -100,7 +100,7 @@ export function CommitsView({ name, refName, path }: { name: string; refName: st
             <Text className="hz-mono" fontSize="$2" color="$color10">
               {c.shortSha}
             </Text>
-            <CopyButton value={c.sha} label="" ariaLabel={`Copy commit ${c.shortSha}`} size="$1" />
+            <CopyButton value={c.sha} label={`Copy commit ${c.shortSha}`} size={20} id="commit-sha" />
           </XStack>
         </XStack>
       ))}

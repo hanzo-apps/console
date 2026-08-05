@@ -24,7 +24,7 @@ import {
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
-import { DataTable, FieldRow, FieldText, PageHeader, type Column } from '@hanzo/ui/product'
+import { DataTable, FieldRow, FieldText, PageHeader, SecretInput, type Column } from '@hanzo/ui/product'
 
 /** IAM-specific guidance for the honest 404 / unauthorized states. */
 const IAM_COPY: HonestCopy = {
@@ -219,7 +219,7 @@ function UsersAdminView({ owner }: { owner: string }) {
           <Text fontSize="$4" fontWeight="700">New user in {owner}</Text>
           <FieldRow label="Name"><FieldText value={name} onChange={setName} placeholder="jdoe" disabled={saving} /></FieldRow>
           <FieldRow label="Email"><FieldText value={email} onChange={setEmail} placeholder="jdoe@hanzo.ai" disabled={saving} /></FieldRow>
-          <FieldRow label="Password"><FieldText value={password} onChange={setPassword} placeholder="initial password" secure disabled={saving} /></FieldRow>
+          <FieldRow label="Password"><SecretInput value={password} onChange={setPassword} placeholder="initial password" disabled={saving} copy={false} id="initial-password" /></FieldRow>
           <XStack gap="$2" items="center">
             <Button self="flex-start" icon={<Plus size={15} />} disabled={saving} onPress={() => void create()}>
               {saving ? 'Creating…' : 'Create user'}

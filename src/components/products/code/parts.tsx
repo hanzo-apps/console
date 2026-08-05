@@ -16,9 +16,14 @@ import { Check, Copy } from '@hanzogui/lucide-icons-2'
 
 import { fmtScore, fullRef, locRef, scoreFraction, type Citation, type Span } from '~/lib/api/code'
 import { RAMP } from '~/lib/theme/ramp'
-import { asColor } from '@hanzo/ui/product'
+import { CopyButton, asColor } from '@hanzo/ui/product'
 
 /** A titled dashboard card — the ONE panel wrapper the board composes. */
+/** Copy a `repo file:line` reference — the shared control, given the reference. */
+export function CopyRef({ loc, size = 24 }: { loc: { repo?: string; file?: string; line?: number; endLine?: number }; size?: number }) {
+  return <CopyButton value={fullRef(loc)} label="Copy reference" size={size} id="code-ref" />
+}
+
 export function Panel({
   title,
   action,
@@ -111,23 +116,6 @@ export function RefButton({ loc, onPress }: { loc: { file?: string; line?: numbe
   )
 }
 
-/** Copy a `repo file:line` reference to the clipboard (honest — shows a check on success). */
-export function CopyRef({ loc, size = '$1' }: { loc: { repo?: string; file?: string; line?: number; endLine?: number }; size?: '$1' | '$2' }) {
-  const [done, setDone] = useState(false)
-  const copy = () => {
-    const text = fullRef(loc)
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      void navigator.clipboard.writeText(text).then(() => {
-        setDone(true)
-        setTimeout(() => setDone(false), 1200)
-      })
-    }
-  }
-  return (
-    <Button size={size} chromeless icon={done ? <Check size={13} /> : <Copy size={13} />} onPress={copy} aria-label="Copy reference" />
-  )
-}
-
 /** One-line snippet preview (monospace, truncated). */
 export function SnippetLine({ text }: { text: string }) {
   if (!text) return <Text fontSize="$2" color="$color10">—</Text>
@@ -177,7 +165,7 @@ export function SpanDetail({ span }: { span: Span }) {
           <Text fontSize="$3" fontWeight="700" color="$color12">
             Snippet
           </Text>
-          <CopyRef loc={span} size="$2" />
+          <CopyRef loc={span} />
         </XStack>
         {span.snippet ? (
           <YStack borderWidth={1} borderColor="$borderColor" rounded="$4" bg="$color1" p="$3" style={{ overflowX: 'auto' }}>

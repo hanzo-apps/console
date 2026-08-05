@@ -25,44 +25,7 @@ import {
 
 import type { Ref, RefList } from '~/lib/api/git'
 import { paper } from '~/components/ui/paper'
-
-/** Copy a value to the clipboard, showing a transient check. ONE control, DRY. */
-export function CopyButton({
-  value,
-  label = 'Copy',
-  ariaLabel,
-  size = '$2',
-}: {
-  value: string
-  label?: string
-  ariaLabel?: string
-  size?: '$1' | '$2' | '$3'
-}) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard?.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* clipboard blocked (insecure context) — the value is already visible */
-    }
-  }
-  return (
-    <Button
-      size={size}
-      chromeless
-      aria-label={ariaLabel ?? label}
-      disabled={!value}
-      icon={copied ? <Check size={14} /> : <Copy size={14} />}
-      onPress={() => void copy()}
-    >
-      <Text fontSize="$2" color="$color11">
-        {copied ? 'Copied' : label}
-      </Text>
-    </Button>
-  )
-}
+import { CopyButton } from '@hanzo/ui/product'
 
 /**
  * The clone panel — a segmented HTTPS/SSH toggle over one copyable URL box, the gitea
@@ -104,7 +67,7 @@ export function ClonePanel({ cloneUrl, sshUrl }: { cloneUrl: string; sshUrl: str
         <Text className="hz-mono" fontSize="$2" color="$color12" flex={1} numberOfLines={1} selectable>
           {value || '—'}
         </Text>
-        {value ? <CopyButton value={value} ariaLabel={`Copy ${proto} clone URL`} /> : null}
+        {value ? <CopyButton value={value} label={`Copy ${proto} clone URL`} id="clone-url" /> : null}
       </XStack>
     </YStack>
   )
@@ -383,3 +346,6 @@ export function ComingSoonTab({
 }
 
 /** The Actions tab body — same honest empty, with the run icon. */
+
+// The ONE copy control, re-exported so git's own views keep a single import site.
+export { CopyButton } from '@hanzo/ui/product'

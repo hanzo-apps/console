@@ -20,7 +20,7 @@ import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
 import { toneColor } from '~/components/ui/tone'
 import { providerColor } from '~/lib/products/ai-accounts'
-import { BackendStateCard, FieldRow, FieldSelect, FieldText, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { BackendStateCard, FieldRow, FieldSelect, FieldText, PageHeader, SecretInput, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -140,7 +140,7 @@ function ProviderRow({
             />
           </FieldRow>
           <FieldRow label={MODE_LABEL[mode]}>
-            <FieldText value={secret} onChange={setSecret} secure placeholder={`Paste your ${MODE_LABEL[mode].toLowerCase()}`} />
+            <SecretInput value={secret} onChange={setSecret} placeholder={`Paste your ${MODE_LABEL[mode].toLowerCase()}`} id={mode} />
           </FieldRow>
           <FieldRow label="Base URL">
             <FieldText value={baseUrl} onChange={setBaseUrl} placeholder="Optional — self-hosted gateway" />

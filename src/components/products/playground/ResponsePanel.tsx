@@ -18,27 +18,9 @@ import { MarkdownView } from './MarkdownView'
 import { costOf, formatLatency, formatTokens, formatUsd, tokensPerSecond } from './cost'
 import type { ChatRun } from './useChatRun'
 import type { ModelPricing } from '~/lib/api'
-import { BackendStateCard } from '@hanzo/ui/product'
+import { BackendStateCard, CopyButton } from '@hanzo/ui/product'
 
 type Tab = 'response' | 'logs'
-
-function CopyButton({ text, size = 14 }: { text: string; size?: number }) {
-  const [done, setDone] = useState(false)
-  const copy = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(
-        () => {
-          setDone(true)
-          setTimeout(() => setDone(false), 1200)
-        },
-        () => {},
-      )
-    }
-  }
-  return (
-    <Button size="$1" chromeless icon={done ? <Check size={size} color="$green10" /> : <Copy size={size} />} onPress={copy} />
-  )
-}
 
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -128,7 +110,7 @@ export function ResponsePanel({
           ) : null}
           {run.content ? (
             <>
-              <CopyButton text={run.content} />
+              <CopyButton value={run.content} label="Copy response" id="response" />
               <Button
                 size="$1"
                 chromeless
@@ -238,7 +220,7 @@ export function ResponsePanel({
             <Text fontSize="$1" color="$color10" letterSpacing={0.5}>
               REQUEST
             </Text>
-            <CopyButton text={requestJson} />
+            <CopyButton value={requestJson} label="Copy request" id="request" />
           </XStack>
           <Card p="$3" bg="$color2" borderWidth={1} borderColor="$borderColor">
             <Text fontSize="$1" color="$color11" style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>

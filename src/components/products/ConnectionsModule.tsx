@@ -23,7 +23,7 @@ import { useToast } from '~/components/ui/Toast'
 import { ApiError } from '~/lib/api/client'
 import { AiConnectionsApi, AI_CONNECTION_PROVIDERS, type AiConnection, type AiConnectionProvider } from '~/lib/api/ai-connections'
 import { toneColor } from '~/components/ui/tone'
-import { BackendStateCard, FieldText, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { BackendStateCard, FieldText, PageHeader, PrimaryButton, SecretInput, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Phase = { t: 'loading' } | { t: 'ready' } | { t: 'error'; state: BackendState }
 
@@ -109,7 +109,7 @@ function ProviderCard({
         </YStack>
       ) : (
         <YStack gap="$2">
-          <FieldText value={key} onChange={setKey} secure placeholder={meta.keyHint} disabled={busy} />
+          <SecretInput value={key} onChange={setKey} placeholder={meta.keyHint} disabled={busy} id={meta.id} />
           <XStack gap="$2" flexWrap="wrap">
             <PrimaryButton icon={<KeyRound size={15} />} onPress={() => onConnect(key)} disabled={busy || key.trim() === ''}>
               Connect

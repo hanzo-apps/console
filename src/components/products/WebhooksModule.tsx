@@ -41,7 +41,7 @@ import { ApiError, restGet, restPost, restDelete, restPatch, cloudProxyV1Url } f
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import { VerifyCard } from './webhooks/VerifyCard'
 import { SIGNATURE_SCHEME } from './webhooks/verify'
-import { DataTable, FieldRow, FieldText, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
+import { CopyButton, DataTable, FieldRow, FieldText, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 const enc = encodeURIComponent
 
@@ -131,28 +131,6 @@ const shortTime = (iso?: string): string => {
 
 // ── Small reusable copy control ─────────────────────────────────────────────────
 
-function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <Button
-      size="$2"
-      icon={copied ? <Check size={14} /> : <Copy size={14} />}
-      onPress={() =>
-        void navigator.clipboard?.writeText(value).then(
-          () => {
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1400)
-          },
-          () => undefined,
-        )
-      }
-      aria-label={label}
-    >
-      {copied ? 'Copied' : label}
-    </Button>
-  )
-}
-
 /** Small event pill. */
 function EventChip({ children }: { children: string }) {
   return (
@@ -185,7 +163,7 @@ function SecretReveal({ title, url, secret, onDismiss }: { title: string; url: s
         <Text flex={1} minW={200} fontSize="$2" color="$color12" className="hz-mono" style={{ wordBreak: 'break-all' }}>
           {secret}
         </Text>
-        <CopyButton value={secret} label="Copy secret" />
+        <CopyButton value={secret} label="Copy secret" id="webhook-secret" />
       </XStack>
       <Text fontSize="$1" color="$color10" className="hz-mono">
         Verify each delivery: {SIGNATURE_SCHEME}
