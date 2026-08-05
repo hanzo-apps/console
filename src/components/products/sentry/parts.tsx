@@ -12,6 +12,7 @@ import { Check, Copy, Search } from '@hanzogui/lucide-icons-2'
 
 import { PERIODS, type Period, type SentryProject } from '~/lib/api/sentry'
 import { toneColor } from '~/components/ui/tone'
+import { CopyButton } from '@hanzo/ui/product'
 
 /** A compact time-range button row (1h · 24h · 7d · …). */
 export function PeriodPicker({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
@@ -111,24 +112,6 @@ export function SearchInput({
   )
 }
 
-/** Copy-to-clipboard button with a transient check. */
-export function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
-  const [done, setDone] = useState(false)
-  const copy = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      void navigator.clipboard.writeText(text).then(() => {
-        setDone(true)
-        setTimeout(() => setDone(false), 1500)
-      })
-    }
-  }
-  return (
-    <Button size="$2" chromeless icon={done ? <Check size={14} color={toneColor('positive')} /> : <Copy size={14} />} onPress={copy}>
-      {done ? 'Copied' : label}
-    </Button>
-  )
-}
-
 /** A monospace code block with a copy affordance (DSN, SDK snippet). */
 export function CodeBlock({ code, title }: { code: string; title?: string }) {
   return (
@@ -137,7 +120,7 @@ export function CodeBlock({ code, title }: { code: string; title?: string }) {
         <Text fontSize="$2" color="$color11" fontWeight="500">
           {title ?? 'Snippet'}
         </Text>
-        <CopyButton text={code} />
+        <CopyButton value={code} label="Copy snippet" id="sentry-snippet" />
       </XStack>
       <YStack p="$3" style={{ overflowX: 'auto' }}>
         <Text className="hz-mono" fontSize="$2" color="$color12" style={{ whiteSpace: 'pre', display: 'block' }}>

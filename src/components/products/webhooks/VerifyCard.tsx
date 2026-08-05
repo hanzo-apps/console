@@ -18,31 +18,7 @@ import {
   goVerifySnippet,
   nodeVerifySnippet,
 } from './verify'
-
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <Button
-      size="$1"
-      chromeless
-      icon={copied ? <Check size={12} /> : <Copy size={12} />}
-      aria-label="Copy code"
-      onPress={() =>
-        void navigator.clipboard?.writeText(value).then(
-          () => {
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1400)
-          },
-          () => undefined,
-        )
-      }
-    >
-      <Text fontSize="$1" color="$color10">
-        {copied ? 'Copied' : 'Copy'}
-      </Text>
-    </Button>
-  )
-}
+import { CopyButton } from '@hanzo/ui/product'
 
 function CodeBlock({ language, code }: { language: string; code: string }) {
   return (
@@ -51,7 +27,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
         <Text fontSize="$1" color="$color10" className="hz-mono">
           {language}
         </Text>
-        <CopyButton value={code} />
+        <CopyButton value={code} label="Copy code" id="webhook-verify" />
       </XStack>
       <YStack style={{ overflowX: 'auto' }} p="$3" bg="$color1">
         <Text fontSize="$2" color="$color12" className="hz-mono" style={{ whiteSpace: 'pre', display: 'block' }}>

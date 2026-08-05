@@ -23,7 +23,7 @@ import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { config } from '~/config'
 import { ErrorState } from '~/components/ui/States'
-import { PageHeader } from '@hanzo/ui/product'
+import { CopyButton, PageHeader, SecretInput } from '@hanzo/ui/product'
 
 // The docs site serves everything under the `/docs` base path (a bare
 // `docs.hanzo.ai/<slug>` 404s), so the API reference is `/docs/api` — white-labeled
@@ -37,25 +37,6 @@ function fmtKeyDate(iso?: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-/** Copy-to-clipboard button with a transient confirmed state. */
-function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard?.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* clipboard blocked (insecure context) — the value is already visible */
-    }
-  }
-  return (
-    <Button size="$2" icon={copied ? <Check size={14} /> : <Copy size={14} />} onPress={() => void copy()}>
-      {copied ? 'Copied' : label}
-    </Button>
-  )
-}
-
 /** The full secret, shown ONCE right after creation. */
 function NewKeyCard({ accessKey, onDone }: { accessKey: string; onDone: () => void }) {
   return (
@@ -66,19 +47,7 @@ function NewKeyCard({ accessKey, onDone }: { accessKey: string; onDone: () => vo
           Your new API key
         </Text>
       </XStack>
-      <XStack gap="$2" items="center" flexWrap="wrap">
-        <Text
-          fontSize="$3"
-          color="$color12"
-          flex={1}
-          minW={260}
-          selectable
-          style={{ fontFamily: 'monospace' }}
-        >
-          {accessKey}
-        </Text>
-        <CopyButton value={accessKey} />
-      </XStack>
+      <SecretInput value={accessKey} id="api-key" />
       <XStack gap="$2" items="center">
         <TriangleAlert size={14} color="$yellow10" />
         <Text fontSize="$2" color="$color11">

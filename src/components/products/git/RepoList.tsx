@@ -111,7 +111,7 @@ export function RepoList() {
         // also open the row's browser.
         render: (r) => (
           <XStack onPress={(e) => e.stopPropagation()}>
-            <CopyButton value={cloneCommand(r)} label="Clone URL" ariaLabel={`Copy git clone command for ${r.name}`} />
+            <CopyButton value={cloneCommand(r)} label={`Copy git clone command for ${r.name}`} id="clone-command" />
           </XStack>
         ),
       },

@@ -21,7 +21,7 @@ import { ApiError, KmsAdminApi, type KmsSecretMeta } from '~/lib/api'
 import { currentOrg, isScopedAway } from '~/lib/org-scope'
 import { config } from '~/config'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
-import { DataTable, FieldRow, FieldText, PageHeader, type Column } from '@hanzo/ui/product'
+import { DataTable, FieldRow, FieldText, PageHeader, SecretInput, type Column } from '@hanzo/ui/product'
 
 /** KMS-specific guidance for the honest 404 / unauthorized states. */
 const KMS_COPY: HonestCopy = {
@@ -199,7 +199,7 @@ export function KmsModule(_props: { params: Record<string, string> }) {
           <FieldRow label="Path"><FieldText value={fPath} onChange={setFPath} placeholder="providers/alpaca" disabled={saving} /></FieldRow>
           <FieldRow label="Name"><FieldText value={fName} onChange={setFName} placeholder="api_key" disabled={saving} /></FieldRow>
           <FieldRow label="Env"><FieldText value={fEnv} onChange={setFEnv} placeholder="default" disabled={saving} /></FieldRow>
-          <FieldRow label="Value"><FieldText value={fValue} onChange={setFValue} placeholder="secret value" secure disabled={saving} /></FieldRow>
+          <FieldRow label="Value"><SecretInput value={fValue} onChange={setFValue} placeholder="secret value" disabled={saving} id="kms-value" /></FieldRow>
           <XStack gap="$2" items="center">
             <Button self="flex-start" icon={<Plus size={15} />} disabled={saving} onPress={() => void submit()}>
               {saving ? 'Saving…' : 'Save secret'}

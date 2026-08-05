@@ -280,7 +280,7 @@ function BlobPane({ name, refName, path }: { name: string; refName: string; path
               </Text>
             </Button>
           ) : null}
-          {text != null ? <CopyButton value={text} label="Copy" ariaLabel="Copy file contents" /> : null}
+          {text != null ? <CopyButton value={text} label="Copy file contents" id="file-contents" /> : null}
           {/* File-level agentic handoff — Ask the built-in assistant about THIS file,
               seeded with its (bounded) content. Edit/Chat are repo-level (shown once in
               the repo header), so this is Ask-only. */}

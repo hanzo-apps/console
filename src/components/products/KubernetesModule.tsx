@@ -37,7 +37,7 @@ import {
   describeAttachError,
   CONNECT_SNIPPET,
 } from './kubernetes/logic'
-import { BackendStateCard, DataTable, EmptyState, FieldRow, FieldSwitch, FieldText, FieldTextArea, PageHeader, StatusTag, classifyRead, type BackendState, type Column } from '@hanzo/ui/product'
+import { BackendStateCard, CopyButton, DataTable, EmptyState, FieldRow, FieldSwitch, FieldText, FieldTextArea, PageHeader, StatusTag, classifyRead, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
@@ -47,25 +47,6 @@ const fmtDate = (v?: string): string => {
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString()
 }
 
-/** Copy-to-clipboard button with a transient confirmed state. */
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard?.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* clipboard blocked (insecure context) — the value is already visible + selectable */
-    }
-  }
-  return (
-    <Button size="$2" chromeless icon={copied ? <Check size={14} /> : <Copy size={14} />} onPress={() => void copy()}>
-      {copied ? 'Copied' : 'Copy'}
-    </Button>
-  )
-}
-
 /** A monospace, copy-selectable one-line command block. */
 function Snippet({ code }: { code: string }) {
   return (
@@ -73,7 +54,7 @@ function Snippet({ code }: { code: string }) {
       <Text flex={1} fontSize="$2" color="$color12" numberOfLines={1} selectable style={{ fontFamily: 'monospace' }}>
         {code}
       </Text>
-      <CopyButton value={code} />
+      <CopyButton value={code} label="Copy command" id="kubeconfig" />
     </XStack>
   )
 }

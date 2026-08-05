@@ -40,7 +40,7 @@ import {
   type EnvDraft,
 } from './logic'
 import { toneVar } from '~/components/ui/tone'
-import { DataTable, FieldText, PrimaryButton, StatusTag, type Column } from '@hanzo/ui/product'
+import { DataTable, FieldText, PrimaryButton, SecretInput, StatusTag, type Column } from '@hanzo/ui/product'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -355,13 +355,17 @@ function EnvRow({ d, disabled, onPatch, onRemove }: { d: EnvDraft; disabled?: bo
           </XStack>
         ) : (
           <>
-            <FieldText
-              value={d.value}
-              onChange={(value) => onPatch({ value })}
-              disabled={disabled}
-              secure={d.secret}
-              placeholder={d.secret ? 'secret value' : 'value'}
-            />
+            {d.secret ? (
+              <SecretInput
+                value={d.value}
+                onChange={(value) => onPatch({ value })}
+                disabled={disabled}
+                placeholder="secret value"
+                id={d.key || 'env'}
+              />
+            ) : (
+              <FieldText value={d.value} onChange={(value) => onPatch({ value })} disabled={disabled} placeholder="value" />
+            )}
             {d.secret && d.sealed && d.replace ? (
               <Button size="$1" self="flex-start" onPress={() => onPatch({ replace: false, value: '' })} disabled={disabled}>
                 Keep current
