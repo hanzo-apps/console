@@ -119,7 +119,7 @@ function Tooltip({ x, height, label, value }: { x: number; height: number; label
           borderRadius: 8,
           padding: '6px 9px',
           fontSize: 11,
-          lineHeight: 1.35,
+          lineHeight: '1.35',
           color: RAMP[0],
           whiteSpace: 'nowrap',
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',

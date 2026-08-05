@@ -87,16 +87,25 @@ export const GUI8_RULES: readonly Gui8Rule[] = [
 export type Gui8Violation = { readonly rule: Gui8Rule; readonly match: string; readonly line: number }
 
 /**
+ * Blank out comment spans, keeping every newline so line numbers still point at the
+ * source. These props are named in prose far more often than they are written, and a
+ * doc comment that cannot mention the bug it documents is a worse rule than none —
+ * which means the whole comment, not just the line its opener sits on. The fix
+ * comments at the two call sites are `{/* … *\/}` JSX blocks that run several lines;
+ * matching a `//` prefix per line never saw the continuations.
+ */
+const withoutComments = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (c) => c.replace(/[^\n]/g, ' '))
+
+/**
  * Every banned gui 7 spelling in one file's source text.
  *
- * Line-based so a report points at the offending line, and so a `//`-prefixed line is
- * skipped: these props are named in prose (this module, the fix comments at the two
- * call sites) far more often than they are written, and a doc comment that cannot
- * mention the bug it documents is a worse rule than none.
+ * Line-based so a report points at the offending line, and comment-blind so prose
+ * about these props is never mistaken for a use of them.
  */
 export function findGui8Violations(source: string): Gui8Violation[] {
   const out: Gui8Violation[] = []
-  source.split('\n').forEach((text, i) => {
+  withoutComments(source).split('\n').forEach((text, i) => {
     if (/^\s*(?:\/\/|\*|\/\*)/.test(text)) return
     for (const rule of GUI8_RULES) {
       for (const m of text.matchAll(rule.pattern)) out.push({ rule, match: m[0], line: i + 1 })
