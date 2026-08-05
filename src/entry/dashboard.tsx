@@ -107,6 +107,7 @@ import { SidebarBrand } from '~/components/SidebarBrand'
 import { AccountMenu } from '~/components/AccountMenu'
 import { BrandMark } from '~/components/ui/BrandLogo'
 import { shellFor, isProductShell } from '~/lib/products/shell'
+import { HanzoAppLauncher } from '@hanzogui/shell'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { ContextSwitcher } from '~/components/ContextSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
@@ -1070,6 +1071,10 @@ export function Dashboard({ children }: { children: ReactNode }) {
             <ThemeToggle />
             <Button size="$2" chromeless icon={<CircleHelp size={16} />} onPress={openDocs} aria-label="Documentation" />
             <Button size="$2" chromeless icon={<Bell size={16} />} onPress={() => push('/alerts')} aria-label="Notifications" />
+            {/* The cross-app launcher, from the shared shell — the same one chat
+                and every other Hanzo surface carries. ⌘K stays with the command
+                palette; the launcher must not claim it too. */}
+            <HanzoAppLauncher currentApp="console" align="right" quickSwitchKey={false} />
             <ScopeSwitcher />
           </XStack>
 
