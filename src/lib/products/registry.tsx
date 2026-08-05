@@ -109,7 +109,7 @@ import { Users,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId, type ShellId } from '~/config'
-import { ALWAYS_ON_PRODUCTS, filterBeta, filterEntitled } from '~/lib/entitlements'
+import { ALWAYS_ON_PRODUCTS, filterBeta, filterEntitled, isLaunchProduct } from '~/lib/entitlements'
 import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
@@ -2980,7 +2980,6 @@ export const catalog: CatalogEntry[] = [
     icon: MessageSquare,
     description: 'AI chat with Zen models, third-party models, and MCP tools.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/chat',
     docs: `${DOCS}/chat`,
@@ -3000,7 +2999,6 @@ export const catalog: CatalogEntry[] = [
     icon: Bot,
     description: 'Agent gateway — channels, skills, and an OpenAI-compatible API.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/bot',
     kind: 'module',
@@ -3021,7 +3019,6 @@ export const catalog: CatalogEntry[] = [
     icon: Compass,
     description: 'Your interactive launch checklist — the Business AI can do each step for you.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3041,7 +3038,6 @@ export const catalog: CatalogEntry[] = [
     icon: Building2,
     description: 'Companies, contacts, and opportunities — your Business-OS CRM, per org.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3071,7 +3067,6 @@ export const catalog: CatalogEntry[] = [
     icon: Landmark,
     description: 'Incorporate your company — an 8-step formation wizard, from entity to equity genesis.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3088,7 +3083,6 @@ export const catalog: CatalogEntry[] = [
     icon: Coins,
     description: 'Your capitalization ledger — stakeholders, share classes, issued equity, SAFEs, and rounds.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3117,7 +3111,6 @@ export const catalog: CatalogEntry[] = [
     icon: Megaphone,
     description: 'Campaigns across channels (email, social, ads) — your marketing surface, per org.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3134,7 +3127,6 @@ export const catalog: CatalogEntry[] = [
     icon: Target,
     description: 'Ad campaigns across platforms (Meta, Google, TikTok, X) — your ads surface, per org.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3155,7 +3147,6 @@ export const catalog: CatalogEntry[] = [
     icon: Share2,
     description: 'Queue and publish your content everywhere — schedule and post across networks (X, Instagram, LinkedIn, TikTok), per org.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3170,7 +3161,6 @@ export const catalog: CatalogEntry[] = [
     icon: Rocket,
     description: 'Startup Program applications — AI-screened pipeline board, per org.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3187,7 +3177,6 @@ export const catalog: CatalogEntry[] = [
     icon: FileText,
     description: 'Native CMS — pages, posts, articles, media, and navigation as DocTypes on the Hanzo Framework, per organization.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/cms`,
@@ -3209,7 +3198,6 @@ export const catalog: CatalogEntry[] = [
     icon: Boxes,
     description: 'Native ERP on the Hanzo Framework — items, sales, purchasing, accounting, and HR as DocTypes, per organization.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3230,7 +3218,6 @@ export const catalog: CatalogEntry[] = [
     icon: LifeBuoy,
     description: 'Native support desk on the Hanzo Framework — tickets, agents, teams, and SLAs as DocTypes, per organization.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/helpdesk`,
@@ -3250,7 +3237,6 @@ export const catalog: CatalogEntry[] = [
     icon: Accessibility,
     description: 'Scan the current page for WCAG accessibility issues — axe-core, in your browser.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -3263,7 +3249,6 @@ export const catalog: CatalogEntry[] = [
     description: 'Browse and deploy AI models & providers — real pricing, live availability.',
     gcp: 'Marketplace',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/console',
     docs: `${DOCS}/marketplace`,
@@ -3276,7 +3261,6 @@ export const catalog: CatalogEntry[] = [
     icon: Search,
     description: 'Managed search — full-text & hybrid indexes.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/search',
     docs: `${DOCS}/search`,
@@ -3296,7 +3280,6 @@ export const catalog: CatalogEntry[] = [
     description: 'Search and crawl the web for your agents — self-hosted, no third-party keys.',
     gcp: 'Programmable Search / Vertex AI Search',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/crawl`,
@@ -3328,7 +3311,6 @@ export const catalog: CatalogEntry[] = [
     description: 'Crawl and extract the web to clean markdown for your agents — self-hosted (Crawl4AI).',
     gcp: 'Web crawl',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/crawl`,
@@ -3350,7 +3332,6 @@ export const catalog: CatalogEntry[] = [
     icon: Sparkles,
     description: 'Build AI apps and pipelines visually.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/studio',
     docs: `${DOCS}/ai-studio`,
@@ -3365,7 +3346,6 @@ export const catalog: CatalogEntry[] = [
     icon: Blocks,
     description: 'Production-ready starter kits — fork a template and deploy.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/gallery',
     kind: 'module',
@@ -3377,7 +3357,6 @@ export const catalog: CatalogEntry[] = [
     icon: Boxes,
     description: 'The unified cloud console — this app.',
     category: 'Apps',
-    beta: true,
     status: 'enabled',
     repo: 'hanzoai/console',
     docs: `${DOCS}/console`,
@@ -3793,8 +3772,16 @@ export const catalogByCategory = (): { category: ProductCategory; entries: Catal
 /** An admin-only (global / Hanzo-managed) entry — hidden from a customer's nav. */
 export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
 
-/** A beta entry — hidden until the org holds the `apps` beta (or superadmin). */
-export const isBetaEntry = (e: CatalogEntry): boolean => e.beta === true
+/**
+ * A BETA entry — hidden until the org holds the beta flag (or is a superadmin).
+ *
+ * Beta is the COMPLEMENT of the launch set, not a per-entry stamp: we are
+ * launching with hanzo.chat, hanzo.app and the console, so everything outside
+ * `LAUNCH_PRODUCTS` is beta by default and a new catalog entry is hidden the
+ * day it lands. `beta: true` still forces the flag on for an entry inside the
+ * launch set, which is how a launch surface can ship dark.
+ */
+export const isBetaEntry = (e: CatalogEntry): boolean => e.beta === true || !isLaunchProduct(e.id)
 
 /**
  * Per-brand category scope — the ONE knob that makes each brand's console show

@@ -48,6 +48,46 @@ export const ALWAYS_ON_PRODUCTS: readonly string[] = [
   'captable', // the org's capitalization ledger — foundational company surface, every org (peer of 'company')
 ]
 
+/**
+ * THE LAUNCH SET — what a new signup sees on console.hanzo.ai tonight.
+ *
+ * We are launching with hanzo.chat, hanzo.app and the console, so the console
+ * shows exactly what those need and nothing else. Every other product in the
+ * catalog (the whole cloud: compute, data, network, security, web3, the app
+ * suite, the fleet admin) is BETA — present, routable, and invisible until an
+ * org holds the beta flag. A superadmin always sees everything.
+ *
+ * This is an ALLOW-LIST on purpose: a new product added to the catalog is
+ * hidden by DEFAULT and joins the launch only when someone names it here. The
+ * inverse (a deny-list) leaks every future addition onto a customer's first
+ * screen.
+ *
+ * The set: the AI plane the two products run on, the credential to call it,
+ * the money surfaces, org/account management, and the beta door itself.
+ */
+export const LAUNCH_PRODUCTS: readonly string[] = [
+  // the console itself
+  'overview', // the home board
+  'beta-features', // the door to everything else — never behind its own flag
+  // the AI plane hanzo.chat + hanzo.app run on
+  'chat', // hanzo.chat
+  'models', // the model catalog
+  'playground', // try a model
+  'api-keys', // the credential both products call with
+  'usage', // what the AI cost
+  'logs', // the request log for those calls
+  // money
+  'billing',
+  'plans',
+  // org + account
+  'settings',
+  'team',
+  'profile',
+]
+
+/** True when a product is part of tonight's launch surface. */
+export const isLaunchProduct = (id: string): boolean => LAUNCH_PRODUCTS.includes(id)
+
 /** True when a product is always-on (implicit, never stored in `enabled`). */
 export const isAlwaysOn = (id: string): boolean => ALWAYS_ON_PRODUCTS.includes(id)
 
@@ -91,13 +131,14 @@ export function filterEntitled<T extends { id: string }>(
  * entries. Fails CLOSED — callers that have not asked the enablement plane
  * pass `showBeta: false` and beta surfaces stay hidden.
  */
-export function filterBeta<T extends { beta?: boolean }>(
+export function filterBeta<T extends { id: string; beta?: boolean }>(
   entries: readonly T[],
   showBeta: boolean,
   showAdmin: boolean,
 ): T[] {
   if (showAdmin || showBeta) return [...entries]
-  return entries.filter((e) => e.beta !== true)
+  // Beta is the COMPLEMENT of the launch set: outside it, or stamped.
+  return entries.filter((e) => isLaunchProduct(e.id) && e.beta !== true)
 }
 
 export function nextEnabled(current: readonly string[], patch: EntitlementPatch): string[] {
