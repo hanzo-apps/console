@@ -53,7 +53,7 @@ function consented(): boolean {
 
 // ── No publishable ingest key is passed, and that is DELIBERATE ──────────────
 //
-// Do not "fix" this by adding a build arg or by reading NEXT_PUBLIC_EVENT_INGEST_KEY
+// Do not "fix" this by adding a build arg or by reading NEXT_PUBLIC_PUBLISHABLE_KEY
 // here.
 //
 // A `pk-` resolves to exactly ONE org (cloud stamps the tenant from the key), and
