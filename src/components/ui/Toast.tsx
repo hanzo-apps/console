@@ -11,7 +11,7 @@
  *   toast.success('Created my-db')
  *   toast.error(err instanceof ApiError ? err.message : 'Failed to create')
  */
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { CircleCheck, CircleX, Info, X } from '@hanzogui/lucide-icons-2'
@@ -144,13 +144,23 @@ export function Toast({ children }: { children: ReactNode }) {
     return () => map.forEach((t) => clearTimeout(t))
   }, [])
 
-  const api: ToastApi = {
-    toast,
-    success: (title, description) => toast({ title, description, kind: 'success' }),
-    error: (title, description) => toast({ title, description, kind: 'error' }),
-    info: (title, description) => toast({ title, description, kind: 'info' }),
-    dismiss,
-  }
+  // The context value is what every consumer's effect dependency list compares. Built
+  // fresh here it is a NEW identity on every render of this provider — and this
+  // provider re-renders each time a toast is added. So an effect that both depends on
+  // the toast api and raises a toast re-triggers itself, forever: raising one toast
+  // renders the provider, which hands the effect a new api, which raises another. The
+  // callbacks below are already stable, so memoising the object is what makes
+  // "depend on the toast api" safe.
+  const api: ToastApi = useMemo(
+    () => ({
+      toast,
+      success: (title, description) => toast({ title, description, kind: 'success' }),
+      error: (title, description) => toast({ title, description, kind: 'error' }),
+      info: (title, description) => toast({ title, description, kind: 'info' }),
+      dismiss,
+    }),
+    [toast, dismiss],
+  )
 
   return (
     <ToastContext.Provider value={api}>
