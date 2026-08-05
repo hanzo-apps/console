@@ -26,6 +26,15 @@ images:
     context: .
     dockerfile: Dockerfile.embed
     repo: ghcr.io/hanzoai/console-embed
+  # The SERVABLE twin of console-embed: the same static export, behind
+  # hanzoai/static, so a console change reaches production by moving ONE tag in
+  # universe instead of riding a cloud release. Deploys as the `console-static`
+  # App CR; the ingress sends /v1 + /zap to cloud and everything else here, which
+  # is the split admin.lux.cloud already runs.
+  - name: console-static
+    context: .
+    dockerfile: Dockerfile.static
+    repo: ghcr.io/hanzoai/console-static
   # The brand-agnostic Next.js server image: brand resolves at RUNTIME from the
   # request hostname, so no NEXT_PUBLIC_* may be baked (baking pins the image to
   # one brand). SOURCE_COMMIT is the only build arg it ever took.
