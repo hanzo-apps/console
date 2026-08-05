@@ -14,9 +14,8 @@ import { FlaskConical, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { ApiError } from '~/lib/api'
 import { EnablementApi, type UserEnablementItem } from '~/lib/api/admin-cockpit'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { ErrorState, asApiError } from '~/components/ui/States'
+import { EmptyState, PageHeader } from '@hanzo/ui/product'
 
 export function BetaFeaturesModule() {
   const [view, setView] = useState<{ items: UserEnablementItem[]; betas: UserEnablementItem[] } | null>(null)

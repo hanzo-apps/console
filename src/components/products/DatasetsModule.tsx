@@ -18,10 +18,7 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, RefreshCw, Database, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { EvalsApi, type EvalDataset, type EvalDatasetItem, type EvalDatasetRun } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, DataTable, FieldRow, FieldText, FieldTextArea, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type ListState =
   | { phase: 'loading' }

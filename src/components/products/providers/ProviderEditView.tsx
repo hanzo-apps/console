@@ -6,14 +6,6 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ApiError, ProviderApi, type Provider } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
 import {
-  FieldRow,
-  FieldText,
-  FieldSelect,
-  FieldSwitch,
-  FieldSlider,
-} from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
-import {
   CATEGORY_OPTIONS,
   CURRENCY_OPTIONS,
   STATE_OPTIONS,
@@ -26,6 +18,7 @@ import {
   temperatureEnabled,
   topPEnabled,
 } from './logic'
+import { FieldRow, FieldSelect, FieldSlider, FieldSwitch, FieldText, PageHeader } from '@hanzo/ui/product'
 
 export function ProviderEditView({ name, onDone }: { name: string; onDone: () => void }) {
   const [provider, setProvider] = useState<Provider | null>(null)

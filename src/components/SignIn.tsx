@@ -24,9 +24,9 @@ import { useIam } from '@hanzo/iam/react'
 import { Text, YStack } from '@hanzo/gui'
 
 import { Loader } from '~/components/ui/Loader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
+import { PrimaryButton } from '@hanzo/ui/product'
 
 export function SignIn() {
   const { account, loading } = useSession()

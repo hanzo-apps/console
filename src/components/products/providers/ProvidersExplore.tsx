@@ -49,11 +49,10 @@ import {
   type ContextBucket,
 } from '~/lib/api/aicatalog'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { SelectMenu } from '~/components/ui/SelectMenu'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
 import type { ApiError } from '~/lib/api'
+import { PageHeader, SelectMenu } from '@hanzo/ui/product'
 
 type Tab = 'explore' | 'mine' | 'custom'
 type SortKey = 'models' | 'name' | 'price' | 'context'

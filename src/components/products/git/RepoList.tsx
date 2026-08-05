@@ -21,11 +21,9 @@ import { FolderGit2, GitBranch, RefreshCw, Search } from '@hanzogui/lucide-icons
 
 import { GitApi, cloneCommand, repoKey, type Repo } from '~/lib/api/git'
 import { fmtBytes, fmtRelative } from '~/lib/api/agents'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { CopyButton } from './parts'
 import { filterRepos, groupReposByOrg, repoHref } from '../code/hub-logic'
+import { BackendStateCard, DataTable, EmptyState, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const EM = '—'
 

@@ -28,14 +28,13 @@ import {
   type ServiceRow,
   type TopOperation,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { DetailRow } from './observability/parts'
 import { fmtNs, fmtRate, fmtPct, fmtCount, errorTone } from './observability/apm-format'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 /** Selectable lookback windows (label → seconds). */
 const RANGES: { label: string; seconds: number }[] = [

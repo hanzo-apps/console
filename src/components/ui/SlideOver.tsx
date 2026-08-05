@@ -25,7 +25,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import { X } from '@hanzogui/lucide-icons-2'
 
-import { asColor, type IconLike } from '~/components/ui/color'
+import { asColor, type IconLike } from '@hanzo/ui/product'
 import { Z, type ZLayer } from '~/lib/z'
 
 /** The lg breakpoint (px) — matches the shell's one responsive threshold. */

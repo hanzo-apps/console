@@ -41,14 +41,9 @@ import {
   type Bucket,
   type S3Object,
 } from '~/lib/api/storage'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { FieldRow, FieldText } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
-import { classifyRead, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, DataTable, EmptyState, FieldRow, FieldText, PageHeader, PrimaryButton, classifyRead, type BackendState, type Column } from '@hanzo/ui/product'
 
 /** Human-readable byte size (folders and unknowns render "—"). */
 function fmtSize(o: S3Object): string {

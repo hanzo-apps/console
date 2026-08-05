@@ -19,15 +19,11 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Box, ExternalLink, Plus, RefreshCw, Rocket } from '@hanzogui/lucide-icons-2'
 
 import { PaasApi, type PaasAppWithProject, type PaasDeployment, type PaasProject } from '~/lib/api/paas'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { appUrl, appSource, orderDeployments, buildStatusOf, deploymentLabel, classifyPaasError } from './logic'
 import { CreateAppForm } from './CreateAppForm'
 import { DomainsPanel } from './DomainsPanel'
 import { RailwayDeploy } from './RailwayDeploy'
+import { DataTable, EmptyState, PageHeader, PrimaryButton, StatusTag, type Column } from '@hanzo/ui/product'
 
 const openUrl = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')

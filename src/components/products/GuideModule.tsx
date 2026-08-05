@@ -56,11 +56,7 @@ import {
   balanceSplitLabel,
   invalidateBalance,
 } from '~/lib/billing/live-balance'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import {
   automatableSuggestions,
   blockedLabel,
@@ -77,6 +73,7 @@ import {
   type ChatTurn,
 } from './guide/logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { BackendStateCard, EmptyState, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

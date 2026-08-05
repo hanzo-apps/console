@@ -50,14 +50,11 @@ import {
   type SessionEvent,
   type TargetKind,
 } from '~/lib/api/mission-control'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend } from '~/components/ui/BackendState'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { useToast } from '~/components/ui/Toast'
 import { useLiveSessions, type LiveState } from './mission-control/live'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { BackendStateCard, EmptyState, FieldRow, FieldSelect, FieldText, PageHeader, classifyBackend } from '@hanzo/ui/product'
 
 // ── status tone palette — the ONE map, as CSS values; the pill's bg is a shade ──
 const TONE: Record<ReturnType<typeof statusTone>, { fg: string; bg: string; label: string }> = {

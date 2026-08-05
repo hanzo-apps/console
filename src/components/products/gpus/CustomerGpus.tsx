@@ -39,8 +39,6 @@ import { onlineCount, avgGpuUtil, queueDepth, runningCount, utilSeries } from '~
 import { useFleetLive } from './useFleetLive'
 import { QueueTab } from './QueueTab'
 import { Sparkline } from './charts'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { useDetailPane } from '~/components/DetailPane'
 import { productColorHex } from '~/lib/products/colors'
 import { LaunchDrawer } from '../machines/LaunchDrawer'
@@ -62,6 +60,7 @@ import {
   sortByHourly,
 } from './customer-logic'
 import type { Async, ComputeData } from './state'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const VERDICT_TONE = { ok: '$green10', warn: '$yellow10', down: '$red10', idle: '$color9' } as const
 

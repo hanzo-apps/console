@@ -14,8 +14,7 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, BotApi } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
+import { PageHeader, StatusTag } from '@hanzo/ui/product'
 
 /** Operator surfaces for the bot — public product domains, opened in a tab. */
 const SURFACES: ReadonlyArray<{ label: string; href: string; hint: string }> = [

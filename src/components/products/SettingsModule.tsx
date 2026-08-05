@@ -24,9 +24,8 @@ import { currentOrg } from '~/lib/org-scope'
 import { setOrgAccent } from '~/lib/theme/accent'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldRow, FieldText, FieldSwitch } from '~/components/ui/Field'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
+import { FieldRow, FieldSwitch, FieldText, PageHeader } from '@hanzo/ui/product'
 
 const IAM_COPY: HonestCopy = {
   notFound:

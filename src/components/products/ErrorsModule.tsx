@@ -19,14 +19,13 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, AlertTriangle, CheckCircle2, EyeOff, RefreshCw, TrendingUp } from '@hanzogui/lucide-icons-2'
 
 import { ErrorTrackingApi, type Issue, type IssueDetail, type IssueStatus } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { Donut, type Slice } from '~/components/ui/Charts'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { levelColor, statusTone } from './sentry/logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 /** Status filter tabs (label → the query value; '' = all). */
 const TABS: { label: string; status: '' | IssueStatus }[] = [

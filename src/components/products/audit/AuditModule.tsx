@@ -16,14 +16,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, Download, Search, X, ChevronLeft, ChevronRight, ShieldCheck, Link2 } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { SelectMenu } from '~/components/ui/SelectMenu'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { AuditApi, type AuditEvent, type AuditPage, type AuditQuery } from '~/lib/api/audit'
 import { exportCSV } from '~/lib/csv'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, DataTable, PageHeader, SelectMenu, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const PAGE_SIZE = 50
 

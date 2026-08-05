@@ -30,10 +30,9 @@ import { Bot, Boxes, Building2, ChevronDown, ChevronRight, Coins, Cpu, FunctionS
 
 import { ApiError } from '~/lib/api'
 import { AdminComputeApi, type ComputeFleets, type ComputeKind, type Rollup, type SizeCount } from '~/lib/api/admin-compute'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
+import { EmptyState, PageHeader } from '@hanzo/ui/product'
 
 type Range = '24h' | '7d' | '30d'
 const RANGES: { key: Range; label: string }[] = [

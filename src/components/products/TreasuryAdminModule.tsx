@@ -27,15 +27,11 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { AdminTreasuryApi, type AnchorStatus, type JournalEntry, type TreasuryView } from '~/lib/api/admin-treasury'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldText } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 import { toneColor } from '~/components/ui/tone'
+import { DataTable, EmptyState, FieldText, PageHeader, PrimaryButton, type Column } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

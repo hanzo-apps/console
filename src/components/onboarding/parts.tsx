@@ -10,8 +10,8 @@ import type { ReactNode } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, ArrowRight, Check } from '@hanzogui/lucide-icons-2'
 
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { ONBOARDING_STEPS, type StepId, type StepStatus } from '~/lib/onboarding/steps'
+import { PrimaryButton } from '@hanzo/ui/product'
 
 /** Title + subtitle header + body for one step. */
 /**

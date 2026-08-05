@@ -43,12 +43,8 @@ import { ApiError } from '~/lib/api'
 import { AdminPromosApi, type PlatformPromo } from '~/lib/api/admin-promos'
 import { AdminCapsApi, type AdminCap } from '~/lib/api/admin-caps'
 import { fmtInt, fmtUsd } from '~/lib/api/functions'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldSelect, FieldSwitch, FieldText, FieldSlider } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import {
   capVerdict,
@@ -65,6 +61,7 @@ import {
   type ScopeType,
 } from '~/components/products/billing/budgets-logic'
 import { formForPromo, promoSummary, validatePromoForm, type PromoForm } from './promo-logic'
+import { EmptyState, FieldRow, FieldSelect, FieldSlider, FieldSwitch, FieldText, PageHeader, PrimaryButton } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; err: ApiError } | { phase: 'ready'; data: T }
 

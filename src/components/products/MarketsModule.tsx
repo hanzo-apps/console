@@ -22,12 +22,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, YStack } from '@hanzo/gui'
 import { DataTable, type FieldDefinition } from '@hanzo/data'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 import { EconomyApi, fmtNum, fmtPrice, fmtSpread, type EconomySnapshot } from '~/lib/api/economy'
 import { findEntry } from '~/lib/products/registry'
+import { BackendStateCard, EmptyState, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** The living-overview KPI board for the Lux economy (the reusable board). */
 const EconomyBoard = livingOverviewModule('lux-economy')

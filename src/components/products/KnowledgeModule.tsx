@@ -21,9 +21,6 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { FileUp, Network, RefreshCw, Upload } from '@hanzogui/lucide-icons-2'
 
 import { KnowledgeApi, type ImportResult } from '~/lib/api/knowledge'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { toneColor } from '~/components/ui/tone'
 import { RAMP } from '~/lib/theme/ramp'
 import {
@@ -38,6 +35,7 @@ import {
   type GraphNode,
   type LayoutState,
 } from './knowledge/graph-logic'
+import { BackendStateCard, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

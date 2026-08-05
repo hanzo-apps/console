@@ -21,8 +21,7 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { CheckCircle2, RefreshCw, TriangleAlert, XCircle } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, TelemetryApi, summarizeHealth, type ServiceHealth } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 type State =
   | { phase: 'loading' }

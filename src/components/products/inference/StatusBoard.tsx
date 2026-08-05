@@ -13,15 +13,11 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, ShieldCheck, Zap } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard } from '~/components/ui/BackendState'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { useInferenceData } from './data'
 import { CellStat, MiniSparkline, SectionCard, StatusDot } from './parts'
 import { PHASE_DOT, endpointDailyRequests, statusSummary, type Endpoint } from './logic'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, DataTable, EmptyState, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 type Row = { e: Endpoint; spark: number[] }
 

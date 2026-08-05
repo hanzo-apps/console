@@ -12,13 +12,12 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, Route } from '@hanzogui/lucide-icons-2'
 
 import { SentryApi, type Period, type SentryLog, type SentryProject } from '~/lib/api/sentry'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker, SearchInput, Pill, Fact } from './parts'
 import { logLevelTone, fmtDateTime } from './logic'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const LEVELS = ['', 'error', 'warning', 'info', 'debug'] as const
 

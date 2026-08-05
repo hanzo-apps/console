@@ -16,9 +16,7 @@ import { Button, Text, XStack } from '@hanzo/gui'
 import { ExternalLink, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { restGet, v1Url } from '~/lib/api/client'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { PageHeader } from '~/components/ui/PageHeader'
+import { BackendStateCard, DataTable, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type SurfaceRow = Record<string, unknown> & { __rowId: string }
 

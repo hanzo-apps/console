@@ -27,8 +27,8 @@ import {
 } from '~/lib/api/visor'
 import { BillingApi } from '~/lib/api/billing'
 import { randomName } from '~/lib/naming'
-import { FieldSelect } from '~/components/ui/Field'
 import { FundingNote } from './FundingNote'
+import { FieldSelect } from '@hanzo/ui/product'
 
 /** A catalog row unified over CPU sizes and GPU sizes (GPU carries model/count/VRAM). */
 type Item = VisorSize & Partial<Pick<VisorGpuSize, 'model' | 'gpuCount' | 'vramGb'>>

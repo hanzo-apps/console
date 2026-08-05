@@ -43,7 +43,6 @@ import {
   Zap,
 } from '@hanzogui/lucide-icons-2'
 
-import { FadeIn } from '~/components/ui/FadeIn'
 import { GuidedTour } from '~/components/tour/GuidedTour'
 import { useGuideSignals } from '~/lib/guide/use-signals'
 import { stepAnchorId } from '~/lib/guide/signals'
@@ -58,6 +57,7 @@ import {
   type ProductGuide,
 } from '~/lib/guide/spec'
 import type { ProductIcon } from '~/lib/products/registry'
+import { FadeIn } from '@hanzo/ui/product'
 
 /** Pitch-point icon name → Lucide glyph (kept out of the pure data layer). */
 const PITCH_ICON: Record<PitchIcon, ProductIcon> = {

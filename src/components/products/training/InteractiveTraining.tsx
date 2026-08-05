@@ -23,13 +23,10 @@ import {
   type TrainingClientDetail,
 } from '~/lib/api/training'
 import { parseTrainingData } from './interactive-data'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { Panel } from '~/components/ui/Panel'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, DataTable, FieldRow, FieldText, FieldTextArea, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

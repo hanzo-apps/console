@@ -23,11 +23,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { DataTable, type FieldDefinition } from '@hanzo/data'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { PaasApi } from '~/lib/api/paas'
 import {
   TradingApi,
@@ -44,6 +39,7 @@ import { BOT_TEMPLATES, findBotTemplate } from '~/lib/products/trading/templates
 import { botsFromApps, isBotRunning, networkLabel, summarizeFleet } from '~/components/products/trading/logic'
 import { DeployForm } from '~/components/products/trading/DeployForm'
 import { findEntry } from '~/lib/products/registry'
+import { BackendStateCard, EmptyState, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** Columns for the bot fleet table. */
 const FLEET_FIELDS: FieldDefinition[] = [

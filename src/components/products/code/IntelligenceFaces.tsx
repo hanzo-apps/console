@@ -29,10 +29,9 @@ import {
   type SearchType,
   type Span,
 } from '~/lib/api/code'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { KindBadge, Panel, RefButton, ScoreBar, SnippetLine, TierBadge, CitationRow } from './parts'
 import { repoFileHref } from './hub-logic'
+import { BackendStateCard, DataTable, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 /** A quiet, honest "not connected on this deployment" note (a 404 on the /v1/code route). */
 function NotConnected({ what }: { what: string }) {

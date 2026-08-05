@@ -24,9 +24,6 @@ import { RefreshCw, ScrollText, Plus } from '@hanzogui/lucide-icons-2'
 
 import { PlatformApi, clustersFromApps, type Cluster, type PlatformApp } from '~/lib/api'
 import { clusterCapacity, fmtVcpu, fmtRam } from '~/lib/api/nodes'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { FieldSelect } from '~/components/ui/Field'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { HintButton } from '~/components/ui/Metric'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import { WorkloadsTab } from './containers/WorkloadsTab'
@@ -38,6 +35,7 @@ import {
   NAMESPACES_COLUMNS,
   EVENTS_COLUMNS,
 } from './containers/resource'
+import { FieldSelect, PageHeader, StatusTag } from '@hanzo/ui/product'
 
 function SidebarRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (

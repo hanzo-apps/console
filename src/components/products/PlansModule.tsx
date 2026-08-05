@@ -20,8 +20,6 @@ import { EVENTS } from '@hanzo/event'
 
 import { PlansApi, type Plan } from '~/lib/api'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 
 /** Open the brand billing portal (Square checkout) — the ONE money surface; the console
  *  LINKS here, never reimplements it. `#pricing` lands on the portal's checkout section,
@@ -31,6 +29,7 @@ function openBilling(anchor = ''): void {
 }
 
 import { promoActive, effectiveMonthly, promoLabel } from '~/lib/billing/promo'
+import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** The price headline for a tier: a quote, free, or the whole-dollar monthly price. */
 function priceLabel(p: Plan): string {

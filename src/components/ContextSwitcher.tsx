@@ -36,9 +36,9 @@ import { IamAdminApi, type Organization } from '~/lib/api'
 import { ORG_PAGE_SIZE, orgQuery } from '~/lib/org-list'
 import { currentOrg, leaveOrg, switchOrg } from '~/lib/org-scope'
 import { contextLabel, scopedOrgRow, titleCase } from '~/lib/account/org-state'
-import { FieldText } from '~/components/ui/Field'
 import { MenuRow } from '~/components/ui/MenuRow'
 import { paper } from '~/components/ui/paper'
+import { SearchInput } from '@hanzo/ui/product'
 
 export function ContextSwitcher() {
   const router = useRouter()
@@ -122,12 +122,11 @@ export function ContextSwitcher() {
               it, not scrolling. A regular user has one org and no field. */}
           {isSuperAdmin ? (
             <YStack px="$1" pb="$1">
-              <FieldText
-                value={query}
-                onChange={search}
-                placeholder="Find an organization"
-                ariaLabel="Find an organization"
-              />
+              {/* A search landmark names the control for assistive tech — the shared
+                  SearchInput has no accessible-name prop of its own. */}
+              <div role="search" aria-label="Find an organization">
+                <SearchInput value={query} onChange={search} placeholder="Find an organization" name="org" />
+              </div>
             </YStack>
           ) : null}
 

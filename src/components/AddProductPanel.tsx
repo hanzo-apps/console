@@ -26,8 +26,7 @@ import { openProduct } from '~/lib/products/open'
 import { useDetailPane } from '~/components/DetailPane'
 import { fetchUsageRecords } from '~/lib/api/aimetrics'
 import { inUseProductIds } from '~/lib/products/product-usage'
-import { asColor } from '~/components/ui/color'
-import { EmptyState } from '~/components/ui/EmptyState'
+import { EmptyState, asColor } from '@hanzo/ui/product'
 
 /** The list narrowing controls at the top. */
 type Filter = 'all' | 'inuse' | 'pinned'

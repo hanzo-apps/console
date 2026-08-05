@@ -20,11 +20,9 @@ import {
   type LinksView,
 } from '~/lib/api/affiliates'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
-import { FieldRow, FieldText } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { monthLabel, ratePct, usd } from './logic'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, FieldRow, FieldText, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

@@ -43,16 +43,9 @@ import {
   type Zone,
 } from '~/lib/api/dns'
 import { IntegrationsApi } from '~/lib/api/integrations'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { FieldRow, FieldText, FieldTextArea, FieldSelect, FieldSwitch } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
-import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
+import { BackendStateCard, ConfirmDelete, DataTable, EmptyState, FieldRow, FieldSelect, FieldSwitch, FieldText, FieldTextArea, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 /** Cloudflare brand orange — used ONLY for the Cloudflare provider/proxy affordances. */
 const CF_TONE = 'var(--color11)' // the Cloudflare lane reads by icon + label, not hue

@@ -26,14 +26,10 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Cable, Plug, RefreshCw, GitBranch } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, IntegrationsApi, type IntegrationProvider as Provider } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyRead, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
 import { GitHubReposView } from '~/components/products/integrations/GitHubReposView'
+import { BackendStateCard, EmptyState, PageHeader, PrimaryButton, StatusTag, classifyRead, type BackendState } from '@hanzo/ui/product'
 
 /** Format an RFC3339 (or any Date-parseable) timestamp; degrade to the raw value. */
 function fmtWhen(v: string): string {

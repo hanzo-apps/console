@@ -16,9 +16,8 @@ import { useCallback, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Accessibility, ExternalLink } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { toIssues, summarize, IMPACTS, type A11yIssue, type A11ySummary, type Impact } from '~/lib/a11y/scan'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 type State =
   | { phase: 'idle' }

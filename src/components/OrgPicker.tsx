@@ -27,10 +27,9 @@ import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { enterOrg } from '~/lib/org-scope'
 import { IamAdminApi, type Organization } from '~/lib/api'
 import { BrandMark } from '~/components/ui/BrandLogo'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FadeIn } from '~/components/ui/FadeIn'
 import { OrgOnboarding } from '~/components/OrgOnboarding'
 import { PAGE_SIZE, pickerView, type OrgCard, type PickerContext } from '~/components/org-picker/logic'
+import { EmptyState, FadeIn } from '@hanzo/ui/product'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 

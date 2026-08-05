@@ -35,7 +35,6 @@ import {
   usd,
   type Gpu,
 } from '~/lib/api/compute'
-import { BackendStateCard } from '~/components/ui/BackendState'
 import { PlatformStateCard } from '../platform/state'
 import { GpuInventory } from './GpuInventory'
 import {
@@ -50,6 +49,7 @@ import {
 } from './charts'
 import type { ComputeData } from './state'
 import { toneVar } from '~/components/ui/tone'
+import { BackendStateCard } from '@hanzo/ui/product'
 
 const RANGES = ['1H', '6H', '24H', '7D', '30D'] as const
 const SEV: Record<string, string> = { critical: toneVar('critical'), error: toneVar('critical'), warning: toneVar('warning'), warn: toneVar('warning') }

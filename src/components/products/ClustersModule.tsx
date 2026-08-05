@@ -22,11 +22,8 @@ import { Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, PlatformApi, DOKS_REGIONS, DOKS_NODE_SIZES, type Cluster, type NodePool } from '~/lib/api'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldSelect } from '~/components/ui/Field'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { DataTable, FieldRow, FieldSelect, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 const KindTag = ({ kind }: { kind?: string }) => (
   <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11">

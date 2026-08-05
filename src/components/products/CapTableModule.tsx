@@ -54,21 +54,15 @@ import {
   type Safe,
   type Round,
 } from '~/lib/api/captable'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { FieldRow, FieldText, FieldSelect, FieldOptionSelect } from '~/components/ui/Field'
+import { FieldOptionSelect } from '~/components/ui/Field'
 import { MetricCard } from '~/components/ui/Metric'
 import { Donut } from '~/components/ui/Charts'
 import { RAMP } from '~/lib/theme/ramp'
 import { Loader } from '~/components/ui/Loader'
 import { useToast } from '~/components/ui/Toast'
-import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, ConfirmDelete, DataTable, EmptyState, FieldRow, FieldSelect, FieldText, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Tab = 'summary' | 'stakeholders' | 'shares' | 'classes' | 'fundraising'
 const tabPath = (id: Tab): string => (id === 'summary' ? '/captable' : `/captable/${id}`)

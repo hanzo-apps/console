@@ -15,8 +15,8 @@ import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Cpu, Server, Tag } from '@hanzogui/lucide-icons-2'
 
 import { fmtHourly, fmtMonthly, DASH, type VisorGpuSize } from '~/lib/api/visor'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { sortByHourly } from './customer-logic'
+import { DataTable, type Column } from '@hanzo/ui/product'
 
 export function CustomerPricingTab({ catalog, onLaunch }: { catalog: VisorGpuSize[]; onLaunch?: (c: VisorGpuSize) => void }) {
   const rows = sortByHourly(catalog.filter((c) => c.available))

@@ -29,11 +29,10 @@ import { Activity, Boxes, CheckCircle2, Coins, Cpu, Gauge, HardDrive, Network, R
 import { LuxInfraApi, COMING_SOON_NETWORKS, type LuxInfra, type Liveness, type NetworkSummary, type ServiceStatus, type ValidatorRow } from '~/lib/api/lux-infra'
 import { ApiError } from '~/lib/api'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard, UtilBar, utilColor } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { SuperAdminRequired, SUPERADMIN_REQUIRED } from '~/components/ui/States'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 // Lux primary-network staking facts (mainnet): 5 validators, each bonds 500M LUX →
 // 2.5B LUX staked. Displayed as a caption on the primary panel (investor context).

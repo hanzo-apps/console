@@ -21,14 +21,12 @@ import { ProductRoute } from '~/components/ProductRoute'
 import { openProduct } from '~/lib/products/open'
 import { useFavorites } from '~/lib/products/favorites'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { ProductIcon } from '~/components/ui/ProductIcon'
-import type { IconLike } from '~/components/ui/color'
 import { useProductColors } from '~/lib/products/pins'
-import { FadeIn } from '~/components/ui/FadeIn'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
 import { ResourceOverview } from '~/components/products/overview/ResourceOverview'
 import { ProductObservability } from '~/components/products/observability/ProductObservability'
+import { FadeIn, PageHeader, type IconLike } from '@hanzo/ui/product'
 
 // The home centerpiece is the reusable LivingOverview (count-up KPIs, live
 // sparklines, streaming activity) — the SAME component every product overview uses.

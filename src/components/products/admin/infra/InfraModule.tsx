@@ -36,17 +36,9 @@ import {
   type InfraSnapshot,
   type InfraVolume,
 } from '~/lib/api/admin-infra'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
-import { DataTable, type Column, type SortState } from '~/components/ui/DataTable'
-import { Segmented, SearchInput, type Option } from '~/components/ui/Filters'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { ConfirmDelete } from '~/components/ui/ConfirmDelete'
-import { BackendStateCard, classifyBackend } from '~/components/ui/BackendState'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldSwitch } from '~/components/ui/Field'
 import { useToast } from '~/components/ui/Toast'
 import { asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { fmtAgo, fmtBytes } from '~/components/products/observability/apm-format'
@@ -72,6 +64,7 @@ import {
   type Sort,
   type VolumeFilter,
 } from './logic'
+import { BackendStateCard, ConfirmDelete, DataTable, EmptyState, FieldSwitch, PageHeader, SearchInput, Segmented, StatusTag, classifyBackend, type Column, type Option, type SortState } from '@hanzo/ui/product'
 
 const EMPTY: InfraSnapshot = {
   at: '',

@@ -26,13 +26,13 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Text, XStack, YStack } from '@hanzo/gui'
-import { OrgMark } from '@hanzo/ui/product'
 import { BookOpen, Globe, Info, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
 import { useOrgIdentity } from '~/components/ui/BrandLogo'
 import { Z } from '~/lib/z'
+import { OrgMark } from '@hanzo/ui/product'
 
 type MenuItem = {
   icon: typeof SlidersHorizontal

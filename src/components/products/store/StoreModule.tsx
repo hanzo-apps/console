@@ -15,10 +15,8 @@ import { HandCoins, RefreshCw, Store } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { fetchOssApps, type OssApp } from '~/lib/api/oss-apps'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { StoreGrid } from './StoreGrid'
+import { BackendStateCard, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async =
   | { phase: 'loading' }

@@ -37,11 +37,7 @@ import {
 
 import { BillingApi, type SpendAlert } from '~/lib/api/billing'
 import { fmtInt, fmtUsd } from '~/lib/api/functions'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { MetricCard } from '~/components/ui/Metric'
-import { FieldSelect, FieldSwitch } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import {
   capVerdict,
   deriveBudgetsSummary,
@@ -57,6 +53,7 @@ import {
   type CapVerdict,
   type ScopeType,
 } from './budgets-logic'
+import { BackendStateCard, EmptyState, FieldSelect, FieldSwitch, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

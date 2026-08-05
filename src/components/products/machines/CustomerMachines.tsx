@@ -28,15 +28,12 @@ import {
   type VisorMachine,
 } from '~/lib/api/visor'
 import { productColorHex } from '~/lib/products/colors'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { useDetailPane } from '~/components/DetailPane'
-import { asColor } from '~/components/ui/color'
 import { BillingApi } from '~/lib/api/billing'
 import { MachineCatalog } from './MachineCatalog'
 import { LaunchDrawer } from './LaunchDrawer'
 import { FundingNote } from './FundingNote'
+import { DataTable, EmptyState, PageHeader, asColor, type Column } from '@hanzo/ui/product'
 
 const VERDICT_TONE = {
   ok: '$green10',

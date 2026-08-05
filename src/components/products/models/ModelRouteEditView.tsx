@@ -5,9 +5,8 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError, ModelRouteApi, type ModelRoute } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { FieldRow, FieldText, FieldSwitch } from '~/components/ui/Field'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { newModelRoute } from './logic'
+import { FieldRow, FieldSwitch, FieldText, PageHeader } from '@hanzo/ui/product'
 
 /**
  * Model-route editor. `modelName === null` => create mode (empty form, modelName

@@ -33,9 +33,6 @@ import { ArrowDown, ArrowUp, Building2, FolderGit2, Plus, RefreshCw, Trash2 } fr
 import { BillingAccountApi, type BillingAccount, type ChainLink } from '~/lib/api/billing-accounts'
 import { fmtUsd } from '~/lib/api/functions'
 import { useScope } from '~/lib/scope-context'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import {
   accountLabel,
   appendPriority,
@@ -48,6 +45,7 @@ import {
   sourceLabel,
   type ScopeTarget,
 } from './accounts-logic'
+import { BackendStateCard, EmptyState, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 type Loaded = { chain: ChainLink[]; accounts: BillingAccount[] }

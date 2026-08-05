@@ -23,9 +23,9 @@ import { Check, ChevronsUpDown, Layers, Plus, Trash } from '@hanzogui/lucide-ico
 import { useScope } from '~/lib/scope-context'
 import { STOCK_ENVIRONMENTS } from '~/lib/scope'
 import { isStockNetwork, parseCustomNetwork, type Network } from '~/lib/network'
-import { FieldText } from '~/components/ui/Field'
 import { MenuRow, type DotColor } from '~/components/ui/MenuRow'
 import { paper } from '~/components/ui/paper'
+import { FieldText } from '@hanzo/ui/product'
 
 /** A small dot keyed to the network tier. Monochrome by default; only the genuine
  *  states carry a hue — mainnet is live (green), testnet is a caution (amber). Every

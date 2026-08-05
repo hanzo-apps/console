@@ -21,10 +21,6 @@ import {
   type Project,
   type NewProject,
 } from '~/lib/api/tracker'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { FieldRow, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { useToast } from '~/components/ui/Toast'
 import { asApiError } from '~/components/ui/States'
 import {
@@ -45,6 +41,7 @@ import {
 import { Toolbar } from './Toolbar'
 import { GroupedList, Board } from './IssueList'
 import { StatusIcon, PriorityIcon, Identifier, ProgressBar } from './atoms'
+import { EmptyState, FieldRow, FieldText, FieldTextArea, PageHeader, PrimaryButton } from '@hanzo/ui/product'
 
 // ── The unified issues view (All / My / a Team) ──────────────────────────────
 

@@ -13,12 +13,11 @@ import { Coins, CreditCard, RefreshCw, TrendingUp, Users } from '@hanzogui/lucid
 
 import { ApiError } from '~/lib/api'
 import { AdminCockpitApi, type RevenueCustomer, type RevenueData } from '~/lib/api/admin-cockpit'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart } from '~/components/ui/Charts'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 

@@ -40,8 +40,6 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { restGet, v1Url } from '~/lib/api/client'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { ForwardSurface, zeroTrustSurfaces } from '~/components/products/ConsoleFeatureModule'
 import {
   ZT_SECTION_IDS,
@@ -60,6 +58,7 @@ import {
   liveCount,
 } from '~/components/products/zt/logic'
 import { toneVar } from '~/components/ui/tone'
+import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type LucideIcon = typeof Waypoints
 

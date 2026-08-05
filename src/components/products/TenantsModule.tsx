@@ -32,13 +32,7 @@ import { Boxes, ChevronRight, Building2, Layers, List as ListIcon, RefreshCw, Se
 import { ApiError, IamAdminApi, TenantsApi } from '~/lib/api'
 import { AdminCockpitApi, type CustomerRow } from '~/lib/api/admin-cockpit'
 import type { Organization } from '~/lib/api/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { FieldText } from '~/components/ui/Field'
-import { BackendStateCard, classifyRead, type BackendState } from '~/components/ui/BackendState'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { SERVICE_LABELS, fillPattern, type Package } from './tenants/packages'
 import { PlatformStateCard, interpretPlatformError, type PlatformError } from './platform/state'
 import {
@@ -52,6 +46,7 @@ import {
   type TenantClusterInput,
 } from './tenants/model'
 import { TenantDetail } from './tenants/TenantDetail'
+import { BackendStateCard, DataTable, EmptyState, FieldText, PageHeader, StatusTag, classifyRead, type BackendState, type Column } from '@hanzo/ui/product'
 
 const usd = (cents?: number): string => (typeof cents === 'number' ? `$${(cents / 100).toFixed(2)}` : '—')
 

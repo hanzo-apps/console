@@ -56,12 +56,8 @@ import { PlatformApi, type Cluster } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { CustomerMachines } from './machines/CustomerMachines'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { Donut, type DonutSegment } from '~/components/ui/Donut'
 import { toneVar, type Tone } from '~/components/ui/tone'
-import { FieldSelect } from '~/components/ui/Field'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import {
   type Machine,
@@ -81,6 +77,7 @@ import {
   fmtMemGb,
   MACHINE_STATUS_LABEL,
 } from './machines/logic'
+import { DataTable, EmptyState, FieldSelect, PageHeader, type Column } from '@hanzo/ui/product'
 
 const TABS = ['Overview', 'Machines', 'Groups', 'Images', 'Scripts', 'SSH Keys', 'Policies', 'Settings'] as const
 type Tab = (typeof TABS)[number]

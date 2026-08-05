@@ -17,13 +17,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Image as ImageIcon, Trash2, TriangleAlert, Upload } from '@hanzogui/lucide-icons-2'
 
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { classifyBackend } from '~/components/ui/BackendState'
 import type { FrameworkClient } from '~/lib/framework/client'
 import type { DocType, FrameworkDoc } from '~/lib/framework/types'
 import { mediaFileField, titleOf } from '~/lib/framework/fields'
 import { uploadMedia, resolveMediaUrl, deleteMediaObject } from './media-upload'
+import { EmptyState, PrimaryButton, classifyBackend } from '@hanzo/ui/product'
 
 export interface MediaGridProps {
   client: FrameworkClient

@@ -37,8 +37,7 @@ import { ArrowUpRight, Check, LayoutTemplate, Loader, RefreshCw, Rocket, Search,
 import { TemplatesApi, buildBuilderUrl, groupByCategory, isLive, type ForkedProject, type Template } from '~/lib/api/templates'
 import { ApiError } from '~/lib/api/client'
 import { config } from '~/config'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

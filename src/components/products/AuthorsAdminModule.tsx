@@ -15,15 +15,12 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { BadgeCheck, Ban, Coins, Github, HandCoins, RefreshCw, Wallet, Zap } from '@hanzogui/lucide-icons-2'
 
 import { AdminAuthorsApi, type AdminAuthor, type AdminAuthorsView, type SweepResult } from '~/lib/api/admin-authors'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldRow, FieldSelect, FieldText } from '~/components/ui/Field'
 import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { ApiError } from '~/lib/api'
 import { dollarsToCents, sharePct, shortDate, statusLabel, statusColor, usd } from './authors/logic'
 import { toneColor } from '~/components/ui/tone'
+import { EmptyState, FieldRow, FieldSelect, FieldText, PageHeader, PrimaryButton } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

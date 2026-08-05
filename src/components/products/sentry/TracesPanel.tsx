@@ -14,12 +14,11 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { SentryApi, type Period, type SentrySpan, type SentryTrace, type SentryTraceDetail, type SentryProject } from '~/lib/api/sentry'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { PeriodPicker, ProjectPicker, SearchInput, Fact } from './parts'
 import { fmtDurationMs, fmtDateTime, fmtCount, logLevelTone } from './logic'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 export function TracesPanel({ id, projects }: { id?: string; projects: SentryProject[] }) {
   const router = useRouter()

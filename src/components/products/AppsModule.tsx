@@ -35,12 +35,7 @@ import { AppWindow, Cpu, ExternalLink, Globe, HardDrive, Pencil, RefreshCw, Rock
 import { config } from '~/config'
 import { AppsApi, builderEditUrl, type App, type AppDeployment } from '~/lib/api/apps'
 import { PlatformSitesApi } from '~/lib/api/platform-sites'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { BackendStateCard, DataTable, EmptyState, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Async<T> =
   | { phase: 'loading' }

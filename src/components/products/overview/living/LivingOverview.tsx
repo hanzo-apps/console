@@ -21,9 +21,7 @@ import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { ApiError } from '~/lib/api'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { ErrorState, asApiError } from '~/components/ui/States'
-import { FadeIn } from '~/components/ui/FadeIn'
 import { effectiveInterval } from './motion'
 import { usePageHidden, usePoll } from './hooks'
 import { type Loadable } from './logic'
@@ -37,6 +35,7 @@ import {
   PanelSpinner,
   TimeseriesTileView,
 } from './tiles'
+import { FadeIn, PageHeader } from '@hanzo/ui/product'
 
 /** Throttle floor: a config can ask for faster, but never faster than this. */
 const POLL_FLOOR_MS = 5000

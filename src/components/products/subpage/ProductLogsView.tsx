@@ -30,12 +30,9 @@ import type { CatalogEntry } from '~/lib/products/registry'
 import type { ApiError } from '~/lib/api'
 import { asApiError } from '~/components/ui/States'
 import { ApmApi, apmWindow, type LogRow } from '~/lib/api/apm'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { SelectMenu, type SelectOption } from '~/components/ui/SelectMenu'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { RuntimeNotice } from '../observability/RuntimeNotice'
 import { subpageSourcesFor } from './sources'
+import { DataTable, PageHeader, SelectMenu, StatusTag, type Column, type SelectOption } from '@hanzo/ui/product'
 
 const RANGES: { key: string; label: string; seconds: number }[] = [
   { key: '15m', label: '15m', seconds: 900 },

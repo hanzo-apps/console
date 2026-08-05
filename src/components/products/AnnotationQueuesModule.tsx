@@ -21,11 +21,10 @@ import {
   type AnnotationQueueItem,
   type O11yPageMeta,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { RuntimeNotice } from './observability/RuntimeNotice'
 import { Pager } from './observability/Pager'
 import { fmtDate } from './observability/format'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const PAGE_LIMIT = 50
 

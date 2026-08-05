@@ -34,9 +34,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Bot, Plus, Terminal, X } from '@hanzogui/lucide-icons-2'
 
-import { ComboBox, type ComboOption } from '~/components/ui/ComboBox'
-import { FieldRow, FieldSelect, FieldSlider, FieldSwitch, FieldText, FieldTextArea } from '~/components/ui/Field'
-import { SelectMenu, type SelectOption } from '~/components/ui/SelectMenu'
 import {
   canSubmit,
   classifyBuilderError,
@@ -48,6 +45,7 @@ import {
   toCreateBody,
 } from './logic'
 import type { AgentBuilderLoaders, AgentConfig, AgentSpec, BuilderOption, BuilderPrompt, ReasoningEffort } from './types'
+import { ComboBox, FieldRow, FieldSelect, FieldSlider, FieldSwitch, FieldText, FieldTextArea, SelectMenu, type ComboOption, type SelectOption } from '@hanzo/ui/product'
 
 /** Async option-list state for the live pickers (model/tool). */
 type OptState =

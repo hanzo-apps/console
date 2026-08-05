@@ -25,9 +25,6 @@ import { BookOpen, ExternalLink, Globe, Search as SearchIcon } from '@hanzogui/l
 
 import { config } from '~/config'
 import { WebSearchApi, WEBSEARCH_ENDPOINTS, SEARXNG_ENGINES, type SearchResult, type WebSearchEndpoint } from '~/lib/api/websearch'
-import { classifyBackend, BackendStateCard, type BackendState } from '~/components/ui/BackendState'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
 import {
   SEARCH_TABS,
   resolveTab,
@@ -38,6 +35,7 @@ import {
   presentableResults,
   type SearchHealth,
 } from './search/logic'
+import { BackendStateCard, PageHeader, StatusTag, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const openExternal = (href: string) => {
   if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener')

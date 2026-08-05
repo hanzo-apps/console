@@ -9,11 +9,10 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { Bell, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import type { GpuAlert } from '~/lib/api/compute'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { PlatformStateCard } from '../platform/state'
 import type { ComputeData } from './state'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, EmptyState, type Column } from '@hanzo/ui/product'
 
 const SEV: Record<string, string> = { critical: toneVar('critical'), error: toneVar('critical'), warning: toneVar('warning'), warn: toneVar('warning'), info: toneVar('neutral') }
 const sevColor = (s?: string) => SEV[(s ?? '').toLowerCase()] ?? toneVar('neutral')

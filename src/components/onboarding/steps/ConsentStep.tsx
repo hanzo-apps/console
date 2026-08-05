@@ -12,9 +12,9 @@ import { FileText, Sparkles } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
-import { FieldSwitch } from '~/components/ui/Field'
 import { StepShell, StepActions, InlineLink } from '~/components/onboarding/parts'
 import type { StepProps } from '~/components/onboarding/types'
+import { FieldSwitch } from '@hanzo/ui/product'
 
 export function ConsentStep({ state, patch, next, back, isFirst }: StepProps) {
   const brand = getBrand()

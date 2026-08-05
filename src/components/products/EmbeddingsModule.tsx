@@ -41,8 +41,6 @@ import {
 import { EmbeddingsApi } from '~/lib/api/embeddings'
 import { ApiError } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { StoreEditView } from './stores/StoreEditView'
 import { newStore } from './stores/logic'
 import { OverviewView } from './embeddings/OverviewView'
@@ -51,6 +49,7 @@ import { ExploreView } from './embeddings/ExploreView'
 import { IngestView } from './embeddings/IngestView'
 import { ModelsView } from './embeddings/ModelsView'
 import { SettingsView } from './embeddings/SettingsView'
+import { PageHeader, PrimaryButton } from '@hanzo/ui/product'
 
 /** The tabs are DECLARED in the registry (`subpages`); this is only the union the
  *  module switches on. */

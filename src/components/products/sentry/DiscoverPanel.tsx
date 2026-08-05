@@ -12,14 +12,12 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Play, Plus, X } from '@hanzogui/lucide-icons-2'
 
 import { SentryApi, type DiscoverFilter, type DiscoverResult, type DiscoverRow, type Period, type SentryProject } from '~/lib/api/sentry'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { LineChart } from '~/components/ui/Charts'
 import { Panel } from '~/components/ui/Panel'
 import { ErrorState, asApiError } from '~/components/ui/States'
-import { FieldSelect, FieldText } from '~/components/ui/Field'
 import { PeriodPicker, ProjectPicker } from './parts'
 import { DISCOVER_FIELDS, DISCOVER_OPS, DISCOVER_AGGREGATIONS, emptyFilter, statsToPoints, fmtCount } from './logic'
+import { DataTable, FieldSelect, FieldText, PageHeader, type Column } from '@hanzo/ui/product'
 
 export function DiscoverPanel({ projects }: { projects: SentryProject[] }) {
   const [filters, setFilters] = useState<DiscoverFilter[]>([emptyFilter()])

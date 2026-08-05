@@ -28,16 +28,13 @@ import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { BarChart3, Bookmark, Download, RefreshCw, ScrollText, Search, Server, X } from '@hanzogui/lucide-icons-2'
 
 import { asApiError, ErrorState } from '~/components/ui/States'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { SelectMenu, type SelectOption } from '~/components/ui/SelectMenu'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { fetchUsageRecords, type UsageRecord } from '~/lib/api/aimetrics'
 import { logsFromRecords, type LogLine } from '~/components/products/inference/logic'
 import { ApmApi, apmWindow, type LogRow } from '~/lib/api/apm'
 import type { ApiError } from '~/lib/api'
 import { exportCSV } from '~/lib/csv'
 import { RuntimeNotice } from './observability/RuntimeNotice'
+import { DataTable, PageHeader, SelectMenu, StatusTag, type Column, type SelectOption } from '@hanzo/ui/product'
 
 const LOG_LIMIT = 250
 

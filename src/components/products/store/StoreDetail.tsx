@@ -22,11 +22,9 @@ import { ArrowLeft, ArrowUpRight, BookOpen, Boxes, Github, Globe, HandCoins, Roc
 
 import { config } from '~/config'
 import { blueprintBase, claimPath, fetchCompose, fetchOssApps, logoUrl, ownerRepo, type OssApp } from '~/lib/api/oss-apps'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { hasDeploySource, parseBlueprint, type Blueprint } from './logic'
 import { DeployDialog } from './DeployDialog'
+import { BackendStateCard, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const openExt = (href?: string) => {
   if (href && typeof window !== 'undefined') window.open(href, '_blank', 'noopener,noreferrer')

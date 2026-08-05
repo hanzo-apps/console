@@ -33,15 +33,12 @@ import {
   type Worker,
   type ActivityInfo,
 } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldSelect } from '~/components/ui/Field'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { LineChart, BarRows, type ChartPoint } from '~/components/ui/Charts'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { statusOf, statusStyle, type Bucket } from './tasks/status'
 import { WorkflowDetailPanel } from './tasks/detail'
+import { BackendStateCard, DataTable, FieldSelect, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

@@ -18,10 +18,9 @@ import { useAnalytics } from '@hanzo/event/react'
 import { EVENTS } from '@hanzo/event'
 
 import { PaasApi, type PaasProject } from '~/lib/api/paas'
-import { FieldRow, FieldText, FieldSelect } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { classifyPaasError } from './logic'
 import { RailwayDeploy } from './RailwayDeploy'
+import { FieldRow, FieldSelect, FieldText, PrimaryButton } from '@hanzo/ui/product'
 
 type Deploying =
   | { phase: 'idle' }

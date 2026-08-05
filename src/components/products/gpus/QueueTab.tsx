@@ -25,11 +25,10 @@ import {
   type FleetJob,
   type FleetWorker,
 } from '~/lib/api/fleet'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { PlatformStateCard } from '../platform/state'
 import { JobStatusPill, CancelJobButton, FreshnessNote } from './job-ui'
 import type { Async } from './state'
+import { DataTable, EmptyState, type Column } from '@hanzo/ui/product'
 
 const DASH = '—'
 

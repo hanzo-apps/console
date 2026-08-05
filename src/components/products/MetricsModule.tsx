@@ -34,13 +34,13 @@ import {
   type ServiceHealth,
 } from '~/lib/api'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { LineChart, type ChartPoint } from '~/components/ui/Charts'
 import { Donut, type DonutSegment } from '~/components/ui/Donut'
 import { toneVar } from '~/components/ui/tone'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
+import { PageHeader } from '@hanzo/ui/product'
 
 // The customer-facing Metrics view = the org's OWN usage board (requests/tokens/
 // spend/per-model over the real commerce ledger). Same reusable LivingOverview the

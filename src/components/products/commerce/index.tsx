@@ -30,13 +30,8 @@ import type {
   CommerceStore,
 } from '~/lib/api/commerce'
 import { fmtUsd, fmtInt, fmtAbs } from '~/lib/api/functions'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldText } from '~/components/ui/Field'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { CommerceResource } from '@hanzo/ui/product'
 import { discountValue, humanizeStatus } from './logic'
+import { BackendStateCard, CommerceResource, DataTable, FieldRow, FieldText, PageHeader, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const Cell = ({ children }: { children: ReactNode }) => (
   <Text fontSize="$3" color="$color11" numberOfLines={1}>

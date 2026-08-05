@@ -28,13 +28,11 @@ import {
   type FunctionInvocation,
 } from '~/lib/api/functions'
 import { ApiError } from '~/lib/api'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { useToast } from '~/components/ui/Toast'
 import { DetailRow, Badge } from '~/components/products/observability/parts'
 import { DisabledAction } from './parts'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, DataTable, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 

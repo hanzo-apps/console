@@ -12,8 +12,8 @@ import { EVENTS } from '@hanzo/event'
 
 import { config } from '~/config'
 import { StepShell, ChoiceCard } from '~/components/onboarding/parts'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import type { StepProps } from '~/components/onboarding/types'
+import { PrimaryButton } from '@hanzo/ui/product'
 
 const TILES: { icon: typeof MessageSquare; title: string; description: string; to: string }[] = [
   { icon: MessageSquare, title: 'Start a chat', description: 'Talk to the latest Zen model right now.', to: '/chat' },

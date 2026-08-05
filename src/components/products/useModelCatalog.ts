@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { fetchCatalog, type CatalogEntry } from '~/lib/api/aicatalog'
-import { classifyBackend, type BackendState } from '~/components/ui/BackendState'
+import { classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type State =
   | { phase: 'loading' }

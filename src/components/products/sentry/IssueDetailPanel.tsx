@@ -13,12 +13,11 @@ import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, CheckCircle2, EyeOff, GitBranch, RefreshCw, Route } from '@hanzogui/lucide-icons-2'
 
 import { SentryApi, type IssueStatus, type SentryEvent, type SentryIssueDetail } from '~/lib/api/sentry'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Pill, Fact } from './parts'
 import { levelColor, statusTone, fmtWhen, fmtDateTime, fmtCount } from './logic'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 export function IssueDetailPanel({ id }: { id: string }) {
   const router = useRouter()

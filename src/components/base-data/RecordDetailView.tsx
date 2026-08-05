@@ -21,11 +21,10 @@ import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, Pencil, Save, Trash2, TriangleAlert, X } from '@hanzogui/lucide-icons-2'
 import { RecordDetail, RecordForm, type FieldDefinition } from '@hanzo/data'
 
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { BaseDataApi, type BaseRecord } from '~/lib/base-data/api'
 import { baseCollectionToFields } from '~/lib/base-data/fields'
 import { recordLabel, savePayload } from './records'
+import { BackendStateCard, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 export interface RecordDetailViewProps {
   /** A configured Base client (transport already wired — e.g. the `/superbase` proxy). */

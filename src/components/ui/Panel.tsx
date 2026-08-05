@@ -24,7 +24,7 @@
 import type { ReactNode } from 'react'
 import { Text, XStack, YStack } from '@hanzo/gui'
 
-import type { IconLike } from '~/components/ui/color'
+import type { IconLike } from '@hanzo/ui/product'
 
 export function Panel({
   title,

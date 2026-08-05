@@ -31,10 +31,9 @@ import { PlatformAppsApi, type PlatformApp } from '~/lib/api/platform-apps'
 import { ComputeApi, fmtInt, type Gpu } from '~/lib/api/compute'
 import { VisorApi, DASH, type VisorMachine } from '~/lib/api/visor'
 import { productColorHex } from '~/lib/products/colors'
-import { asColor } from '~/components/ui/color'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { appDisplayStatus, summarize } from '../platform-apps/logic'
 import { isOnline, onlineCaption, onlineSplit, providerKind, providerLabel } from './resource-logic'
+import { StatusTag, asColor } from '@hanzo/ui/product'
 
 /** How many rows each section previews before deferring to its full module. */
 const PREVIEW = 6

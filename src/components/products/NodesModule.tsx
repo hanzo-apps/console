@@ -16,10 +16,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { DataTable, type FieldDefinition } from '@hanzo/data'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { EmptyState } from '~/components/ui/EmptyState'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import {
   NodesApi,
   fmtHeight,
@@ -28,6 +24,7 @@ import {
   type NodeNetworkId,
 } from '~/lib/api/nodes'
 import { findEntry } from '~/lib/products/registry'
+import { BackendStateCard, EmptyState, PageHeader, StatusTag, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** Columns for the node grid — the uniform per-node row. Rendered via @hanzo/data. */
 const FIELDS: FieldDefinition[] = [

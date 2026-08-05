@@ -27,17 +27,15 @@ import { ProvisioningApi, type ResourceKind } from '~/lib/api/provisioning'
 import { ApmApi, apmWindow } from '~/lib/api/apm'
 import { fetchCardMetrics } from './platform-apps/metrics'
 import type { ServiceDepEdge } from './platform-apps/canvas'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { CreateAppForm } from './paas/CreateAppForm'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { Loader } from '~/components/ui/Loader'
-import { PageHeader } from '~/components/ui/PageHeader'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { usePoll, useReducedMotion } from '~/components/products/overview/living/hooks'
 import { buildProjectCanvas, summarizeCanvas, type CanvasResource } from './platform-apps/canvas'
 import { renderServiceIcon } from './platform-apps/icons'
 import { buildAppTabs, buildResourceTabs } from './platform-apps/drawer'
 import { toneColor, toneVar } from '~/components/ui/tone'
+import { BackendStateCard, EmptyState, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 /** The managed data kinds the provisioning service serves. */
 const RESOURCE_KINDS: ResourceKind[] = ['sql', 'vector', 'kv', 'search', 's3', 'datastore', 'docdb']

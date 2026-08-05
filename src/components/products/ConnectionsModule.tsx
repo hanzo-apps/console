@@ -17,16 +17,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { Check, ExternalLink, KeyRound, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
-import { PageHeader } from '~/components/ui/PageHeader'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { FieldText } from '~/components/ui/Field'
 import { Loader } from '~/components/ui/Loader'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { useToast } from '~/components/ui/Toast'
 import { ApiError } from '~/lib/api/client'
 import { AiConnectionsApi, AI_CONNECTION_PROVIDERS, type AiConnection, type AiConnectionProvider } from '~/lib/api/ai-connections'
 import { toneColor } from '~/components/ui/tone'
+import { BackendStateCard, FieldText, PageHeader, PrimaryButton, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 type Phase = { t: 'loading' } | { t: 'ready' } | { t: 'error'; state: BackendState }
 

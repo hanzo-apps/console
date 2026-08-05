@@ -26,12 +26,10 @@ import { Activity, CheckCircle2, RefreshCw } from '@hanzogui/lucide-icons-2'
 import type { CatalogEntry } from '~/lib/products/registry'
 import { PlatformApi, type PlatformApp } from '~/lib/api/platform'
 import { ApmApi, apmWindow, type ServiceHealth } from '~/lib/api/apm'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
 import { subpageSourcesFor } from './sources'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 type DeployState =
   | { phase: 'loading' }

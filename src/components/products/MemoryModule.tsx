@@ -17,11 +17,8 @@ import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, Trash, Search, ArrowLeft, Save, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { MemoryApi, MEMORY_KINDS, type Memory, type MemoryKind } from '~/lib/api'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { FieldRow, FieldSelect, FieldTextArea } from '~/components/ui/Field'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
 import { useToast } from '~/components/ui/Toast'
+import { BackendStateCard, DataTable, FieldRow, FieldSelect, FieldTextArea, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 /** Per-kind tone, so every memory list reads the same. */
 const KIND_TONE: Record<MemoryKind, { bg: '$color5' | '$color4' | '$color3'; fg: '$color12' | '$color11' }> = {

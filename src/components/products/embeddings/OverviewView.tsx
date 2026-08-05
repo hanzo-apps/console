@@ -17,8 +17,6 @@ import { Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { EmbeddingsApi } from '~/lib/api/embeddings'
-import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
-import { EmptyState } from '~/components/ui/EmptyState'
 import { Donut, BarRows } from '~/components/ui/Charts'
 import { ProductLanding, apiBaseFromDocs, type LandingMetric, type ProductLandingConfig } from '~/components/products/landing'
 import {
@@ -29,6 +27,7 @@ import {
   type Collection,
   type CloudUsages,
 } from './logic'
+import { BackendStateCard, EmptyState, classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 const fmtInt = (n: number) => Math.round(n).toLocaleString()
 const fmtMs = (n: number) => `${Math.round(n)} ms`

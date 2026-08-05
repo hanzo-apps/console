@@ -22,9 +22,9 @@ import { UsagePanel } from '@hanzo/usage/panel'
 import { ConnectedUsage } from '@hanzo/usage/connected'
 import type { CloudUsageOverview, ProviderUsage, UsageRange } from '@hanzo/usage'
 
-import { classifyBackend } from '~/components/ui/BackendState'
 import { CloudUsageApi } from '~/lib/api/cloud-usage'
 import { AiConnectionsApi } from '~/lib/api/ai-connections'
+import { classifyBackend } from '@hanzo/ui/product'
 
 type NativeState = { phase: 'loading' } | { phase: 'error'; message: string } | { phase: 'ready'; data: CloudUsageOverview }
 type ConnState = { phase: 'loading' } | { phase: 'error'; message: string } | { phase: 'ready'; items: ProviderUsage[] }

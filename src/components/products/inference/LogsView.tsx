@@ -15,13 +15,12 @@ import { ChevronRight, FileText, RefreshCw } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { useDetailPane } from '~/components/DetailPane'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
 import { useInferenceData } from './data'
 import { SectionCard, Segmented, StatusDot, type Option } from './parts'
 import { openLogDetail } from './panes'
 import { distinctLevels, distinctModels, logsFromRecords, type LogLine } from './logic'
 import { toneVar } from '~/components/ui/tone'
+import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 const LIMIT = 200
 

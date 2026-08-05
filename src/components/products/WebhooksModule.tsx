@@ -38,13 +38,10 @@ import {
 } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, restGet, restPost, restDelete, restPatch, cloudProxyV1Url } from '~/lib/api/client'
-import { PageHeader } from '~/components/ui/PageHeader'
-import { DataTable, type Column } from '~/components/ui/DataTable'
-import { StatusTag } from '~/components/ui/StatusTag'
-import { FieldRow, FieldText } from '~/components/ui/Field'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import { VerifyCard } from './webhooks/VerifyCard'
 import { SIGNATURE_SCHEME } from './webhooks/verify'
+import { DataTable, FieldRow, FieldText, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
 const enc = encodeURIComponent
 
