@@ -28,16 +28,19 @@ import { modelId, modelType, modelDisplayName, type CatalogEntry } from './aicat
 import { brandForModel, brandLabel, type BrandKey } from '~/components/ui/brand'
 
 /**
- * The default model surfaced first in the house Zen family — the user-facing
- * "Default" the Models page pills and the Chat surface preselect. It MUST be a
- * NON-PREMIUM model so a trial / $5-welcome balance gets a 200 on the first call
- * (a premium default 402s for a trial-only balance). `zen5-flash` is the
- * non-premium Zen flagship — `zen5-mini` is PREMIUM, so it can't be the trial
- * default. The Playground's `defaultModelId` independently picks the same
- * non-premium Zen flagship at runtime from the live catalog's `premium` flag, so
- * Chat, Playground, and the Models page all agree on one trial-safe default.
+ * The default model every Hanzo surface preselects — the Models page pills, the
+ * Chat surface, and the assistant. It is **Enso**, the house frontier family: a
+ * caller who has not chosen gets Hanzo's own model, not a cheaper stand-in.
+ *
+ * `enso-flash` is the free rung of that family, so a trial or $5-welcome balance
+ * still gets a 200 on the first message — the property the old Zen default was
+ * picked for, kept, on the better family. A caller who wants the flagship's
+ * judgement selects `enso`; one who wants the panel selects `enso-ultra`.
+ *
+ * The Playground's `defaultModelId` independently resolves the same non-premium
+ * flagship from the live catalog, so every surface agrees on one default.
  */
-export const DEFAULT_MODEL = 'zen5-flash'
+export const DEFAULT_MODEL = 'enso-flash'
 
 /** One vendor family: a stable id (the canonical brand key), its vendor label, and
  *  the brand key `ProviderLogo` resolves to a mark + hue. */
@@ -135,7 +138,7 @@ export type FamilyGroup = {
   available: number
 }
 
-/** Available-first, then the Zen default (`DEFAULT_MODEL`) up top, then name asc. PURE. */
+/** Available-first, then the house default (`DEFAULT_MODEL`) up top, then name asc. PURE. */
 function sortMembers(models: CatalogEntry[]): CatalogEntry[] {
   return [...models].sort((a, b) => {
     const av = Number(b.available) - Number(a.available)
