@@ -220,6 +220,12 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
         />
       ) : null}
 
+      {/* Response — full width, directly under the surface tabs, so the answer
+          is the first thing on every screen size. The builder row follows. */}
+      <YStack width="100%">
+        <ResponsePanel run={run} pricing={pricing} model={composer.model} requestJson={json} />
+      </YStack>
+
       <XStack gap="$4" flexWrap="wrap" items="flex-start">
         {/* Builder — the composer with an attached, collapsible Model settings
             side-pane (a bottom sheet on mobile). The two outer columns each ask
@@ -268,10 +274,6 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
           </XStack>
         </YStack>
 
-        {/* Response — a 1/3 flex column at desktop; wraps below the builder on mobile. */}
-        <YStack flex={1} minW={320} gap="$3">
-          <ResponsePanel run={run} pricing={pricing} model={composer.model} requestJson={json} />
-        </YStack>
       </XStack>
 
       {/* Mobile: the same Model settings as a dismissable bottom sheet. */}
