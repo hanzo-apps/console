@@ -25,6 +25,7 @@ import { EVENTS } from '@hanzo/event'
 
 import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { DEFAULT_MODEL } from '~/lib/api/families'
+import { useRecentModels } from '~/lib/models/recent'
 import { hanzoAssistantSystemPrompt, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
 import { useVoice } from '~/lib/voice'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
@@ -187,6 +188,7 @@ export function ChatConversation({
   voiceSignal?: number
 }) {
   const analytics = useAnalytics()
+  const { record } = useRecentModels()
   const [model, setModel] = useState('')
   const [messages, setMessages] = useState<(ChatMessage & { time?: string })[]>([])
   const [input, setInput] = useState('')
@@ -201,9 +203,9 @@ export function ChatConversation({
   const showAdmin = useIsSuperAdmin()
   const system = useMemo(() => hanzoAssistantSystemPrompt({ showAdmin }), [showAdmin])
 
-  // Default to the trial-safe Zen default once the catalog loads: prefer the
+  // Default to the trial-safe house default once the catalog loads: prefer the
   // NON-PREMIUM `DEFAULT_MODEL` (the same default the Models page pills and the
-  // Playground pick), then any Zen model, then the first — so a $5-trial user's
+  // Playground pick), then any Enso model, then the first — so a $5-trial user's
   // first message never 402s on a premium default.
   useEffect(() => {
     let live = true
@@ -319,6 +321,8 @@ export function ChatConversation({
     // First turn of a conversation starts a chat; every turn is a message sent.
     if (history.length === 0) analytics.capture(EVENTS.CHAT_STARTED)
     analytics.capture(EVENTS.CHAT_MESSAGE_SENT)
+    // A sent turn is a real use — it feeds the Models page's Recent chips.
+    if (model) record(model)
     setMessages((m) => [...m, { role: 'user', content: q, time: turnTime() }])
     setInput('')
     const reply = await streamReply(q, history)
@@ -404,7 +408,7 @@ export function ChatConversation({
       ) : (
         <PageHeader
           title="Chat"
-          subtitle={`Talk to ${model || 'Zen'} and other models — real completions through the gateway.`}
+          subtitle={`Talk to ${model || 'Enso'} and other models — real completions through the gateway.`}
           actions={
             <XStack gap="$2">
               <Button size="$2" icon={<History size={15} />} onPress={onShowHistory}>
@@ -435,7 +439,7 @@ export function ChatConversation({
                 </Text>
                 <Text fontSize="$3" color="$color11" text="center" lineHeight={22}>
                   Ask about {config.brandName} — models, GPUs, data, deploys, billing — or anything
-                  else. Answers come from the live {model || 'Zen'} gateway, billed to your
+                  else. Answers come from the live {model || 'Enso'} gateway, billed to your
                   organization.
                 </Text>
               </YStack>

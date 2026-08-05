@@ -100,7 +100,6 @@ import { useDetailPane } from '~/components/DetailPane'
 import { ProductCustomize, ManagePins } from '~/components/SidebarCustomize'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { ProductIcon } from '~/components/ui/ProductIcon'
-import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { SystemStatusBadge } from '~/components/ui/SystemStatusBadge'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { SidebarBrand } from '~/components/SidebarBrand'
@@ -1065,24 +1064,25 @@ export function Dashboard({ children }: { children: ReactNode }) {
               search box fills the row (two flex:1 siblings would halve it). */}
           <XStack display="none" $lg={{ display: 'flex' }} flex={1} />
 
-          {/* Full topbar controls — shown only at lg+. */}
+          {/* Full topbar controls — shown only at lg+. The bar carries navigation
+              only: status, docs, and the cross-app launcher. Theme lives in the
+              account menu, alerts at /alerts, and the network picker in the
+              account drawer — production is the default environment, so the
+              environment is chrome you open, not chrome you wear. */}
           <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
             <SystemStatusBadge />
-            <ThemeToggle />
             <Button size="$2" chromeless icon={<CircleHelp size={16} />} onPress={openDocs} aria-label="Documentation" />
-            <Button size="$2" chromeless icon={<Bell size={16} />} onPress={() => push('/alerts')} aria-label="Notifications" />
             {/* The cross-app launcher, from the shared shell — the same one chat
                 and every other Hanzo surface carries. ⌘K stays with the command
                 palette; the launcher must not claim it too. */}
             <HanzoAppLauncher currentApp="console" align="right" quickSwitchKey={false} />
-            <ScopeSwitcher />
           </XStack>
 
-          {/* Compact topbar trigger — the switchers + account fold into a drawer. */}
+          {/* Account drawer trigger — every viewport. The drawer is where the
+              occasional controls live (environment, notifications, account). */}
           <Button
             size="$3"
             chromeless
-            $lg={{ display: 'none' }}
             icon={<SlidersHorizontal size={18} />}
             onPress={() => setMenuOpen(true)}
             aria-label="Account and settings"
@@ -1122,10 +1122,10 @@ export function Dashboard({ children }: { children: ReactNode }) {
         <DockedChatPanel />
       </YStack>
 
-      {/* Mobile account drawer — the SAME account control as the rail foot, so
-          identity, tenancy, theme, billing and sign-out read identically on a
-          phone. Only the phone-only extras (project/network scope, alerts) sit
-          beside it; the drawer no longer keeps its own copies of them. */}
+      {/* Account drawer — the SAME account control as the rail foot, so identity,
+          tenancy, theme, billing and sign-out read identically everywhere. The
+          occasional controls sit beside it: the environment picker (production
+          is the default, switching it is a deliberate act) and notifications. */}
       <SlideOver open={menuOpen} onClose={() => setMenuOpen(false)} side="right" size={320} title="Account">
         <YStack gap="$2" className="hz-touch-target">
           <AccountMenu />
