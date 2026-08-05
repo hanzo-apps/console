@@ -105,9 +105,31 @@ export function ContextSwitcher() {
           iconAfter={<ChevronsUpDown size={13} opacity={0.6} />}
           aria-label={`Organization and project — ${contextLabel(orgLabel, scope.project)}`}
         >
-          <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} flex={1}>
-            {contextLabel(orgLabel, scope.project)}
-          </Text>
+          {org.logo ? (
+            // The org's own logo IS the label — the uploaded mark takes the
+            // slot the name held, height-capped to the row so any aspect fits.
+            // A scoped project keeps its text beside it; the full text stays
+            // in the aria-label either way. Arbitrary tenant URL/data URL, so
+            // a raw <img> (next/image would need a per-tenant remote
+            // allow-list) — same call BrandLogo makes.
+            <XStack items="center" gap="$2" flex={1} minW={0}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={org.logo}
+                alt={orgLabel}
+                style={{ height: 22, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'block' }}
+              />
+              {scope.project ? (
+                <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} flex={1}>
+                  / {scope.project}
+                </Text>
+              ) : null}
+            </XStack>
+          ) : (
+            <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} flex={1}>
+              {contextLabel(orgLabel, scope.project)}
+            </Text>
+          )}
         </Button>
       </Popover.Trigger>
 
