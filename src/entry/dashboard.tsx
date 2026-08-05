@@ -100,7 +100,6 @@ import { useDetailPane } from '~/components/DetailPane'
 import { ProductCustomize, ManagePins } from '~/components/SidebarCustomize'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { ProductIcon } from '~/components/ui/ProductIcon'
-import { ThemeToggle } from '~/components/ui/ThemeToggle'
 import { SystemStatusBadge } from '~/components/ui/SystemStatusBadge'
 import { Breadcrumbs } from '~/components/ui/Breadcrumbs'
 import { SidebarBrand } from '~/components/SidebarBrand'
@@ -113,6 +112,7 @@ import { ContextSwitcher } from '~/components/ContextSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
 import { WorkbenchDock } from '~/components/workbench/Workbench'
 import { Z } from '~/lib/z'
+import { ThemeToggle } from '@hanzo/ui/product'
 
 const EXPANDED_W = 264
 const COLLAPSED_W = 64
