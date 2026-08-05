@@ -136,7 +136,10 @@ export function buildTourFromSteps(guide: ProductGuide, resolved: StepProgress[]
       target: stepAnchorSelector(guide.id, r.step.id),
       title: r.step.title,
       body: r.step.body,
-      placement: 'right' as const,
+      // BELOW the row, never beside it: a checklist row spans the whole card,
+      // so "right of the row" is the far viewport edge — the card rendered
+      // clipped off-screen there, step one of every tour.
+      placement: 'bottom' as const,
     }))
   return [...stepTour, ...(guide.tour ?? [])]
 }

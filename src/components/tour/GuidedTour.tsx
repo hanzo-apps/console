@@ -28,18 +28,41 @@ const GAP = 12
 /** Read the current step's target rect, or null (no target / not found / hidden). */
 function readRect(target?: string): Rect | null {
   if (!target || typeof document === 'undefined') return null
-  const el = document.querySelector(target)
+  // The FIRST VISIBLE match, not merely the first: an anchor id can appear in a
+  // hidden twin (a collapsed rail, an unmounted pane) whose zero/offscreen box
+  // would strand the spotlight.
+  const all = Array.from(document.querySelectorAll(target))
+  const el = all.find((e) => {
+    const r = e.getBoundingClientRect()
+    return r.width >= 1 && r.height >= 1
+  })
   if (!el) return null
+  // Bring a scrolled-away target back before measuring — a tour step about an
+  // element the viewport cannot see is a spotlight on nothing.
+  const pre = el.getBoundingClientRect()
+  const vh = window.innerHeight
+  if (pre.bottom < 0 || pre.top > vh) el.scrollIntoView({ block: 'center' })
   const r = el.getBoundingClientRect()
-  // A zero-size box = a hidden anchor (e.g. the desktop sidebar on a phone) → center.
   if (r.width < 1 || r.height < 1) return null
+  // An anchor larger than most of the viewport is a container, not a target —
+  // spotlighting it dims nothing and confuses everything. Center instead.
+  if (r.width * r.height > window.innerWidth * vh * 0.7) return null
   return { top: r.top, left: r.left, width: r.width, height: r.height }
 }
 
 /** Clamp a value into [min, max]. */
 const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(v, max))
 
-/** Fixed-position style for the tooltip card given the target rect + placement. */
+/** Rough card height for fit math — measured cards vary; this bounds the clamps. */
+const CARD_H = 220
+
+/**
+ * Fixed-position style for the tooltip card. The declared placement is a
+ * PREFERENCE, not a contract: a side that has no room for the card FLIPS to
+ * the opposite side, and a side pair with no room either way falls through to
+ * below/above — so no step can render off-screen, whatever its author or its
+ * anchor's size assumed. Every axis is then clamped into the viewport.
+ */
 function tooltipStyle(rect: Rect | null, placement: TourStep['placement']): CSSProperties {
   const vw = typeof window === 'undefined' ? 1200 : window.innerWidth
   const vh = typeof window === 'undefined' ? 800 : window.innerHeight
@@ -47,18 +70,26 @@ function tooltipStyle(rect: Rect | null, placement: TourStep['placement']): CSSP
     return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: CARD_W, maxWidth: '92vw', zIndex: Z.popover }
   }
   const base: CSSProperties = { position: 'fixed', width: CARD_W, maxWidth: '92vw', zIndex: Z.popover }
+  const fitsRight = rect.left + rect.width + GAP + CARD_W <= vw
+  const fitsLeft = rect.left - GAP - CARD_W >= 0
+  const fitsBelow = rect.top + rect.height + GAP + CARD_H <= vh
+  let side = placement
+  if (side === 'right' && !fitsRight) side = fitsLeft ? 'left' : 'bottom'
+  else if (side === 'left' && !fitsLeft) side = fitsRight ? 'right' : 'bottom'
+  if (side === 'bottom' && !fitsBelow && rect.top - GAP - CARD_H >= 0) side = 'top'
   const leftClamped = clamp(rect.left, GAP, Math.max(GAP, vw - CARD_W - GAP))
-  switch (placement) {
+  const topClamped = clamp(rect.top, GAP, Math.max(GAP, vh - CARD_H - GAP))
+  switch (side) {
     case 'bottom':
-      return { ...base, top: clamp(rect.top + rect.height + GAP, GAP, vh - GAP), left: leftClamped }
+      return { ...base, top: clamp(rect.top + rect.height + GAP, GAP, Math.max(GAP, vh - CARD_H - GAP)), left: leftClamped }
     case 'top':
-      return { ...base, bottom: clamp(vh - rect.top + GAP, GAP, vh - GAP), left: leftClamped }
+      return { ...base, bottom: clamp(vh - rect.top + GAP, GAP, Math.max(GAP, vh - GAP)), left: leftClamped }
     case 'right':
-      return { ...base, top: clamp(rect.top, GAP, vh - GAP), left: clamp(rect.left + rect.width + GAP, GAP, Math.max(GAP, vw - CARD_W - GAP)) }
+      return { ...base, top: topClamped, left: clamp(rect.left + rect.width + GAP, GAP, Math.max(GAP, vw - CARD_W - GAP)) }
     case 'left':
-      return { ...base, top: clamp(rect.top, GAP, vh - GAP), right: clamp(vw - rect.left + GAP, GAP, vw - GAP) }
+      return { ...base, top: topClamped, left: clamp(rect.left - GAP - CARD_W, GAP, Math.max(GAP, vw - CARD_W - GAP)) }
     default:
-      return { ...base, top: clamp(rect.top + rect.height + GAP, GAP, vh - GAP), left: leftClamped }
+      return { ...base, top: clamp(rect.top + rect.height + GAP, GAP, Math.max(GAP, vh - CARD_H - GAP)), left: leftClamped }
   }
 }
 
