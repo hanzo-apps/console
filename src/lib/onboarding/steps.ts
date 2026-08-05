@@ -4,7 +4,7 @@
  * and the progress rail.
  *
  * The six post-signup steps (order is the flow): secure the account (2FA) →
- * data & consent → confirm the workspace → unlock free-trial credits → choose AI
+ * data & consent → confirm the organization → unlock free-trial credits → choose AI
  * access → first action. The whole state is one JSON object persisted under the
  * account preference key `onboarding` (see `useOnboarding`), so a half-finished
  * flow RESUMES on the next load and a completed one never shows again.
@@ -56,7 +56,7 @@ export interface OnboardingStepMeta {
 export const ONBOARDING_STEPS: readonly OnboardingStepMeta[] = [
   { id: 'secure', title: 'Secure your account', blurb: 'Two-factor authentication' },
   { id: 'consent', title: 'Data & consent', blurb: 'Terms and data preferences' },
-  { id: 'team', title: 'Your workspace', blurb: 'Confirm or name your team' },
+  { id: 'team', title: 'Your organization', blurb: 'Confirm or name your organization' },
   { id: 'credits', title: 'Free trial credits', blurb: 'Add a card to unlock credits' },
   { id: 'ai', title: 'AI access', blurb: 'Connect, bring keys, or use Hanzo' },
   { id: 'launch', title: "You're ready", blurb: 'Take your first action' },

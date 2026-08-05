@@ -339,7 +339,7 @@ export function StoreDetail({ params }: { params: Record<string, string> }) {
                 </Text>
               </XStack>
               <Text fontSize="$2" color="$color11">
-                Earn up to 20% of the compute margin every time a team runs it here.
+                Earn up to 20% of the compute margin every time an organization runs it here.
               </Text>
               <Button size="$2" self="flex-start" onPress={() => router.push(claimPath(app))}>
                 Claim your project

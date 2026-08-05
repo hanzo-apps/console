@@ -115,7 +115,7 @@ export const CATEGORY_SUMMARY: Record<ProductCategory, string> = {
   Apps: 'Chat, bot, search, marketplace, and studio — end-user AI applications.',
   Commerce: 'Products, orders, customers, inventory, and promotions — run your store on Hanzo Commerce (payments via Square in Billing).',
   Billing: 'Balance, credits, usage-based spend, invoices, payment methods, revenue, and grants — your account\'s money, metering, and the Square-backed billing console.',
-  Settings: 'Team, organization, and profile — administer your account and members.',
+  Settings: 'Members, organization, and profile — administer your account.',
 }
 
 // ── Nodes surface — which chain networks each brand reports on ────────────────

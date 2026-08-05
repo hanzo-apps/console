@@ -237,7 +237,7 @@ export default function DashboardHome() {
           icon={HandCoins}
           color={colorOf('authors')}
           title="Earn from your OSS"
-          description="Earn 20% of the compute margin your open-source project drives when teams run it on Hanzo Cloud — paid to your Hanzo wallet."
+          description="Earn 20% of the compute margin your open-source project drives when organizations run it on Hanzo Cloud — paid to your Hanzo wallet."
           ctaLabel="Start earning"
           onPress={() => push('/authors')}
         />

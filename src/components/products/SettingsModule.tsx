@@ -99,7 +99,7 @@ function GeneralTab() {
     <YStack gap="$5">
       <Section
         title="Organization"
-        action={<Button size="$2" icon={<Users size={15} />} onPress={() => router.push('/team')}>Manage team</Button>}
+        action={<Button size="$2" icon={<Users size={15} />} onPress={() => router.push('/team')}>Manage members</Button>}
       >
         {state.phase === 'error' ? (
           <ErrorState err={state.err} onRetry={reload} copy={IAM_COPY} />

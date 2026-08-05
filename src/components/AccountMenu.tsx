@@ -75,7 +75,7 @@ export function AccountMenu() {
         // Your people, beside your own settings — the other half of "who am I".
         // Choosing a DIFFERENT tenant is a different question and lives in the
         // top-left context switcher, so this menu never re-scopes the console.
-        { label: 'Team', href: '/team' },
+        { label: 'Members', href: '/team' },
         { label: 'Documentation', href: config.docsUrl, external: true, separatorBefore: true },
       ]}
       brand={{ name: config.brandName }}

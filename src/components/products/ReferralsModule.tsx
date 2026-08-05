@@ -52,7 +52,7 @@ export function ReferralsModule() {
     <YStack gap="$3">
       <PageHeader
         title="Referrals"
-        subtitle="Invite teams to Hanzo — earn cloud credit when they get started."
+        subtitle="Invite organizations to Hanzo — earn cloud credit when they get started."
         actions={
           <Button size="$3" icon={<RefreshCw size={15} />} onPress={load} disabled={state.phase === 'loading'}>
             Refresh
@@ -89,7 +89,7 @@ function ReferralsReady({
           </Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
-          Share your link. When a new team signs up and starts using Hanzo, they get {usd(data.refereeBonusCents)} in
+          Share your link. When a new organization signs up and starts using Hanzo, they get {usd(data.refereeBonusCents)} in
           bonus credit and you earn {usd(data.referrerBonusCents)}.
         </Text>
         <XStack gap="$2" items="center" flexWrap="wrap">
@@ -126,7 +126,7 @@ function ReferralsReady({
 
       {/* Real stat tiles */}
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Invites" value={String(data.counts.total)} caption="teams referred" />
+        <MetricCard icon={<Users size={16} color={toneColor('muted')} />} label="Invites" value={String(data.counts.total)} caption="orgs referred" />
         <MetricCard
           icon={<CircleCheck size={16} color={toneColor('positive')} />}
           label="Credited"
@@ -174,7 +174,7 @@ function ReferralsReady({
               >
                 <YStack gap="$1" flex={1} minW={180}>
                   <Text fontSize="$3" fontWeight="600" color="$color12">
-                    {r.referee || 'New team'}
+                    {r.referee || 'New organization'}
                   </Text>
                   <Text fontSize="$2" color="$color10">
                     {progressCaption(r)} · {shortDate(r.createdAt)}

@@ -1,5 +1,5 @@
 /**
- * Org-list decisions — the PURE core of the lazy-loading org/team switcher.
+ * Org-list decisions — the PURE core of the lazy-loading org switcher.
  *
  * No React, no I/O, no fabrication: it only ever transforms the orgs it is given
  * (or the query it is asked to page), so the switcher stays a thin render of this

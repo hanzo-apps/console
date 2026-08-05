@@ -15,7 +15,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { primeSession } from './_session'
 
 /** Every step whose footer must line up, in flow order. */
-const STEPS = ['Secure your account', 'Data & consent', 'Your workspace', 'Free trial credits', 'AI access']
+const STEPS = ['Secure your account', 'Data & consent', 'Your organization', 'Free trial credits', 'AI access']
 
 /** The y of the actions row, in page coordinates. */
 async function actionsY(page: Page): Promise<number> {

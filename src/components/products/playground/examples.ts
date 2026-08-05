@@ -36,7 +36,7 @@ export const EXAMPLES: Example[] = [
     label: 'Summarize a paragraph',
     model: 'zen-omni',
     system: 'Summarize the user text in exactly three bullet points.',
-    user: 'Hanzo Cloud is a unified AI gateway exposing hundreds of models behind one OpenAI-compatible API, with built-in retrieval, billing and per-org keys, so teams switch models without changing code.',
+    user: 'Hanzo Cloud is a unified AI gateway exposing hundreds of models behind one OpenAI-compatible API, with built-in retrieval, billing and per-org keys, so orgs switch models without changing code.',
   },
   {
     id: 'json',
