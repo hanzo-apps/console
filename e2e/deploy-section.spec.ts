@@ -279,6 +279,60 @@ test('the deploy form opens, derives a name, and refuses a bad host without post
   expect(writes, 'a rejected form must not create an app or a site').toEqual([])
 })
 
+test('every env var is SEALED by default, and only a named one opens', async ({ page }) => {
+  await mockNetwork(page)
+  await page.setViewportSize({ width: 1440, height: 1400 })
+  await openDeploy(page)
+  await page.getByRole('button', { name: 'New deployment' }).click()
+  const form = page.getByTestId('new-deploy')
+
+  // Credential names a key-NAME regex would have missed, plus plain config.
+  await form.getByRole('textbox').last().fill('STRIPE_SK=sk_live_x\nGH_PAT=ghp_x\nDB_PASS=hunter2\nPORT=8080')
+  const vars = form.getByTestId('env-vars')
+  await expect(vars).toBeVisible()
+
+  // Default is sealed for ALL FOUR — including the three the old regex let through.
+  for (const key of ['STRIPE_SK', 'GH_PAT', 'DB_PASS', 'PORT']) {
+    await expect(vars.getByRole('button', { name: `${key} Sealed` })).toHaveAttribute('aria-pressed', 'true')
+  }
+
+  // Opening PORT opens ONLY PORT.
+  await vars.getByRole('button', { name: 'PORT Public' }).click()
+  await expect(vars.getByRole('button', { name: 'PORT Public' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(vars.getByRole('button', { name: 'STRIPE_SK Sealed' })).toHaveAttribute('aria-pressed', 'true')
+
+  await page.screenshot({ path: join(SHOTS, 'deploy-env-secrets.png') })
+})
+
+test('a half-loaded board names the gap and shows no count it cannot know', async ({ page }) => {
+  // Sites answer; the APPS fan-out fails. The board must not render "Apps 0".
+  await page.route('**/v1/**', (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/v1/platform/projects')) return json(route, PROJECTS)
+    if (path.includes('/v1/platform/projects/') && path.endsWith('/apps')) {
+      return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"boom"}' })
+    }
+    if (path.endsWith('/v1/platform/sites')) return json(route, SITES)
+    return json(route, {})
+  })
+  await primeSession(page)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+
+  await openDeploy(page)
+  const board = page.getByTestId('deploy-board')
+  await expect(board.getByRole('status')).toContainText('Apps could not be fully loaded')
+  // The site that DID load still renders — a partial read is not an outage.
+  await expect(board.getByText('docs', { exact: true })).toBeVisible()
+  // Sites is knowable (1); Apps and the totals are not.
+  await expect(board.getByText('1', { exact: true })).toBeVisible()
+  await expect(board.getByText('—', { exact: true }).first()).toBeVisible()
+
+  // The Domains list inherits the same gap, and says so.
+  await openDeploy(page, 'domains')
+  await expect(page.getByTestId('deploy-panel-domains').getByRole('status')).toContainText('Apps could not be fully loaded')
+  await page.screenshot({ path: join(SHOTS, 'deploy-partial.png') })
+})
+
 test('at 390px the body never scrolls horizontally', async ({ page }) => {
   await mockNetwork(page)
   await page.setViewportSize({ width: 390, height: 844 })

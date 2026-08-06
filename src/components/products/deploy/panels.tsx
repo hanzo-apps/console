@@ -31,7 +31,7 @@ import { StorageApi, type Bucket } from '~/lib/api/storage'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
-import { hostRows, type DeployRow, type HostRow } from '~/lib/deploy/board'
+import { hostRows, partialNote, type DeployKind, type DeployRow, type HostRow } from '~/lib/deploy/board'
 
 /** Epoch ms → local string; an em dash when the backend had no timestamp. */
 const when = (ms?: number): string => (ms ? new Date(ms).toLocaleString() : '—')
@@ -310,8 +310,23 @@ export function StoragePanel() {
 
 // ── Domains ──────────────────────────────────────────────────────────────────
 
-export function DomainsPanel({ rows, loading, onRefresh }: { rows: DeployRow[]; loading: boolean; onRefresh: () => void }) {
+export function DomainsPanel({
+  rows,
+  loading,
+  incomplete,
+  onRefresh,
+}: {
+  rows: DeployRow[]
+  loading: boolean
+  /** Sources the board could not fully read — this list inherits their gaps. */
+  incomplete: DeployKind[]
+  onRefresh: () => void
+}) {
   const hosts = hostRows(rows)
+  // The host list is derived from the board's rows, so a half-loaded board is a
+  // half-loaded domain list. Saying so matters more here than anywhere else: a
+  // missing host reads as "nothing is bound", which is the opposite of the truth.
+  const note = partialNote(incomplete)
 
   const columns: Column<HostRow>[] = [
     {
@@ -353,6 +368,11 @@ export function DomainsPanel({ rows, loading, onRefresh }: { rows: DeployRow[]; 
         note="Every host serving one of your deployments. Bind a custom host when you deploy; it stays pending until DNS proves ownership."
         onRefresh={onRefresh}
       />
+      {note ? (
+        <Text fontSize="$2" color="$color11" role="status">
+          {note}
+        </Text>
+      ) : null}
       <DataTable
         columns={columns}
         rows={hosts}

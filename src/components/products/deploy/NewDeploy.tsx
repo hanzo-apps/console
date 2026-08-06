@@ -12,11 +12,18 @@
  *           upload or a git deploy afterwards, so this creates the target and the
  *           board shows it as `draft` until something is published to it.
  *
- * Env values are typed here and POSTed straight to cloud, which stores secrets in
- * KMS. They are never logged, never persisted by the browser, and never read back
- * into this form — cloud masks a secret's value on read, so re-submitting what a
- * read returned would blank the secret. That is why this form only CREATES env
- * and has no edit mode.
+ * Env values are typed here and POSTed straight to cloud. They are never logged,
+ * never persisted by the browser, and never read back into this form — cloud
+ * masks a sealed value on read, so re-submitting what a read returned would blank
+ * it. That is why this form only CREATES env and has no edit mode.
+ *
+ * Secrecy is DECLARED per variable, not guessed. Every variable is sealed unless
+ * the person deploying marks it Public, and the form says exactly that. The
+ * earlier version inferred secrecy from the key NAME, which let `STRIPE_SK`,
+ * `GH_PAT` and `DB_PASS` through as public while the help text promised they were
+ * sealed — a false promise is worse than no promise, so the UI now states only
+ * what it controls and defers to cloud (which seals by value shape server-side
+ * regardless of this choice) for the rest.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -26,10 +33,19 @@ import { PaasApi, type PaasProject } from '~/lib/api/paas'
 import { PlatformSitesApi, SITE_FRAMEWORKS } from '~/lib/api/platform-sites'
 import { FieldRow, FieldText, FieldTextArea, FieldOptionSelect } from '~/components/ui/Field'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { formError, repoName, toAppInput, toSiteInput, type DeployForm } from '~/lib/deploy/board'
+import { envVars, formError, repoName, toAppInput, toSiteInput, type DeployForm } from '~/lib/deploy/board'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
 
-const EMPTY: DeployForm = { kind: 'app', name: '', repo: '', branch: '', host: '', env: '', framework: 'static' }
+const EMPTY: DeployForm = {
+  kind: 'app',
+  name: '',
+  repo: '',
+  branch: '',
+  host: '',
+  env: '',
+  publicKeys: [],
+  framework: 'static',
+}
 
 export function NewDeploy({ onCancel, onDeployed }: { onCancel: () => void; onDeployed: () => void }) {
   const [form, setForm] = useState<DeployForm>(EMPTY)
@@ -64,6 +80,21 @@ export function NewDeploy({ onCancel, onDeployed }: { onCancel: () => void; onDe
   }, [])
 
   const problem = useMemo(() => formError(form, project || null), [form, project])
+
+  /** The variables as they will be SENT — each carrying its sealed/public state. */
+  const vars = useMemo(() => envVars(form), [form])
+
+  /**
+   * Name (or un-name) a key as public. Only keys the person opened are listed, so
+   * editing the textarea can never silently unseal a variable: a key that is no
+   * longer present simply stops being read, and a new one arrives sealed.
+   */
+  const markPublic = (key: string, isPublic: boolean) =>
+    set({
+      publicKeys: isPublic
+        ? [...new Set([...(form.publicKeys ?? []), key])]
+        : (form.publicKeys ?? []).filter((k) => k !== key),
+    })
 
   const submit = async () => {
     setTouched(true)
@@ -171,12 +202,63 @@ export function NewDeploy({ onCancel, onDeployed }: { onCancel: () => void; onDe
           </FieldRow>
 
           <FieldRow label="Environment">
-            <YStack gap="$1.5">
+            <YStack gap="$2">
               <FieldTextArea value={form.env ?? ''} rows={4} onChange={(v) => set({ env: v })} />
               <Text fontSize="$1" color="$color10">
-                One KEY=VALUE per line. Anything naming a credential is stored as a secret in KMS and masked
-                afterwards — this form can set a secret, never read one back.
+                One KEY=VALUE per line. Every variable is <Text fontWeight="600">sealed by default</Text> — mark
+                one Public to keep it readable later. Cloud may seal a value regardless of that choice when the
+                value itself looks like a credential. A sealed value is masked on read, so this form can set one
+                but never read one back.
               </Text>
+
+              {vars.length ? (
+                <YStack
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  rounded="$4"
+                  overflow="hidden"
+                  data-testid="env-vars"
+                >
+                  {vars.map((v, i) => (
+                    <XStack
+                      key={v.key}
+                      items="center"
+                      justify="space-between"
+                      gap="$3"
+                      px="$3"
+                      py="$2"
+                      flexWrap="wrap"
+                      borderTopWidth={i === 0 ? 0 : 1}
+                      borderColor="$borderColor"
+                    >
+                      <Text fontSize="$2" color="$color12" numberOfLines={1} className="hz-mono" flex={1} minW={0}>
+                        {v.key}
+                      </Text>
+                      <XStack gap="$1.5">
+                        {(
+                          [
+                            ['Sealed', true],
+                            ['Public', false],
+                          ] as const
+                        ).map(([label, sealed]) => (
+                          <Button
+                            key={label}
+                            size="$1"
+                            bg={v.secret === sealed ? '$color5' : 'transparent'}
+                            borderWidth={1}
+                            borderColor="$borderColor"
+                            aria-pressed={v.secret === sealed}
+                            aria-label={`${v.key} ${label}`}
+                            onPress={() => markPublic(v.key, !sealed)}
+                          >
+                            {label}
+                          </Button>
+                        ))}
+                      </XStack>
+                    </XStack>
+                  ))}
+                </YStack>
+              ) : null}
             </YStack>
           </FieldRow>
         </>

@@ -8,7 +8,8 @@ import {
   byRecency,
   summarize,
   repoName,
-  isSecretKey,
+  envVars,
+  partialNote,
   parseEnv,
   hostError,
   envError,
@@ -156,7 +157,7 @@ describe('parseEnv', () => {
 
   it('skips blanks, comments, and lines with no assignment', () => {
     expect(parseEnv('\n# a comment\nPORT=8080\ngarbage\n  \n')).toEqual([
-      { key: 'PORT', value: '8080', secret: false },
+      { key: 'PORT', value: '8080', secret: true },
     ])
   })
 
@@ -165,26 +166,56 @@ describe('parseEnv', () => {
   })
 
   it('keeps an empty value when the key is real', () => {
-    expect(parseEnv('EMPTY=')).toEqual([{ key: 'EMPTY', value: '', secret: false }])
+    expect(parseEnv('EMPTY=')).toEqual([{ key: 'EMPTY', value: '', secret: true }])
   })
 
   it('does not unquote or expand — a credential is stored verbatim', () => {
     expect(parseEnv('TOKEN="ab$HOME"')).toEqual([{ key: 'TOKEN', value: '"ab$HOME"', secret: true }])
   })
 
-  it('marks credential-shaped keys secret and leaves plain config visible', () => {
-    const got = parseEnv('API_TOKEN=t\nDATABASE_URL=postgres://x\nPORT=8080\nNODE_ENV=production')
+  // The defect this replaced: a key-NAME regex decided secrecy, so these three
+  // real credential names sailed through as public while the form's help text
+  // promised they were sealed.
+  it.each(['STRIPE_SK', 'GH_PAT', 'DB_PASS', 'PORT', 'NODE_ENV'])('seals %s by default', (key) => {
+    expect(parseEnv(`${key}=x`)[0].secret).toBe(true)
+  })
+
+  it('opens ONLY the keys named public', () => {
+    const got = parseEnv('PORT=8080\nSTRIPE_SK=sk_live_x', new Set(['PORT']))
     expect(got.map((e) => [e.key, e.secret])).toEqual([
-      ['API_TOKEN', true],
-      ['DATABASE_URL', true],
       ['PORT', false],
-      ['NODE_ENV', false],
+      ['STRIPE_SK', true],
     ])
   })
 
-  it('classifies case-insensitively', () => {
-    expect(isSecretKey('stripe_secret')).toBe(true)
-    expect(isSecretKey('LOG_LEVEL')).toBe(false)
+  it('ignores a public key that is not present, and never opens by prefix', () => {
+    expect(parseEnv('DB_PASSWORD=x', new Set(['DB_PASS', 'NOPE']))[0].secret).toBe(true)
+  })
+})
+
+describe('envVars', () => {
+  it('reads the public list off the form', () => {
+    const form: DeployForm = { kind: 'app', name: 'a', repo: 'r', env: 'A=1\nB=2', publicKeys: ['A'] }
+    expect(envVars(form).map((e) => [e.key, e.secret])).toEqual([
+      ['A', false],
+      ['B', true],
+    ])
+  })
+
+  it('seals everything when the form names nothing public', () => {
+    expect(envVars({ kind: 'app', name: 'a', repo: 'r', env: 'A=1' })[0].secret).toBe(true)
+  })
+})
+
+describe('partialNote', () => {
+  it('names WHICH source is incomplete, so a reader knows which number lies', () => {
+    expect(partialNote(['app'])).toMatch(/^Apps could not/)
+    expect(partialNote(['site'])).toMatch(/^Sites could not/)
+    expect(partialNote(['app', 'site'])).toMatch(/^Apps and sites could not/)
+  })
+
+  it('is silent for a whole board', () => {
+    expect(partialNote([])).toBeNull()
   })
 })
 
@@ -233,14 +264,22 @@ describe('hostError', () => {
 describe('form → create input', () => {
   const base: DeployForm = { kind: 'app', name: 'api', repo: 'https://git.hanzo.ai/hanzoai/api.git' }
 
-  it('maps a repo + host + env to the app create body', () => {
+  it('maps a repo + host + env to the app create body, sealing env by default', () => {
     expect(toAppInput({ ...base, branch: 'main', host: 'API.Example.COM ', env: 'PORT=8080' })).toEqual({
       name: 'api',
       source: 'git',
       repo: { url: 'https://git.hanzo.ai/hanzoai/api.git', branch: 'main' },
-      env: [{ key: 'PORT', value: '8080', secret: false }],
+      env: [{ key: 'PORT', value: '8080', secret: true }],
       domains: ['api.example.com'],
     })
+  })
+
+  it('carries the per-variable public choice into the create body', () => {
+    const out = toAppInput({ ...base, env: 'PORT=8080\nSTRIPE_SK=sk_live', publicKeys: ['PORT'] })
+    expect(out.env).toEqual([
+      { key: 'PORT', value: '8080', secret: false },
+      { key: 'STRIPE_SK', value: 'sk_live', secret: true },
+    ])
   })
 
   it('omits branch, env, and domains rather than sending empty ones', () => {

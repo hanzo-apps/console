@@ -104,6 +104,20 @@ export function hostOf(url: string): string {
 export const byRecency = (rows: DeployRow[]): DeployRow[] =>
   [...rows].sort((a, b) => b.updatedAt - a.updatedAt)
 
+/**
+ * The sentence for a board that loaded only part of itself, or null when it is
+ * whole. Named per source, because "some data is missing" leaves a reader unable
+ * to tell which number on the screen is now a lie.
+ */
+export function partialNote(incomplete: readonly DeployKind[]): string | null {
+  const apps = incomplete.includes('app')
+  const sites = incomplete.includes('site')
+  if (apps && sites) return 'Apps and sites could not be fully loaded — this list is incomplete.'
+  if (apps) return 'Apps could not be fully loaded — this list is incomplete.'
+  if (sites) return 'Sites could not be fully loaded — this list is incomplete.'
+  return null
+}
+
 /** Board headline counts. `live` is the backend's own word, never inferred. */
 export function summarize(rows: DeployRow[]): { total: number; live: number; apps: number; sites: number } {
   return {
@@ -142,28 +156,23 @@ export function repoName(url: string): string {
 }
 
 /**
- * Env keys whose VALUE is treated as a secret by default.
- *
- * Fail-secure default, not a classifier: an unrecognised key stays visible, and
- * anything naming a credential — including the connection strings that carry a
- * password inline (`DATABASE_URL`, `*_DSN`) — is marked secret so cloud stores it
- * as one and masks it on read. The person deploying can still be wrong about a
- * key we do not recognise, so this is a default, never a guarantee.
- */
-const SECRET_KEY = /(SECRET|TOKEN|KEY|PASSWORD|PASSWD|CREDENTIAL|PRIVATE|AUTH|DSN|URI|URL|CONN)/i
-
-export const isSecretKey = (key: string): boolean => SECRET_KEY.test(key)
-
-/**
  * `KEY=VALUE` lines → env vars. Blank lines and `#` comments are skipped, the
  * first `=` splits (so a value may contain `=`), and a line without one is
  * dropped rather than stored as a key with an empty value.
  *
- * Values are passed through verbatim — no trimming of the value beyond
- * surrounding whitespace, no unquoting, no expansion. Interpreting `$VAR` or
- * stripping quotes here would silently change a credential.
+ * EVERY variable is secret unless its key appears in `publicKeys` — an explicit
+ * choice the person deploying makes per variable. This replaced a key-NAME regex
+ * (`/SECRET|TOKEN|KEY|…/`) that guessed, and guessed wrong in both directions:
+ * `STRIPE_SK`, `GH_PAT` and `DB_PASS` all name credentials and all escaped it, while
+ * the form's own help text promised they would be sealed. A default that fails
+ * open under a promise of safety is worse than no default, so the default is now
+ * sealed and the exceptions are named.
+ *
+ * Values are passed through verbatim — no trimming beyond surrounding
+ * whitespace, no unquoting, no expansion. Interpreting `$VAR` or stripping
+ * quotes here would silently change a credential.
  */
-export function parseEnv(text: string): PaasEnvVar[] {
+export function parseEnv(text: string, publicKeys: ReadonlySet<string> = new Set()): PaasEnvVar[] {
   const out: PaasEnvVar[] = []
   for (const raw of text.split('\n')) {
     const line = raw.trim()
@@ -172,7 +181,7 @@ export function parseEnv(text: string): PaasEnvVar[] {
     if (eq <= 0) continue
     const key = line.slice(0, eq).trim()
     if (!key) continue
-    out.push({ key, value: line.slice(eq + 1).trim(), secret: isSecretKey(key) })
+    out.push({ key, value: line.slice(eq + 1).trim(), secret: !publicKeys.has(key) })
   }
   return out
 }
@@ -220,13 +229,22 @@ export type DeployForm = {
   host?: string
   /** Raw `KEY=VALUE` lines from the textarea. Apps only. */
   env?: string
+  /**
+   * Keys the person explicitly marked PUBLIC. Everything else is sealed — the
+   * list names the exceptions, so forgetting to touch a variable leaves it safe.
+   */
+  publicKeys?: string[]
   framework?: string
 }
+
+/** The variables a form will send, each carrying its sealed/public choice. */
+export const envVars = (form: DeployForm): PaasEnvVar[] =>
+  parseEnv(form.env ?? '', new Set(form.publicKeys ?? []))
 
 /** The app create body (`POST /v1/platform/projects/:project/apps`). */
 export function toAppInput(form: DeployForm): CreateAppInput {
   const host = form.host?.trim().toLowerCase()
-  const env = parseEnv(form.env ?? '')
+  const env = envVars(form)
   return {
     name: form.name.trim(),
     source: 'git',

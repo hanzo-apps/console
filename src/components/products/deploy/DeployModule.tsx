@@ -28,7 +28,7 @@ import { MetricCard } from '~/components/ui/Metric'
 import { StatusTag } from '~/components/ui/StatusTag'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
 import { productSubpageSlug } from '~/lib/products/match'
-import { summarize, type DeployKind, type DeployRow } from '~/lib/deploy/board'
+import { partialNote, summarize, type DeployKind, type DeployRow } from '~/lib/deploy/board'
 import { PlatformStateCard } from '../platform/state'
 import { useBoard } from './useBoard'
 import { NewDeploy } from './NewDeploy'
@@ -54,7 +54,14 @@ export function DeployModule({ params }: { params: Record<string, string> }) {
       case 'storage':
         return <StoragePanel />
       case 'domains':
-        return <DomainsPanel rows={board.rows} loading={board.loading} onRefresh={() => void board.reload()} />
+        return (
+          <DomainsPanel
+            rows={board.rows}
+            loading={board.loading}
+            incomplete={board.incomplete}
+            onRefresh={() => void board.reload()}
+          />
+        )
       case 'apps':
         return <BoardView board={board} only="app" />
       case 'sites':
@@ -103,6 +110,13 @@ function BoardView({ board, only }: { board: ReturnType<typeof useBoard>; only?:
   const router = useRouter()
   const rows = only ? board.rows.filter((r) => r.kind === only) : board.rows
   const totals = summarize(board.rows)
+  const note = partialNote(board.incomplete)
+  // A count over a source that did not fully load is a FLOOR, not a total. Showing
+  // "Apps 0" beside "apps could not be loaded" states a number the board does not
+  // know, so the unreliable tiles read an em dash instead.
+  const missingApps = board.incomplete.includes('app')
+  const missingSites = board.incomplete.includes('site')
+  const count = (n: number, unreliable: boolean): string => (unreliable ? '—' : String(n))
 
   const columns: Column<DeployRow>[] = [
     {
@@ -161,16 +175,32 @@ function BoardView({ board, only }: { board: ReturnType<typeof useBoard>; only?:
     <YStack gap="$3.5" data-testid={only ? `deploy-panel-${only}s` : 'deploy-board'}>
       {only ? null : (
         <XStack gap="$3" flexWrap="wrap">
-          <MetricCard icon={<Rocket size={15} color="$color10" />} label="Deployments" value={String(totals.total)} />
-          <MetricCard icon={<Layers size={15} color="$color10" />} label="Live" value={String(totals.live)} />
-          <MetricCard icon={<AppWindow size={15} color="$color10" />} label="Apps" value={String(totals.apps)} />
-          <MetricCard icon={<Globe size={15} color="$color10" />} label="Sites" value={String(totals.sites)} />
+          <MetricCard
+            icon={<Rocket size={15} color="$color10" />}
+            label="Deployments"
+            value={count(totals.total, missingApps || missingSites)}
+          />
+          <MetricCard
+            icon={<Layers size={15} color="$color10" />}
+            label="Live"
+            value={count(totals.live, missingApps || missingSites)}
+          />
+          <MetricCard
+            icon={<AppWindow size={15} color="$color10" />}
+            label="Apps"
+            value={count(totals.apps, missingApps)}
+          />
+          <MetricCard
+            icon={<Globe size={15} color="$color10" />}
+            label="Sites"
+            value={count(totals.sites, missingSites)}
+          />
         </XStack>
       )}
 
-      {board.partial ? (
+      {note ? (
         <Text fontSize="$2" color="$color11" role="status">
-          {board.partial}
+          {note}
         </Text>
       ) : null}
 
