@@ -50,6 +50,15 @@ export type ConsoleConfig = {
   brandName: string
   /** Unified cloud backend base URL (hanzoai/cloud /v1) — shared across brands. */
   cloudUrl: string
+  /**
+   * The PUBLIC gated API host — what a customer's own code calls, and the only base
+   * that belongs in a copyable snippet. Distinct from `cloudUrl`, which is SAME-ORIGIN
+   * in the browser: printing that would hand someone `https://console.<brand>/v1/…`,
+   * a URL that works for the SPA's proxied session and not for their API key. Shared
+   * across brands, because the cloud backend is one multi-tenant `/v1` scoped by the
+   * brand JWT's org — there is no per-brand API host to resolve.
+   */
+  apiUrl: string
   /** PaaS base URL (DOKS cluster control plane) — shared. */
   platformUrl: string
   /**
@@ -469,6 +478,7 @@ export function resolveConfig(host: string = currentHost()): ConsoleConfig {
     brand,
     brandName: b.brandName,
     cloudUrl: cloudUrl(),
+    apiUrl: trimSlash(process.env.NEXT_PUBLIC_API_URL ?? 'https://api.hanzo.ai'),
     iamUrl: trimSlash(process.env.NEXT_PUBLIC_IAM_URL ?? b.iamUrl),
     iamOrgName: process.env.NEXT_PUBLIC_IAM_ORG_NAME ?? org,
     iamAppName: process.env.NEXT_PUBLIC_IAM_APP_NAME ?? app,

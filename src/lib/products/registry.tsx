@@ -1236,6 +1236,10 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: AgentsModule },
     ],
     subpages: [
+      // The guided way in: describe an agent or start from a template, configure it in
+      // the ONE builder, run it, and take the call away. Leads the sub-nav because it
+      // is where someone with no agents yet should land.
+      { slug: 'quickstart', label: 'Quickstart' },
       { slug: 'status', label: 'Status' },
       { slug: 'logs', label: 'Logs' },
       { slug: 'metrics', label: 'Metrics' },

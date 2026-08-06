@@ -78,6 +78,8 @@ import {
   VersionBadge,
 } from './agents/parts'
 import { AgentDetailView, NewAgentForm } from './agents/forms'
+import { agentBuilderLoaders } from './agents/loaders'
+import { AgentQuickstart } from '~/components/agent-builder'
 import { BackendStateCard, DataTable, EmptyState, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
 
 const PAGE_SIZE = 8
@@ -279,6 +281,36 @@ export function AgentsModule(props: { params: Record<string, string> }) {
     />
   )
 
+  // Owned sub-pages: Status/Logs/Metrics render focused slices of the agents' OWN
+  // runs (from /v1/agents), so they are never the empty generic o11y/ledger subpage.
+  // Overview ('') shows everything. Metrics = counts + invocation trend + resource;
+  // Status = health donut + agents table; Logs = the invocation activity feed.
+  const routeTab = props.params?.tab ?? ''
+
+  // ── Quickstart ──────────────────────────────────────────────────────────────
+  // Its own surface, and it answers BEFORE the list's loading/error/empty states on
+  // purpose: building an agent does not depend on reading the ones that exist, and
+  // the moments you most need it — no agents yet, or the registry not answering —
+  // are exactly the ones those early returns would have swallowed it in.
+  if (routeTab === 'quickstart') {
+    return (
+      <>
+        <PageHeader
+          title="Build an agent"
+          subtitle="Describe what you want, or start from a template. Four steps, and every one is a real call."
+        />
+        <AgentQuickstart
+          loaders={agentBuilderLoaders}
+          apiBase={config.apiUrl}
+          onFinished={() => {
+            analytics.capture(EVENTS.AGENT_CREATED)
+            void reload()
+          }}
+        />
+      </>
+    )
+  }
+
   // ── Initial loading ─────────────────────────────────────────────────────────
   if (loading && agents.length === 0 && !error) {
     return (
@@ -397,11 +429,6 @@ export function AgentsModule(props: { params: Record<string, string> }) {
   const tabs: StatusTab[] = ['all', ...AGENT_STATUSES]
   const tabCount = (t: StatusTab): number => (t === 'all' ? agents.length : health[t])
 
-  // Owned sub-pages: Status/Logs/Metrics render focused slices of the agents' OWN
-  // runs (from /v1/agents), so they are never the empty generic o11y/ledger subpage.
-  // Overview ('') shows everything. Metrics = counts + invocation trend + resource;
-  // Status = health donut + agents table; Logs = the invocation activity feed.
-  const routeTab = props.params?.tab ?? ''
   const showMetrics = routeTab === '' || routeTab === 'metrics'
   const showStatus = routeTab === '' || routeTab === 'status'
   const showLogs = routeTab === '' || routeTab === 'logs'

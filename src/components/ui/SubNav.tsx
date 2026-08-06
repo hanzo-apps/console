@@ -4,8 +4,8 @@
  * SubNav — the ONE level-2 nav for a product.
  *
  * Clicking into a product reveals ITS options rather than replacing the screen.
- * That second level lives in the SIDEBAR (`DrillNav`) — the house pattern, the one
- * the whole console already drills with. This strip is the SAME nav, rendered from
+ * That second level lives in the SIDEBAR (`SubRows`), expanded beneath the product's
+ * own row — the house pattern. This strip is the SAME nav, rendered from
  * the SAME source (`productSubpages` over the registry), for the viewports where
  * the sidebar is not on screen: below `lg` the sidebar is a drawer, so the strip
  * carries level 2 in the content column and hides itself at `lg+` where the rail
@@ -75,7 +75,7 @@ export function SubNav({
   const to = href ?? ((slug: string) => subpageHref(id, slug))
 
   return (
-    // Hidden at lg+ — the sidebar's DrillNav is the level-2 nav there. Purely a
+    // Hidden at lg+ — the sidebar's SubRows is the level-2 nav there. Purely a
     // CSS media style prop (not a JS media branch), so SSR and first paint match.
     <XStack
       gap="$1.5"

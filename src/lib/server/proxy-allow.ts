@@ -33,6 +33,13 @@ export const CLOUD_HEADS: readonly string[] = [
   'functions',
   'prompts',
   'agents',
+  // The unified tool plane (cloud apps/tools): /v1/tools — discovery across every
+  // source (connector actions, functions, zap-service routes, agents, skills, the
+  // org's own MCP servers), deduplicated by name. `scopeOf` derives the org+project
+  // from the Bearer owner and 403s a cookie-only call, so it routes through /v1
+  // exactly like agents/prompts. Discovery only — `/v1/tools/call` is refused below,
+  // because running a tool belongs to whatever runs an agent, not to a browser tab.
+  'tools',
   // Login manager (cloud clients/link): /v1/links[/…] — the org+user-scoped registry
   // of which AI provider accounts are signed in on which machines + their usage. The
   // handler resolves org from the Bearer owner + the user from the validated subject
@@ -395,7 +402,15 @@ export function v1Head(path: string): string | null {
  * rule would break a live surface while claiming to preserve a property that never
  * covered it. Defense in depth — the backend gates cross-tenant reads on its own.
  */
-const REFUSED_SUBPATHS: readonly RegExp[] = [/^v1\/ai\/stores\/global(?:$|[/?#])/]
+const REFUSED_SUBPATHS: readonly RegExp[] = [
+  /^v1\/ai\/stores\/global(?:$|[/?#])/,
+  // The tool plane's DISPATCH door. `tools` is allow-listed for discovery — the agent
+  // builder needs to offer the org's real tool names — but a head admits every
+  // sub-path, and `POST /v1/tools/call` RUNS a tool. Executing one belongs to whatever
+  // runs an agent, never to a form in a browser tab, so the console's proxy is a
+  // read-only window onto the plane.
+  /^v1\/tools\/call(?:$|[/?#])/,
+]
 
 export function allowCloudSurface(path: string): boolean {
   const rel = path.replace(/^\/+/, '')
