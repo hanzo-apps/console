@@ -3588,8 +3588,8 @@ and the rail hid them.
   rail, `SubNav`, and ⌘K all say the same word. The eight products missing `subpages`
   now declare them; the icons the strips were carrying moved onto the declarations.
 - **`components/ui/SubNav.tsx` is the ONE strip**, rendered from `productSubpages` and
-  hidden at `lg+` (`$lg={{ display: 'none' }}`) because the sidebar's `DrillNav` owns
-  level 2 there. One declaration, two mounts — never two navs painting at once. It
+  hidden at `lg+` (`$lg={{ display: 'none' }}`) because the sidebar owns level 2
+  there (then `DrillNav`; now `SubRows` — see "The rail stopped drilling" below). One declaration, two mounts — never two navs painting at once. It
   takes an optional `href` for a product whose tabs carry URL state (Containers keeps
   its `?cluster=` selection across tabs). `subpageIcon` moved here and `dashboard.tsx`
   imports it, so the sub-page icon defaults exist once.
@@ -3833,3 +3833,84 @@ reports signed out and the app sits on its loader forever. It emits base64URL no
 which is what a JWT segment actually is. And the assistant's composer carries its own
 mic with the same `Talk to Hanzo` label, mounted-but-hidden until the panel opens, so
 a bare attribute locator matches that one first: scope to `getByTestId('assistant-fab')`.
+
+
+## The agent quickstart, and the rail that stopped drilling (v8.5.61)
+
+Two changes that share a shape: something that looked finished was standing in for
+the thing itself.
+
+**The builder had no way in.** `AgentBuilder` — the canonical, host-agnostic one —
+was reachable only as a form in a side pane, from a board you first had to have
+agents to be looking at. `agents/quickstart` is the way someone with none starts:
+describe what you want in a sentence, or take a template, then configure, run and
+integrate.
+
+- **Every step is an endpoint**, which is the whole design constraint. Describe →
+  `POST /v1/chat/completions` (`draftAgent`) turns a sentence into a spec; Configure →
+  the SAME `AgentBuilder`, seeded; Run → `POST /v1/agents/:ref/run` executes it and
+  shows the RECORDED run; Integrate → prints the request that just worked. A ladder
+  of steps is a promise about what happens, and a step that only draws a checkmark
+  turns the promise into decoration. Steps 1 and 3 are optional by construction —
+  their loaders may be absent, and the step then says exactly what is missing.
+- **`components/agent-builder/templates.ts`** — eight presets, pure data. A template is
+  a PRESET, never a promise: it may only carry fields `toCreateBody` already expresses
+  (`name`, `description`, `systemPrompt`, and the real `AgentConfig` knobs), and a test
+  pins exactly that. **None names a tool.** Tools are per-org, so a hardcoded
+  `web.search` would name something that may not exist and would fail at the agent's
+  FIRST invocation rather than in the form. What a template CAN say truthfully is
+  `useTools` / `webSearch`, which are real switches in the agent contract.
+- **The tool plane was live the whole time.** `loaders.ts` said "No live tool catalog
+  endpoint on this deployment yet" and left the field typeable-only. `GET /v1/tools` is
+  bound and serving — one flat set spanning connector actions, functions, zap-service
+  routes, agents, skills and the org's own MCP servers, deduplicated by name, each
+  flagged `activated`. `lib/api/tools.ts` reads it, `proxy-allow` admits the head, and
+  `/v1/tools/call` is REFUSED there: running a tool belongs to whatever runs an agent,
+  never to a browser tab. An org with nothing activated gets `{"tools":[]}` — a real
+  empty answer, shown honestly rather than papered over.
+- **`defaultModel` was picking an embeddings model.** It named `zen-omni` as its exact
+  match, and the live catalog does not carry that id — so the exact arm never fired and
+  the fallback ran instead: `^zen[-.]` over an alphabetically sorted catalog, which
+  selects `zen-embedding`. Every agent created without touching the model field was
+  pointed at a SKU that cannot hold a conversation, and nothing caught it because the
+  dead exact-match read like the rule. The family test is `^zen\d` now, because zen's
+  naming splits cleanly: **`zen5*` are the text models; `zen-<noun>` names a MODALITY**
+  (embedding, image, video, rerank, voice, vl, guard). The model and tool placeholders
+  were advertising the same dead id and two invented tool names; both now say things
+  that exist.
+
+**The rail stopped drilling.** Clicking a product used to swap the ENTIRE sidebar for
+that product's sub-nav, behind a "Back to all products" button. The options were
+identical either way — what the drill took away was every OTHER product, which is
+precisely what someone needs when the reason they opened the rail was to go somewhere
+else. `SubRows` replaces `DrillNav`: a product's sub-pages expand beneath its own row,
+indented on a hairline, `inert` when collapsed.
+
+- **The label navigates; the chevron only opens and closes.** One target doing both
+  would make "show me what is in here" and "take me there" the same gesture.
+- `productIsOpen` / `toggleProduct` in `nav-accordion.ts`, beside the category pair and
+  keyed apart from it. The default is the OPPOSITE of a category's, deliberately:
+  categories are few and describe the catalog, so they open; products are many and each
+  brings four to eight rows, so opening them all would bury the catalog under its own
+  detail. The product you are IN is open unless you closed it, and that choice persists.
+- **A pinned product appears twice** — once under Pinned, once in its category — and
+  exactly ONE copy may carry the sub-list. Two copies is two navs painting at once,
+  which is the thing this rail exists to avoid, and it doubles the rail's height for no
+  information. The pinned copy owns it.
+
+**Verification.** `tsc --noEmit` clean; `vitest` **3259 passed / 8 skipped** (262 files;
++draft/handle parsing, +templates, +the product accordion, +the tool-plane allow/refuse
+pair, and a `defaultModel` test that goes red on the `zen-embedding` regression).
+RENDER-proven: `e2e/agent-quickstart.spec.ts` (3 tests) asserts the ladder, that the
+gallery sits to the RIGHT of the composer by measured geometry at 1440, that searching
+narrows it, that picking Deep researcher carries its handle and prompt into step 2, and
+that 390 stacks without the body scrolling sideways. `e2e/level-2-nav.spec.ts` (5/5) was
+retargeted, not deleted: it now asserts "All products" is still on screen while a
+product is open — the invariant the drill could never have satisfied — and that no
+"Back to all products" button exists on any of the 18 converted products.
+
+One placement note that cost a debug cycle: the quickstart branch must return BEFORE
+`AgentsModule`'s loading/error/empty states. Building an agent does not depend on
+reading the ones that exist, and the moments you most need the quickstart — no agents
+yet, or the registry not answering — are exactly the ones those early returns swallow
+it in.
