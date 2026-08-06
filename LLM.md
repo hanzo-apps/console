@@ -3833,3 +3833,61 @@ reports signed out and the app sits on its loader forever. It emits base64URL no
 which is what a JWT segment actually is. And the assistant's composer carries its own
 mic with the same `Talk to Hanzo` label, mounted-but-hidden until the panel opens, so
 a bare attribute locator matches that one first: scope to `getByTestId('assistant-fab')`.
+
+## Level 2 is a BRANCH of the product list, not a second screen
+
+Entering a product used to REPLACE the sidebar. `3cd612b6aa` ("cleaner sidebar/nav
+UX — expand-all, drill-in, rail+flyout") swapped the inline sub-nav for a drill:
+clicking a product with sub-pages rendered `DrillNav` — that product's pages, a
+product header, and a "Back to all products" affordance — INSTEAD of the catalog. So
+reading Models › Metrics put a navigation between you and Agents, and the only way to
+the next product was back out and in again.
+
+That was a re-regression, not a new idea. The commit it replaced had removed a
+two-level nav for exactly this reason; its own docstring says so — "a single click
+from the always-visible list, with NO slide-out and NO 'back' step (the prior
+two-level nav required returning to the list to reach another product)". The drill
+was reintroduced deliberately in that UX pass, not as a fix for something else, so
+restoring the branch costs nothing else.
+
+`InlineSubnav` renders the current product's pages NESTED under its own row, inside
+its category, so every sibling stays listed below it. `orderEntries(entries,
+activeId)` already floats the active product to the top of its category, so the shape
+falls out: the product, its pages, then its peers.
+
+It is the SAME list from the SAME source — `productSubpages(entry, showAdmin)` over
+the registry (`indexLabel` + `subpages` + the uniform `BASE_SUBPAGES`), which is also
+what `SubNav` renders below `lg` and what `match-core` routes on. There is no second
+list of products and no second list of page names; adding a sub-page is still one
+registry edit. `subpageHref` builds the URL, so there is one URL per screen.
+
+Three things fell out of the change and are worth keeping:
+
+- **~70 lines went away.** The drill needed `manualList` state, an effect to reset it
+  when the route changed, `canDrill`/`drilled`, an early return with its own brand +
+  account + wallet mounts, and a two-branch `open()` (drill vs navigate, which is why
+  entering a product sometimes closed the mobile drawer and sometimes did not).
+  Opening a product is now one thing: go to it.
+- **The active category can no longer be collapsed shut.** Its section now HOLDS
+  level 2, and the content strip that carries level 2 below `lg` is `display: none`
+  at `lg+` — so honoring a stored collapse would strand you inside a product with no
+  way to reach its pages. `categoryIsOpen` takes `activeCategory` and forces that one
+  open; every other section still obeys the user's stored choice (pinned by two tests,
+  including that nothing is forced when no product is active).
+- **A nav claim in a browser needs GEOMETRY, not visibility.** `SidebarNav` is one
+  definition with several mounts, and the closed mobile drawer is moved off-canvas by
+  a CSS transform — Playwright still reports it VISIBLE, because an off-screen element
+  keeps its box (measured: the desktop rail's nested nav at x=38, the drawer's copy of
+  the same nav at x=-284, both `visibility: visible`). `onScreen()` in the spec asserts
+  the box is inside the viewport, which is the only honest way to say "this is the nav
+  the user can see".
+
+`e2e/level-2-nav.spec.ts` keeps its original invariant (exactly ONE level-2 nav: the
+rail owns it at `lg+` and the content strip's COMPUTED display is `none`) and gains the
+regression: siblings are listed AND clickable from the product AND from a nested page,
+clicking one lands on it directly, arriving there moves level 2 to THAT product, and
+"Back to all products" now has count 0 anywhere on screen. 7/7 green against a local
+fixture, with `e2e-shots/level2-siblings-nested.png` showing Models › Blend open with
+Agents and AI Accounts sitting right below Metrics. The 18-product sweep is
+`test.slow()` — it is 18 full page loads, minutes against a dev server that compiles
+each route on demand.

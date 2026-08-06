@@ -1,19 +1,23 @@
 'use client'
 
 /**
- * Dashboard shell — a TWO-LEVEL sidebar (product list ⇄ drill into a product) + top
+ * Dashboard shell — ONE always-visible product list (level 2 nests inside it) + top
  * bar + content, responsive across phone / tablet / laptop / desktop.
  *
- * Level 1 (the product list) renders from the catalog: fixed Overview/Docs, a
- * Pinned section the user curates, then every product grouped by category. Each
- * CATEGORY is an INDEPENDENTLY collapsible section that renders EXPANDED by default
- * (nothing auto-collapses); the header is flush-left with the top-level items and
- * carries an OPTIONAL collapse chevron whose state persists per-user. Clicking a
- * PRODUCT that has sub-pages DRILLS the sidebar INTO that product's sub-nav
- * (Overview + specifics + the uniform base set: Settings · Status · Logs · Metrics)
- * with a clear BACK affordance to the full list — Level 2. A product with only an
- * Overview navigates directly (no drill). Sub-pages with no backend yet are dimmed
- * and open an honest placeholder (never a dead link).
+ * The list renders from the catalog: fixed Overview/Docs, a Pinned section the user
+ * curates, then every product grouped by category. Each CATEGORY is an INDEPENDENTLY
+ * collapsible section that renders EXPANDED by default (nothing auto-collapses); the
+ * header is flush-left with the top-level items and carries an OPTIONAL collapse
+ * chevron whose state persists per-user.
+ *
+ * The CURRENT product's own pages (its index under the product's `indexLabel`, its
+ * specifics, then the uniform base set: Settings · Status · Logs · Metrics) render
+ * NESTED under its row, inside its category — so every SIBLING product stays listed
+ * below and is one click away. Reading Models › Metrics, you can jump straight to
+ * Evals. That is the whole point: level 2 is a BRANCH of the list, not a second
+ * screen. Drilling used to REPLACE the list behind a "Back to all products" step,
+ * which put a navigation between you and the next product. Sub-pages with no backend
+ * yet are dimmed and open an honest placeholder (never a dead link).
  *
  * Level 2 is DECLARED once, in the registry (`subpages` + `indexLabel`), and read
  * here and by `SubNav` (the same nav, for the viewports where this sidebar is a
@@ -42,11 +46,10 @@
  * NOT a JS media branch, so SSR and first paint match. The nav body (`SidebarNav`) is
  * shared by the sidebar, the flyout, and the drawer (DRY) — one definition, many mounts.
  */
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Input, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
-  ArrowLeft,
   BarChart3,
   Bell,
   BookOpen,
@@ -80,7 +83,7 @@ import {
   type ProductCategory,
   type ProductSubpage,
 } from '~/lib/products/registry'
-import { productSubpages, subpageWired, activeSubpage } from '~/lib/products/match'
+import { productSubpages, subpageWired, activeSubpage, subpageHref } from '~/lib/products/match'
 import { subpageIcon } from '~/components/ui/SubNav'
 import { ProductGuidePanel } from '~/components/guide/ProductGuidePanel'
 import { ConsoleFooter } from '~/components/ConsoleFooter'
@@ -266,81 +269,53 @@ function NavRow({
 }
 
 /**
- * Level 2 — the drilled product's sub-nav. Reached by clicking a product with
- * sub-pages; a BACK affordance returns to the full product list (Level 1). The
- * header shows the product (colored icon + name) under a category breadcrumb; the
- * body is `productSubpages(entry)` — Overview + specifics + the uniform base set —
- * with an unwired sub-page dimmed but honest (opens a placeholder, never a dead link).
+ * Level 2 — the current product's own pages, nested UNDER its row and INSIDE its
+ * category, so every SIBLING stays listed below. The sub-nav is a BRANCH of the
+ * product list, never a second screen: you can read Models › Metrics and jump
+ * straight to Evals without a Back step standing between you and the next product.
+ *
+ * The list is `productSubpages(entry)` — the registry's ONE declaration (the index
+ * under the product's own `indexLabel`, its specifics, then the uniform base set
+ * Settings · Status · Logs · Metrics) — the same source `SubNav` renders from below
+ * `lg`. An unwired sub-page is dimmed but honest (opens a placeholder, never a dead
+ * link).
  */
-function DrillNav({
+function InlineSubnav({
   entry,
   subs,
   pathname,
-  color,
-  onBack,
   onGo,
 }: {
   entry: CatalogEntry
   subs: ProductSubpage[]
   pathname: string
-  color: string
-  onBack: () => void
   onGo: (path: string) => void
 }) {
   const activeSlug = activeSubpage(pathname, entry.id)
-  const Icon = entry.icon
   return (
-    <>
-      {/* Back to the full product list, with the category as a quiet breadcrumb. */}
-      <Button
-        chromeless
-        size="$2"
-        height={34}
-        px="$2"
-        justify="flex-start"
-        icon={<ArrowLeft size={17} />}
-        onPress={onBack}
-        hoverStyle={{ bg: '$color3' }}
-        aria-label="Back to all products"
-      >
-        <Text fontSize="$1" color="$color10" fontWeight="500">
-          {entry.category}
-        </Text>
-      </Button>
-
-      {/* The product header. */}
-      <XStack items="center" gap="$2.5" px="$2" py="$1.5" mb="$1">
-        <ProductIcon icon={Icon} color={color} size={22} />
-        <Text flex={1} fontSize="$5" fontWeight="800" color="$color12" numberOfLines={1}>
-          {entry.label}
-        </Text>
-      </XStack>
-
-      <ScrollView flex={1} minH={0}>
-        <YStack gap="$0.5">
-          {subs.map((sp) => {
-            const wired = subpageWired(entry.id, sp.slug)
-            const active = sp.slug === activeSlug
-            const SubIcon = sp.icon ?? subpageIcon(sp.slug)
-            return (
-              <Button
-                key={sp.slug || 'overview'}
-                onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
-                bg={active ? '$color4' : 'transparent'}
-                justify="flex-start"
-                icon={<SubIcon size={17} />}
-                iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
-                size="$3"
-                opacity={wired ? 1 : 0.6}
-                aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
-              >
-                {sp.label}
-              </Button>
-            )
-          })}
-        </YStack>
-      </ScrollView>
-    </>
+    <YStack gap="$0.5" ml="$5" my="$0.5" data-testid={`railnav-${entry.id}`}>
+      {subs.map((sp) => {
+        const wired = subpageWired(entry.id, sp.slug)
+        const active = sp.slug === activeSlug
+        const SubIcon = sp.icon ?? subpageIcon(sp.slug)
+        return (
+          <Button
+            key={sp.slug || 'overview'}
+            onPress={() => onGo(subpageHref(entry.id, sp.slug))}
+            bg={active ? '$color4' : 'transparent'}
+            justify="flex-start"
+            icon={<SubIcon size={15} />}
+            iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
+            size="$2"
+            opacity={wired ? 1 : 0.6}
+            aria-current={active ? 'page' : undefined}
+            aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
+          >
+            {sp.label}
+          </Button>
+        )
+      })}
+    </YStack>
   )
 }
 
@@ -467,21 +442,16 @@ function SidebarNav({
   const navOpen = prefs.get<CategoryOpen>(NAV_OPEN_PREF, EMPTY_OPEN)
   const toggleSection = (category: string) => prefs.set(NAV_OPEN_PREF, toggleCategory(navOpen, category))
 
-  // ── Drill-in state (Level 1 ⇄ Level 2) ────────────────────────────────────
+  // ── The current product (Level 2 nests under its row) ─────────────────────
   const activeId = activeModuleId(pathname)
   const activeEntry = activeId ? findEntry(activeId) ?? null : null
   const activeSubs = useMemo(
     () => (activeEntry && activeEntry.kind === 'module' ? productSubpages(activeEntry, showAdmin) : []),
     [activeEntry, showAdmin],
   )
-  // `manualList` = the user hit BACK — force the Level-1 list even though the active
-  // route is a drillable product. Entering a DIFFERENT product resets it (auto-drill).
-  const [manualList, setManualList] = useState(false)
-  useEffect(() => {
-    setManualList(false)
-  }, [activeId])
-  const canDrill = Boolean(activeEntry) && activeSubs.length > 1
-  const drilled = canDrill && !manualList && !collapsed
+  // A product with nothing beyond its index has no level 2 worth painting — its row
+  // IS the page.
+  const showSubs = activeSubs.length > 1
   const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
 
   // Navigate to a LEAF (a sub-page or a no-sub-page product) — closes the drawer.
@@ -489,9 +459,9 @@ function SidebarNav({
     router.push(path)
     onNavigate()
   }
-  // Open a product from the list: DRILL if it has sub-pages (keep the drawer open so
-  // the sub-nav shows), else navigate directly (leaf → close the drawer). An external
-  // launch tile opens its deployed app in a new tab.
+  // Open a product from the list — ONE way: go to it. Its own pages then nest under
+  // its row, in place, with every sibling still listed (see `InlineSubnav`). An
+  // external launch tile opens its deployed app in a new tab.
   const open = (entry: CatalogEntry) => {
     if (entry.kind === 'external') {
       openProduct(entry, go)
@@ -499,13 +469,7 @@ function SidebarNav({
       return
     }
     setFilter('')
-    const subs = productSubpages(entry, showAdmin)
-    if (subs.length > 1) {
-      setManualList(false)
-      router.push(`/${entry.id}`) // DRILL — keep the drawer open for the sub-nav
-    } else {
-      go(`/${entry.id}`) // leaf — navigate + close
-    }
+    go(`/${entry.id}`)
   }
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
@@ -674,27 +638,9 @@ function SidebarNav({
     )
   }
 
-  // ── Level 2 — drilled into a product's sub-nav, with a BACK affordance ──
-  if (drilled && activeEntry) {
-    return (
-      <>
-        <SidebarBrand collapsed={false} onNavigate={onNavigate} />
-        <DrillNav
-          entry={activeEntry}
-          subs={activeSubs}
-          pathname={pathname}
-          color={colorOf(activeEntry.id)}
-          onBack={() => setManualList(true)}
-          onGo={go}
-        />
-        <SidebarAccount collapsed={false} />
-        <SidebarWallet collapsed={false} />
-      </>
-    )
-  }
-
-  // ── Level 1 — the full product list: brand; filter; Overview/Docs; Pinned; every
-  //    category (EXPANDED by default, collapsible); All-products; identity + wallet. ──
+  // ── The product list: brand; filter; Overview/Docs; Pinned; every category
+  //    (EXPANDED by default, collapsible) with the current product's own pages
+  //    nested under its row; All-products; identity + wallet. ──
   return (
     // The product rail is a NAVIGATION LANDMARK. It had no role at all, so a
     // screen-reader user had no way to jump to the product list and no way to
@@ -794,20 +740,26 @@ function SidebarNav({
               key={group.category}
               category={group.category}
               count={group.entries.length}
-              open={categoryIsOpen(navOpen, group.category, { filtering })}
+              open={categoryIsOpen(navOpen, group.category, { filtering, activeCategory: activeEntry?.category })}
               onToggle={() => toggleSection(group.category)}
             >
               {group.entries.map((entry) => (
-                <NavRow
-                  key={entry.id}
-                  entry={entry}
-                  active={isActive(entry.id)}
-                  color={colorOf(entry.id)}
-                  collapsed={false}
-                  pinned={isPinned(entry.id)}
-                  onOpen={() => open(entry)}
-                  onToggle={() => toggle(entry.id)}
-                />
+                <YStack key={entry.id} gap="$0.5">
+                  <NavRow
+                    entry={entry}
+                    active={isActive(entry.id)}
+                    color={colorOf(entry.id)}
+                    collapsed={false}
+                    pinned={isPinned(entry.id)}
+                    onOpen={() => open(entry)}
+                    onToggle={() => toggle(entry.id)}
+                  />
+                  {/* Level 2, nested — the siblings below stay one click away. Hidden
+                      while filtering, so a narrowed list stays scannable. */}
+                  {!filtering && showSubs && entry.id === activeId ? (
+                    <InlineSubnav entry={entry} subs={activeSubs} pathname={pathname} onGo={go} />
+                  ) : null}
+                </YStack>
               ))}
             </CategorySection>
           ))}

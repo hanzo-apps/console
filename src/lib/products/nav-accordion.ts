@@ -33,6 +33,10 @@ export const EMPTY_OPEN: CategoryOpen = {}
  * Whether a category renders EXPANDED, given the user's stored choices + context:
  *  - while FILTERING: always open, so a match is never hidden behind a collapsed
  *    section (the group list is already narrowed to non-empty matches);
+ *  - the ACTIVE product's category: always open. Its section holds the level-2 nav
+ *    (the current product's own pages, nested under its row), and the content strip
+ *    that carries level 2 below `lg` is hidden at `lg+` — so collapsing it would
+ *    leave the user inside a product with NO way to reach its pages;
  *  - otherwise: the user's EXPLICIT choice if they made one, else the DEFAULT (OPEN).
  *    A section the user never touched is open; one they collapsed stays collapsed
  *    (and one they re-opened stays open) — it stays where the user left it.
@@ -40,9 +44,10 @@ export const EMPTY_OPEN: CategoryOpen = {}
 export function categoryIsOpen(
   stored: CategoryOpen,
   category: string,
-  ctx: { filtering: boolean },
+  ctx: { filtering: boolean; activeCategory?: string | null },
 ): boolean {
   if (ctx.filtering) return true
+  if (ctx.activeCategory && category === ctx.activeCategory) return true
   const v = stored[category]
   return v === undefined ? true : v
 }

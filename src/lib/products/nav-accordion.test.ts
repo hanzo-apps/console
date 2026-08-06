@@ -35,6 +35,22 @@ describe('categoryIsOpen (expand-by-default)', () => {
     expect(categoryIsOpen(stored, 'Data', ctx(false))).toBe(true)
     expect(categoryIsOpen(stored, 'Compute', ctx(false))).toBe(true) // untouched → open
   })
+
+  // The current product's section holds the level-2 nav (its own pages, nested under
+  // its row), and the content strip that carries level 2 below `lg` is hidden at
+  // `lg+` — so honoring a collapse here would strand the user inside a product with
+  // no way to reach its pages. Every OTHER section still obeys the stored choice.
+  it('keeps the ACTIVE product’s category open even when the user collapsed it', () => {
+    const stored: CategoryOpen = { AI: false, Observe: false }
+    expect(categoryIsOpen(stored, 'AI', { filtering: false, activeCategory: 'AI' })).toBe(true)
+    expect(categoryIsOpen(stored, 'Observe', { filtering: false, activeCategory: 'AI' })).toBe(false)
+  })
+
+  it('does not force anything open when no product is active', () => {
+    const stored: CategoryOpen = { AI: false }
+    expect(categoryIsOpen(stored, 'AI', { filtering: false, activeCategory: null })).toBe(false)
+    expect(categoryIsOpen(stored, 'AI', { filtering: false, activeCategory: undefined })).toBe(false)
+  })
 })
 
 describe('toggleCategory (independent per-section)', () => {
