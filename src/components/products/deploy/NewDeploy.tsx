@@ -36,8 +36,8 @@ import { Rocket } from '@hanzogui/lucide-icons-2'
 
 import { PaasApi, type PaasProject } from '~/lib/api/paas'
 import { PlatformSitesApi, SITE_FRAMEWORKS } from '~/lib/api/platform-sites'
-import { FieldRow, FieldText, FieldTextArea, FieldOptionSelect } from '~/components/ui/Field'
-import { PrimaryButton } from '~/components/ui/PrimaryButton'
+import { FieldRow, FieldText, FieldTextArea, PrimaryButton } from '@hanzo/ui/product'
+import { FieldOptionSelect } from '~/components/ui/Field'
 import {
   envVars,
   formError,

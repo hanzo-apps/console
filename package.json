@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.5.62",
+  "version": "8.5.63",
   "packageManager": "pnpm@11.17.0",
   "private": true,
   "license": "MIT OR Apache-2.0",
