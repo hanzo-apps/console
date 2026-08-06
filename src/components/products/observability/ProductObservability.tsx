@@ -19,11 +19,24 @@ import { useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, ArrowUpRight, ScrollText, Waypoints } from '@hanzogui/lucide-icons-2'
 
-import { ApmApi, apmWindow, type LogRow, type ServiceHealth, type TraceSpan } from '~/lib/api/apm'
+import { ApmApi, apmWindow, type LogRow, type TraceSpan } from '~/lib/api/apm'
+import { O11yMetricsApi, errorRateTone } from '~/lib/api/o11y-metrics'
 import { MetricCard } from '~/components/ui/Metric'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { RuntimeNotice } from '~/components/products/observability/RuntimeNotice'
 import { formatMetric } from '~/components/products/overview/living/logic'
+
+/**
+ * The RED numbers this panel shows, derived from the per-product o11y read
+ * (`GET /v1/o11y/product/metrics`). It replaces `ApmApi.serviceHealth`, whose
+ * `POST /v1/o11y/services` builds `FROM o11y_traces.<table>` — a database that does not
+ * exist on the datastore, so that read fails every time and this panel showed "—" for
+ * every product regardless of how much traffic it was serving.
+ *
+ * `reqPerSec` is DERIVED (requests ÷ window), not reported: the per-product read returns
+ * a count over a window, and dividing it is arithmetic on a real number, not an invention.
+ */
+type Red = { requests: number; errorRatePct: number; p95Ms: number; reqPerSec: number; tone: 'green' | 'yellow' | 'red' }
 
 const RANGES: { label: string; seconds: number }[] = [
   { label: '15m', seconds: 900 },
@@ -41,7 +54,7 @@ const clock = (iso: string): string => {
 }
 const durMs = (nanos: number | null): string => (nanos == null ? '—' : formatMetric(nanos / 1_000_000, 'ms'))
 
-type State = { loading: boolean; error: unknown; health: ServiceHealth | null; logs: LogRow[]; traces: TraceSpan[] }
+type State = { loading: boolean; error: unknown; health: Red | null; logs: LogRow[]; traces: TraceSpan[] }
 
 const LOG_COLS: Column<LogRow>[] = [
   { key: 'timestamp', header: 'Time', width: 108, mono: true, render: (r) => clock(r.timestamp) },
@@ -80,7 +93,19 @@ export function ProductObservability({
       // Health is best-effort — a null (no telemetry) renders honest "—", it must
       // not fail the whole panel. Logs + traces are the primary signal: if the
       // runtime is unreachable they throw → the shared RuntimeNotice.
-      ApmApi.serviceHealth(w, service).catch(() => null),
+      // Never throws — an o11y miss resolves to an honest not-connected, so the RED
+      // tiles fall back to "—" without failing the logs/traces half of the panel.
+      O11yMetricsApi.service(service, { rangeSec: seconds }).then((m): Red | null =>
+        m.hasData
+          ? {
+              requests: m.summary.requests,
+              errorRatePct: m.summary.errorRate,
+              p95Ms: m.summary.p95Ms,
+              reqPerSec: seconds > 0 ? m.summary.requests / seconds : 0,
+              tone: errorRateTone(m.summary.errorRate),
+            }
+          : null,
+      ),
       ApmApi.logs(w, 20, service),
       ApmApi.traceSearch(w, 20, service),
     ])
@@ -146,16 +171,16 @@ export function ProductObservability({
           {/* RED metrics — real per-service health, honest "—" when no telemetry. */}
           <XStack gap="$3" flexWrap="wrap">
             <YStack flex={1} minW={150}>
-              <MetricCard icon={<Activity size={15} />} label="Requests" value={st.health ? formatMetric(st.health.numCalls, 'count') : '—'} caption={st.loading ? 'loading…' : `last ${RANGES.find((r) => r.seconds === seconds)?.label ?? ''}`} />
+              <MetricCard icon={<Activity size={15} />} label="Requests" value={st.health ? formatMetric(st.health.requests, 'count') : '—'} caption={st.loading ? 'loading…' : `last ${RANGES.find((r) => r.seconds === seconds)?.label ?? ''}`} />
             </YStack>
             <YStack flex={1} minW={150}>
               <MetricCard icon={<Activity size={15} />} label="Error rate" value={st.health ? pct1(st.health.errorRatePct) : '—'} caption={st.health ? st.health.tone : 'no telemetry'} />
             </YStack>
             <YStack flex={1} minW={150}>
-              <MetricCard icon={<Activity size={15} />} label="p99 latency" value={st.health ? formatMetric(st.health.p99Ms, 'ms') : '—'} caption={st.health ? `avg ${formatMetric(st.health.avgMs, 'ms')}` : ''} />
+              <MetricCard icon={<Activity size={15} />} label="p95 latency" value={st.health ? formatMetric(st.health.p95Ms, 'ms') : '—'} caption={st.health ? 'window p95' : ''} />
             </YStack>
             <YStack flex={1} minW={150}>
-              <MetricCard icon={<Activity size={15} />} label="Req / s" value={st.health ? formatMetric(st.health.callRate, 'count') : '—'} caption="throughput" />
+              <MetricCard icon={<Activity size={15} />} label="Req / s" value={st.health ? formatMetric(st.health.reqPerSec, 'count') : '—'} caption="throughput" />
             </YStack>
           </XStack>
 

@@ -50,7 +50,10 @@ export function formatMetric(value: number, unit: MetricUnit = 'count'): string 
     case 'ms':
       return duration(value)
     case 'pct':
-      return `${Math.round(value)}%`
+      // Keep one decimal below 10% and drop a trailing ".0". A margin or success rate lives
+      // near 100 and reads fine rounded, but an error rate lives near 0 — rounding 0.4% to
+      // "0%" would report "no errors" for a service that is dropping requests.
+      return value >= 10 ? `${Math.round(value)}%` : `${Number(value.toFixed(1))}%`
     default:
       return compact(value)
   }

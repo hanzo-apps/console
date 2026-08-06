@@ -79,7 +79,11 @@ type State = { phase: 'loading' } | { phase: 'error'; err: ApiError } | { phase:
 export function ProductLogsView({ entry }: { entry: CatalogEntry }) {
   const { o11yService } = subpageSourcesFor(entry)
   const [state, setState] = useState<State>({ phase: 'loading' })
-  const [rangeIdx, setRangeIdx] = useState(1) // default 1h
+  // Default 24h, not 1h. The log plane is busy in aggregate (~900k rows/hour) but a single
+  // product is not: a low-volume service like IAM ships ~1k lines a DAY and is nowhere near
+  // the top services in any given hour. A 1h default therefore opened on an empty table for
+  // most products, which reads as broken rather than as quiet.
+  const [rangeIdx, setRangeIdx] = useState(3)
   const [severity, setSeverity] = useState<string | null>(null)
 
   const load = useCallback(

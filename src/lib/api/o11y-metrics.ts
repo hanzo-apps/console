@@ -111,6 +111,15 @@ export function normalizeServiceMetrics(raw: unknown): ServiceMetrics {
   }
 }
 
+/**
+ * The error-rate verdict. ONE definition of the thresholds, shared by the Metrics board and
+ * the per-product Status band so the two can never disagree about what "healthy" means.
+ * Thresholds are unchanged from the ones the console already shipped (`apm.serviceHealthOf`):
+ * under 1% is green, 1–5% is elevated, 5% and over is degraded.
+ */
+export const errorRateTone = (pct: number): 'green' | 'yellow' | 'red' =>
+  pct >= 5 ? 'red' : pct >= 1 ? 'yellow' : 'green'
+
 /** Lookback windows the metrics tab offers (backend `range` is in SECONDS, ≤ 604800). */
 export const METRICS_RANGES = [
   { id: 3600, label: '1h' },

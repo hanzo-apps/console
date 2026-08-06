@@ -13,25 +13,43 @@
  * FULL ledger — which is entirely inference calls flowing through it — and the subtitle +
  * the view's banner frame it as org-wide inference, not a fabricated per-product slice.
  *
- * Latency (p99) is the LIVE o11y (O11y) RED metric for the product's OTel service
- * (`ApmApi.serviceHealth`, scoped to `subpageSourcesFor(entry).o11yService`), fetched in
- * parallel with the ledger and merged into `kpi.latencyP99`. The commerce ledger carries
- * no latency, so this is the ONE real source for it — and it degrades to an honest "—"
- * when o11y has no telemetry for the service (never fabricated).
+ * TWO real sources, because they answer different questions and neither can stand in for the
+ * other. The commerce ledger knows what was BILLED (tokens, spend, model mix) and is empty for
+ * a product that bills nothing; the o11y RED read
+ * (`O11yMetricsApi.service` → `GET /v1/o11y/product/metrics`, derived from `event.span`) knows
+ * what was SERVED (requests, error rate, p95) and is populated for any instrumented service.
+ * So a product like Vector or IAM — no billed spend, real traffic — now has a Metrics board
+ * with real numbers on it instead of an honest-but-empty ledger view.
+ *
+ * Where they overlap, TELEMETRY WINS and says so: `requests` and the requests-over-time series
+ * come from o11y when it reported data, falling back to the ledger's billed-call count. Error
+ * rate and p95 have no ledger equivalent at all, so they are o11y or an honest em-dash — never
+ * a fabricated zero. The p95 is labelled p95 because that is what the endpoint returns.
+ *
+ * NOT USED: `POST /v1/o11y/services`. That read builds `FROM o11y_traces.<table>`, a database
+ * which does not exist on the datastore, so it fails every time. The per-product read above is
+ * the healthy, org-scoped replacement.
  */
-import { Activity, DollarSign, Hash, Timer } from '@hanzogui/lucide-icons-2'
+import { Activity, AlertTriangle, DollarSign, Hash, Timer } from '@hanzogui/lucide-icons-2'
 
 import type { CatalogEntry } from '~/lib/products/registry'
 import { UsageApi } from '~/lib/api/usage'
-import { ApmApi, apmWindow } from '~/lib/api/apm'
+import { O11yMetricsApi, type MetricPoint } from '~/lib/api/o11y-metrics'
 import { metricsScopeFor, o11yServiceFor } from '~/components/products/subpage/sources'
-import type { LivingOverviewConfig, OverviewRange } from './config'
+import type { LivingOverviewConfig, OverviewRange, OverviewSeries } from './config'
 import { fromCloudUsage } from './adapters'
 
 const usageRange = (r: OverviewRange): '24h' | '7d' | '30d' => r
 
-/** The o11y latency window matches the metrics range (seconds). */
-const RANGE_SECONDS: Record<OverviewRange, number> = { '24h': 86_400, '7d': 604_800, '30d': 2_592_000 }
+/** The o11y window matches the metrics range (seconds). The endpoint caps at 7d, so a 30d
+ *  board asks for the most it can serve and the tiles say what they actually cover. */
+const RANGE_SECONDS: Record<OverviewRange, number> = { '24h': 86_400, '7d': 604_800, '30d': 604_800 }
+
+/** o11y `{t,v}` → the overview's `{t,value}`. Bucket cadence is the backend's (~60 buckets). */
+const toSeries = (points: MetricPoint[], interval: 'hour' | 'day'): OverviewSeries => ({
+  interval,
+  points: points.map((p) => ({ t: p.t, value: p.v })),
+})
 
 /** The per-product Metrics ledger filter — the `metadata.product` tag, or null (whole
  *  inference ledger) for a raw model-serving surface. Thin accessor over the ONE
@@ -52,7 +70,7 @@ export function productMetricsConfig(entry: CatalogEntry): LivingOverviewConfig 
   const subtitle =
     scope === 'inference-all'
       ? `Org-wide inference — every model call flows through ${entry.label}, per organization.`
-      : `Usage and spend attributed to ${entry.label}, per organization.`
+      : `Traffic served by ${entry.label}, with the usage and spend attributed to it, per organization.`
   return {
     id: `metrics:${entry.id}`,
     title: 'Metrics',
@@ -60,13 +78,15 @@ export function productMetricsConfig(entry: CatalogEntry): LivingOverviewConfig 
     live: { pollMs: 20000, countUp: true },
     rows: [
       [
-        { tile: 'metric', key: 'requests', label: 'Total Requests', icon: Activity },
+        { tile: 'metric', key: 'requests', label: 'Requests', icon: Activity },
+        { tile: 'metric', key: 'errorRatePct', label: 'Error rate', icon: AlertTriangle, unit: 'pct' },
+        { tile: 'metric', key: 'latencyP95', label: 'Latency (p95)', icon: Timer, unit: 'ms' },
         { tile: 'metric', key: 'tokens', label: 'Total Tokens', icon: Hash },
         { tile: 'metric', key: 'spendCents', label: 'Total Spend', icon: DollarSign, unit: 'cents' },
-        { tile: 'metric', key: 'latencyP99', label: 'Latency (p99)', icon: Timer, unit: 'ms' },
       ],
       [
-        { tile: 'timeseries', key: 'requests', title: 'Usage over time' },
+        { tile: 'timeseries', key: 'requests', title: 'Requests over time' },
+        { tile: 'timeseries', key: 'errors', title: 'Errors over time' },
         { tile: 'timeseries', key: 'spendCents', title: 'Spend over time (USD)', kind: 'bar', unit: 'cents' },
       ],
       [
@@ -76,17 +96,28 @@ export function productMetricsConfig(entry: CatalogEntry): LivingOverviewConfig 
       ],
       [{ tile: 'activity', title: 'Recent usage', empty: `No usage attributed to ${entry.label} in this range yet.` }],
     ],
-    // Fetch the REAL usage ledger and the LIVE o11y service latency in parallel; merge the
-    // real p99 into the latency KPI. o11y failure / no-telemetry → the tile stays an honest "—".
+    // Fetch the REAL billed ledger and the LIVE o11y RED window in parallel, then fuse them.
+    // Neither read can blank the board: `O11yMetricsApi.service` never throws (it resolves to
+    // an honest not-connected), and a ledger failure surfaces through the driver's own error
+    // state. Every tile is real data or an em-dash — nothing here fabricates a zero.
     load: async ({ range, allOrgs }) => {
-      const [usage, health] = await Promise.all([
+      const [usage, red] = await Promise.all([
         UsageApi.overview({ range: usageRange(range), activityType: 'all', activityLimit: 12, topModels: 8, allOrgs, product }),
-        o11yService
-          ? ApmApi.serviceHealth(apmWindow(RANGE_SECONDS[range]), o11yService).catch(() => null)
-          : Promise.resolve(null),
+        o11yService ? O11yMetricsApi.service(o11yService, { rangeSec: RANGE_SECONDS[range] }) : Promise.resolve(null),
       ])
       const data = fromCloudUsage(usage)
-      if (health) data.kpi.latencyP99 = { value: health.p99Ms }
+
+      if (red?.hasData) {
+        const interval = range === '24h' ? 'hour' : 'day'
+        // Telemetry wins over the ledger for what was SERVED — the ledger only counts billed
+        // calls, so it undercounts (or misses entirely) a service that bills nothing.
+        data.kpi.requests = { value: red.summary.requests }
+        data.series.requests = toSeries(red.requests, interval)
+        data.series.errors = toSeries(red.errors, interval)
+        // No ledger equivalent exists for either of these.
+        data.kpi.errorRatePct = { value: red.summary.errorRate }
+        data.kpi.latencyP95 = { value: red.summary.p95Ms }
+      }
       return data
     },
   }

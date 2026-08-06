@@ -4,29 +4,50 @@ import { describe, it, expect, vi } from 'vitest'
 // isn't transformed in the node test env, so stub the icons the config uses with plain
 // tokens (the tile carries them as opaque values — the tests assert tile KEYS, not icons).
 vi.mock('@hanzogui/lucide-icons-2', () => {
-  const names = ['Activity', 'DollarSign', 'Hash', 'Timer']
+  const names = ['Activity', 'AlertTriangle', 'DollarSign', 'Hash', 'Timer']
   return Object.fromEntries(names.map((n) => [n, `icon:${n}`]))
 })
 
-// The loader merges the REAL usage ledger with LIVE o11y latency; mock both boundaries.
-// `fromCloudUsage` is mocked to a known empty base so the test isolates the o11y merge.
+// The loader fuses the REAL billed ledger with the LIVE o11y RED window; mock both
+// boundaries. `fromCloudUsage` is mocked to a known empty base so the tests isolate the
+// o11y half — anything that appears on `data` came from the fusion, not the ledger.
 vi.mock('./adapters', () => ({
   fromCloudUsage: vi.fn(() => ({ kpi: {}, series: {}, distribution: {}, activity: [], alerts: [], health: [] })),
 }))
 vi.mock('~/lib/api/usage', () => ({ UsageApi: { overview: vi.fn(async () => ({})) } }))
-vi.mock('~/lib/api/apm', async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import('~/lib/api/apm')
-  return { ...actual, ApmApi: { ...actual.ApmApi, serviceHealth: vi.fn(async () => null) } }
-})
+vi.mock('~/lib/api/o11y-metrics', () => ({ O11yMetricsApi: { service: vi.fn() } }))
 
 import { metricsProductFilter, productMetricsConfig } from './product-metrics'
-import { ApmApi } from '~/lib/api/apm'
+import { O11yMetricsApi, type ServiceMetrics } from '~/lib/api/o11y-metrics'
 import type { CatalogEntry } from '~/lib/products/registry'
-import type { ServiceHealth } from '~/lib/api/apm'
 
 // A minimal module catalog entry (only the fields the config reads).
 const entry = (id: string, label: string): CatalogEntry =>
   ({ id, label, description: '', category: 'AI', status: 'enabled', kind: 'module', routes: [] }) as unknown as CatalogEntry
+
+/** A RED window as the per-product o11y read returns it. */
+const red = (over: Partial<ServiceMetrics> = {}): ServiceMetrics => ({
+  product: 'vector',
+  requests: [{ t: '2026-08-06T00:00:00Z', v: 10 }, { t: '2026-08-06T01:00:00Z', v: 14 }],
+  errors: [{ t: '2026-08-06T00:00:00Z', v: 0 }, { t: '2026-08-06T01:00:00Z', v: 2 }],
+  latencyP50Ms: [],
+  latencyP95Ms: [],
+  summary: { requests: 24, errors: 2, errorRate: 8.3, p95Ms: 142 },
+  usage: { calls: 0, tokens: 0, costCents: 0 },
+  hasData: true,
+  connected: true,
+  ...over,
+})
+
+/** The honest empty/not-connected shape the client resolves to on any o11y miss. */
+const noRed = (connected: boolean): ServiceMetrics =>
+  red({
+    requests: [],
+    errors: [],
+    summary: { requests: 0, errors: 0, errorRate: 0, p95Ms: 0 },
+    hasData: false,
+    connected,
+  })
 
 describe('metricsProductFilter (thin accessor over the ONE scope decision)', () => {
   it('raw model-serving surfaces read the WHOLE inference ledger (null filter)', () => {
@@ -43,14 +64,23 @@ describe('metricsProductFilter (thin accessor over the ONE scope decision)', () 
 })
 
 describe('productMetricsConfig', () => {
-  it('builds a per-product Metrics dashboard with the mockup tiles + a product-scoped loader', () => {
+  it('builds a per-product Metrics dashboard with the RED tiles + a product-scoped loader', () => {
     const cfg = productMetricsConfig(entry('agents', 'Agents'))
     expect(cfg.id).toBe('metrics:agents')
     expect(cfg.title).toBe('Metrics')
-    // A product-scoped surface is framed as "attributed to <label>".
-    expect(cfg.subtitle).toContain('attributed to Agents')
-    // 4 KPI tiles: requests, tokens, spend, p99 latency (the LIVE o11y RED metric)
-    expect(cfg.rows[0].map((t) => (t.tile === 'metric' ? t.key : t.tile))).toEqual(['requests', 'tokens', 'spendCents', 'latencyP99'])
+    // A product-scoped surface names BOTH sources: traffic served, plus attributed spend.
+    expect(cfg.subtitle).toContain('Traffic served by Agents')
+    expect(cfg.subtitle).toContain('attributed to it')
+    // KPI row leads with the RED signals, then the billed ledger's own dimensions.
+    expect(cfg.rows[0].map((t) => (t.tile === 'metric' ? t.key : t.tile))).toEqual([
+      'requests',
+      'errorRatePct',
+      'latencyP95',
+      'tokens',
+      'spendCents',
+    ])
+    // Requests + errors over time are the o11y series; spend stays the ledger's.
+    expect(cfg.rows[1].map((t) => (t.tile === 'timeseries' ? t.key : t.tile))).toEqual(['requests', 'errors', 'spendCents'])
     // 3 breakdowns: top-models-by-tokens, requests-by-status, spend-by-model
     expect(cfg.rows[2].map((t) => (t.tile === 'distribution' ? t.key : t.tile))).toEqual(['byModelTokens', 'byStatus', 'byModel'])
   })
@@ -62,36 +92,53 @@ describe('productMetricsConfig', () => {
   })
 })
 
-describe('productMetricsConfig.load — LIVE o11y latency merged into the ledger', () => {
-  const health = (p99Ms: number): ServiceHealth => ({
-    service: 'vector',
-    numCalls: 100,
-    callRate: 1.2,
-    errorRatePct: 0.5,
-    p99Ms,
-    avgMs: 10,
-    tone: 'green',
-  })
-
-  it('injects the REAL o11y p99 (ms) into kpi.latencyP99 when the service reports telemetry', async () => {
-    vi.mocked(ApmApi.serviceHealth).mockResolvedValueOnce(health(142))
+describe('productMetricsConfig.load — the ledger fused with the LIVE o11y RED window', () => {
+  it('takes requests, error rate, p95 and both series from o11y when it reported data', async () => {
+    vi.mocked(O11yMetricsApi.service).mockResolvedValueOnce(red())
     const cfg = productMetricsConfig(entry('vector', 'Vector'))
     const data = await cfg.load({ range: '24h' })
-    expect(data.kpi.latencyP99).toEqual({ value: 142 })
+
+    // Telemetry wins for what was SERVED — the ledger only counts billed calls.
+    expect(data.kpi.requests).toEqual({ value: 24 })
+    // Neither of these has any ledger equivalent at all.
+    expect(data.kpi.errorRatePct).toEqual({ value: 8.3 })
+    expect(data.kpi.latencyP95).toEqual({ value: 142 })
+    expect(data.series.requests.points).toEqual([
+      { t: '2026-08-06T00:00:00Z', value: 10 },
+      { t: '2026-08-06T01:00:00Z', value: 14 },
+    ])
+    expect(data.series.errors.points.map((p) => p.value)).toEqual([0, 2])
   })
 
-  it('leaves latencyP99 ABSENT (honest "—") when o11y has no telemetry for the service', async () => {
-    vi.mocked(ApmApi.serviceHealth).mockResolvedValueOnce(null)
+  it('asks o11y for the window matching the range, capped at the 7d the endpoint serves', async () => {
+    const cfg = productMetricsConfig(entry('vector', 'Vector'))
+    for (const [range, rangeSec] of [
+      ['24h', 86_400],
+      ['7d', 604_800],
+      ['30d', 604_800],
+    ] as const) {
+      vi.mocked(O11yMetricsApi.service).mockResolvedValueOnce(noRed(true))
+      await cfg.load({ range })
+      expect(vi.mocked(O11yMetricsApi.service).mock.lastCall).toEqual(['vector', { rangeSec }])
+    }
+  })
+
+  it('leaves the RED tiles ABSENT (honest "—") when the service reports no telemetry', async () => {
+    vi.mocked(O11yMetricsApi.service).mockResolvedValueOnce(noRed(true))
     const cfg = productMetricsConfig(entry('vector', 'Vector'))
     const data = await cfg.load({ range: '24h' })
-    expect(data.kpi.latencyP99).toBeUndefined()
+    // Absent, not zero — a zero here would claim "no errors" for a service we never measured.
+    expect(data.kpi.errorRatePct).toBeUndefined()
+    expect(data.kpi.latencyP95).toBeUndefined()
+    expect(data.kpi.requests).toBeUndefined()
   })
 
-  it('never lets an o11y failure break the metrics load (latency just stays "—")', async () => {
-    vi.mocked(ApmApi.serviceHealth).mockRejectedValueOnce(new Error('o11y 503'))
+  it('never lets an o11y outage break the metrics load — the ledger half still resolves', async () => {
+    // The client resolves (never throws) to an honest not-connected on 503/404/401/403.
+    vi.mocked(O11yMetricsApi.service).mockResolvedValueOnce(noRed(false))
     const cfg = productMetricsConfig(entry('vector', 'Vector'))
     const data = await cfg.load({ range: '7d' })
-    expect(data.kpi.latencyP99).toBeUndefined()
-    expect(data.activity).toEqual([]) // the ledger half still resolved
+    expect(data.kpi.latencyP95).toBeUndefined()
+    expect(data.activity).toEqual([])
   })
 })

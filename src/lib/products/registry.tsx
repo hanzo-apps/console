@@ -1218,19 +1218,17 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/agent',
     docs: `${DOCS}/agents`,
     kind: 'module',
-    // Agents OWNS Status/Logs/Metrics — they render the agent registry's OWN runs
-    // (health board, invocation activity, invocation/latency metrics from /v1/agents),
-    // NOT the generic o11y/usage-ledger subpage (which is empty for agents until the
-    // service emits OTel / the ledger tags spend product:agents). Same pattern as
-    // Inference owning Status/Logs. Settings stays the shared subpage.
+    // Agents does NOT own Status/Logs/Metrics. It used to declare them, which made
+    // `resolveProductView` treat them as owned specifics and route them to `:tab` —
+    // but `AgentsModule` never read that param for these slugs (its `StatusTab` is an
+    // agent-status FILTER, not a page), so all three rendered the Agents index while
+    // the nav highlighted "Status". Three dead entries. Dropping the declaration hands
+    // them back to the shared per-product sub-page system, which serves this product's
+    // real o11y health, logs and RED metrics. Inference is the pattern to copy if these
+    // ever become bespoke: it declares them AND its module actually renders them.
     routes: [
       { path: '', component: AgentsModule },
       { path: ':tab', component: AgentsModule },
-    ],
-    subpages: [
-      { slug: 'status', label: 'Status' },
-      { slug: 'logs', label: 'Logs' },
-      { slug: 'metrics', label: 'Metrics' },
     ],
   },
   {

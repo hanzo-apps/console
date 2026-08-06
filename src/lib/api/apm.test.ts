@@ -15,7 +15,7 @@ import {
   normalizeDashboard,
   normalizeDashboards,
   listQueryPayload,
-  serviceFilterItem,
+  serviceFilterExpression,
   pickService,
   serviceHealthOf,
   parseListRows,
@@ -234,65 +234,74 @@ describe('normalizeDashboard / normalizeDashboards', () => {
   })
 })
 
-describe('listQueryPayload (O11y v3 query_range LIST)', () => {
+describe('listQueryPayload (the v5 query_range RAW-LIST envelope)', () => {
   const w = apmWindow(3600)
 
-  it('builds a noop list builder query over the given dataSource with ms bounds', () => {
-    const p = listQueryPayload('logs', w, 100) as {
-      start: number
-      end: number
-      compositeQuery: { queryType: string; panelType: string; builderQueries: Record<string, Record<string, unknown>> }
-    }
+  type V5 = {
+    schemaVersion: string
+    start: number
+    end: number
+    requestType: string
+    compositeQuery: { queries: { type: string; spec: Record<string, unknown> }[] }
+  }
+  const specOf = (p: unknown) => (p as V5).compositeQuery.queries[0].spec
+
+  it('builds the v5 envelope with ms bounds and a raw request type', () => {
+    const p = listQueryPayload('logs', w, 100) as V5
     expect(p.start).toBe(w.startMs)
     expect(p.end).toBe(w.endMs)
-    expect(p.compositeQuery.queryType).toBe('builder')
-    expect(p.compositeQuery.panelType).toBe('list')
-    const A = p.compositeQuery.builderQueries.A
-    expect(A.dataSource).toBe('logs')
-    expect(A.aggregateOperator).toBe('noop')
-    expect(A.expression).toBe('A')
-    expect(A.pageSize).toBe(100)
-    // newest-first
-    expect(A.orderBy).toEqual([{ columnName: 'timestamp', order: 'desc' }])
+    // `raw` is the v5 requestType for a row list. `list` is a v3 panelType and is rejected.
+    expect(p.requestType).toBe('raw')
+    // Free-form and optional upstream, but it is "v1" — NOT "v5".
+    expect(p.schemaVersion).toBe('v1')
+    expect(p.compositeQuery.queries).toHaveLength(1)
+    expect(p.compositeQuery.queries[0].type).toBe('builder_query')
   })
 
-  it('carries dataSource=traces for a span search', () => {
-    const p = listQueryPayload('traces', w, 50) as { compositeQuery: { builderQueries: { A: { dataSource: string } } } }
-    expect(p.compositeQuery.builderQueries.A.dataSource).toBe('traces')
+  // THE REGRESSION THIS SUITE EXISTS FOR. v5's compositeQuery has exactly one field,
+  // `queries`, and its decoder is a strict unknown-field check: the v3 spelling made the
+  // deployed runtime 400 with `unknown field "queryType" in composite query`, which is why
+  // every Logs surface rendered empty. None of these keys may ever come back.
+  it('never sends the v3 shape the runtime rejects', () => {
+    const cq = (listQueryPayload('logs', w, 100) as V5).compositeQuery as Record<string, unknown>
+    expect(Object.keys(cq)).toEqual(['queries'])
+    for (const dead of ['queryType', 'panelType', 'builderQueries']) expect(cq[dead]).toBeUndefined()
   })
 
-  it('clamps pageSize into [1,1000] and floors it', () => {
-    const big = listQueryPayload('logs', w, 99999) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
-    const zero = listQueryPayload('logs', w, 0) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
-    const frac = listQueryPayload('logs', w, 12.9) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
-    expect(big.compositeQuery.builderQueries.A.pageSize).toBe(1000)
-    expect(zero.compositeQuery.builderQueries.A.pageSize).toBe(1)
-    expect(frac.compositeQuery.builderQueries.A.pageSize).toBe(12)
+  it('names the signal on the spec (plural — singular "log" is rejected)', () => {
+    expect(specOf(listQueryPayload('logs', w, 50)).signal).toBe('logs')
+    expect(specOf(listQueryPayload('traces', w, 50)).signal).toBe('traces')
   })
 
-  it('defaults to NO filters (whole-org stream) when none are given — back-compat', () => {
-    const p = listQueryPayload('logs', w, 100) as { compositeQuery: { builderQueries: { A: { filters: { items: unknown[]; op: string } } } } }
-    expect(p.compositeQuery.builderQueries.A.filters).toEqual({ items: [], op: 'AND' })
+  it('orders newest-first and omits aggregations for a raw list', () => {
+    const spec = specOf(listQueryPayload('logs', w, 100))
+    expect(spec.order).toEqual([{ key: { name: 'timestamp' }, direction: 'desc' }])
+    expect(spec.aggregations).toBeUndefined()
   })
 
-  it('carries a per-service filter into the builder query when given (per-product scope)', () => {
-    const item = serviceFilterItem('logs', 'iam')
-    const p = listQueryPayload('logs', w, 100, [item]) as { compositeQuery: { builderQueries: { A: { filters: { items: unknown[]; op: string } } } } }
-    expect(p.compositeQuery.builderQueries.A.filters).toEqual({ items: [item], op: 'AND' })
+  it('clamps the limit into [1,1000] and floors it', () => {
+    expect(specOf(listQueryPayload('logs', w, 99999)).limit).toBe(1000)
+    expect(specOf(listQueryPayload('logs', w, 0)).limit).toBe(1)
+    expect(specOf(listQueryPayload('logs', w, 12.9)).limit).toBe(12)
+  })
+
+  it('omits the filter entirely for a whole-org stream', () => {
+    expect(specOf(listQueryPayload('logs', w, 100)).filter).toBeUndefined()
+  })
+
+  it('carries a single filter expression when scoped to one product', () => {
+    const spec = specOf(listQueryPayload('logs', w, 100, serviceFilterExpression('iam')))
+    expect(spec.filter).toEqual({ expression: "service.name = 'iam'" })
   })
 })
 
-describe('serviceFilterItem (scope a logs/traces query to one OTel service.name)', () => {
-  it('builds the service.name resource-attribute equality O11y expects', () => {
-    const f = serviceFilterItem('logs', 'vector')
-    expect(f.op).toBe('=')
-    expect(f.value).toBe('vector')
-    expect(f.key.key).toBe('service.name')
-    expect(f.key.type).toBe('resource')
-    expect(f.key.isColumn).toBe(false) // logs: resource attribute, not an indexed column
+describe('serviceFilterExpression (scope a logs/traces query to one OTel service.name)', () => {
+  it('builds the SQL-ish equality v5 expects', () => {
+    expect(serviceFilterExpression('vector')).toBe("service.name = 'vector'")
+    expect(serviceFilterExpression('bot-gateway')).toBe("service.name = 'bot-gateway'")
   })
-  it('marks service.name as an indexed column for traces (where it is materialized)', () => {
-    expect(serviceFilterItem('traces', 'gateway').key.isColumn).toBe(true)
+  it('escapes a quote so a value can never end the expression and rewrite the query', () => {
+    expect(serviceFilterExpression("i'am")).toBe("service.name = 'i''am'")
   })
 })
 
