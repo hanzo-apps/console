@@ -114,3 +114,30 @@ test('phone: it stacks and the body never scrolls sideways', async ({ browser })
   await page.screenshot({ path: join(SHOTS, 'agent-quickstart-phone.png'), fullPage: true })
   await ctx.close()
 })
+
+test('a template card is reachable and operable by keyboard, and it rings', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const page = await ctx.newPage()
+  await open(page)
+
+  const card = page.getByRole('button', { name: 'Start from Deep researcher' })
+  await card.focus()
+  await expect(card).toBeFocused()
+
+  // The focus law lives in globals.css and keys off [tabindex] among others — a card
+  // that takes focus and shows nothing is worse than one that cannot be reached.
+  const ring = await card.evaluate((el) => {
+    const s = getComputedStyle(el)
+    return { width: s.outlineWidth, style: s.outlineStyle, color: s.outlineColor }
+  })
+  expect(ring.style, 'the focused card draws an outline').not.toBe('none')
+  expect(parseFloat(ring.width), 'the outline has real width').toBeGreaterThan(0)
+
+  // Enter picks it — the same thing a click does.
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(700)
+  await expect(page.getByRole('button', { name: /Step 2: Configure/ })).toBeVisible()
+  await expect(page.locator('input[value="researcher"]').first()).toBeVisible()
+
+  await ctx.close()
+})
