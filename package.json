@@ -1,11 +1,11 @@
 {
   "name": "@hanzo/console",
-  "version": "8.5.50",
+  "version": "8.5.61",
   "packageManager": "pnpm@11.17.0",
   "private": true,
   "license": "MIT OR Apache-2.0",
   "author": "Hanzo AI <dev@hanzo.ai>",
-  "description": "Hanzo Cloud Console \u2014 unified admin console for Hanzo Cloud and all cloud products.",
+  "description": "Hanzo Cloud Console — unified admin console for Hanzo Cloud and all cloud products.",
   "scripts": {
     "dev": "next dev -p 4000",
     "build": "next build",
