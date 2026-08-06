@@ -127,6 +127,17 @@ export const BASE_SUBPAGES: ProductSubpage[] = [
 ]
 
 /**
+ * The base sub-pages a product actually gets: the uniform set minus any whose
+ * slug IS the product's own id. A product that already IS one of these concerns
+ * — Settings, Status, Logs, Metrics — must not also carry a base sub-tab bearing
+ * its own name (that is a self-referential duplicate: the Settings product would
+ * show a "Settings" tab of itself). One rule, read by both the nav and the
+ * router, so the two never disagree on whether that tab exists.
+ */
+export const baseSubpagesFor = (entry: CatalogEntry): ProductSubpage[] =>
+  BASE_SUBPAGES.filter((b) => b.slug !== entry.id)
+
+/**
  * The full ordered level-2 nav for a product: Overview, then its declared
  * SPECIFIC sub-pages, then the uniform base set (a base slug the product already
  * declares as a specific is not duplicated). Non-module entries have none.
@@ -140,7 +151,7 @@ export function productSubpages(entry: CatalogEntry, showAdmin = true): ProductS
   const specifics = (entry.subpages ?? []).filter((s) => s.slug !== '' && (showAdmin || !s.admin))
   const seen = new Set(specifics.map((s) => s.slug))
   const out: ProductSubpage[] = [indexSubpage(entry), ...specifics]
-  for (const b of BASE_SUBPAGES) if (!seen.has(b.slug)) out.push(b)
+  for (const b of baseSubpagesFor(entry)) if (!seen.has(b.slug)) out.push(b)
   return out
 }
 
@@ -293,7 +304,7 @@ export function resolveProductView(
     if (entry && entry.kind === 'module') {
       const seg = slug[1]
       const ownsAsSpecific = (entry.subpages ?? []).some((s) => s.slug === seg)
-      const base = BASE_SUBPAGES.find((s) => s.slug === seg)
+      const base = baseSubpagesFor(entry).find((s) => s.slug === seg)
       if (base && !ownsAsSpecific) return { kind: 'subpage', entry, subpage: base }
     }
   }
@@ -306,7 +317,7 @@ export function resolveProductView(
     if (entry && entry.kind === 'module') {
       const seg = slug[1]
       const declared = (entry.subpages ?? []).find((s) => s.slug === seg)
-      const base = BASE_SUBPAGES.find((s) => s.slug === seg)
+      const base = baseSubpagesFor(entry).find((s) => s.slug === seg)
       const sp = declared ?? base
       if (sp) return { kind: 'stub', entry, subpage: sp }
     }

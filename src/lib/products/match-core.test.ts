@@ -11,6 +11,7 @@ import {
   canonicalSlug,
   SLUG_ALIASES,
   BASE_SUBPAGES,
+  baseSubpagesFor,
   subpageSlug,
   subpageHref,
   activeSubpage,
@@ -202,6 +203,19 @@ describe('productSubpages — Overview + specifics + uniform base set', () => {
   it('BASE_SUBPAGES is exactly Settings · Status · Logs · Metrics', () => {
     expect(BASE_SUBPAGES.map((s) => s.slug)).toEqual(['settings', 'status', 'logs', 'metrics'])
   })
+  it('a product that IS a base concern never gets a self-referential base tab', () => {
+    // The Settings product: General (index) · Branding, then the base set MINUS
+    // its own 'settings' — no second "Settings" tab of itself (the reported bug).
+    const settings = mod('settings', { indexLabel: 'General', subpages: [{ slug: 'branding', label: 'Branding' }] })
+    expect(slugs(settings)).toEqual(['', 'branding', 'status', 'logs', 'metrics'])
+    // Same one rule for the other three Observe products named after a base slug.
+    expect(slugs(mod('logs'))).toEqual(['', 'settings', 'status', 'metrics'])
+    expect(slugs(mod('metrics'))).toEqual(['', 'settings', 'status', 'logs'])
+    expect(slugs(mod('status'))).toEqual(['', 'settings', 'logs', 'metrics'])
+    // The rule is expressed once: baseSubpagesFor drops only the self-named slug.
+    expect(baseSubpagesFor(mod('settings')).map((s) => s.slug)).toEqual(['status', 'logs', 'metrics'])
+    expect(baseSubpagesFor(mod('vpc')).map((s) => s.slug)).toEqual(['settings', 'status', 'logs', 'metrics'])
+  })
 })
 
 describe('the ONE level-2 nav — one declaration, read by both the rail and the strip', () => {
@@ -275,6 +289,31 @@ describe('resolveProductView — base sub-pages are the shared per-product view 
     expect(resolveProductView(cat, mods, ['emb', 'settings']).kind).toBe('route')
     // …but an UNowned base slug on the same product is still the shared view.
     expect(resolveProductView(cat, mods, ['emb', 'status']).kind).toBe('subpage')
+  })
+  it('the router agrees with the nav: a product IS-that-concern URL is not a base subpage', () => {
+    // Settings (a :tab product): /settings/settings is NOT the shared per-product
+    // Settings view — it falls through to the module (which lands on the index),
+    // so there is never a self-referential Settings screen. Its OTHER base slugs
+    // still render the shared view.
+    const settings = mod('settings', {
+      indexLabel: 'General',
+      subpages: [{ slug: 'branding', label: 'Branding' }],
+      routes: [
+        { path: '', component: C },
+        { path: ':tab', component: C },
+      ],
+    })
+    const cat = [settings]
+    const mods = cat.map((e) => e as unknown as ProductModule)
+    expect(resolveProductView(cat, mods, ['settings', 'settings']).kind).not.toBe('subpage')
+    expect(resolveProductView(cat, mods, ['settings', 'status']).kind).toBe('subpage')
+    // A single-screen product named after a base slug: the self-URL is an honest
+    // 404 (nothing links there), while its other base slugs render the shared view.
+    const logs = mod('logs')
+    const lcat = [logs]
+    const lmods = lcat.map((e) => e as unknown as ProductModule)
+    expect(resolveProductView(lcat, lmods, ['logs', 'logs']).kind).toBe('notfound')
+    expect(resolveProductView(lcat, lmods, ['logs', 'metrics']).kind).toBe('subpage')
   })
   it('stubs a DECLARED non-base specific that has no route yet (Tasks › Queues)', () => {
     const v = view(['tasks', 'queues'])
