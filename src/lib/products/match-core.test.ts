@@ -197,6 +197,15 @@ describe('productSubpages — Overview + specifics + uniform base set', () => {
   it('hides an admin-only specific from a customer', () => {
     expect(slugs(models, false)).toEqual(['', 'settings', 'status', 'logs', 'metrics'])
   })
+  it('drops a base slug that IS the product — Settings has no Settings child', () => {
+    // The org-Settings product owns the `settings` concept; a base `settings`
+    // sub-page beneath it is the `Settings › Settings` the rail used to show.
+    expect(slugs(mod('settings'))).toEqual(['', 'status', 'logs', 'metrics'])
+    // Same rule for the Observe products named after a base slug.
+    expect(slugs(mod('logs'))).toEqual(['', 'settings', 'status', 'metrics'])
+    expect(slugs(mod('metrics'))).toEqual(['', 'settings', 'status', 'logs'])
+    expect(slugs(mod('status'))).toEqual(['', 'settings', 'logs', 'metrics'])
+  })
   it('fails closed (empty sub-pages) for a non-module entry', () => {
     expect(productSubpages(nonModule)).toEqual([])
   })

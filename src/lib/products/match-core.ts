@@ -139,8 +139,10 @@ export const baseSubpagesFor = (entry: CatalogEntry): ProductSubpage[] =>
 
 /**
  * The full ordered level-2 nav for a product: Overview, then its declared
- * SPECIFIC sub-pages, then the uniform base set (a base slug the product already
- * declares as a specific is not duplicated). Non-module entries have none.
+ * SPECIFIC sub-pages, then the uniform base set (`baseSubpagesFor` — the uniform
+ * set minus any slug that IS the product's own id, so Settings has no "Settings"
+ * child). A base slug the product already declares as a specific is not duplicated.
+ * Non-module entries have none.
  *
  * `showAdmin` gates admin-only specifics (e.g. Models › Routing): a customer
  * never sees them in the sub-nav (default true keeps every existing caller

@@ -45,10 +45,10 @@ export function RuntimeNotice({ surface, error }: { surface: string; error: unkn
   const status = classifyRuntime(error)
   const message = error instanceof Error ? error.message : String(error)
   const body: Record<RuntimeStatus, string> = {
-    'not-initialized': `Observability runtime initializing — your ${surface} will appear here once it's enabled. The /v1/o11y routes are mounted, but the runtime (telemetry stores, query service) is not initialized on this deployment yet. This page shows live ${surface} the moment the runtime is online — it never shows placeholder data.`,
+    'not-initialized': `Observability runtime initializing — your ${surface} will appear here once it's enabled. The /v1/o11y routes are mounted, but the runtime (telemetry stores, query service) is not initialized on this deployment yet. This page shows live ${surface} the moment the runtime is online.`,
     unavailable: `The /v1/o11y/${surface} surface is not proxied on this host yet.`,
     // 403 for a signed-in user — observability isn't provisioned for their org.
-    access: `Observability isn't enabled for your organization yet, so your ${surface} can't be read. It appears here automatically once it is — never placeholder data.`,
+    access: `Observability isn't enabled for your organization yet, so your ${surface} can't be read. It appears here automatically once it is.`,
     // 401 — the session itself lapsed.
     signin: `Your session has expired or isn't recognized here. Sign in again to view your ${surface}.`,
     error: message,

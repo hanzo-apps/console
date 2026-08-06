@@ -216,10 +216,12 @@ function ChatSheet({
  * listening. The mic renders only where the browser can actually listen, so there is
  * never a dead control.
  *
- * It sits ABOVE the Developers dock at `lg+` (that dock's collapsed bar is 44px and
- * exists only there), and its caller suppresses it exactly where the assistant is
- * already on screen: while the sheet is open, on the pages that ARE a composer
- * (`/chat`, `/playground`), and while the assistant IS the column.
+ * It is the assistant's entry point on phones/tablets (`<lg`). At `lg+` the
+ * Developers dock at the foot of the page hosts the same mic + brand-mark, so the
+ * bubble is hidden there (`$lg` display:none) — one launcher per viewport, never two.
+ * Its caller also suppresses it where the assistant is already on screen: while the
+ * sheet is open, on the pages that ARE a composer (`/chat`, `/playground`), and while
+ * the assistant IS the column.
  */
 function AssistantFab({ onOpen, onVoice }: { onOpen: () => void; onVoice: () => void }) {
   const [voiceOk] = useState(() => voiceSupported())
@@ -229,7 +231,7 @@ function AssistantFab({ onOpen, onVoice }: { onOpen: () => void; onVoice: () => 
       position="fixed"
       r={20}
       b={20}
-      $lg={{ b: 64 }}
+      $lg={{ display: 'none' }}
       items="center"
       gap="$2"
       style={{ zIndex: Z.raised }}
