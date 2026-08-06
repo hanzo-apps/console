@@ -241,6 +241,23 @@ export type DeployForm = {
 export const envVars = (form: DeployForm): PaasEnvVar[] =>
   parseEnv(form.env ?? '', new Set(form.publicKeys ?? []))
 
+/**
+ * The public marks that still have a variable, given the current env text.
+ *
+ * A mark must not outlive the line it was made on. Without this, deleting
+ * `DATABASE_URL=postgres://safe` (marked Public) and later typing a new
+ * `DATABASE_URL=` carrying a password would silently inherit the old mark and
+ * ship the credential unsealed — the mark would be a property of a NAME rather
+ * than of the variable someone actually looked at.
+ *
+ * Matching is exact, so `db_url` never inherits `DB_URL`'s mark: a case twin is a
+ * different key to the backend, and failing closed on the ambiguity is correct.
+ */
+export function prunePublicKeys(env: string, publicKeys: readonly string[]): string[] {
+  const present = new Set(parseEnv(env).map((e) => e.key))
+  return publicKeys.filter((k) => present.has(k))
+}
+
 /** The app create body (`POST /v1/platform/projects/:project/apps`). */
 export function toAppInput(form: DeployForm): CreateAppInput {
   const host = form.host?.trim().toLowerCase()

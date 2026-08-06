@@ -21,9 +21,14 @@
  * the person deploying marks it Public, and the form says exactly that. The
  * earlier version inferred secrecy from the key NAME, which let `STRIPE_SK`,
  * `GH_PAT` and `DB_PASS` through as public while the help text promised they were
- * sealed — a false promise is worse than no promise, so the UI now states only
- * what it controls and defers to cloud (which seals by value shape server-side
- * regardless of this choice) for the rest.
+ * sealed — a false promise is worse than no promise, so the copy now claims only
+ * what THIS form decides: the default, and the mark.
+ *
+ * It deliberately does NOT promise that cloud re-seals a Public value whose shape
+ * looks like a credential. That server-side check is not deployed yet, and a
+ * safety net described before it exists is the same defect in a new place — it
+ * invites someone to mark a credential Public believing something downstream will
+ * catch it. Restore that sentence when the backend seal actually ships.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -33,7 +38,15 @@ import { PaasApi, type PaasProject } from '~/lib/api/paas'
 import { PlatformSitesApi, SITE_FRAMEWORKS } from '~/lib/api/platform-sites'
 import { FieldRow, FieldText, FieldTextArea, FieldOptionSelect } from '~/components/ui/Field'
 import { PrimaryButton } from '~/components/ui/PrimaryButton'
-import { envVars, formError, repoName, toAppInput, toSiteInput, type DeployForm } from '~/lib/deploy/board'
+import {
+  envVars,
+  formError,
+  prunePublicKeys,
+  repoName,
+  toAppInput,
+  toSiteInput,
+  type DeployForm,
+} from '~/lib/deploy/board'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from '../platform/state'
 
 const EMPTY: DeployForm = {
@@ -62,7 +75,14 @@ export function NewDeploy({ onCancel, onDeployed }: { onCancel: () => void; onDe
   // happen to touch the repo field.
   const set = (patch: Partial<DeployForm>) => {
     setTouched(true)
-    setForm((f) => ({ ...f, ...patch }))
+    setForm((f) => {
+      const next = { ...f, ...patch }
+      // Editing the env text re-derives which marks still have a variable, so a
+      // Public mark can never outlive the line it was made on and be inherited by
+      // a later variable that happens to reuse the name.
+      if (patch.env !== undefined) next.publicKeys = prunePublicKeys(next.env ?? '', next.publicKeys ?? [])
+      return next
+    })
   }
 
   useEffect(() => {
@@ -85,9 +105,10 @@ export function NewDeploy({ onCancel, onDeployed }: { onCancel: () => void; onDe
   const vars = useMemo(() => envVars(form), [form])
 
   /**
-   * Name (or un-name) a key as public. Only keys the person opened are listed, so
-   * editing the textarea can never silently unseal a variable: a key that is no
-   * longer present simply stops being read, and a new one arrives sealed.
+   * Name (or un-name) a key as public. Only keys the person opened are listed —
+   * and `set` prunes that list on every env edit, so a mark cannot outlive its
+   * line: delete a variable and its mark goes with it, so a later variable
+   * reusing the name arrives sealed like any other.
    */
   const markPublic = (key: string, isPublic: boolean) =>
     set({
@@ -206,8 +227,7 @@ export function NewDeploy({ onCancel, onDeployed }: { onCancel: () => void; onDe
               <FieldTextArea value={form.env ?? ''} rows={4} onChange={(v) => set({ env: v })} />
               <Text fontSize="$1" color="$color10">
                 One KEY=VALUE per line. Every variable is <Text fontWeight="600">sealed by default</Text> — mark
-                one Public to keep it readable later. Cloud may seal a value regardless of that choice when the
-                value itself looks like a credential. A sealed value is masked on read, so this form can set one
+                one Public to keep it readable later. A sealed value is masked on read, so this form can set one
                 but never read one back.
               </Text>
 

@@ -302,6 +302,14 @@ test('every env var is SEALED by default, and only a named one opens', async ({ 
   await expect(vars.getByRole('button', { name: 'STRIPE_SK Sealed' })).toHaveAttribute('aria-pressed', 'true')
 
   await page.screenshot({ path: join(SHOTS, 'deploy-env-secrets.png') })
+
+  // A Public mark must not outlive its line: delete PORT, retype it, and it comes
+  // back SEALED like any new variable rather than inheriting the old mark.
+  const env = form.getByRole('textbox').last()
+  await env.fill('STRIPE_SK=sk_live_x')
+  await expect(vars.getByRole('button', { name: 'PORT Sealed' })).toHaveCount(0)
+  await env.fill('STRIPE_SK=sk_live_x\nPORT=9090')
+  await expect(vars.getByRole('button', { name: 'PORT Sealed' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('a half-loaded board names the gap and shows no count it cannot know', async ({ page }) => {

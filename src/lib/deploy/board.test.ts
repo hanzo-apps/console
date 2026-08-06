@@ -9,6 +9,7 @@ import {
   summarize,
   repoName,
   envVars,
+  prunePublicKeys,
   partialNote,
   parseEnv,
   hostError,
@@ -204,6 +205,37 @@ describe('envVars', () => {
 
   it('seals everything when the form names nothing public', () => {
     expect(envVars({ kind: 'app', name: 'a', repo: 'r', env: 'A=1' })[0].secret).toBe(true)
+  })
+})
+
+describe('prunePublicKeys', () => {
+  it('keeps a mark whose variable is still there', () => {
+    expect(prunePublicKeys('PORT=8080\nDEBUG=1', ['PORT'])).toEqual(['PORT'])
+  })
+
+  it('drops a mark whose variable was deleted', () => {
+    expect(prunePublicKeys('DEBUG=1', ['PORT'])).toEqual([])
+    expect(prunePublicKeys('', ['PORT'])).toEqual([])
+  })
+
+  // The attack this closes: mark a harmless DATABASE_URL Public, delete it, then
+  // type a new one carrying a password. Without pruning the stale mark is
+  // inherited and the credential ships unsealed.
+  it('does not let a mark be inherited by a later variable reusing the name', () => {
+    const marked = ['DATABASE_URL']
+    const afterDelete = prunePublicKeys('PORT=8080', marked)
+    expect(afterDelete).toEqual([])
+    const retyped = 'PORT=8080\nDATABASE_URL=postgres://u:secret@h/db'
+    expect(parseEnv(retyped, new Set(afterDelete)).find((e) => e.key === 'DATABASE_URL')?.secret).toBe(true)
+  })
+
+  it('matches exactly, so a case twin never inherits the mark', () => {
+    expect(prunePublicKeys('db_url=x', ['DB_URL'])).toEqual([])
+    expect(parseEnv('db_url=x', new Set(['DB_URL']))[0].secret).toBe(true)
+  })
+
+  it('ignores a commented-out line — a mark cannot survive on a comment', () => {
+    expect(prunePublicKeys('# PORT=8080', ['PORT'])).toEqual([])
   })
 })
 
