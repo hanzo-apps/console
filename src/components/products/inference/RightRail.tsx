@@ -107,7 +107,7 @@ function NeedHelpCard() {
   return (
     <SectionCard title="Need help?" p="$3">
       <YStack gap="$0.5">
-        <ActionRow icon={<MessageSquare size={15} />} label="Join Discord" onPress={() => openExternal('https://discord.gg/hanzo')} />
+        <ActionRow icon={<MessageSquare size={15} />} label="Join Discord" onPress={() => openExternal('https://discord.gg/CJCyAsm9Vr')} />
         <ActionRow icon={<LifeBuoy size={15} />} label="Contact Support" onPress={() => openExternal(`mailto:support@${apex}`)} />
       </YStack>
     </SectionCard>
