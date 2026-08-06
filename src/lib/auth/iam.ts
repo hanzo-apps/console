@@ -80,6 +80,18 @@ export function iamAccessToken(): string | null {
   }
 }
 
+/**
+ * True when the browser still holds an IAM session to refresh — an access token is
+ * stored, even if the SDK considers it expired (`getAccessToken` returns the raw
+ * stored token). Cheap + synchronous, no network. Used to BOUND the refresh retry:
+ * an anonymous visitor (no stored token) never waits through the backoff, and a
+ * retry stops the moment the session is gone from storage (a revoked token the SDK
+ * cleared cannot be brought back by retrying).
+ */
+export function iamHasSession(): boolean {
+  return iamAccessToken() != null
+}
+
 /** A valid (auto-refreshed if needed) access token, or null. */
 export async function iamValidAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null

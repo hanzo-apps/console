@@ -11,8 +11,10 @@ import {
   iamValidAccessToken,
   iamUserInfo,
   iamExpiresInSeconds,
+  iamHasSession,
   iamSignOut,
 } from '~/lib/auth/iam'
+import { refreshSession } from '~/lib/auth/refresh'
 import { config } from '~/config'
 import { type Account } from './types'
 
@@ -100,7 +102,15 @@ export const AccountApi = {
    * silently refreshed by the SDK before the claims are read.
    */
   session: async (): Promise<SessionResult> => {
-    const token = await iamValidAccessToken()
+    let token = await iamValidAccessToken()
+    // A transient IAM blip (network / a 5xx from the token endpoint) yields a null
+    // token even though the browser still holds a session — don't boot the user to the
+    // sign-in card on a hiccup at load. Retry via the ONE resilient, single-flight
+    // refresh before concluding signed-out; an anonymous visitor (no stored token)
+    // skips it (iamHasSession is false) and resolves signed-out immediately.
+    if (!token && iamHasSession() && (await refreshSession())) {
+      token = await iamValidAccessToken()
+    }
     if (!token) return { account: null, expiresIn: null }
     // Resolve identity from the access-token JWT claims directly — self-contained
     // and immune to the SDK's getUserInfo() returning null on a 200 (which dead-ended

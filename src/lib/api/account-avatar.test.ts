@@ -25,6 +25,7 @@ vi.mock('./client', async () => {
 })
 vi.mock('~/lib/auth/iam', () => ({
   iamValidAccessToken: vi.fn(),
+  iamHasSession: vi.fn(() => false),
   iamUserInfo: vi.fn(),
   iamExpiresInSeconds: vi.fn(),
   iamSignOut: vi.fn(),

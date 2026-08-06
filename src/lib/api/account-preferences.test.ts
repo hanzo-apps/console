@@ -18,6 +18,7 @@ const iam = vi.hoisted(() => ({ token: 'live-access-token' as string | null }))
 vi.mock('~/lib/auth/iam', () => ({
   iamAccessToken: () => iam.token,
   iamValidAccessToken: async () => iam.token,
+  iamHasSession: () => iam.token != null,
   iamExpiresInSeconds: () => 3600,
   iamUserInfo: async () => null,
   iamSignOut: () => {},
