@@ -3835,7 +3835,7 @@ mic with the same `Talk to Hanzo` label, mounted-but-hidden until the panel open
 a bare attribute locator matches that one first: scope to `getByTestId('assistant-fab')`.
 
 
-## The agent quickstart, and the rail that stopped drilling (v8.5.61)
+## The agent quickstart, and the rail that stopped drilling (v8.5.62)
 
 Two changes that share a shape: something that looked finished was standing in for
 the thing itself.
@@ -3908,6 +3908,13 @@ that 390 stacks without the body scrolling sideways. `e2e/level-2-nav.spec.ts` (
 retargeted, not deleted: it now asserts "All products" is still on screen while a
 product is open — the invariant the drill could never have satisfied — and that no
 "Back to all products" button exists on any of the 18 converted products.
+
+**ONE door.** The board's New-Agent button opened the builder in a side pane —
+the same component, reached by a different shape, with no templates, no drafting,
+and nowhere to run what it made. It goes to the quickstart now and
+`NewAgentForm` is deleted; two entrances to one builder is two things to keep in
+step, and the pane was the lesser of them. A spec clicks the board's CTA and
+asserts the URL lands on `/agents/quickstart`.
 
 One placement note that cost a debug cycle: the quickstart branch must return BEFORE
 `AgentsModule`'s loading/error/empty states. Building an agent does not depend on

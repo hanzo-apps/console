@@ -141,3 +141,25 @@ test('a template card is reachable and operable by keyboard, and it rings', asyn
 
   await ctx.close()
 })
+
+test('the board\'s New Agent button is the SAME door as the quickstart', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const page = await ctx.newPage()
+  await page.route('**/*', mock)
+  await primeSession(page, ACCOUNT)
+  await page.goto(`${BASE_URL}/agents`, { waitUntil: 'domcontentloaded' })
+  await page.locator('[data-testid="product-content"]').first().waitFor({ state: 'attached', timeout: 30_000 })
+  await page.waitForTimeout(1200)
+
+  // Whichever New-Agent affordance the board is showing (header button or empty
+  // state), it must LAND on the quickstart — not open a second, differently-shaped
+  // create form in a side pane.
+  const cta = page.getByRole('button', { name: /New Agent/i }).filter({ visible: true }).first()
+  await cta.click()
+  await page.waitForTimeout(900)
+
+  expect(new URL(page.url()).pathname).toBe('/agents/quickstart')
+  await expect(page.getByText('What do you want to build?')).toBeVisible()
+
+  await ctx.close()
+})

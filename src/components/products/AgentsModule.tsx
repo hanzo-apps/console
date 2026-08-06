@@ -14,12 +14,13 @@
  * facade (`AgentsApi.metrics`); until that route is bound they show a truthful "not
  * connected" note, never a placeholder trend. When the org has ZERO agents (or the
  * `/v1/agents` route isn't bound yet) the board is replaced by a polished
- * "create your first agent" empty state with the real New-Agent flow — never the
- * mockup's sample data.
+ * "create your first agent" empty state that opens the QUICKSTART — the one way to
+ * create an agent here — never the mockup's sample data.
  *
  * Style props use the @hanzo/gui v5 shorthand set (bg/p/px/py/gap/rounded/items/…).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { useAnalytics } from '@hanzo/event/react'
 import { EVENTS } from '@hanzo/event'
@@ -77,7 +78,7 @@ import {
   TopAgents,
   VersionBadge,
 } from './agents/parts'
-import { AgentDetailView, NewAgentForm } from './agents/forms'
+import { AgentDetailView } from './agents/forms'
 import { agentBuilderLoaders } from './agents/loaders'
 import { AgentQuickstart } from '~/components/agent-builder'
 import { BackendStateCard, DataTable, EmptyState, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
@@ -136,6 +137,7 @@ function useAgents() {
 }
 
 export function AgentsModule(props: { params: Record<string, string> }) {
+  const router = useRouter()
   const detail = useDetailPane()
   const { agents, loading, error, live, activity, reload, setAgents } = useAgents()
 
@@ -228,26 +230,11 @@ export function AgentsModule(props: { params: Record<string, string> }) {
 
   const analytics = useAnalytics()
 
-  const openNew = useCallback(
-    () =>
-      detail.open({
-        title: 'New agent',
-        subtitle: 'Define a model, prompt, and tools',
-        icon: Bot,
-        iconColor: agentColor,
-        content: (
-          <NewAgentForm
-            onCancel={detail.close}
-            onCreated={() => {
-              analytics.capture(EVENTS.AGENT_CREATED)
-              detail.close()
-              void reload()
-            }}
-          />
-        ),
-      }),
-    [detail, agentColor, reload, analytics],
-  )
+  // ONE way to create an agent, and it is the quickstart. This used to open the
+  // builder in a side pane — the same component, reached by a different shape, with
+  // no templates, no drafting and nowhere to run what it made. Two entrances to one
+  // builder is two things to keep in step; the pane was the lesser of them.
+  const openNew = useCallback(() => router.push('/agents/quickstart'), [router])
 
   const header = (
     <PageHeader
