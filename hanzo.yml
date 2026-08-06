@@ -1,9 +1,11 @@
 # Canonical CI config for hanzoai/console — read by the hanzoai/ci reusable
 # (.hanzo/workflows/cicd.yml) and platform.hanzo.ai.
 #
-# The frontend ships as a SITE RELEASE — the `site:` lane at the bottom. A push to
-# main builds the static export and promotes it on /v1/sites, and that is the whole
-# path: no image, no cloud rebuild, rollback is a pointer flip.
+# The frontend ships as a SITE RELEASE — .hanzo/workflows/site.yml. A push to main
+# builds the static export and promotes it on /v1/sites with an IAM bearer, and that
+# is the whole path: no image, no cloud rebuild, rollback is a pointer flip. It is
+# NOT the hanzoai/ci `site:` lane — that lane uploads with `mc mirror` and refuses
+# to publish without static S3 admin keys, which is a second, non-IAM credential.
 #
 # It used to ship welded INTO the cloud binary via the console-embed image below
 # (cloud `COPY --from=console /dist/` → go:embed), which priced a CSS fix at a
@@ -44,25 +46,3 @@ images:
     context: .
     dockerfile: Dockerfile
     repo: ghcr.io/hanzoai/console
-
-# How the frontend actually ships. ci builds `build:`, mirrors `dir:` into this
-# org's own storage, then POSTs /v1/sites/<slug>/publish — promote + activate in
-# one call, release id digested from the manifest so a re-run of the same bytes is
-# a no-op. Credentials are NOT new: declaring `site:` is itself what makes ci fetch
-# them, and the bearer is the IAM JWT the workflow's single KMS login already
-# minted from KMS_CLIENT_ID/KMS_CLIENT_SECRET. One machine identity, one rotation,
-# nothing added to git.
-site:
-  slug: hanzo-console
-  dir: out
-  on: [main]
-  # Node 22 + corepack are already on the runner (ci provisions them from
-  # package.json), so this only adds deps + the export. The heap bump is
-  # load-bearing, not defensive: the full @hanzo/gui export OOMs into a stub shell
-  # without it. The analytics id is the public per-site id Dockerfile.embed baked —
-  # same value, so the release keeps tracking exactly as the embed did.
-  build: >-
-    pnpm install --frozen-lockfile &&
-    NODE_OPTIONS=--max-old-space-size=8192
-    NEXT_PUBLIC_ANALYTICS_WEBSITE_ID=7dce54ee-41f6-4751-96bf-fe005067c7c7
-    pnpm build:embed
