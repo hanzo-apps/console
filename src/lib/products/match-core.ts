@@ -82,7 +82,11 @@ export const SLUG_ALIASES: Record<string, string> = {
   auto: 'automations',
   automation: 'automations',
   traces: 'o11y',
-  deploy: 'app-platform',
+  // `deploy` used to alias App Platform, back when the PaaS canvas was the only
+  // place a deploy happened. It is a real product now — the front door over apps,
+  // sites, domains, CD, CI, and storage — so the slug resolves to itself and App
+  // Platform keeps its own id. An alias to a sibling would make the front door
+  // unreachable: `canonicalSlug` rewrites the head before any lookup.
   'plans-pricing': 'plans',
   wallets: 'wallet',
   'model-catalog': 'models',

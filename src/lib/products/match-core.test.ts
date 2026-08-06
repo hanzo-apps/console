@@ -322,7 +322,6 @@ describe('canonicalSlug — conventional URLs map to the canonical entry id', ()
   it('maps the human product slugs the console/e2e/bookmarks use to the canonical id', () => {
     // These six were the biggest "blank" source: a human slug ≠ registry id → 404.
     expect(canonicalSlug(['traces'])).toEqual(['o11y'])
-    expect(canonicalSlug(['deploy'])).toEqual(['app-platform'])
     expect(canonicalSlug(['plans-pricing'])).toEqual(['plans'])
     expect(canonicalSlug(['wallets'])).toEqual(['wallet'])
     expect(canonicalSlug(['model-catalog'])).toEqual(['models'])
@@ -361,7 +360,6 @@ describe('resolveProductView — aliases + external resolve (never a 404 nav ite
   it('every human product slug resolves to its real module (never a 404 blank)', () => {
     const cases: [string, string][] = [
       ['traces', 'o11y'],
-      ['deploy', 'app-platform'],
       ['plans-pricing', 'plans'],
       ['wallets', 'wallet'],
       ['model-catalog', 'models'],
