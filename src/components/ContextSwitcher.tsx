@@ -31,7 +31,6 @@ import { ChevronsUpDown, FolderGit2, Plus, SlidersHorizontal } from '@hanzogui/l
 
 import { useScope } from '~/lib/scope-context'
 import { useOrgIdentity } from '~/components/ui/BrandLogo'
-import { OrgMark } from '@hanzo/ui/product'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { IamAdminApi, type Organization } from '~/lib/api'
 import { ORG_PAGE_SIZE, orgQuery } from '~/lib/org-list'
