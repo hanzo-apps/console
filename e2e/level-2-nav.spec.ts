@@ -119,7 +119,12 @@ test('phone: the strip carries level 2 where the sidebar is a drawer', async ({ 
   const labels = await strip(page, 'models').getByRole('button').allInnerTexts()
   // Routing is admin-only and this account is an ORG admin, not a global one — the
   // one nav gates it, so a customer is never offered a surface they cannot open.
-  expect(labels).toEqual(['Catalog', 'Leaderboard', 'Blend', 'Settings', 'Status', 'Logs', 'Metrics'])
+  //
+  // The tail reads raw → summary: Logs, then Metrics, then Status LAST (the
+  // live-health verdict comes after the signals it is derived from). f6df104ec8
+  // reordered BASE_SUBPAGES and updated match-core.test.ts but not this spec, so it
+  // asserted the retired order and failed against every build from 8.5.75 on.
+  expect(labels).toEqual(['Catalog', 'Leaderboard', 'Blend', 'Settings', 'Logs', 'Metrics', 'Status'])
 
   // The strip wraps rather than pushing the page sideways.
   const scrolls = await page.evaluate(
