@@ -17,48 +17,55 @@ vi.mock('./client', () => ({
 
 import { ApmApi, apmWindow } from './apm'
 
-type Body = { compositeQuery: { builderQueries: { A: { filters: { items: { op: string; value: string; key: { key: string } }[] } } } } }
+type Body = {
+  requestType: string
+  compositeQuery: { queries: { type: string; spec: { signal: string; limit: number } & Record<string, unknown> }[] }
+}
 
-describe('ApmApi.logs — the per-product o11y query builds with the service filter + maps real rows', () => {
+describe('ApmApi.logs — the per-product o11y v5 query builds + maps real rows, service-scoped', () => {
   beforeEach(() => restPost.mockReset())
 
-  it('sends a service.name filter and normalizes a real O11y logs response to service-scoped rows', async () => {
+  it('asks the v5 raw surface for a deep page and normalizes rows to the ONE service', async () => {
     const nsTs = String(Date.parse('2026-07-03T00:00:00Z') * 1_000_000) // O11y ns epoch
     restPost.mockResolvedValueOnce({
-      data: { result: [{ list: [{ timestamp: nsTs, data: { id: 'l1', severity_text: 'INFO', 'service.name': 'iam', body: 'signed in' } }] }] },
+      data: { data: { results: [{ rows: [{ timestamp: nsTs, data: { id: 'l1', severity_text: 'INFO', resources_string: { 'service.name': 'iam' }, body: 'signed in' } }] }] } },
     })
 
     const rows = await ApmApi.logs(apmWindow(3600), 500, 'iam')
 
-    // 1) the outgoing query carried the per-service filter (serviceFilterItem)
+    // 1) the outgoing query is the v5 raw shape on the version-less canonical
+    // surface, addressed via the /v1 bearer BFF. Service scoping is client-side
+    // (the runtime's key resolution is down — see rawQueryPayload), so a scoped
+    // read asks for the deepest page instead of a server filter.
     const [url, body] = restPost.mock.calls[0] as [string, Body]
-    // Version-less canonical o11y surface, addressed via the /v1 bearer BFF.
     expect(url).toBe('/v1/o11y/query_range')
-    const items = body.compositeQuery.builderQueries.A.filters.items
-    expect(items).toHaveLength(1)
-    expect(items[0]).toMatchObject({ op: '=', value: 'iam', key: { key: 'service.name' } })
+    expect(body.requestType).toBe('raw')
+    const q = body.compositeQuery.queries[0]
+    expect(q.type).toBe('builder_query')
+    expect(q.spec).toMatchObject({ signal: 'logs', limit: 1000 })
+    expect('filter' in q.spec).toBe(false)
 
     // 2) the real response maps to real, normalized rows
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({ service: 'iam', severity: 'info', body: 'signed in' })
   })
 
-  it('re-filters client-side so a runtime that ignored the filter cannot leak another service onto the page', async () => {
+  it('re-filters client-side so another service can never leak onto the page', async () => {
     restPost.mockResolvedValueOnce({
-      data: { result: [{ list: [
-        { timestamp: '2', data: { body: 'mine', 'service.name': 'iam' } },
-        { timestamp: '1', data: { body: 'not mine', 'service.name': 'kms' } },
-      ] }] },
+      data: { data: { results: [{ rows: [
+        { timestamp: '2', data: { body: 'mine', resources_string: { 'service.name': 'iam' } } },
+        { timestamp: '1', data: { body: 'not mine', resources_string: { 'service.name': 'kms' } } },
+      ] }] } },
     })
     const rows = await ApmApi.logs(apmWindow(3600), 500, 'iam')
     expect(rows.map((r) => r.body)).toEqual(['mine'])
   })
 
-  it('sends NO filter for the org-wide stream (back-compat with the Observe Logs board)', async () => {
-    restPost.mockResolvedValueOnce({ data: { result: [] } })
+  it('keeps the caller limit for the org-wide stream (no service, no deep page)', async () => {
+    restPost.mockResolvedValueOnce({ data: { data: { results: [] } } })
     await ApmApi.logs(apmWindow(3600), 500)
     const [, body] = restPost.mock.calls[0] as [string, Body]
-    expect(body.compositeQuery.builderQueries.A.filters.items).toEqual([])
+    expect(body.compositeQuery.queries[0].spec.limit).toBe(500)
   })
 })
 

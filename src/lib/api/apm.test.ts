@@ -14,11 +14,10 @@ import {
   normalizeExceptions,
   normalizeDashboard,
   normalizeDashboards,
-  listQueryPayload,
-  serviceFilterItem,
+  rawQueryPayload,
   pickService,
   serviceHealthOf,
-  parseListRows,
+  parseRawRows,
   toIso,
   normalizeLogRow,
   normalizeLogs,
@@ -234,65 +233,55 @@ describe('normalizeDashboard / normalizeDashboards', () => {
   })
 })
 
-describe('listQueryPayload (O11y v3 query_range LIST)', () => {
+describe('rawQueryPayload (O11y v5 query_range RAW)', () => {
   const w = apmWindow(3600)
+  type V5 = {
+    schemaVersion: string
+    start: number
+    end: number
+    requestType: string
+    compositeQuery: { queries: { type: string; spec: Record<string, unknown> }[] }
+  }
 
-  it('builds a noop list builder query over the given dataSource with ms bounds', () => {
-    const p = listQueryPayload('logs', w, 100) as {
-      start: number
-      end: number
-      compositeQuery: { queryType: string; panelType: string; builderQueries: Record<string, Record<string, unknown>> }
-    }
+  it('builds ONE builder_query envelope over the given signal with ms bounds', () => {
+    const p = rawQueryPayload('logs', w, 100) as V5
+    expect(p.schemaVersion).toBe('v1')
     expect(p.start).toBe(w.startMs)
     expect(p.end).toBe(w.endMs)
-    expect(p.compositeQuery.queryType).toBe('builder')
-    expect(p.compositeQuery.panelType).toBe('list')
-    const A = p.compositeQuery.builderQueries.A
-    expect(A.dataSource).toBe('logs')
-    expect(A.aggregateOperator).toBe('noop')
-    expect(A.expression).toBe('A')
-    expect(A.pageSize).toBe(100)
-    // newest-first
-    expect(A.orderBy).toEqual([{ columnName: 'timestamp', order: 'desc' }])
+    expect(p.requestType).toBe('raw')
+    expect(p.compositeQuery.queries).toHaveLength(1)
+    const q = p.compositeQuery.queries[0]
+    expect(q.type).toBe('builder_query')
+    expect(q.spec).toMatchObject({ name: 'A', signal: 'logs', disabled: false, limit: 100, offset: 0 })
   })
 
-  it('carries dataSource=traces for a span search', () => {
-    const p = listQueryPayload('traces', w, 50) as { compositeQuery: { builderQueries: { A: { dataSource: string } } } }
-    expect(p.compositeQuery.builderQueries.A.dataSource).toBe('traces')
+  it('carries signal=traces for a span search', () => {
+    const p = rawQueryPayload('traces', w, 50) as V5
+    expect(p.compositeQuery.queries[0].spec.signal).toBe('traces')
   })
 
-  it('clamps pageSize into [1,1000] and floors it', () => {
-    const big = listQueryPayload('logs', w, 99999) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
-    const zero = listQueryPayload('logs', w, 0) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
-    const frac = listQueryPayload('logs', w, 12.9) as { compositeQuery: { builderQueries: { A: { pageSize: number } } } }
-    expect(big.compositeQuery.builderQueries.A.pageSize).toBe(1000)
-    expect(zero.compositeQuery.builderQueries.A.pageSize).toBe(1)
-    expect(frac.compositeQuery.builderQueries.A.pageSize).toBe(12)
+  it('clamps limit into [1,1000] and floors it', () => {
+    const lim = (n: number) => (rawQueryPayload('logs', w, n) as V5).compositeQuery.queries[0].spec.limit
+    expect(lim(99999)).toBe(1000)
+    expect(lim(0)).toBe(1)
+    expect(lim(12.9)).toBe(12)
   })
 
-  it('defaults to NO filters (whole-org stream) when none are given — back-compat', () => {
-    const p = listQueryPayload('logs', w, 100) as { compositeQuery: { builderQueries: { A: { filters: { items: unknown[]; op: string } } } } }
-    expect(p.compositeQuery.builderQueries.A.filters).toEqual({ items: [], op: 'AND' })
+  it('keeps order and filter OFF the wire — the runtime 500s resolving any key today', () => {
+    // Both spec features route through telemetry-metadata key resolution, which the
+    // deployed runtime cannot serve ("failed to get logs keys"). Raw is newest-first
+    // by default, and service scoping is the client-side re-filter in ApmApi.
+    const spec = (rawQueryPayload('logs', w, 100) as V5).compositeQuery.queries[0].spec
+    expect('order' in spec).toBe(false)
+    expect('filter' in spec).toBe(false)
   })
 
-  it('carries a per-service filter into the builder query when given (per-product scope)', () => {
-    const item = serviceFilterItem('logs', 'iam')
-    const p = listQueryPayload('logs', w, 100, [item]) as { compositeQuery: { builderQueries: { A: { filters: { items: unknown[]; op: string } } } } }
-    expect(p.compositeQuery.builderQueries.A.filters).toEqual({ items: [item], op: 'AND' })
-  })
-})
-
-describe('serviceFilterItem (scope a logs/traces query to one OTel service.name)', () => {
-  it('builds the service.name resource-attribute equality O11y expects', () => {
-    const f = serviceFilterItem('logs', 'vector')
-    expect(f.op).toBe('=')
-    expect(f.value).toBe('vector')
-    expect(f.key.key).toBe('service.name')
-    expect(f.key.type).toBe('resource')
-    expect(f.key.isColumn).toBe(false) // logs: resource attribute, not an indexed column
-  })
-  it('marks service.name as an indexed column for traces (where it is materialized)', () => {
-    expect(serviceFilterItem('traces', 'gateway').key.isColumn).toBe(true)
+  it('never emits a v3 field the strict v5 decoder refuses', () => {
+    const p = rawQueryPayload('logs', w, 100) as Record<string, unknown>
+    const composite = p.compositeQuery as Record<string, unknown>
+    expect('builderQueries' in composite).toBe(false)
+    expect('queryType' in composite).toBe(false)
+    expect('panelType' in composite).toBe(false)
   })
 })
 
@@ -338,21 +327,40 @@ describe('serviceHealthOf (RED verdict for one service)', () => {
   })
 })
 
-describe('parseListRows', () => {
-  it('reads rows from data.result[].list', () => {
-    const body = { data: { result: [{ list: [{ timestamp: '1', data: { body: 'a' } }, { timestamp: '2', data: { body: 'b' } }] }] } }
-    expect(parseListRows(body)).toHaveLength(2)
+describe('parseRawRows', () => {
+  it('reads rows from the {status,data:{data:{results:[{rows}]}}} envelope', () => {
+    const body = {
+      status: 'success',
+      data: { type: 'raw', data: { results: [{ queryName: 'A', rows: [{ timestamp: '1', data: { body: 'a' } }, { timestamp: '2', data: { body: 'b' } }] }] } },
+    }
+    expect(parseRawRows(body)).toHaveLength(2)
   })
-  it('reads rows from the nested data.newResult.data.result[].list mirror', () => {
-    const body = { data: { newResult: { data: { result: [{ list: [{ timestamp: '1', data: {} }] }] } } } }
-    expect(parseListRows(body)).toHaveLength(1)
+  it('reads rows from a bare {data:{results}} response', () => {
+    const body = { data: { results: [{ rows: [{ timestamp: '1', data: {} }] }] } }
+    expect(parseRawRows(body)).toHaveLength(1)
+  })
+  it('flattens the OTel attribute maps over the row scalars into ONE namespace', () => {
+    const body = {
+      data: { data: { results: [{ rows: [{
+        timestamp: '2026-08-06T23:00:03Z',
+        data: {
+          body: 'request',
+          severity_text: 'info',
+          resources_string: { 'service.name': 'cloud' },
+          attributes_string: { 'http.method': 'GET' },
+          attributes_number: { 'http.status_code': 200 },
+        },
+      }] }] } },
+    }
+    const [row] = parseRawRows(body)
+    expect(row.data).toMatchObject({ body: 'request', 'service.name': 'cloud', 'http.method': 'GET', 'http.status_code': 200 })
   })
   it('returns [] for empty/garbage/missing shapes (never throws)', () => {
-    expect(parseListRows(null)).toEqual([])
-    expect(parseListRows({})).toEqual([])
-    expect(parseListRows({ data: { result: null } })).toEqual([])
-    expect(parseListRows({ data: { result: [{ list: null }] } })).toEqual([])
-    expect(parseListRows('nope')).toEqual([])
+    expect(parseRawRows(null)).toEqual([])
+    expect(parseRawRows({})).toEqual([])
+    expect(parseRawRows({ data: { results: null } })).toEqual([])
+    expect(parseRawRows({ data: { results: [{ rows: null }] } })).toEqual([])
+    expect(parseRawRows('nope')).toEqual([])
   })
 })
 
@@ -402,15 +410,21 @@ describe('normalizeLogRow / normalizeLogs', () => {
     expect(l.body).toBe('hi')
     expect(l.id).toBe('5-3') // ts-idx fallback
   })
-  it('maps a full query_range logs response, newest-first order preserved', () => {
+  it('maps a full v5 query_range logs response, newest-first order preserved', () => {
     const body = {
-      data: { result: [{ list: [{ timestamp: '2', data: { body: 'newer' } }, { timestamp: '1', data: { body: 'older' } }] }] },
+      data: { data: { results: [{ rows: [{ timestamp: '2', data: { body: 'newer' } }, { timestamp: '1', data: { body: 'older' } }] }] } },
     }
     const rows = normalizeLogs(body)
     expect(rows.map((r) => r.body)).toEqual(['newer', 'older'])
   })
-  it('empty result → empty list (honest empty, not a throw)', () => {
-    expect(normalizeLogs({ data: { result: [] } })).toEqual([])
+  it('reads the service from the nested resources_string map (as the runtime emits it)', () => {
+    const body = {
+      data: { data: { results: [{ rows: [{ timestamp: '1', data: { body: 'hi', severity_text: 'INFO', resources_string: { 'service.name': 'iam' } } }] }] } },
+    }
+    expect(normalizeLogs(body)[0]).toMatchObject({ service: 'iam', severity: 'info', body: 'hi' })
+  })
+  it('empty results → empty list (honest empty, not a throw)', () => {
+    expect(normalizeLogs({ data: { data: { results: [] } } })).toEqual([])
   })
 })
 
@@ -432,8 +446,8 @@ describe('normalizeTraceSpan / normalizeSpans', () => {
     expect(normalizeTraceSpan({ data: { spanID: 's' } }, 0).durationNano).toBeNull()
     expect(normalizeTraceSpan({ data: { spanID: 's', durationNano: '' } }, 0).durationNano).toBeNull()
   })
-  it('maps a full query_range traces response', () => {
-    const body = { data: { result: [{ list: [{ timestamp: '1', data: { traceID: 't', name: 'op' } }] }] } }
+  it('maps a full v5 query_range traces response', () => {
+    const body = { data: { data: { results: [{ rows: [{ timestamp: '1', data: { trace_id: 't', name: 'op' } }] }] } } }
     expect(normalizeSpans(body)).toHaveLength(1)
   })
 })

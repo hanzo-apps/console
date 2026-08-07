@@ -532,122 +532,86 @@ export function normalizeDashboards(body: unknown): Dashboard[] {
   return rows.map(normalizeDashboard).filter((d) => d.uuid !== '')
 }
 
-// ── Logs + Traces (O11y composite query_range) ──────────────────────────────
+// ── Logs + Traces (O11y v5 composite query_range) ────────────────────────────
 //
-// The universal `POST /v1/o11y/query_range` builder query (version-less canonical
-// surface). A `list`-panel `noop` query over `dataSource: logs | traces` returns RAW
-// rows (recent log lines / spans), newest first — the one true logs/traces read.
-// Time is epoch MILLISECONDS = `ApmWindow.startMs/endMs`. Every helper is pure (JSON
-// in, view-model out) so it unit-tests without a live runtime.
+// The universal `POST /v1/o11y/query_range` builder query. The runtime behind the
+// flat path is the module's V5 querier — its composite is `{queries: [{type,
+// spec}]}` and its decoder is STRICT, so the old v3 `{queryType, panelType,
+// builderQueries}` envelope is refused outright ("unknown field \"builderQueries\"
+// in composite query"), which the overview panel rendered as "Could not reach
+// observability". A `requestType: "raw"` query over `signal: logs | traces`
+// returns raw rows (recent log lines / spans), newest first — the server's own
+// default order for raw.
+//
+// Two v5 spec features are deliberately NOT sent, verified against the live
+// runtime: an `order` clause and a `filter` expression both route through
+// telemetry-metadata key resolution, which currently fails server-side ("failed
+// to get logs keys", 500) — the runtime's key tables are not reachable from the
+// embedded store. Raw already returns newest-first without `order`, and service
+// scoping is enforced by the client-side re-filter below (which these readers
+// always did as their leak-proofing). When the metadata store heals, the filter
+// expression (`service.name = '<svc>'`) is the one-line addition.
+//
+// Time is epoch MILLISECONDS = `ApmWindow.startMs/endMs`. Every helper is pure
+// (JSON in, view-model out) so it unit-tests without a live runtime.
 
 /** The telemetry signal a builder query reads. */
 export type O11yDataSource = 'logs' | 'traces' | 'metrics'
 
 /**
- * One O11y builder-query filter item — the `{key, op, value}` shape the explorer
- * sends. `key` carries the attribute's name + type so the runtime resolves it
- * correctly (a resource attribute vs an indexed column).
+ * The v5 `query_range` RAW payload — ONE `builder_query` envelope keyed `A`.
+ * `limit` is clamped into [1,1000] (the page a reader shows). No `order`, no
+ * `filter` — see the section note above for why both stay off the wire today.
  */
-export type QueryFilterItem = {
-  key: { key: string; dataType: 'string'; type: string; isColumn: boolean }
-  op: string
-  value: string
-}
-
-/**
- * Filter a logs/traces list query to ONE OpenTelemetry `service.name`. `service.name`
- * is a RESOURCE attribute on both signals (on traces it is also materialized as an
- * indexed column, so `isColumn` is set there) — this is the exact filter item O11y's
- * own explorer emits for a service-scoped list, so the runtime resolves it and never
- * 400s. The caller ALSO re-filters the normalized rows client-side (belt-and-suspenders),
- * so a runtime that ignores the item can never leak another service's rows onto a
- * per-product page.
- */
-export function serviceFilterItem(dataSource: O11yDataSource, service: string): QueryFilterItem {
+export function rawQueryPayload(signal: O11yDataSource, w: ApmWindow, limit: number): Record<string, unknown> {
+  const capped = Math.max(1, Math.min(1000, Math.floor(limit)))
   return {
-    key: { key: 'service.name', dataType: 'string', type: 'resource', isColumn: dataSource === 'traces' },
-    op: '=',
-    value: service,
-  }
-}
-
-/**
- * The `list`-panel `selectColumns` per signal. The traces v4 list builder HARD-fails
- * (`select columns cannot be empty for panelType list`, → 500) when a noop list query
- * carries no `selectColumns`; the query already emits timestamp/spanID/traceID, so
- * these ADD the display fields `normalizeTraceSpan` reads. Each name is a materialized
- * static trace column (o11y `StaticFieldsTraces`), so the runtime resolves it verbatim.
- * Logs list does NOT require selectColumns (its noop path returns the default row set),
- * so it stays empty — adding trace columns there would reference non-existent log columns.
- */
-const listSelectColumns: Record<O11yDataSource, Array<Record<string, unknown>>> = {
-  traces: [
-    { key: 'name', dataType: 'string', type: 'tag', isColumn: true },
-    { key: 'duration_nano', dataType: 'float64', type: 'tag', isColumn: true },
-    { key: 'response_status_code', dataType: 'string', type: 'tag', isColumn: true },
-  ],
-  logs: [],
-  metrics: [],
-}
-
-/**
- * The exact v3 `query_range` LIST payload — ONE `noop` builder query keyed `A`,
- * newest-first, paged by `offset`/`pageSize`. Mirrors what O11y's own explorer
- * sends (verified against the frontend + the server `BuilderQuery` struct), so the
- * runtime never 400s on shape. `filters` (default none) scopes the query — e.g. a
- * `serviceFilterItem` restricts it to one product's OTel service. `selectColumns`
- * is REQUIRED by the traces list builder (empty → 500); see `listSelectColumns`.
- */
-export function listQueryPayload(
-  dataSource: O11yDataSource,
-  w: ApmWindow,
-  limit: number,
-  filters: QueryFilterItem[] = [],
-): Record<string, unknown> {
-  const pageSize = Math.max(1, Math.min(1000, Math.floor(limit)))
-  return {
+    schemaVersion: 'v1',
     start: w.startMs,
     end: w.endMs,
-    step: 60,
+    requestType: 'raw',
     compositeQuery: {
-      queryType: 'builder',
-      panelType: 'list',
-      builderQueries: {
-        A: {
-          queryName: 'A',
-          dataSource,
-          aggregateOperator: 'noop',
-          aggregateAttribute: {},
-          expression: 'A',
-          disabled: false,
-          stepInterval: 60,
-          filters: { items: filters, op: 'AND' },
-          selectColumns: listSelectColumns[dataSource],
-          groupBy: [],
-          having: [],
-          orderBy: [{ columnName: 'timestamp', order: 'desc' }],
-          limit: null,
-          offset: 0,
-          pageSize,
+      queries: [
+        {
+          type: 'builder_query',
+          spec: { name: 'A', signal, disabled: false, limit: capped, offset: 0 },
         },
-      },
+      ],
     },
   }
 }
 
-/** A `list`-panel query returns rows under `data.result[].list` (newer runtimes
- *  mirror them under `data.newResult.data.result[].list`); each is `{timestamp,data}`. */
+/** One raw row, its attribute maps flattened so `pick` reads one namespace. */
 type ListRow = { timestamp?: string | number; data?: Record<string, unknown> | null }
 
-/** Pull the flat list rows out of either result location, never throwing on shape. */
-export function parseListRows(body: unknown): ListRow[] {
-  const r = (body ?? {}) as { data?: { result?: unknown; newResult?: { data?: { result?: unknown } } } }
-  const direct = r?.data?.result
-  const nested = r?.data?.newResult?.data?.result
-  const results = (Array.isArray(direct) ? direct : Array.isArray(nested) ? nested : []) as { list?: unknown }[]
+/**
+ * Pull the raw rows out of a v5 `query_range` response, never throwing on shape.
+ * The envelope is `{status, data: {type: "raw", data: {results: [{queryName,
+ * rows: [{timestamp, data}]}]}}}` (a bare `{data: {results}}` is also accepted).
+ * Each row's `data` nests the OTel attribute maps (`resources_string`,
+ * `attributes_string`, `attributes_number`, `attributes_bool`); they are
+ * flattened over the row's own scalars so downstream readers keep addressing one
+ * flat namespace (`body`, `severity_text`, `service.name`, …) exactly as the v3
+ * list rows carried it.
+ */
+export function parseRawRows(body: unknown): ListRow[] {
+  const r = (body ?? {}) as { data?: { data?: { results?: unknown }; results?: unknown } }
+  const results = ([] as unknown[]).concat(
+    (Array.isArray(r?.data?.data?.results) ? r.data.data.results : Array.isArray(r?.data?.results) ? r.data.results : []) as unknown[],
+  ) as { rows?: unknown }[]
   const out: ListRow[] = []
   for (const res of results) {
-    if (Array.isArray(res?.list)) out.push(...(res.list as ListRow[]).filter((x): x is ListRow => x != null))
+    if (!Array.isArray(res?.rows)) continue
+    for (const raw of res.rows as ListRow[]) {
+      if (raw == null) continue
+      const d = (raw.data ?? {}) as Record<string, unknown>
+      const flat: Record<string, unknown> = { ...d }
+      for (const mapKey of ['resources_string', 'attributes_string', 'attributes_number', 'attributes_bool']) {
+        const m = d[mapKey]
+        if (m && typeof m === 'object' && !Array.isArray(m)) Object.assign(flat, m as Record<string, unknown>)
+      }
+      out.push({ timestamp: raw.timestamp, data: flat })
+    }
   }
   return out
 }
@@ -691,7 +655,7 @@ export function normalizeLogRow(row: ListRow, idx: number): LogRow {
 
 /** Normalize a logs `query_range` response → LogRow[] (newest first). */
 export function normalizeLogs(body: unknown): LogRow[] {
-  return parseListRows(body).map(normalizeLogRow)
+  return parseRawRows(body).map(normalizeLogRow)
 }
 
 /** One trace/span row from a `dataSource: traces` list query. */
@@ -726,7 +690,7 @@ export function normalizeTraceSpan(row: ListRow, idx: number): TraceSpan {
 
 /** Normalize a traces `query_range` response → TraceSpan[] (newest first). */
 export function normalizeSpans(body: unknown): TraceSpan[] {
-  return parseListRows(body).map(normalizeTraceSpan)
+  return parseRawRows(body).map(normalizeTraceSpan)
 }
 
 // ── Transport ─────────────────────────────────────────────────────────────────
@@ -734,12 +698,11 @@ export function normalizeSpans(body: unknown): TraceSpan[] {
 const u = (path: string): string => cloudProxyV1Url(`o11y/${path}`)
 
 // The composite builder query rides the FLAT public path `/v1/o11y/query_range` (one
-// /v1/, no nested /api/vN). `listQueryPayload` + `parseListRows` are a matched v3 pair
-// (`compositeQuery.{queryType,builderQueries}` → `data.result[].list`); the cloud
-// clients/o11y flat route (query.go) resolves this flat path to the v3 engine handler
-// SERVER-SIDE. (The upstream module's version-less alias would instead resolve to the
-// HIGHEST engine version (v5), whose composite accepts only `{queries:[…]}` and 400s
-// the v3 shape — which is exactly why the mapping is pinned in cloud, not here.)
+// /v1/, no nested /api/vN). The version-less address resolves to the module's HIGHEST
+// engine — the v5 querier — so `rawQueryPayload` + `parseRawRows` are its matched pair
+// (`compositeQuery.queries[]` → `data.data.results[].rows`). The v3 pin this comment
+// used to cite (cloud's query.go) is deleted; a v3 envelope sent here is refused by
+// the strict v5 decoder, not quietly served.
 const COMPOSITE_QUERY_RANGE = 'query_range'
 
 /** The APM POST body — a start/end window + optional tags filter (O11y shape). */
@@ -782,19 +745,20 @@ export const ApmApi = {
   dashboards: async (): Promise<Dashboard[]> => normalizeDashboards(await restGet<unknown>(u('dashboards'))),
   dashboard: (uuid: string): Promise<unknown> => restGet<unknown>(u(`dashboards/${encodeURIComponent(uuid)}`)),
 
-  // ── Logs + Traces (composite query_range; `/v1/o11y/logs` is a stub) ──
-  // A `service` scopes the query to ONE product's OTel `service.name` (the per-product
-  // Logs sub-page); omit it for the org-wide stream. The rows are re-filtered client-side
-  // to the same service so a runtime ignoring the item can never leak other services' lines.
+  // ── Logs + Traces (v5 raw query_range; `/v1/o11y/logs` is a stub) ──
+  // A `service` scopes the read to ONE product's OTel `service.name` (the
+  // per-product Logs sub-page); omit it for the org-wide stream. Scoping is the
+  // CLIENT-SIDE re-filter — the server-side filter expression is off the wire
+  // while the runtime's key resolution is down (see rawQueryPayload) — so a
+  // scoped read asks for a deeper page (up to the 1000 cap) and keeps what
+  // matches. A row with no service survives the filter, as it always did here.
   logs: async (w: ApmWindow, limit = 200, service?: string): Promise<LogRow[]> => {
-    const filters = service ? [serviceFilterItem('logs', service)] : []
-    const rows = normalizeLogs(await restPost<unknown>(u(COMPOSITE_QUERY_RANGE), listQueryPayload('logs', w, limit, filters)))
-    return service ? rows.filter((r) => !r.service || r.service === service) : rows
+    const rows = normalizeLogs(await restPost<unknown>(u(COMPOSITE_QUERY_RANGE), rawQueryPayload('logs', w, service ? 1000 : limit)))
+    return service ? rows.filter((r) => !r.service || r.service === service).slice(0, limit) : rows
   },
   traceSearch: async (w: ApmWindow, limit = 200, service?: string): Promise<TraceSpan[]> => {
-    const filters = service ? [serviceFilterItem('traces', service)] : []
-    const rows = normalizeSpans(await restPost<unknown>(u(COMPOSITE_QUERY_RANGE), listQueryPayload('traces', w, limit, filters)))
-    return service ? rows.filter((r) => !r.service || r.service === service) : rows
+    const rows = normalizeSpans(await restPost<unknown>(u(COMPOSITE_QUERY_RANGE), rawQueryPayload('traces', w, service ? 1000 : limit)))
+    return service ? rows.filter((r) => !r.service || r.service === service).slice(0, limit) : rows
   },
 
   // ── Per-product service health (RED metrics for ONE product's OTel service) ──
