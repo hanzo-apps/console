@@ -94,6 +94,53 @@ function decodeJwtClaims(token: string): Record<string, unknown> | null {
   }
 }
 
+/**
+ * The profile photo, which the access token does not carry and never will.
+ *
+ * Identity above is read from the token's own claims — self-contained, no round
+ * trip, and immune to `getUserInfo()` answering null on a 200, which once
+ * dead-ended the session into a /signin loop. That is the right source and this
+ * does not move it. But IAM puts the avatar on `picture` in the USERINFO
+ * response ONLY (`internal/oidc/userinfo.go`), deliberately: an avatar is a
+ * bounded data URI, so carrying it would add kilobytes to every JWT on every
+ * request for a value almost nothing reads. hanzoai/app's `lib/profile.ts`
+ * states the same contract from the writing side.
+ *
+ * So the token is authoritative for WHO you are and silent about your picture,
+ * and reading only the token meant `account.avatar` was undefined for every
+ * user, forever — the account menu fell back to initials no matter what anyone
+ * uploaded. One fetch fills exactly that gap.
+ *
+ * Best-effort and cached by design. A failure, a signed-out 401, or a user with
+ * no photo all resolve to "no avatar" — never a broken session, because a
+ * missing picture must not cost anyone their sign-in. The cache is keyed by
+ * identity so switching accounts cannot show the previous face, and it holds
+ * the miss too: a user with no photo should cost one request, not one per load.
+ */
+let avatarCache: { key: string; url: string | undefined } | null = null
+
+async function withAvatar(account: Account): Promise<Account> {
+  if (account.avatar) return account
+  const key = `${account.owner}/${account.name}`
+  if (avatarCache?.key !== key) {
+    let url: string | undefined
+    try {
+      const info = await iamUserInfo()
+      const pic = info?.['picture'] ?? info?.['avatar']
+      if (typeof pic === 'string' && pic) url = pic
+    } catch {
+      /* no photo is not a session failure */
+    }
+    avatarCache = { key, url }
+  }
+  return avatarCache.url ? { ...account, avatar: avatarCache.url } : account
+}
+
+/** Drop the cached photo — sign-out, so the next account never inherits this face. */
+function forgetAvatar(): void {
+  avatarCache = null
+}
+
 export const AccountApi = {
   /**
    * Resolve the current session from IAM: a valid access token (refreshed if
@@ -117,7 +164,9 @@ export const AccountApi = {
     // the session and looped /signin). Fall back to userinfo only if not a JWT.
     const claims = decodeJwtClaims(token) ?? (await iamUserInfo())
     if (!claims) return { account: null, expiresIn: null }
-    return { account: accountFromClaims(claims), expiresIn: iamExpiresInSeconds() }
+    const account = accountFromClaims(claims)
+    if (!account) return { account: null, expiresIn: null }
+    return { account: await withAvatar(account), expiresIn: iamExpiresInSeconds() }
   },
 
   /** The current signed-in account, or null. */
@@ -125,6 +174,7 @@ export const AccountApi = {
 
   /** Sign out: clear the IAM tokens (client) and best-effort the casibase session. */
   signout: async (): Promise<void> => {
+    forgetAvatar()
     iamSignOut()
     try {
       await post('signout')
