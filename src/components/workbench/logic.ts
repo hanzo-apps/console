@@ -120,37 +120,26 @@ export function eventsFrom(records: EventSource[]): PlatformEvent[] {
     .sort((a, b) => (b.at ?? -Infinity) - (a.at ?? -Infinity))
 }
 
-// ── Cloud shell — the terminal's address, and the one control frame ───────────
+// ── Cloud shell — where the terminal is ──────────────────────────────────────
 
 /**
- * The terminal's WebSocket address, built from the API host.
+ * The terminal's address on the API host.
  *
- * It is the one call in the console that addresses `api.hanzo.ai` DIRECTLY, and
- * that is forced rather than chosen: every other `/v1` read rides the same-origin
- * proxy, which is a Next route handler, and a route handler forwards requests —
- * it cannot forward an upgrade. So the socket leaves the origin, and what it
- * carries instead of the session is the single-use ticket the proxy just fetched.
- * A `WebSocket` constructor takes a URL and nothing else; a ticket is the only
- * credential that shape can hold.
+ * Cloud SERVES the terminal — emulator, socket, resize and reconnect, one
+ * self-contained page — so a host that wants a shell frames this rather than
+ * building one. It is the one address in the console that is not same-origin, and
+ * that is forced rather than chosen: the same-origin `/v1` proxy is a Next route
+ * handler, and a route handler forwards requests, not sockets and not frames.
+ * What crosses instead of the session is the single-use ticket the proxy just
+ * fetched, which is the only credential a URL can safely hold.
+ *
+ * `arg` names a tmux session, so reopening the dock reattaches to the shell it
+ * left instead of opening a fresh one over the user's work.
  */
-export function socketFor(apiBase: string, id: string, ticket: string): string {
+export function terminalFor(apiBase: string, id: string, ticket: string, session: string): string {
   const base = apiBase.trim().replace(/\/+$/, '')
-  const wire = base.startsWith('https://')
-    ? `wss://${base.slice('https://'.length)}`
-    : base.startsWith('http://')
-      ? `ws://${base.slice('http://'.length)}`
-      : base.startsWith('wss://') || base.startsWith('ws://')
-        ? base
-        : `wss://${base.replace(/^\/\//, '')}`
-  return `${wire}/v1/sandboxes/${encodeURIComponent(id)}/terminal/ws?ticket=${encodeURIComponent(ticket)}`
-}
-
-/**
- * The ONE control frame the terminal sends. Everything else it puts on the wire
- * is keystrokes, so this is the only text the far side reads as anything but
- * input — same shape, same name, on both ends of the socket.
- */
-export function resize(cols: number, rows: number): string {
-  const whole = (n: number) => Math.max(1, Math.min(1000, Math.round(n) || 1))
-  return JSON.stringify({ resize: { cols: whole(cols), rows: whole(rows) } })
+  return (
+    `${base}/v1/sandboxes/${encodeURIComponent(id)}/terminal` +
+    `?ticket=${encodeURIComponent(ticket)}&arg=${encodeURIComponent(session)}`
+  )
 }

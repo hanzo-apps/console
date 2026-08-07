@@ -9,23 +9,26 @@
  * anything, so the `$` in the dock was a promise the dock could not keep.
  *
  * THE SHELL IS A SANDBOX. Not a simulator, not a command allow-list: a login
- * shell on a pseudo-terminal inside the org's own gVisor pod, reached through
- * `/v1/sandboxes/:id/terminal/ws`. Whatever the sandbox image carries — the hanzo
- * CLI included — is a command the user types, and nothing here decides what is
- * allowed to run. That decision belongs to the runtime boundary the pod already
- * has, and putting a second one in a browser tab would only be a fiction.
+ * shell on a pseudo-terminal inside the org's own gVisor pod. Whatever the image
+ * carries — the hanzo CLI is on its PATH — is a command the user types, and
+ * nothing here decides what may run. That decision belongs to the runtime
+ * boundary the pod already has, and a second one in a browser tab would only be a
+ * fiction.
  *
- * THE SOCKET LEAVES THE ORIGIN, once, deliberately. Every other read in the
- * console goes through the same-origin `/v1` proxy, which mints a user-bound
- * bearer server-side. A WebSocket cannot use it: the proxy is a Next route
- * handler and a route handler forwards requests, not upgrades. So the two halves
- * split — the ticket is fetched through the proxy exactly like every other call,
- * and the socket dials the API host carrying it. That is what a single-use,
- * thirty-second ticket is FOR, and it is why nothing long-lived is ever put in
- * this URL.
+ * THE TERMINAL IS NOT BUILT HERE. Cloud serves it, whole, at the same address as
+ * the socket, and this frames it. That is not laziness about an emulator — it is
+ * that the console is one of several hosts that show a shell, and a terminal
+ * built per host is a terminal that is subtly different in each of them. One
+ * implementation, one place a fix lands, and this file is left with the only part
+ * that is genuinely the console's: which sandbox, and what to say while it is
+ * coming up.
+ *
+ * WHAT THIS STILL OWNS is the credential. A frame carries no Authorization
+ * header any more than a socket does, so the ticket is fetched through the
+ * same-origin `/v1` proxy — where identity lives — and handed to the page in its
+ * URL. Single-use, thirty seconds, bound to one sandbox: that is what makes
+ * putting it in a URL safe, and why nothing long-lived ever goes there.
  */
-
-import '@xterm/xterm/css/xterm.css'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
@@ -33,7 +36,7 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ApiError, cloudProxyV1Url, restGet, restPost } from '~/lib/api/client'
 import { config } from '~/config'
 import { toneColor } from '~/components/ui/tone'
-import { resize, socketFor } from './logic'
+import { terminalFor } from './logic'
 
 /**
  * The project the dock's shell holds. A `dev` sandbox is attached to a project
@@ -44,6 +47,20 @@ import { resize, socketFor } from './logic'
  * second.
  */
 const PROJECT = 'console'
+
+/** The tmux session this dock attaches to, so reopening it finds the same shell. */
+const SESSION = 'dock'
+
+/**
+ * How long to wait for the terminal to say it is up.
+ *
+ * The page posts `{source:'hanzo-term'}` when its socket opens. Without a
+ * deadline a frame that failed into something else — an expired ticket, an
+ * origin that refused to be framed — is indistinguishable from one that is still
+ * loading, and the dock would sit on "Starting…" forever rather than offering the
+ * reconnect that fixes it.
+ */
+const READY_BY = 6000
 
 type Phase = 'starting' | 'live' | 'gone'
 
@@ -78,28 +95,27 @@ const reason = (err: unknown): string =>
 export function Terminal() {
   const [phase, setPhase] = useState<Phase>('starting')
   const [why, setWhy] = useState('')
-  // A change to this is the ONE way a session restarts: the effect below owns
-  // the whole lifetime — sandbox, ticket, socket, terminal — and reruns as a
-  // unit, so there is no half-torn-down session to reason about.
+  const [src, setSrc] = useState('')
+  // A change to this is the ONE way a session restarts: the effect below owns the
+  // whole lifetime — sandbox, ticket, frame — and reruns as a unit, so there is
+  // no half-torn-down session to reason about. A ticket is spent once, so a
+  // reconnect is a new ticket and never the old frame reloaded.
   const [attempt, setAttempt] = useState(0)
-  const host = useRef<HTMLDivElement>(null)
+  const frame = useRef<HTMLIFrameElement>(null)
 
   const retry = useCallback(() => {
     setPhase('starting')
     setWhy('')
+    setSrc('')
     setAttempt((n) => n + 1)
   }, [])
 
   useEffect(() => {
-    const mount = host.current
-    if (!mount) return
-
     // `alive` is the barrier for everything this effect started. React mounts an
-    // effect twice in development, and a socket opened by the first pass would
-    // otherwise keep writing into a terminal the second pass has replaced.
+    // effect twice in development, and a ticket fetched by the first pass would
+    // otherwise land in a frame the second pass has replaced.
     let alive = true
-    let socket: WebSocket | null = null
-    let stop: (() => void) | null = null
+    let waiting: ReturnType<typeof setTimeout> | null = null
 
     const end = (message: string) => {
       if (!alive) return
@@ -107,81 +123,30 @@ export function Terminal() {
       setPhase('gone')
     }
 
+    // The readiness handshake. Only the frame we opened may speak for it: the
+    // origin is checked against the API host, so another page cannot post its way
+    // into a terminal that is not there.
+    const heard = (e: MessageEvent) => {
+      if (!alive || e.source !== frame.current?.contentWindow) return
+      if (new URL(config.apiUrl).origin !== e.origin) return
+      const d = e.data as { source?: string } | null
+      if (d && d.source === 'hanzo-term') {
+        if (waiting) clearTimeout(waiting)
+        setPhase('live')
+      }
+    }
+    window.addEventListener('message', heard)
+
     void (async () => {
       try {
         const m = await sandbox()
         if (!alive) return
-        const pass = await restPost<{ ticket: string }>(cloudProxyV1Url(`sandboxes/${m.id}/terminal`))
+        const pass = await restPost<{ ticket: string }>(
+          cloudProxyV1Url(`sandboxes/${m.id}/terminal/ticket`),
+        )
         if (!alive) return
-
-        // xterm is loaded HERE and not imported at the top, because it reads
-        // `document` as it constructs and this component is rendered on the
-        // server first. A dynamic import is the honest form of "only in a
-        // browser" — the alternative is a build-time flag that says the same
-        // thing further from the code that needs it.
-        const [{ Terminal: Xterm }, { FitAddon }] = await Promise.all([
-          import('@xterm/xterm'),
-          import('@xterm/addon-fit'),
-        ])
-        if (!alive) return
-
-        // No theme override. A terminal is its own surface and xterm's default
-        // one is the convention everywhere else a person has ever used a shell;
-        // tinting it to the dock's palette would make a light theme's terminal
-        // the one place in the product where ANSI colors are unreadable.
-        const term = new Xterm({
-          cursorBlink: true,
-          fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-          fontSize: 12,
-          scrollback: 5000,
-        })
-        const fit = new FitAddon()
-        term.loadAddon(fit)
-        term.open(mount)
-
-        const ws = new WebSocket(socketFor(config.apiUrl, m.id, pass.ticket))
-        ws.binaryType = 'arraybuffer'
-        socket = ws
-
-        // The window, sent whenever it changes and once at the start. A shell
-        // that is never told its size runs at the 80x24 the pty defaults to,
-        // and every full-screen program in it draws into the wrong rectangle.
-        const measure = () => {
-          try {
-            fit.fit()
-          } catch {
-            return // the dock is collapsed and the element has no size yet
-          }
-          if (ws.readyState === WebSocket.OPEN) ws.send(resize(term.cols, term.rows))
-        }
-        const watch = new ResizeObserver(measure)
-        watch.observe(mount)
-
-        ws.onopen = () => {
-          if (!alive) return
-          setPhase('live')
-          measure()
-          term.focus()
-        }
-        ws.onmessage = (e) => {
-          term.write(
-            typeof e.data === 'string' ? e.data : new Uint8Array(e.data as ArrayBuffer),
-          )
-        }
-        ws.onerror = () => end('The connection failed.')
-        ws.onclose = (e) => end(e.reason || 'The connection closed.')
-
-        term.onData((d) => {
-          if (ws.readyState === WebSocket.OPEN) ws.send(d)
-        })
-
-        stop = () => {
-          watch.disconnect()
-          ws.onclose = null
-          ws.onerror = null
-          ws.close()
-          term.dispose()
-        }
+        setSrc(terminalFor(config.apiUrl, m.id, pass.ticket, SESSION))
+        waiting = setTimeout(() => end('The terminal did not come up.'), READY_BY)
       } catch (err) {
         end(reason(err))
       }
@@ -189,18 +154,24 @@ export function Terminal() {
 
     return () => {
       alive = false
-      if (stop) stop()
-      else socket?.close()
+      if (waiting) clearTimeout(waiting)
+      window.removeEventListener('message', heard)
     }
   }, [attempt])
 
-  // The terminal's element is ALWAYS laid out, and the status covers it rather
-  // than replacing it. An element that is display:none has no size, and the fit
-  // that runs the moment the socket opens would measure zero and hand the shell
-  // an 80x24 window it never corrects.
+  // The frame is ALWAYS laid out and the status covers it, because a frame that
+  // is display:none has no size — and a terminal sized to nothing measures 80x24
+  // and never corrects.
   return (
     <YStack flex={1} minH={0} position="relative" bg="#000">
-      <div ref={host} style={{ position: 'absolute', inset: 0, padding: 8 }} />
+      {src ? (
+        <iframe
+          ref={frame}
+          src={src}
+          title="Cloud shell"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+        />
+      ) : null}
       {phase === 'live' ? null : (
         <YStack position="absolute" t={0} l={0} r={0} b={0} items="center" justify="center" gap="$2" p="$4" bg="$color1">
           {phase === 'starting' ? (
