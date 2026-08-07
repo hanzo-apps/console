@@ -20,7 +20,9 @@ import { useSession } from '~/lib/auth/session'
 import { AccountApi, ApiError } from '~/lib/api'
 import { MfaApi, type MfaSetup } from '~/lib/api/mfa'
 import { ApiKeysView } from './ApiKeysModule'
-import { FieldRow, PageHeader } from '@hanzo/ui/product'
+import { FieldRow, FieldSwitch, PageHeader } from '@hanzo/ui/product'
+import { usePreferences } from '~/lib/products/preferences'
+import { NAV_CATALOG_PREF } from '~/lib/products/nav'
 
 /** A labeled read-only value row; dim em-dash when empty. */
 function InfoRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
@@ -161,6 +163,30 @@ function PhotoCard() {
   )
 }
 
+/**
+ * What the sidebar lists. Every product is available to every org, so the rail
+ * shows all of them by default; a person who works in six can put the catalog
+ * away and keep their pins. Nothing goes out of reach either way — the search box
+ * at the top of the rail and "All products" at its foot both stay whole.
+ */
+function SidebarCard() {
+  const prefs = usePreferences()
+  const catalog = prefs.get<boolean>(NAV_CATALOG_PREF, true)
+  return (
+    <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
+      <FieldRow label="Show every product">
+        <XStack items="center" gap="$3">
+          <FieldSwitch checked={catalog} onChange={(v) => prefs.set(NAV_CATALOG_PREF, v)} />
+          <Text fontSize="$2" color="$color10">
+            List the whole catalog in the sidebar. Off, it shows what you pinned and
+            wherever you are; search and All products still reach everything.
+          </Text>
+        </XStack>
+      </FieldRow>
+    </Card>
+  )
+}
+
 function AccountTab() {
   const { account, signOut } = useSession()
 
@@ -179,6 +205,8 @@ function AccountTab() {
           <InfoRow label="Role" value={account?.isAdmin ? 'Organization admin' : 'Member'} />
         </YStack>
       </Card>
+
+      <SidebarCard />
 
       <XStack>
         <Button icon={<LogOut size={16} />} onPress={() => void signOut()}>Sign out</Button>

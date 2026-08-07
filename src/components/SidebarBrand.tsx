@@ -30,7 +30,8 @@ import { BookOpen, Globe, Info, SlidersHorizontal } from '@hanzogui/lucide-icons
 
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'
-import { BrandMark, useOrgIdentity } from '~/components/ui/BrandLogo'
+import { useOrgIdentity } from '~/components/ui/BrandLogo'
+import { orgLabel } from '~/lib/account/org-state'
 import { Z } from '~/lib/z'
 import { OrgMark } from '@hanzo/ui/product'
 
@@ -113,7 +114,9 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
   // The tenant leads the chrome: its own logo when set, else its monogram — never
   // the house mark. `useOrgIdentity` is the ONE cached org-identity source.
   const org = useOrgIdentity()
-  const orgLabel = org.displayName || org.name
+  // ONE naming rule, shared with the context switcher, so the collapsed rail and
+  // the expanded one cannot call the same org two different things.
+  const label = orgLabel(org)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
   const go = useCallback(
@@ -149,8 +152,8 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
         onClick={() => go('/')}
         onContextMenu={onContextMenu}
         role="link"
-        aria-label={`${orgLabel} — home (right-click for brand menu)`}
-        title={orgLabel}
+        aria-label={`${label} — home (right-click for brand menu)`}
+        title={label}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -161,8 +164,14 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
           color: 'var(--color12)',
         }}
       >
-        {/* A logo may be a wordmark, so it is allowed to run wide; the monogram
-            stays the square tile the account avatar wears.
+        {/* The TENANT's mark, always — its uploaded logo when it has one, else its
+            own monogram. It used to fall back to the HOST's glyph, so an org with
+            no logo wore the Hanzo mark here and its own initials in the switcher:
+            one org, two marks, depending on whether the rail was collapsed.
+            `OrgMark` already resolves logo-else-monogram, which is the whole rule.
+
+            A logo may be a wordmark, so it is allowed to run wide; the monogram
+            stays the square tile the account mark wears.
 
             `data-monogram`: OrgMark is a DISTRIBUTED component that sizes its
             monogram glyph proportionally to its tile, so it paints text off the
@@ -170,16 +179,7 @@ export function SidebarBrand({ collapsed, onNavigate }: { collapsed: boolean; on
             marker declares that here, at our call site, rather than teaching the
             design gate a library's class names. */}
         <span data-monogram style={{ display: 'contents' }}>
-          {org.logo ? (
-            <OrgMark org={org} size={24} maxW={140} />
-          ) : (
-            // An org that has not uploaded a mark yet wears the HOST's brand, not
-            // its own initial: on console.hanzo.ai that is the Hanzo mark, on a
-            // white-labelled host the brand that host resolves to. The surface
-            // reads as the tenant's own from the first sign-in, and uploading a
-            // logo in Settings → Branding replaces it.
-            <BrandMark size={24} />
-          )}
+          <OrgMark org={org} size={24} maxW={140} />
         </span>
       </div>
       {menu ? <BrandMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} /> : null}

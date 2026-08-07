@@ -1,16 +1,17 @@
 /**
  * e2e: ONE level-2 nav.
  *
- * Clicking into a product must reveal ITS options rather than replacing the screen,
- * and there must be exactly ONE such nav on screen — not the sidebar's level 2 AND a
- * competing tab strip in the content, which is what `/models` used to do (eight items
- * in the rail, four in the content, disagreeing on the index's own name).
+ * Clicking into a product must reveal ITS options, and there must be exactly ONE
+ * such nav on screen — not the sidebar's level 2 AND a competing tab strip in the
+ * content, which is what `/models` used to do (eight items in the rail, four in the
+ * content, disagreeing on the index's own name).
  *
- * "Rather than replacing the screen" is now literal on both axes: the product's
- * sub-pages expand BENEATH its row and the rest of the catalog stays put. The rail
- * used to swap itself for the product's sub-nav behind a "Back to all products"
- * button, so these specs assert the other products are still there — that is the
- * whole point of the change, and the part a future drill would silently undo.
+ * The RAIL owns level 2: inside a product it lists that product's pages, flush, with
+ * the rest of its category beneath them and the category itself as the way back up.
+ * It does not swap itself for a bare sub-nav behind a "Back to all products" button
+ * (nothing to move sideways to), and it does not indent the pages under the product's
+ * row while the whole catalog stays painted below (two levels at once, and the same
+ * product listed twice). These specs pin both failures shut.
  *
  * These are assertions only a browser can make. They read COMPUTED style and
  * GEOMETRY, not source: a strip hidden by a `$lg` media style prop is still in the
@@ -82,11 +83,9 @@ test('desktop: the sidebar owns level 2 — the content strip is not a second na
   const page = await ctx.newPage()
   await open(page, '/models')
 
-  // The rail expanded Models in place — and did NOT swap itself for it.
+  // No dead-end drill: the way out is the category and the full catalog, both named.
   await expect(page.getByRole('button', { name: 'Back to all products' })).toHaveCount(0)
-  // The rest of the catalog is still there — "All products" sits at the FOOT of the
-  // product list, so its presence proves the list was never swapped away. This is the
-  // assertion the drill could not have passed.
+  await expect(page.getByRole('button', { name: 'Back to AI' }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'All products' }).first()).toBeVisible()
 
   // The index is named what the PRODUCT calls it — Models' index is the Catalog,
@@ -181,8 +180,8 @@ test('back returns a level without losing pinned state', async ({ browser }) => 
   await page.waitForTimeout(900)
   expect(new URL(page.url()).pathname).toBe('/models')
 
-  // Models is still expanded with the same options — browser Back moved the ROUTE,
-  // and the rail followed it without collapsing what the user was looking at.
+  // Models still owns the rail with the same options — browser Back moved the ROUTE,
+  // and the rail is a function of the route, so it followed without losing the level.
   await expect(visibleTab(page, 'Catalog').first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Back to all products' })).toHaveCount(0)
 
@@ -192,10 +191,9 @@ test('back returns a level without losing pinned state', async ({ browser }) => 
 
 /**
  * Every product that used to carry its own `const TABS` — the whole conversion, in
- * one sweep. For each: the page renders, the rail expands it in place, and the
- * content strip is present but PAINTS NOTHING at lg+. That is the "no second nav"
- * invariant, and it is the thing that regresses the moment someone adds a tab bar
- * back.
+ * one sweep. For each: the page renders, the rail carries its pages, and the content
+ * strip is present but PAINTS NOTHING at lg+. That is the "no second nav" invariant,
+ * and it is the thing that regresses the moment someone adds a tab bar back.
  */
 const CONVERTED = [
   'models', 'evals', 'ai-accounts', 'containers', 'analytics', 'finetuning', 'team',
@@ -204,6 +202,9 @@ const CONVERTED = [
 ] as const
 
 test('no product paints a second level-2 nav at lg+', async ({ browser }) => {
+  // Eighteen full page loads in one test — it lands within a hair of the 60s
+  // default and fails on the wrong side of it about as often as the right one.
+  test.slow()
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await ctx.newPage()
 
@@ -216,7 +217,7 @@ test('no product paints a second level-2 nav at lg+', async ({ browser }) => {
     ).toBe('none')
     await expect(
       page.getByRole('button', { name: 'Back to all products' }),
-      `${id}: the rail expands in place — it must never swap itself for one product`,
+      `${id}: the rail keeps a way out — never a bare drill behind one button`,
     ).toHaveCount(0)
   }
 

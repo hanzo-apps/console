@@ -28,6 +28,17 @@ export function titleCase(name: string): string {
 }
 
 /**
+ * What to CALL an org — its IAM display name when it has one, else its slug
+ * titled. ONE rule, so the switcher's trigger, the row for that same org inside
+ * it, and the rail's brand all say the same word. They used to disagree: the
+ * trigger titled the slug and the rows printed it raw, so the control could read
+ * "Acme" over an active row reading "acme".
+ */
+export function orgLabel(org: { name?: string; displayName?: string }): string {
+  return org.displayName?.trim() || titleCase(org.name ?? '')
+}
+
+/**
  * The one-line summary the context switcher shows: the org, then the project
  * slice of it. Org-level scope has no project, and says so by omission rather
  * than by printing a placeholder.
