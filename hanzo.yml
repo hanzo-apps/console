@@ -41,3 +41,7 @@ images:
     context: .
     dockerfile: Dockerfile
     repo: ghcr.io/hanzoai/console
+    # Fetched from KMS (deploy/PUBLISHABLE_KEY, env prod) and passed as
+    # --build-arg PUBLISHABLE_KEY. Signed-out views need it to be admitted at all;
+    # signed-in ones keep their own bearer. Same name the rest of the estate uses.
+    build_secrets: [PUBLISHABLE_KEY]

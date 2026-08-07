@@ -33,6 +33,18 @@ ENV NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=8192
 # identically to one served from inside cloud.
 ARG NEXT_PUBLIC_ANALYTICS_WEBSITE_ID=7dce54ee-41f6-4751-96bf-fe005067c7c7
 ENV NEXT_PUBLIC_ANALYTICS_WEBSITE_ID=$NEXT_PUBLIC_ANALYTICS_WEBSITE_ID
+# The publishable ingest key, for SIGNED-OUT views only. A signed-in visitor is
+# still attributed by their own IAM bearer -- src/lib/event.ts feeds this through
+# getToken as `token ?? key`, never as `ingestKey`, so it can only fill the gap
+# where there is no token and can never displace one.
+#
+# PUBLISHABLE_KEY is the name in KMS (org hanzo, path deploy, env prod) and on the
+# --build-arg; NEXT_PUBLIC_ is what makes the bundler inline it and is a property
+# of THIS build, so it is applied here and the secret store keeps the one plain
+# name. No default: absent means signed-out views report nothing, exactly as
+# before, which is a degradation and not a break.
+ARG PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_PUBLISHABLE_KEY=$PUBLISHABLE_KEY
 COPY . .
 RUN corepack enable && pnpm install --frozen-lockfile
 # FAIL-HARD: the export MUST emit a real bundle, never a placeholder shell. An
