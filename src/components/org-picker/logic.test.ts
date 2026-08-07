@@ -182,3 +182,36 @@ describe('pickerView — filter → sort → paginate → cards', () => {
     expect(p2.hasMore).toBe(false)
   })
 })
+
+// ONE PERSON, MANY ORGS — and each card states the role it was actually granted.
+//
+// roleFor's last branch used to carry a comment calling itself unreachable
+// ("a non-global-admin only ever sees their own org"). The picker now lists
+// memberships, so that branch runs for every joined org — and it answered
+// "Member" for all of them, including one the person administers. Measured
+// live: dave, admin of maxpower, read "Member" on the maxpower card.
+describe('roleFor — the membership is the truth once you can see more than one org', () => {
+  const org = (name: string) => ({ owner: 'admin', name }) as Organization
+  const base = { ownOrg: 'hanzo', isSuperAdmin: false, callerIsAdmin: false }
+
+  it('states the granted role for a joined org, not a guess', () => {
+    expect(roleFor(org('maxpower'), { ...base, roles: { maxpower: 'admin' } })).toBe('Admin')
+    expect(roleFor(org('acme'), { ...base, roles: { acme: 'owner' } })).toBe('Owner')
+    expect(roleFor(org('other'), { ...base, roles: { other: 'member' } })).toBe('Member')
+  })
+
+  it('prefers the membership over the own-org inference', () => {
+    // Their home org, where the account flag says plain member but the
+    // membership says admin — the membership is the grant.
+    expect(roleFor(org('hanzo'), { ...base, roles: { hanzo: 'admin' } })).toBe('Admin')
+  })
+
+  it('falls back to the own-org inference when no membership row exists', () => {
+    expect(roleFor(org('hanzo'), base)).toBe('Member')
+    expect(roleFor(org('hanzo'), { ...base, callerIsAdmin: true })).toBe('Admin')
+  })
+
+  it('still calls a super admin viewing another tenant what they are', () => {
+    expect(roleFor(org('maxpower'), { ...base, isSuperAdmin: true })).toBe('Super admin')
+  })
+})
