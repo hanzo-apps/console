@@ -44,7 +44,11 @@ RUN pnpm build:embed && [ -s out/index.html ] && [ -d out/_next ] \
 # hanzoai/static, digest-pinned: a base image is pinned by digest so the bytes
 # cannot change under a rebuild. (The console's OWN release is named by semver in
 # the values file — that is the version a human reads.)
-FROM ghcr.io/hanzoai/static@sha256:346ad30dc7f762c508b4467c2801b3d7e9ec201ec9b257bc7a38b60d59cecc05
+#
+# v0.5.7: serves a directory's index IN PLACE. The prior pin 301'd `/` to
+# `/index.html`, so the address bar carried the internal filename and the
+# console's breadcrumb dutifully read "Home > index.html".
+FROM ghcr.io/hanzoai/static@sha256:46b9a9b359b24377e228d39fb3d4e485af594d55bf1034dcc7b7a1e858a0bba6
 COPY --from=build /console/out/ /srv/
 EXPOSE 3000
 ENTRYPOINT ["/static"]
