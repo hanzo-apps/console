@@ -31,6 +31,7 @@ import { ChevronsUpDown, FolderGit2, Plus } from '@hanzogui/lucide-icons-2'
 
 import { useScope } from '~/lib/scope-context'
 import { useOrgIdentity } from '~/components/ui/BrandLogo'
+import { OrgMark } from '@hanzo/ui/product'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { IamAdminApi, type Organization } from '~/lib/api'
 import { ORG_PAGE_SIZE, orgQuery } from '~/lib/org-list'
@@ -126,9 +127,16 @@ export function ContextSwitcher() {
               ) : null}
             </XStack>
           ) : (
-            <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} flex={1}>
-              {contextLabel(orgLabel, scope.project)}
-            </Text>
+            // No uploaded logo: lead with the org's shared OrgMark (its monogram —
+            // the SAME mark SidebarBrand and the account widget wear), so the switcher
+            // is never a bare name. White-label safe: OrgMark is the tenant's OWN mark
+            // (the org's IAM logo when set, else its monogram), never the house glyph.
+            <XStack items="center" gap="$2" flex={1} minW={0}>
+              <OrgMark org={org} size={20} />
+              <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1} flex={1}>
+                {contextLabel(orgLabel, scope.project)}
+              </Text>
+            </XStack>
           )}
         </Button>
       </Popover.Trigger>

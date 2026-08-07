@@ -27,9 +27,16 @@ import {
   Activity,
   BarChart3,
   Circle,
+  Coins,
+  CreditCard,
+  FileText,
   House,
+  Receipt,
+  Repeat,
   ScrollText,
   SlidersHorizontal,
+  Target,
+  Users,
 } from '@hanzogui/lucide-icons-2'
 import type { ComponentType } from 'react'
 
@@ -45,6 +52,15 @@ const SUBPAGE_ICON: Record<string, ComponentType<{ size?: number }>> = {
   status: Activity,
   logs: ScrollText,
   metrics: BarChart3,
+  // Common billing/finance slugs get a real icon here (the ONE shared map) rather
+  // than the quiet dot, so every product that names one is iconed — not just billing.
+  reports: FileText,
+  accounts: Users,
+  budgets: Target,
+  invoices: Receipt,
+  subscriptions: Repeat,
+  'payment-methods': CreditCard,
+  credits: Coins,
 }
 
 /** A View is flex-shrink:0 by default; a wrapping row needs this to wrap at all. */

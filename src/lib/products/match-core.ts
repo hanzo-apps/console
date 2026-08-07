@@ -121,9 +121,11 @@ export const indexSubpage = (entry: CatalogEntry): ProductSubpage =>
  */
 export const BASE_SUBPAGES: ProductSubpage[] = [
   { slug: 'settings', label: 'Settings' },
-  { slug: 'status', label: 'Status' },
+  // Observability trio reads raw → summary: Logs, then Metrics, then Status LAST
+  // (the live-health verdict comes after the signals it is derived from).
   { slug: 'logs', label: 'Logs' },
   { slug: 'metrics', label: 'Metrics' },
+  { slug: 'status', label: 'Status' },
 ]
 
 /**

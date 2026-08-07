@@ -184,46 +184,46 @@ describe('productSubpages — Overview + specifics + uniform base set', () => {
   const slugs = (e: CatalogEntry, showAdmin = true) => productSubpages(e, showAdmin).map((s) => s.slug)
 
   it('auto-adds Overview + the base set to a single-screen product', () => {
-    expect(slugs(vpc)).toEqual(['', 'settings', 'status', 'logs', 'metrics'])
+    expect(slugs(vpc)).toEqual(['', 'settings', 'logs', 'metrics', 'status'])
   })
   it('places a specific between Overview and the base set', () => {
     // models declares Routing (admin) — visible to an admin, before the base set.
-    expect(slugs(models, true)).toEqual(['', 'routing', 'settings', 'status', 'logs', 'metrics'])
+    expect(slugs(models, true)).toEqual(['', 'routing', 'settings', 'logs', 'metrics', 'status'])
   })
   it('does NOT duplicate a base slug a product declares as a specific', () => {
     const withMetrics = mod('x', { subpages: [{ slug: 'metrics', label: 'Metrics' }] })
-    expect(slugs(withMetrics)).toEqual(['', 'metrics', 'settings', 'status', 'logs'])
+    expect(slugs(withMetrics)).toEqual(['', 'metrics', 'settings', 'logs', 'status'])
   })
   it('hides an admin-only specific from a customer', () => {
-    expect(slugs(models, false)).toEqual(['', 'settings', 'status', 'logs', 'metrics'])
+    expect(slugs(models, false)).toEqual(['', 'settings', 'logs', 'metrics', 'status'])
   })
   it('drops a base slug that IS the product — Settings has no Settings child', () => {
     // The org-Settings product owns the `settings` concept; a base `settings`
     // sub-page beneath it is the `Settings › Settings` the rail used to show.
-    expect(slugs(mod('settings'))).toEqual(['', 'status', 'logs', 'metrics'])
+    expect(slugs(mod('settings'))).toEqual(['', 'logs', 'metrics', 'status'])
     // Same rule for the Observe products named after a base slug.
-    expect(slugs(mod('logs'))).toEqual(['', 'settings', 'status', 'metrics'])
-    expect(slugs(mod('metrics'))).toEqual(['', 'settings', 'status', 'logs'])
+    expect(slugs(mod('logs'))).toEqual(['', 'settings', 'metrics', 'status'])
+    expect(slugs(mod('metrics'))).toEqual(['', 'settings', 'logs', 'status'])
     expect(slugs(mod('status'))).toEqual(['', 'settings', 'logs', 'metrics'])
   })
   it('fails closed (empty sub-pages) for a non-module entry', () => {
     expect(productSubpages(nonModule)).toEqual([])
   })
-  it('BASE_SUBPAGES is exactly Settings · Status · Logs · Metrics', () => {
-    expect(BASE_SUBPAGES.map((s) => s.slug)).toEqual(['settings', 'status', 'logs', 'metrics'])
+  it('BASE_SUBPAGES is exactly Settings · Logs · Metrics · Status', () => {
+    expect(BASE_SUBPAGES.map((s) => s.slug)).toEqual(['settings', 'logs', 'metrics', 'status'])
   })
   it('a product that IS a base concern never gets a self-referential base tab', () => {
     // The Settings product: General (index) · Branding, then the base set MINUS
     // its own 'settings' — no second "Settings" tab of itself (the reported bug).
     const settings = mod('settings', { indexLabel: 'General', subpages: [{ slug: 'branding', label: 'Branding' }] })
-    expect(slugs(settings)).toEqual(['', 'branding', 'status', 'logs', 'metrics'])
+    expect(slugs(settings)).toEqual(['', 'branding', 'logs', 'metrics', 'status'])
     // Same one rule for the other three Observe products named after a base slug.
-    expect(slugs(mod('logs'))).toEqual(['', 'settings', 'status', 'metrics'])
-    expect(slugs(mod('metrics'))).toEqual(['', 'settings', 'status', 'logs'])
+    expect(slugs(mod('logs'))).toEqual(['', 'settings', 'metrics', 'status'])
+    expect(slugs(mod('metrics'))).toEqual(['', 'settings', 'logs', 'status'])
     expect(slugs(mod('status'))).toEqual(['', 'settings', 'logs', 'metrics'])
     // The rule is expressed once: baseSubpagesFor drops only the self-named slug.
-    expect(baseSubpagesFor(mod('settings')).map((s) => s.slug)).toEqual(['status', 'logs', 'metrics'])
-    expect(baseSubpagesFor(mod('vpc')).map((s) => s.slug)).toEqual(['settings', 'status', 'logs', 'metrics'])
+    expect(baseSubpagesFor(mod('settings')).map((s) => s.slug)).toEqual(['logs', 'metrics', 'status'])
+    expect(baseSubpagesFor(mod('vpc')).map((s) => s.slug)).toEqual(['settings', 'logs', 'metrics', 'status'])
   })
 })
 
@@ -231,7 +231,7 @@ describe('the ONE level-2 nav — one declaration, read by both the rail and the
   it('names the index after the product when it owns one (Models is a Catalog)', () => {
     const named = mod('models2', { indexLabel: 'Catalog', subpages: [{ slug: 'blend', label: 'Blend' }] })
     expect(productSubpages(named).map((s) => s.label)).toEqual([
-      'Catalog', 'Blend', 'Settings', 'Status', 'Logs', 'Metrics',
+      'Catalog', 'Blend', 'Settings', 'Logs', 'Metrics', 'Status',
     ])
   })
   it('falls back to Overview when the product does not name its index', () => {
