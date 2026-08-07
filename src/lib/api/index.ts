@@ -110,7 +110,7 @@ export {
   type RawValidator,
   type RawPeer,
 } from './nodes'
-export { TeamApi } from './team'
+export { TeamApi, MembershipApi, orgNamesFor, type Membership } from './team'
 export {
   PlaygroundApi,
   type ChatMessage,
