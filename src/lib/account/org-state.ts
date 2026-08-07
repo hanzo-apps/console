@@ -16,10 +16,19 @@
  */
 import type { Organization } from '~/lib/api'
 
-/** The scoped org as a row — the honest answer when no wider list is reachable. */
-export function scopedOrgRow(name: string): Organization[] {
+/**
+ * The scoped org as a row — the honest answer when no wider list is reachable.
+ *
+ * It takes the org the switcher has ALREADY resolved from IAM, rather than
+ * re-deriving one from the slug. Re-deriving printed "Hanzo" in the row under a
+ * trigger reading "Hanzo AI", and a monogram under the trigger's logo: one org,
+ * named twice, from two different places. There is one org identity, and this is
+ * that identity shaped as a list.
+ */
+export function scopedOrgRow(org: { name?: string; displayName?: string; logo?: string }): Organization[] {
+  const name = org.name ?? ''
   if (!name) return []
-  return [{ owner: 'admin', name, displayName: titleCase(name) } as Organization]
+  return [{ owner: 'admin', name, displayName: orgLabel(org), logo: org.logo } as Organization]
 }
 
 /** A slug as a name, without inventing one IAM did not give us. */

@@ -4031,3 +4031,48 @@ the list it acts on. Type `vector` and commit: Enter correctly opens `/vector`
 unfiltered `browseGroups` in catalog order with `Overview` first and `#cmdk-active` on
 it. Reproduces via ⌘K, so it predates this work and is not caused by the rail's new
 search box. `find-and-do.spec.ts` passes because it probes Enter, never DOM order.
+
+## Integrations lists the whole registry, and one org has one name (v8.5.84)
+
+The tail of the same six the owner reported. The rail work above landed first and left
+two things standing.
+
+**Google was not missing — it was filtered out.** `apps/integrations/google.go` in cloud
+registers Google on the ORG plane (Drive + Sheets: the document import and the cap-table
+import both read the token it custodies), and `GET /v1/integrations` returns it. The
+console dropped it: `OrgIntegrationsModule` rendered
+`providers.filter((p) => p.available || p.connected)`. `available` is
+`Provider.Configured()`, which for Google is `GOOGLE_CLIENT_ID != ""` — and the cloud
+Deployment carries `SLACK_CLIENT_ID` and `GITHUB_APP_ID` and no `GOOGLE_CLIENT_*`. So
+the card was not unavailable on the page, it was ABSENT from it, and the only reading
+available to a reader was that we had dropped Google.
+
+The filter is gone. The page lists the registry; a provider the deployment holds no
+credentials for wears an `Unavailable` tag, says "Awaiting app credentials on this
+deployment." on its own card, and its Connect is inert. `available` is a fact about the
+deployment, not a reason to withhold the fact that the provider exists — the same rule
+the catalog now follows in the rail. Nothing else has to change when the credentials
+land: `integrations-catalog.spec.ts` runs the identical page against `available: true`
+and the button is live.
+
+**To actually connect Google** the deployment needs `GOOGLE_CLIENT_ID` +
+`GOOGLE_CLIENT_SECRET` from KMS on the cloud Deployment. That is a credential, not code.
+
+**One org, one name.** The switcher's trigger read the org identity IAM resolved
+(`useOrgIdentity` → "Hanzo AI", with the logo); the row inside it was re-derived from the
+slug by `scopedOrgRow(name)` → "Hanzo", with a monogram. One org named twice from two
+places, which is the exact drift `orgLabel` exists to prevent — it just never reached
+the row, because the row was built before there was an identity to name it with.
+`scopedOrgRow` takes the resolved org now and shapes it as a list; it derives nothing.
+
+**Three surfaces still say "connect your AI account"** and this did not converge them:
+- `connections` → `/v1/ai/connections` (live on the gateway) — openai · anthropic · google
+- `ai-accounts` → `app/v1/ai-accounts/*`, a console-local BFF (404 on api.hanzo.ai) —
+  hanzo · codex · claude, no Google
+- `integrations` → `/v1/integrations`, the org OAuth registry — Google among ~30
+
+Two products in the AI category both claim the GCP analog "Connected accounts", over two
+different backends, with two hand-written provider lists that disagree about whether
+Google exists. That is why "I can't see Google" had three possible answers. The
+convergence is a backend question (which of `/v1/ai/connections` and the console-local
+`/v1/ai-accounts` survives), so it is named here rather than half-done.

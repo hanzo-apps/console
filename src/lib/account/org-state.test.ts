@@ -5,13 +5,25 @@ import { describe, expect, it } from 'vitest'
 import { contextLabel, scopedOrgRow } from './org-state'
 
 describe('scopedOrgRow', () => {
-  it('titles a slug without inventing a display name', () => {
-    expect(scopedOrgRow('acme').at(0)?.displayName).toBe('Acme')
-    expect(scopedOrgRow('acme').at(0)?.name).toBe('acme')
+  it('titles a slug when IAM gave no display name', () => {
+    expect(scopedOrgRow({ name: 'acme' }).at(0)?.displayName).toBe('Acme')
+    expect(scopedOrgRow({ name: 'acme' }).at(0)?.name).toBe('acme')
+  })
+
+  it('carries the resolved identity, so the row cannot disagree with the trigger', () => {
+    // The trigger reads `orgLabel(org)`; the row must read the same words and wear
+    // the same mark. It used to re-derive both from the slug — "Hanzo AI" above a
+    // row saying "Hanzo", a logo above a monogram.
+    const org = { name: 'hanzo', displayName: 'Hanzo AI', logo: 'https://x/logo.svg' }
+    const row = scopedOrgRow(org).at(0)
+    expect(row?.displayName).toBe('Hanzo AI')
+    expect(row?.logo).toBe('https://x/logo.svg')
+    expect(row?.name).toBe('hanzo')
   })
 
   it('is honest when nothing is scoped yet', () => {
-    expect(scopedOrgRow('')).toEqual([])
+    expect(scopedOrgRow({ name: '' })).toEqual([])
+    expect(scopedOrgRow({})).toEqual([])
   })
 })
 

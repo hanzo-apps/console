@@ -16,9 +16,15 @@
  * `/integrations?connected=<id>&account=<label>` (or `?error=<id>&reason=<msg>`); this
  * module reads that query on mount and shows an honest success/error toast + refetches.
  * Every state is honest — loading spinner, `BackendStateCard` on failure, empty state
- * when the framework returns no providers. Only providers whose OAuth is configured
- * on this deployment (`available`) or already connected are listed, so every card
- * has a live Connect/Disconnect action — no dead-end.
+ * when the framework returns no providers.
+ *
+ * The page lists the WHOLE registry. It used to drop any provider the deployment had
+ * no app credentials for, which is why Google — registered, documented, and the one
+ * the cap-table and document imports read — simply was not on the page: nothing said
+ * it existed, so the only reading available was that we had dropped it. Absence is a
+ * worse answer than an unavailable card. A provider without credentials says so on
+ * its own card and its Connect is inert; `available` is a fact about the deployment,
+ * not a reason to withhold the fact that the provider exists.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -53,7 +59,7 @@ function ProviderCard({
   onManageRepos?: (p: Provider) => void
 }) {
   return (
-    <Card width={300} p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" bg="$color1">
+    <Card width={300} p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" bg="$color1" data-testid={`provider-${p.id}`}>
       <XStack items="center" gap="$3">
         <ProviderLogo provider={p.id} size={36} />
         <YStack flex={1} minW={0}>
@@ -66,7 +72,7 @@ function ProviderCard({
             </Text>
           ) : null}
         </YStack>
-        <StatusTag status={p.connected ? 'Connected' : 'Not connected'} />
+        <StatusTag status={p.connected ? 'Connected' : p.available ? 'Not connected' : 'Unavailable'} />
       </XStack>
 
       {p.description ? (
@@ -88,6 +94,15 @@ function ProviderCard({
             </Text>
           ) : null}
         </YStack>
+      ) : null}
+
+      {/* Say WHY the button is inert, on the card, rather than leaving a dead control
+          the reader has to guess about. The deployment holds no app credentials for
+          this provider yet, and that is the whole of it. */}
+      {!p.connected && !p.available ? (
+        <Text fontSize="$1" color="$color10" data-testid={`unavailable-${p.id}`}>
+          Awaiting app credentials on this deployment.
+        </Text>
       ) : null}
 
       <XStack items="center" justify="flex-end" gap="$2" mt="$1" flexWrap="wrap">
@@ -251,13 +266,8 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
     )
   }
 
-  // Only connectors whose OAuth is configured on this deployment (available) or
-  // already connected are shown — an unconfigured provider is omitted, so every card
-  // has a live Connect/Disconnect action (no dead-end). Nothing fabricated.
-  const visible = providers.filter((p) => p.available || p.connected)
-
-  // ── Honest empty (no connectable providers on this deployment) ───────────────
-  if (visible.length === 0) {
+  // ── Honest empty (the registry itself is empty) ──────────────────────────────
+  if (providers.length === 0) {
     return (
       <YStack gap="$4">
         {header}
@@ -275,7 +285,7 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
     <YStack gap="$4">
       {header}
       <XStack flexWrap="wrap" gap="$3">
-        {visible.map((p) => (
+        {providers.map((p) => (
           <ProviderCard
             key={p.id}
             p={p}

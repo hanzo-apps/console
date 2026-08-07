@@ -63,11 +63,11 @@ export function ContextSwitcher() {
   // the only way to reach a tenant nobody is a member of.
   const loadOrgs = useCallback(
     async (q: string) => {
-      if (!isSuperAdmin) return setOrgs(scopedOrgRow(scoped) as Organization[])
+      if (!isSuperAdmin) return setOrgs(scopedOrgRow({ ...org, name: org.name || scoped }))
       const res = await IamAdminApi.organizations(orgQuery(0, q, ORG_PAGE_SIZE))
       setOrgs(res.rows ?? [])
     },
-    [isSuperAdmin, scoped],
+    [isSuperAdmin, scoped, org],
   )
 
   const search = useCallback(

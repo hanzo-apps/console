@@ -141,8 +141,18 @@ test('the org switcher shows the org NAME even when the org has a logo', async (
   await expect(org.locator('img')).toBeVisible()
 
   await org.click()
-  await page.locator('[role=menu]').first().waitFor()
+  const menu = page.locator('[role=menu]').first()
+  await menu.waitFor()
   await page.waitForTimeout(600)
+
+  // The row for the very same org must read the SAME words and wear the SAME mark
+  // as the trigger above it. A regular user's row was re-derived from the slug, so
+  // the control read "Hanzo AI" over a row reading "Hanzo", with a logo over a
+  // monogram — one org, named twice, from two places.
+  const row = menu.getByRole('radio').first()
+  await expect(row).toHaveText('Hanzo AI')
+  await expect(row.locator('img')).toBeVisible()
+
   await page.screenshot({ path: join(SHOTS, 'rail-org-name.png'), animations: 'disabled' })
   await ctx.close()
 })
