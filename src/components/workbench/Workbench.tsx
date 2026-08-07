@@ -289,7 +289,7 @@ export function WorkbenchDock() {
               $
             </Text>
             <Text flex={1} fontSize="$2" color="$color10" className="hz-mono" numberOfLines={1}>
-              Run a /v1 command — models, agents, logs…
+              Open a cloud shell — a real terminal in your sandbox
             </Text>
           </XStack>
         ) : (

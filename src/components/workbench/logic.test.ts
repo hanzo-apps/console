@@ -1,32 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { curlFor, eventsFrom, hanzoCli, inspectorRoute, parseCommand, renderOutput } from './logic'
-
-describe('parseCommand', () => {
-  it('accepts every documented form and normalizes to a /v1-relative path', () => {
-    expect(parseCommand('GET /v1/models')).toEqual({ path: 'models' })
-    expect(parseCommand('get v1/models')).toEqual({ path: 'models' })
-    expect(parseCommand('/v1/models')).toEqual({ path: 'models' })
-    expect(parseCommand('models')).toEqual({ path: 'models' })
-    expect(parseCommand('  agents?limit=5  ')).toEqual({ path: 'agents?limit=5' })
-  })
-
-  it('is read-only — every mutating method is refused', () => {
-    for (const m of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      expect(parseCommand(`${m} /v1/agents`)).toHaveProperty('error')
-    }
-  })
-
-  it('refuses empty, multi-path, traversal, and smuggled inputs', () => {
-    expect(parseCommand('')).toHaveProperty('error')
-    expect(parseCommand('GET')).toHaveProperty('error')
-    expect(parseCommand('/v1')).toHaveProperty('error')
-    expect(parseCommand('GET /v1/a /v1/b')).toHaveProperty('error')
-    expect(parseCommand('/v1/../admin')).toHaveProperty('error')
-    expect(parseCommand('//evil.com/x')).toHaveProperty('error')
-    expect(parseCommand('https://evil.com/x')).toHaveProperty('error')
-  })
-})
+import { curlFor, eventsFrom, inspectorRoute, renderOutput, resize, socketFor } from './logic'
 
 describe('renderOutput', () => {
   it('pretty-prints JSON and passes strings through', () => {
@@ -77,10 +51,6 @@ describe('show code', () => {
     expect(curlFor('models')).toBe('curl https://api.hanzo.ai/v1/models \\\n  -H "Authorization: Bearer $HANZO_API_KEY"')
     expect(curlFor('/v1/agents')).toContain('https://api.hanzo.ai/v1/agents')
   })
-  it('builds the Hanzo CLI form', () => {
-    expect(hanzoCli('/v1/models')).toBe('hanzo api get /v1/models')
-    expect(hanzoCli('agents')).toBe('hanzo api get /v1/agents')
-  })
 })
 
 describe('eventsFrom', () => {
@@ -103,5 +73,48 @@ describe('eventsFrom', () => {
   it('prefers the gateway requestId as the event id and is honest-empty', () => {
     expect(eventsFrom([rec({ id: 'x', requestId: 'req_1', at: 1 })])[0].id).toBe('req_1')
     expect(eventsFrom([])).toEqual([])
+  })
+})
+
+describe('cloud shell — the socket address', () => {
+  it('speaks wss over an https API host, and keeps the /v1 path', () => {
+    expect(socketFor('https://api.hanzo.ai', 'm_abc', 'tok')).toBe(
+      'wss://api.hanzo.ai/v1/sandboxes/m_abc/terminal/ws?ticket=tok',
+    )
+  })
+
+  it('downgrades to ws only when the API host itself is plain http (local dev)', () => {
+    expect(socketFor('http://localhost:8000', 'm_1', 't')).toBe(
+      'ws://localhost:8000/v1/sandboxes/m_1/terminal/ws?ticket=t',
+    )
+  })
+
+  it('never leaves a caller on http by accident — a bare or ws host resolves to a socket scheme', () => {
+    expect(socketFor('api.hanzo.ai', 'm_1', 't')).toMatch(/^wss:\/\/api\.hanzo\.ai\//)
+    expect(socketFor('//api.hanzo.ai', 'm_1', 't')).toMatch(/^wss:\/\/api\.hanzo\.ai\//)
+    expect(socketFor('wss://api.hanzo.ai', 'm_1', 't')).toMatch(/^wss:\/\/api\.hanzo\.ai\//)
+  })
+
+  it('tolerates a trailing slash and escapes what it interpolates', () => {
+    expect(socketFor('https://api.hanzo.ai/', 'm_1', 't')).toContain('api.hanzo.ai/v1/sandboxes/m_1')
+    // A ticket is base64url and an id is hex, but neither is trusted to be:
+    // an unescaped `&` would silently truncate the credential.
+    expect(socketFor('https://api.hanzo.ai', 'a/b', 'x&y=z')).toBe(
+      'wss://api.hanzo.ai/v1/sandboxes/a%2Fb/terminal/ws?ticket=x%26y%3Dz',
+    )
+  })
+})
+
+describe('cloud shell — the resize frame', () => {
+  it('is the one control object the far side reads as anything but input', () => {
+    expect(resize(120, 40)).toBe('{"resize":{"cols":120,"rows":40}}')
+  })
+
+  it('never sends a window nothing can render', () => {
+    // A collapsed dock measures 0, and NaN is what a fit against a detached
+    // element produces. A shell told it has 0 columns draws nothing at all.
+    expect(resize(0, 0)).toBe('{"resize":{"cols":1,"rows":1}}')
+    expect(resize(NaN, NaN)).toBe('{"resize":{"cols":1,"rows":1}}')
+    expect(resize(80.6, 24.2)).toBe('{"resize":{"cols":81,"rows":24}}')
   })
 })

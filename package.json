@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.5.75",
+  "version": "8.5.76",
   "packageManager": "pnpm@11.17.0",
   "private": true,
   "license": "MIT OR Apache-2.0",
@@ -43,6 +43,8 @@
     "@lexical/selection": "0.46.0",
     "@lexical/utils": "0.46.0",
     "@luxfi/logo": "^1.0.1",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
     "@xyflow/react": "12.11.1",
     "@zap-proto/web": "1.0.0",
     "@zap-proto/zap": "1.6.0",

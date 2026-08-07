@@ -246,6 +246,17 @@ export const CLOUD_HEADS: readonly string[] = [
   'gpus',
   'fleet',
   'clusters',
+  // Sandboxes (cloud apps/sandbox): the org's leased gVisor pods — lease/list/get/
+  // end, exec, fs, and the ticket that opens an interactive terminal
+  // (/v1/sandboxes[/:id[/exec|/fs|/terminal]]). Same gate as the rest: the handler
+  // resolves the org from the Bearer owner and answers 403 without one, and an id
+  // belonging to another org is a 404.
+  //
+  // The terminal's SOCKET does not come through here and cannot: a Next route
+  // handler proxies requests, not upgrades. The browser dials the API host
+  // directly, carrying the single-use ticket this proxy fetched for it — which is
+  // the whole reason the ticket exists.
+  'sandboxes',
   // DO-native: virtual private clouds and managed load balancers — FULL CRUD
   // (/v1/vpcs[/:id], /v1/balancers[/:id]).
   'vpcs',
