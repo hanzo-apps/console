@@ -511,6 +511,127 @@ export const fmtRelative = (iso?: string | null, now: number = Date.now()): stri
   return `${Math.round(mo / 12)}y ago`
 }
 
+// ── Runs — the execution feed (`/v1/agents/runs`) ───────────────────────────
+
+/** A recorded run either completed or it didn't — the two states the feed carries. */
+export type AgentRunStatus = 'ok' | 'error'
+
+/** The feed's status filter; `all` sends no `status` param (the backend serves both). */
+export type AgentRunFilter = AgentRunStatus | 'all'
+
+/**
+ * One recorded agent run. `id`, `status`, `model`, `durationMs` and `createdAt` are
+ * always written; every other field is `omitempty` on the wire, so it may legitimately
+ * be ABSENT — the UI shows "—" rather than inventing a value.
+ *
+ * `traceId` is the one that matters here: a run recorded before tracing existed simply
+ * has none, which is a DIFFERENT fact from a failure. `traceHref` keeps the two apart
+ * so an absent trace can never become a dead link.
+ */
+export type AgentRun = {
+  id: string
+  status: AgentRunStatus
+  model: string
+  /** End-to-end wall time in milliseconds. */
+  durationMs: number
+  /** RFC3339 timestamp. */
+  createdAt: string
+  input?: string
+  output?: string
+  error?: string
+  /** The agent that ran (its name handle). */
+  agent?: string
+  /** Who or what invoked it. */
+  actor?: string
+  /** The trace this run produced — the key into the existing span waterfall. */
+  traceId?: string
+  promptTokens?: number
+  completionTokens?: number
+  toolCalls?: number
+}
+
+/** Largest page the feed serves (`limit` is 1..200 upstream). */
+export const RUN_LIMIT_MAX = 200
+
+/** Wire value → display text. An object/array is stringified; `''` reads as absent. */
+const textOf = (v: unknown): string | undefined => {
+  if (typeof v === 'string') return v || undefined
+  if (v === null || v === undefined) return undefined
+  if (typeof v === 'object') {
+    try {
+      return JSON.stringify(v)
+    } catch {
+      return String(v)
+    }
+  }
+  return String(v)
+}
+
+/**
+ * Normalize one recorded run (a row with no id is dropped — it can't be opened).
+ * A run carrying a recorded `error` is an error run even if the status string is
+ * missing or unrecognized, so a failure is never displayed as a success.
+ */
+export function normalizeRun(raw: unknown): AgentRun | null {
+  const r = asRecord(raw)
+  const id = str(r.id) ?? str(r.runId) ?? str(r.run_id)
+  if (!id) return null
+  const error = textOf(r.error)
+  const status = (str(r.status) ?? '').toLowerCase()
+  return {
+    id,
+    status: status === 'error' || (status !== 'ok' && error !== undefined) ? 'error' : 'ok',
+    model: str(r.model) ?? '',
+    durationMs: num(r.durationMs) ?? num(r.duration_ms) ?? 0,
+    createdAt: str(r.createdAt) ?? str(r.created_at) ?? '',
+    input: textOf(r.input),
+    output: textOf(r.output),
+    error,
+    agent: str(r.agent) ?? str(r.agentName) ?? str(r.agent_name),
+    actor: str(r.actor),
+    traceId: str(r.traceId) ?? str(r.trace_id),
+    promptTokens: num(r.promptTokens) ?? num(r.prompt_tokens),
+    completionTokens: num(r.completionTokens) ?? num(r.completion_tokens),
+    toolCalls: num(r.toolCalls) ?? num(r.tool_calls),
+  }
+}
+
+/**
+ * Normalize a feed payload to runs, NEWEST FIRST. Sorted here (one place) so both
+ * the org-wide and the per-agent read present the same order; a row with an
+ * unparseable timestamp sorts last rather than shuffling the real ones.
+ */
+export function normalizeRuns(payload: unknown): AgentRun[] {
+  const at = (r: AgentRun): number => {
+    const t = new Date(r.createdAt).getTime()
+    return Number.isNaN(t) ? -Infinity : t
+  }
+  return arrayUnder(payload, ['runs', 'data', 'items', 'rows'])
+    .map(normalizeRun)
+    .filter((r): r is AgentRun => r !== null)
+    .sort((a, b) => at(b) - at(a))
+}
+
+/**
+ * The console path to this run's span waterfall (`/o11y/<traceId>` — the trace
+ * detail that already exists), or `null` when the run recorded no trace. Callers
+ * MUST branch on the null: a run without a trace gets an honest "no trace recorded",
+ * never a link that 404s.
+ */
+export const traceHref = (run: Pick<AgentRun, 'traceId'>): string | null =>
+  run.traceId ? `/o11y/${enc(run.traceId)}` : null
+
+/** Query for a runs read — `limit` clamped to the served range, `all` omitted. */
+export type RunsQuery = { limit?: number; status?: AgentRunFilter }
+
+const runsQuery = ({ limit, status }: RunsQuery = {}): string => {
+  const p = new URLSearchParams()
+  if (limit !== undefined) p.set('limit', String(Math.min(RUN_LIMIT_MAX, Math.max(1, Math.round(limit)))))
+  if (status && status !== 'all') p.set('status', status)
+  const qs = p.toString()
+  return qs ? `?${qs}` : ''
+}
+
 // ── Network methods (thin — forward-compatible against the documented contract) ─
 
 /**
@@ -547,6 +668,15 @@ export const AgentsApi = {
   /** The org's recent agent activity feed (`GET /v1/agents/activity`). */
   activity: (): Promise<AgentActivity[]> =>
     restGet<unknown>(originV1Url(`${BASE}/activity`)).then(normalizeActivity),
+
+  /** The org-wide run feed across every agent (`GET /v1/agents/runs`), newest first. */
+  runs: (q: RunsQuery = {}): Promise<AgentRun[]> =>
+    restGet<unknown>(originV1Url(`${BASE}/runs${runsQuery(q)}`)).then(normalizeRuns),
+
+  /** One agent's run history (`GET /v1/agents/:ref/runs`) — keyed by the agent's NAME
+   *  handle, like every other single-agent route. This route serves `limit` only. */
+  agentRuns: (ref: string, q: Omit<RunsQuery, 'status'> = {}): Promise<AgentRun[]> =>
+    restGet<unknown>(originV1Url(`${agentPath(ref)}/runs${runsQuery(q)}`)).then(normalizeRuns),
 
   /** Create an agent (`POST /v1/agents`) — only called when the backend is live. */
   create: (body: NewAgentBody): Promise<unknown> => restPost<unknown>(originV1Url(BASE), body),

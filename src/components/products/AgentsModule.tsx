@@ -65,6 +65,7 @@ import {
 } from '~/lib/api/agents'
 import { productColorHex } from '~/lib/products/colors'
 import { PageHeader } from '~/components/ui/PageHeader'
+import { SubNav } from '~/components/ui/SubNav'
 import { DataTable, type Column } from '~/components/ui/DataTable'
 import { EmptyState } from '~/components/ui/EmptyState'
 import { BackendStateCard, classifyBackend, type BackendState } from '~/components/ui/BackendState'
@@ -250,7 +251,11 @@ export function AgentsModule(props: { params: Record<string, string> }) {
     [detail, agentColor, reload, analytics],
   )
 
+  // The level-2 nav is declared once in the registry and mounted twice: the sidebar
+  // rail renders it at lg+, this strip carries it below lg where the rail is a drawer
+  // — so Runs is reachable from the Agents index on a phone too.
   const header = (
+    <>
     <PageHeader
       title="Agents"
       subtitle="Autonomous agents — a model, a prompt, and tools that run on Hanzo compute."
@@ -280,6 +285,8 @@ export function AgentsModule(props: { params: Record<string, string> }) {
         </XStack>
       }
     />
+    <SubNav id="agents" />
+    </>
   )
 
   // ── Initial loading ─────────────────────────────────────────────────────────

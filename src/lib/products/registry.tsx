@@ -33,6 +33,7 @@ import { Users,
   Brain,
   Server,
   Bot,
+  History,
   Zap,
   Sparkles,
   Boxes,
@@ -232,6 +233,7 @@ import { GpusModule, GpusOverview } from '~/components/products/GpusModule'
 import { FinetuningModule } from '~/components/products/FinetuningModule'
 import { InferenceModule } from '~/components/products/InferenceModule'
 import { AgentsModule } from '~/components/products/AgentsModule'
+import { AgentRunsModule } from '~/components/products/AgentRunsModule'
 import { MissionControlModule } from '~/components/products/MissionControlModule'
 import { CodeModule } from '~/components/products/CodeModule'
 import { AutomationsModule } from '~/components/products/AutomationsModule'
@@ -1226,8 +1228,18 @@ export const catalog: CatalogEntry[] = [
     // them back to the shared per-product sub-page system, which serves this product's
     // real o11y health, logs and RED metrics. Inference is the pattern to copy if these
     // ever become bespoke: it declares them AND its module actually renders them.
+    //
+    // Runs IS bespoke, and follows that rule: it is declared here AND rendered by its
+    // own module. It is the drill-down from a recorded run to the trace the run already
+    // produced (`/o11y/<traceId>`) — before it, runs were not listed as runs anywhere,
+    // so a complete trace existed with nothing linking to it.
+    subpages: [{ slug: 'runs', label: 'Runs', icon: History }],
     routes: [
       { path: '', component: AgentsModule },
+      // The literal `runs` routes precede `:tab` — `resolveRoute` takes the first
+      // pattern matching by segment count, so the literal wins over the param.
+      { path: 'runs', component: AgentRunsModule },
+      { path: 'runs/:id', component: AgentRunsModule },
       { path: ':tab', component: AgentsModule },
     ],
   },

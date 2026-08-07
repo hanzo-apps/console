@@ -79,6 +79,45 @@ describe('resolveRoute — the models merge routing (ask 1)', () => {
   })
 })
 
+/**
+ * Agents › Runs — the run → trace drill-down. `runs` and `:tab` are both ONE
+ * segment, so the literal only wins because it is declared FIRST (routes are tried
+ * in order). Reordering the array would silently render the Agents dashboard at
+ * `/agents/runs` instead, which is exactly the class of dead sub-route this repo
+ * has hit before. Fixture mirrors the real registry entry.
+ */
+describe('resolveRoute — a literal sub-route wins over :tab', () => {
+  const agents: ProductModule[] = [
+    {
+      id: 'agents',
+      label: 'Agents',
+      icon: I,
+      description: '',
+      routes: [
+        { path: '', component: C },
+        { path: 'runs', component: C },
+        { path: 'runs/:id', component: C },
+        { path: ':tab', component: C },
+      ],
+    },
+  ]
+
+  it('lands /agents/runs on the runs list, never the :tab dashboard', () => {
+    expect(resolveRoute(agents, ['agents', 'runs'])?.route.path).toBe('runs')
+    expect(resolveRoute(agents, ['agents', 'runs'])?.params).toEqual({})
+  })
+
+  it('resolves one run by id', () => {
+    const m = resolveRoute(agents, ['agents', 'runs', 'run_7f3a'])
+    expect(m?.route.path).toBe('runs/:id')
+    expect(m?.params).toEqual({ id: 'run_7f3a' })
+  })
+
+  it('still resolves any other single segment as :tab', () => {
+    expect(resolveRoute(agents, ['agents', 'anything'])?.params).toEqual({ tab: 'anything' })
+  })
+})
+
 describe('entryMatches — the sidebar filter (ask 4)', () => {
   const entry = {
     id: 'vector',
