@@ -38,7 +38,7 @@ import { currentOrg, leaveOrg, switchOrg } from '~/lib/org-scope'
 import { contextLabel, scopedOrgRow, titleCase } from '~/lib/account/org-state'
 import { MenuRow } from '~/components/ui/MenuRow'
 import { paper } from '~/components/ui/paper'
-import { SearchInput } from '@hanzo/ui/product'
+import { OrgMark, SearchInput } from '@hanzo/ui/product'
 
 export function ContextSwitcher() {
   const router = useRouter()
