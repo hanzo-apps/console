@@ -46,6 +46,22 @@ images:
     # signed-in ones keep their own bearer. Same name the rest of the estate uses.
     build_secrets: [PUBLISHABLE_KEY]
 
+# The site publish — what actually reaches console.hanzo.ai. The console ships as
+# the ACTIVE RELEASE of the `hanzo-console` site (cloud reads it from S3 at boot
+# and on poll); rolling the standalone Deployment reaches nobody. Without this
+# block the ci site step skips, so a console change lands on main and never
+# ships — which is why 8.5.84–8.5.86 built images but the live site did not move.
+#
+# slug is cloud's CLOUD_CONSOLE_SITE default; dir is what `build:embed` emits (the
+# static export); the build command is the same gate the embed uses. On main only.
+# The publish reads HANZO_API_TOKEN + HANZO_ORG from KMS (kms.org below), so a
+# missing credential FAILS the publish rather than shipping empty — fail-safe.
+site:
+  slug: hanzo-console
+  dir: out
+  build: npm run build:embed
+  on: [main]
+
 # The KMS tenant this repo's build secrets come from.
 #
 # Stated rather than derived. hanzoai/ci derives it from
