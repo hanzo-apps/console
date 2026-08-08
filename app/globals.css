@@ -633,3 +633,33 @@ body {
 [data-hanzo-shell] :not(code, pre, kbd, samp) {
   font-family: var(--font-sans) !important;
 }
+
+/* The one microphone (`@hanzo/voice` — the same control hanzo.chat and
+   hanzo.app mount). The package draws the machine: glyph, waveform while
+   listening, a worn refusal when the platform declines. This is only its
+   chrome, sized to the composer row it sits in. */
+.voice-control {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--color11, #a1a1a1);
+  transition: color 150ms, background-color 150ms;
+}
+.voice-control:hover:not(:disabled) {
+  background-color: color-mix(in oklab, currentColor 10%, transparent);
+  color: var(--color12, #fafafa);
+}
+.voice-control:disabled {
+  opacity: 0.4;
+}
+.voice-control[data-state='listening'],
+.voice-control[data-state='speaking'] {
+  color: var(--color12, #fafafa);
+}
+.voice-control svg {
+  width: 15px;
+  height: 15px;
+}

@@ -19,7 +19,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ScrollView, Spinner, Text, TextArea, XStack, YStack } from '@hanzo/gui'
-import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight, Mic, Square } from '@hanzogui/lucide-icons-2'
+import { Send, Sparkles, Plus, History, Braces, Brain, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
 import { useAnalytics } from '@hanzo/event/react'
 import { EVENTS } from '@hanzo/event'
 
@@ -27,7 +27,9 @@ import { AiApi, PlaygroundApi, type ChatMessage } from '~/lib/api'
 import { DEFAULT_MODEL } from '~/lib/api/families'
 import { useRecentModels } from '~/lib/models/recent'
 import { hanzoAssistantSystemPrompt, assistantState, ASSISTANT_DOCS_STORE } from '~/lib/assistant'
-import { useVoice } from '~/lib/voice'
+import { Voice, useVoice } from '@hanzo/voice'
+
+import { HANZO_SPEECH } from '~/lib/voice'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { config } from '~/config'
 import { Markdown } from './markdown'
@@ -297,20 +299,18 @@ export function ChatConversation({
     return replyText
   }
 
-  // Voice — "talk to Hanzo". A completed utterance (onFinal) is sent as a turn; the
-  // interim transcript shows live in the composer; while voice mode is on the reply
-  // is spoken back (hands-free). Feature-detected — the mic renders only when
-  // supported, so a browser without SpeechRecognition never shows a dead control.
-  const [voiceMode, setVoiceMode] = useState(false)
-  const voiceModeRef = useRef(voiceMode)
-  voiceModeRef.current = voiceMode
+  // Voice — "talk to Hanzo", the ONE machine (`@hanzo/voice`, shared with
+  // hanzo.chat and hanzo.app). A settled utterance is sent as a turn through the
+  // SAME submit path as typing; the interim transcript streams into the
+  // composer; the reply is read back while the conversation is open — `say` is
+  // a no-op otherwise, so a typed turn stays silent without a mode flag here.
   const sendTextRef = useRef<(raw: string) => Promise<void>>(async () => {})
   const voice = useVoice({
-    onFinal: (t) => {
-      setVoiceMode(true)
+    speech: HANZO_SPEECH,
+    onPartial: (t) => setInput(t),
+    onUtterance: (t) => {
       void sendTextRef.current(t)
     },
-    onInterim: (t) => setInput(t),
   })
 
   const sendText = async (raw: string) => {
@@ -325,8 +325,9 @@ export function ChatConversation({
     setMessages((m) => [...m, { role: 'user', content: q, time: turnTime() }])
     setInput('')
     const reply = await streamReply(q, history)
-    // Voice-initiated turn → speak the reply back so a hands-free user hears it.
-    if (voiceModeRef.current && reply) voice.speak(reply)
+    // Read the reply back — a no-op unless the voice conversation is open, so
+    // a typed turn stays silent without anyone here tracking a mode.
+    if (reply) void voice.say(reply)
   }
   sendTextRef.current = sendText
   const send = () => {
@@ -369,9 +370,8 @@ export function ChatConversation({
   // voiceSignal). A no-op when voice is unsupported, so nothing breaks on Safari/
   // Firefox — the user just types.
   useEffect(() => {
-    if (voiceSignal > 0 && voice.supported) {
-      setVoiceMode(true)
-      voice.start()
+    if (voiceSignal > 0 && !voice.blocked && !voice.open) {
+      voice.toggle()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceSignal])
@@ -552,27 +552,11 @@ export function ChatConversation({
               hoverStyle={{ bg: '$color4' }}
               aria-label="Insert code block"
             />
-            {/* Talk to Hanzo — the mic renders ONLY when this browser supports
-                speech recognition (never a dead control). Listening → a red Stop. */}
-            {voice.supported ? (
-              <Button
-                size="$2"
-                circular
-                chromeless
-                icon={voice.listening ? <Square size={15} /> : <Mic size={16} />}
-                onPress={() => {
-                  if (voice.listening) {
-                    voice.stop()
-                  } else {
-                    setVoiceMode(true)
-                    voice.start()
-                  }
-                }}
-                bg={voice.listening ? '$red5' : undefined}
-                hoverStyle={{ bg: voice.listening ? '$red6' : '$color4' }}
-                aria-label={voice.listening ? 'Stop listening' : 'Talk to Hanzo'}
-              />
-            ) : null}
+            {/* Talk to Hanzo — the ONE mic (`@hanzo/voice`), the same control
+                hanzo.chat's composer and hanzo.app's builder mount. It draws the
+                waveform itself while listening, and when voice cannot run it
+                stays, disabled, wearing the reason — never a dead control. */}
+            <Voice voice={voice} disabled={sending} className="voice-control" />
             <Button
               size="$3"
               circular
