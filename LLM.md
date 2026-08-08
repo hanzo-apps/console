@@ -4159,3 +4159,46 @@ Rollout stays a REVIEWED pin: universe `charts/app/values/hanzo/console.yaml` cu
 pins `tag: 8.5.83` while GHCR is already at 8.5.86, and cd.hanzo.ai's selfHeal restores
 that CR from the universe pin on every poll. So building an image does not ship it — the
 pin bump is a separate, deliberate change in hanzoai/universe.
+
+## CORRECTION — the console is a PUBLISHED SITE. go:embed is gone; `CONSOLE_REF` does not exist.
+
+Every note above that says a console change reaches console.hanzo.ai "on the next
+`hanzoai/cloud` release embedding `console@main` (`CONSOLE_REF=main`, go:embed)" is
+STALE — 41 lines of this file repeat it, and following it costs an afternoon looking
+for a pin that is not there. Measured in the cloud repo, not inferred:
+
+- cloud's `Dockerfile` has **no `CONSOLE_REF`, no `FROM … AS console` stage, no
+  `npm run build:embed`, no `COPY --from=console`**. The whole stage is deleted.
+- `webui/console.go` opens with **"IT CARRIES NO BYTES."** — nothing is `go:embed`ed.
+- cloud `326c0f57` (2026-08-05, *"the console is a published site, not a binary"*) is
+  an ancestor of cloud `main`, so this is what ships.
+
+**What actually happens now.** `serve.go` calls
+`release.Load(ctx, release.ConfigFromEnv(), logger)` and mounts
+`webui.Mount(app, release.FS(consoleSrc))` — the bytes are the **ACTIVE RELEASE of a
+SITE**, read from S3 at boot and re-read on a poll:
+
+    CLOUD_CONSOLE_SITE   the site whose active release IS the console  (default hanzo-console)
+    CLOUD_CONSOLE_ORG    its org — defaults to CLOUD_SITES_FIRSTPARTY_ORG (hanzo)
+    CLOUD_CONSOLE_POLL   how often the release is re-read
+
+So shipping the console is a **publish**, not a build and not a roll: sub-second,
+rollback faster, and it neither rebuilds nor restarts cloud. "Which console is live" is
+answered by the site's active release, not by a line in a Dockerfile. The Dockerfile
+says why the old way went: a console CSS fix was a CLOUD release (~22 min) on a
+single-replica `strategy: Recreate`, which took api.hanzo.ai down for a measured 2m15s.
+
+The publish route exists and is org-gated — `GET /v1/sites/hanzo-console/releases`
+answers **403 `X-Org-Id required`**, not 404. `apps/sites` pulls no OCI image; a release
+is uploaded bytes.
+
+**Consequence, measured 2026-08-08:** console `main` carries the design-system work
+(`@hanzo/ui/dist/theme.css` in this repo's own `node_modules` has 15 `--type-scale`
+hits) while the CSS served by console.hanzo.ai has **zero**, and its `--text-base` is a
+bare `0.875rem` with no `calc()`. Main is ahead of production because nothing has
+published a release since — not because a cloud release is pending.
+
+**Still open, deliberately not guessed:** `build:embed` remains in `package.json` and
+cloud no longer consumes it. It is plausibly what produces the static bundle a release
+is cut FROM — but that was not verified here, so do not delete it on the strength of
+this note. Find the publisher first.
