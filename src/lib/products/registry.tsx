@@ -3527,7 +3527,13 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: SettingsModule },
     ],
     indexLabel: 'General',
-    subpages: [{ slug: 'branding', label: 'Branding' }],
+    subpages: [
+      { slug: 'branding', label: 'Branding' },
+      // Appearance is a PERSON's setting, not the org's, but it sits beside
+      // Branding because both answer "how does this look" and someone
+      // hunting for one finds the other.
+      { slug: 'appearance', label: 'Appearance' },
+    ],
   },
   {
     id: 'contact',

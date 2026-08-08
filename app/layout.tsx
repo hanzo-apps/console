@@ -19,6 +19,7 @@ import { Provider } from '~/components/Provider'
 import { ChunkGuard } from '~/components/ChunkGuard'
 import { BrandTitle } from '~/components/BrandTitle'
 import { resolveConfig } from '~/config'
+import { bootScript as appearanceBoot } from '@hanzo/appearance/state'
 
 // The document <title> is SSR metadata, so it must reflect the REQUEST host's
 // brand (console.lux.cloud -> "Lux Cloud Console"), not the build-time default.
@@ -52,6 +53,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="t_dark" style={{ backgroundColor: '#000000', colorScheme: 'dark' }} suppressHydrationWarning>
+      <head>
+        {/* A person's text size and density, applied BEFORE first paint. The
+            same reasoning as the literal `t_dark` class above: a preference
+            read in an effect resolves after the page has painted, so every
+            load would render at the default and then jump. @hanzo/appearance
+            re-applies — and validates the accent — when React mounts. */}
+        <script dangerouslySetInnerHTML={{ __html: appearanceBoot() }} />
+      </head>
       <body style={{ margin: 0 }}>
         <ChunkGuard />
         <BrandTitle />
