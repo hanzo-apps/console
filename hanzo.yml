@@ -1,82 +1,39 @@
-# Canonical CI config for hanzoai/console — read by the hanzoai/ci reusable
-# (.hanzo/workflows/cicd.yml) and platform.hanzo.ai. hanzoai/ci pushes to `repo:`
-# (GHCR) and server-side-mirrors to registry.hanzo.ai automatically.
+# CI config for hanzo-apps/console — read by hanzoai/ci (build) and platform (deploy).
 #
-# TWO artifacts, one bundle. The console is a static SPA export; what differs is
-# only who serves it:
+# The console is a static SPA and ships ONE way: as the active release of the
+# `hanzo-console` site, which cloud reads from S3 at boot and on poll (the site:
+# block below publishes it). console.hanzo.ai comes from that release, so rolling
+# the standalone Deployment reaches nobody. The `console` image serves the same
+# bundle behind hanzoai/static for the white-label admin hosts.
 #
-#   console-embed   the bundle alone at /dist. hanzoai/cloud does
-#                   `COPY --from=console /dist/` so a cloud release never rebuilds
-#                   npm+Next. Needed only while cloud go:embeds the console.
-#   console         the bundle behind hanzoai/static, serving itself. This is how
-#                   a console change ships WITHOUT a cloud release: move image.tag
-#                   in a universe values file and cd rolls it.
-#
-# The Next.js SERVER image that used to be the second entry is gone. It was
-# already doing nothing a file server could not — every host it served sent /v1
-# and /zap to cloud-api at the ingress, so its BFF was never reached — and its own
-# auth routes stopped mattering when identity became a client-held IAM token.
-#
-# TAGS: the shared builder publishes `sha-<sha7>-amd64` on every main push AND the
-# bare semver on a cut v* tag. PIN THE SEMVER — it says which console RELEASE a
-# deployment carries, which a sha cannot. The discipline that keeps that honest is
-# that a cut tag is never re-pointed (`:v8.4.118` once was): cut the next patch
-# instead.
+# TAGS: the builder publishes `sha-<sha7>-amd64` on every main push and the bare
+# semver on a cut v* tag. Pin the semver in a universe values file — it says which
+# console RELEASE a deployment carries, which a sha cannot. A cut tag is never
+# re-pointed; cut the next patch instead.
 images:
-  - name: console-embed
-    context: .
-    dockerfile: Dockerfile.embed
-    repo: ghcr.io/hanzoai/console-embed
-  # The console. It is static — that is not a variant, it is what the console IS,
-  # so the image is `console` and there is no adjective in the name. Dockerfile
-  # builds the SPA export and puts hanzoai/static in front of it.
-  #
-  # This REPLACES the Next.js server image that used to be published here. It was
-  # already doing nothing a file server could not: every host it serves
-  # (admin.lux.cloud, admin.lux.network, admin.zoo.cloud) sends /v1 and /zap to
-  # cloud-api at the ingress, so the server's BFF at /v1/* was never reached on any
-  # of them. Its own auth routes went the same way when identity became a
-  # client-held IAM token. One console, one image.
   - name: console
     context: .
     dockerfile: Dockerfile
     repo: ghcr.io/hanzoai/console
     # Fetched from KMS (deploy/PUBLISHABLE_KEY, env prod) and passed as
-    # --build-arg PUBLISHABLE_KEY. Signed-out views need it to be admitted at all;
-    # signed-in ones keep their own bearer. Same name the rest of the estate uses.
+    # --build-arg PUBLISHABLE_KEY. Signed-out views need it to be admitted; signed-in
+    # ones carry their own bearer.
     build_secrets: [PUBLISHABLE_KEY]
 
-# The site publish — what actually reaches console.hanzo.ai. The console ships as
-# the ACTIVE RELEASE of the `hanzo-console` site (cloud reads it from S3 at boot
-# and on poll); rolling the standalone Deployment reaches nobody. Without this
-# block the ci site step skips, so a console change lands on main and never
-# ships — which is why 8.5.84–8.5.86 built images but the live site did not move.
-#
-# slug is cloud's CLOUD_CONSOLE_SITE default; dir is what `build:embed` emits (the
-# static export); the build command is the same gate the embed uses. On main only.
-# The publish reads HANZO_API_TOKEN + HANZO_ORG from KMS (kms.org below), so a
-# missing credential FAILS the publish rather than shipping empty — fail-safe.
+# The site publish — what reaches console.hanzo.ai. Without this block the site step
+# skips and a console change lands on main but never ships. slug is cloud's
+# CLOUD_CONSOLE_SITE default; dir is what build:embed emits; the publish reads
+# HANZO_API_TOKEN + HANZO_ORG from KMS (kms.org below), so a missing credential FAILS
+# the publish rather than shipping empty. On main only.
 site:
   slug: hanzo-console
   dir: out
   build: npm run build:embed
   on: [main]
 
-# The KMS tenant this repo's build secrets come from.
-#
-# Stated rather than derived. hanzoai/ci derives it from
-# `github.repository_owner` when unset, and that context var is not reliably
-# populated on git.hanzo.ai — the same file notes GITHUB_WORKFLOW_REF is unset
-# there. When the derivation yields nothing, ORG is empty, and because this repo
-# DECLARES build_secrets the step is required rather than best-effort, so the
-# build fails outright:
-#
-#   ::error::KMS not configured (no KMS_CLIENT_ID or org) but hanzo.yml declares
-#   build_secrets: PUBLISHABLE_KEY — refusing to build an image with empty
-#   credentials
-#
-# One line here removes the dependency on a variable the forge may not set.
-# `kms.org` is the documented override and takes precedence over both the
-# KMS_ORG var and the owner-prefix fallback.
+# The KMS tenant this repo's build secrets come from. Stated rather than derived:
+# hanzoai/ci derives it from the owner when unset, and that context var is not
+# reliably populated on git.hanzo.ai, which leaves ORG empty and fails a build that
+# declares build_secrets. kms.org is the documented override.
 kms:
   org: hanzo
