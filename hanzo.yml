@@ -45,3 +45,22 @@ images:
     # --build-arg PUBLISHABLE_KEY. Signed-out views need it to be admitted at all;
     # signed-in ones keep their own bearer. Same name the rest of the estate uses.
     build_secrets: [PUBLISHABLE_KEY]
+
+# The KMS tenant this repo's build secrets come from.
+#
+# Stated rather than derived. hanzoai/ci derives it from
+# `github.repository_owner` when unset, and that context var is not reliably
+# populated on git.hanzo.ai — the same file notes GITHUB_WORKFLOW_REF is unset
+# there. When the derivation yields nothing, ORG is empty, and because this repo
+# DECLARES build_secrets the step is required rather than best-effort, so the
+# build fails outright:
+#
+#   ::error::KMS not configured (no KMS_CLIENT_ID or org) but hanzo.yml declares
+#   build_secrets: PUBLISHABLE_KEY — refusing to build an image with empty
+#   credentials
+#
+# One line here removes the dependency on a variable the forge may not set.
+# `kms.org` is the documented override and takes precedence over both the
+# KMS_ORG var and the owner-prefix fallback.
+kms:
+  org: hanzo
