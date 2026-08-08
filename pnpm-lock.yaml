@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@hanzo/appearance':
-        specifier: ^0.1.0
-        version: 0.1.0(react@19.2.7)
+        specifier: ^0.1.2
+        version: 0.1.2(react@19.2.7)
       '@hanzo/brand':
         specifier: ^1.4.5
         version: 1.4.5(react@19.2.7)
@@ -745,8 +745,8 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@hanzo/appearance@0.1.0':
-    resolution: {integrity: sha512-lN38BpvNgVMz4SZdUq1EKxiY8ohzP1rPDuVZFabnFEE/XL8u11bSx1uAUOiN7K0UOT8Zq8NRIkY/kTMKCj81Ow==}
+  '@hanzo/appearance@0.1.2':
+    resolution: {integrity: sha512-Oc67xzdurgX0dTz4GM5IBGjKD7mOOeVfDU6VvjTABU6hjT6rKfwrEPbSaVNCVK1ZGyJ5qdHHzwYmjFU1GTmLpw==}
     peerDependencies:
       react: '>=19'
 
@@ -4849,7 +4849,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@hanzo/appearance@0.1.0(react@19.2.7)':
+  '@hanzo/appearance@0.1.2(react@19.2.7)':
     dependencies:
       '@hanzo/design': 0.4.12
       react: 19.2.7
