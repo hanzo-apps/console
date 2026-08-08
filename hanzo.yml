@@ -22,13 +22,18 @@ images:
 
 # The site publish — what reaches console.hanzo.ai. Without this block the site step
 # skips and a console change lands on main but never ships. slug is cloud's
-# CLOUD_CONSOLE_SITE default; dir is what build:embed emits; the publish reads
+# CLOUD_CONSOLE_SITE default; dir is what the build emits; the publish reads
 # HANZO_API_TOKEN + HANZO_ORG from KMS (kms.org below), so a missing credential FAILS
 # the publish rather than shipping empty. On main only.
+#
+# build runs on a FRESH runner checkout with no node_modules, so it installs first,
+# and it uses pnpm — the packageManager this repo pins (npm would fetch a stray
+# next and fail). Same steps the Dockerfile runs, so the runner export matches the
+# image bundle byte-for-byte.
 site:
   slug: hanzo-console
   dir: out
-  build: npm run build:embed
+  build: corepack enable && pnpm install --frozen-lockfile && pnpm build:embed
   on: [main]
 
 # The KMS tenant this repo's build secrets come from. Stated rather than derived:
