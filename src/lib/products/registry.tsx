@@ -1955,8 +1955,22 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/ai',
     docs: ext.api,
-    kind: 'module',
-    routes: overviewRoutes('api'),
+    // EXTERNAL, because `/api` is not ours to route. A module entry renders at
+    // its own id, so this one asked the console for `/api` — and that address
+    // belongs to IAM's legacy surface, which answers before the SPA ever sees
+    // it. The nav item therefore left the console entirely: a bare text/plain
+    // 404 from the router, no shell, no way back but the browser's Back button.
+    // (`/apiz` renders fine, which is how you can tell it is an exact-prefix
+    // claim rather than a routing miss.) HIP-0111 retires `/api/*` — canonical
+    // IAM is `/v1/iam/*` — so the address is disappearing, not moving, and the
+    // console should not be holding a door there in the meantime.
+    //
+    // The kind is also what this entry always WAS. It is the REST reference, a
+    // document served by docs.hanzo.ai; there is no in-console module behind
+    // it, and `overviewRoutes` was manufacturing exactly the dead route the
+    // type's own doc says the module kind must never manufacture.
+    kind: 'external',
+    href: ext.api,
   },
   {
     // Webhooks — the org's outbound event destinations over the real cloud
