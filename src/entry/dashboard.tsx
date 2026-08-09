@@ -1,32 +1,35 @@
 'use client'
 
 /**
- * Dashboard shell — a TWO-LEVEL sidebar (products, each expanding its own sub-pages
- * in place) + top bar + content, responsive across phone / tablet / laptop / desktop.
+ * Dashboard shell — a TWO-LEVEL sidebar + top bar + content, responsive across
+ * phone / tablet / laptop / desktop.
  *
- * Level 1 (the product list) renders from the catalog: fixed Overview/Docs, a
+ * ONE LEVEL SHOWS AT A TIME, and the ROUTE picks which:
+ *
+ * Level 1 (anywhere outside a product) is the catalog: fixed Overview/Docs, a
  * Pinned section the user curates, then every product grouped by category. Each
  * CATEGORY is an INDEPENDENTLY collapsible section that renders EXPANDED by default
  * (nothing auto-collapses); the header is flush-left with the top-level items and
  * carries an OPTIONAL collapse chevron whose state persists per-user.
  *
- * Level 2 — a product's sub-pages (Overview + specifics + the uniform base set:
- * Settings · Status · Logs · Metrics) — expands BENEATH that product's own row, so
- * its options appear without the rest of the catalog going away. The label
- * navigates; the chevron beside it only expands or collapses, and that choice
- * persists per-user (the product you are IN is open unless you closed it). Sub-pages
- * with no backend yet are dimmed and open an honest placeholder, never a dead link.
+ * Level 2 (inside a product) is that product's pages — Overview + specifics + the
+ * uniform base set (Settings · Status · Logs · Metrics) — sitting FLUSH where the
+ * catalog was, under the category you came through, with the rest of that category
+ * beneath them so a sibling stays one click away. A page with no backend yet is
+ * dimmed and opens an honest placeholder, never a dead link.
  *
- * This replaced a DRILL: clicking a product used to swap the whole rail for that
- * product's sub-nav, behind a "Back to all products" button. The options were the
- * same either way — what the drill took away was every OTHER product, which is
- * precisely what someone needs when the reason they opened the rail was to go
- * somewhere else.
+ * Both halves of that used to be true at once: the pages appeared INDENTED under the
+ * product's row while the whole catalog stayed painted below, so two levels shared
+ * the screen and a pinned product carried its pages in one place while its own
+ * category row sat inert in another — the same product twice, one of them dead. The
+ * level is a REPLACEMENT now, which is the only reading of "level" that stays true
+ * when the list is long.
  *
  * Level 2 is DECLARED once, in the registry (`subpages` + `indexLabel`), and read
  * here and by `SubNav` (the same nav, for the viewports where this sidebar is a
  * drawer). No module carries its own tab list. The level itself is carried by the
- * URL and nothing else, so a reload, a deep link and Back all agree.
+ * URL and nothing else, so a reload, a deep link and Back all agree — there is no
+ * remembered expansion to disagree with them.
  *
  * The WHOLE sidebar collapses to an icon RAIL (the topbar panel toggle, persisted).
  * When collapsed, HOVER reveals the full sidebar as an OVERLAY flyout (it doesn't
@@ -57,6 +60,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  ChevronLeft,
   ChevronRight,
   Circle,
   CircleHelp,
@@ -93,18 +97,15 @@ import { ConsoleFooter } from '~/components/ConsoleFooter'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
 import { usePins, useProductColors } from '~/lib/products/pins'
-import { useAppsBeta } from '~/lib/products/beta'
 import { orderEntries } from '~/lib/products/order'
 import {
   categoryIsOpen,
   toggleCategory,
-  productIsOpen,
-  toggleProduct,
   NAV_OPEN_PREF,
-  NAV_PRODUCT_OPEN_PREF,
+  NAV_CATALOG_PREF,
   EMPTY_OPEN,
   type CategoryOpen,
-} from '~/lib/products/nav-accordion'
+} from '~/lib/products/nav'
 import { usePreferences } from '~/lib/products/preferences'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { useEntitlements } from '~/lib/entitlements-context'
@@ -137,18 +138,6 @@ const DOCK_W = 384
 const CONTENT_MAX = 1680
 /** Collapsed-rail icon size — large enough to be a comfortable hit target. */
 const ICON = 20
-
-/** Icons for the Billing Center tabs — used by the billing-only shell nav. */
-const BILLING_SUBPAGE_ICON: Record<string, ComponentType<{ size?: number }>> = {
-  '': House,
-  reports: BarChart3,
-  budgets: Bell,
-  invoices: ScrollText,
-  subscriptions: Repeat,
-  'payment-methods': CreditCard,
-  credits: Wallet,
-}
-const billingSubpageIcon = (slug: string): ComponentType<{ size?: number }> => BILLING_SUBPAGE_ICON[slug] ?? Circle
 
 /** The active in-console module id for a path, or null (home / external / unknown). */
 function activeModuleId(pathname: string): string | null {
@@ -310,55 +299,49 @@ function NavRow({
 }
 
 /**
- * Level 2 — a product's sub-pages, expanded IN PLACE beneath its own row. The list
- * is `productSubpages(entry)` (Overview + specifics + the uniform base set), with an
- * unwired sub-page dimmed but honest: it opens a placeholder, never a dead link.
+ * ONE level-2 row — a single page of the product the rail is currently showing.
  *
- * Indented under the product and hung on a hairline, so the nesting is legible
- * without a second heading — the product's own row above IS the heading. Collapsed,
- * the rows are `inert`, so hidden options leave the tab order.
+ * Level 2 is a REPLACEMENT, not a nesting: when a product is open the rail lists
+ * ITS pages, so these rows sit FLUSH with the level-1 rows they stand in for. They
+ * used to be indented under the product's row while the whole catalog stayed
+ * painted below, which put two levels on screen at once and left the reader to work
+ * out which list they were in.
+ *
+ * An unwired page is dimmed but honest — it opens a placeholder, never a dead link.
+ * Both faces render through this one row: the full console's level 2 and the
+ * product-shell face, whose nav IS its root module's pages.
  */
-function SubRows({
-  entry,
-  subs,
-  pathname,
-  open,
+function SubRow({
+  id,
+  sub,
+  active,
+  collapsed,
   onGo,
 }: {
-  entry: CatalogEntry
-  subs: ProductSubpage[]
-  pathname: string
-  open: boolean
+  id: string
+  sub: ProductSubpage
+  active: boolean
+  collapsed: boolean
   onGo: (path: string) => void
 }) {
-  const activeSlug = activeSubpage(pathname, entry.id)
+  const wired = subpageWired(id, sub.slug)
+  const Icon = sub.icon ?? subpageIcon(sub.slug)
   return (
-    <div className="hz-acc" data-open={open ? 'true' : 'false'} id={`nav-sub-${entry.id}`} inert={!open}>
-      <div className="hz-acc-inner">
-        <YStack gap="$0.5" ml="$4" pl="$2" pt="$0.5" borderLeftWidth={1} borderColor="$borderColor">
-          {subs.map((sp) => {
-            const wired = subpageWired(entry.id, sp.slug)
-            const active = sp.slug === activeSlug
-            const SubIcon = sp.icon ?? subpageIcon(sp.slug)
-            return (
-              <Button
-                key={sp.slug || 'overview'}
-                onPress={() => onGo(sp.slug ? `/${entry.id}/${sp.slug}` : `/${entry.id}`)}
-                bg={active ? '$color4' : 'transparent'}
-                justify="flex-start"
-                icon={<SubIcon size={15} />}
-                iconAfter={!wired ? <Circle size={7} opacity={0.5} /> : undefined}
-                size="$2"
-                opacity={wired ? 1 : 0.6}
-                aria-label={wired ? sp.label : `${sp.label} (not available yet)`}
-              >
-                {sp.label}
-              </Button>
-            )
-          })}
-        </YStack>
-      </div>
-    </div>
+    <Button
+      onPress={() => onGo(sub.slug ? `/${id}/${sub.slug}` : `/${id}`)}
+      bg={active ? '$color4' : 'transparent'}
+      justify={collapsed ? 'center' : 'flex-start'}
+      px={collapsed ? '$0' : '$2.5'}
+      height={collapsed ? 44 : undefined}
+      icon={<Icon size={collapsed ? ICON : 17} />}
+      iconAfter={!collapsed && !wired ? <Circle size={7} opacity={0.5} /> : undefined}
+      size="$3"
+      opacity={wired ? 1 : 0.6}
+      aria-current={active ? 'page' : undefined}
+      aria-label={wired ? sub.label : `${sub.label} (not available yet)`}
+    >
+      {collapsed ? undefined : sub.label}
+    </Button>
   )
 }
 
@@ -473,11 +456,9 @@ function SidebarNav({
   const { colorOf } = useProductColors()
   const detail = useDetailPane()
   const showAdmin = useIsSuperAdmin()
-  const showBeta = useAppsBeta(showAdmin)
   // Entitlement scope: currently ungated in prod (the endpoint 404s → `enabled` is
   // null → the full catalog shows), matching "every product is always available".
   const { enabled } = useEntitlements()
-  const [filter, setFilter] = useState('')
 
   // Collapsible-category accordion state — the user's EXPLICIT per-category collapse
   // choices, persisted per-user. Everything is EXPANDED by default; a collapsed
@@ -485,75 +466,52 @@ function SidebarNav({
   const prefs = usePreferences()
   const navOpen = prefs.get<CategoryOpen>(NAV_OPEN_PREF, EMPTY_OPEN)
   const toggleSection = (category: string) => prefs.set(NAV_OPEN_PREF, toggleCategory(navOpen, category))
+  // Does the rail list the whole catalog, or only what you keep? (Profile → Account.)
+  const catalogInRail = prefs.get<boolean>(NAV_CATALOG_PREF, true)
 
-  // ── Level 2, in place ─────────────────────────────────────────────────────
-  // A product's sub-pages expand beneath its own row; nothing replaces the list.
+  // ── Which level the rail is on ────────────────────────────────────────────
+  // The ROUTE decides, and nothing else: inside a product the rail shows THAT
+  // product's pages plus the rest of its category (level 2); anywhere else it shows
+  // the catalog (level 1). One level on screen at a time, and a reload, a deep link
+  // and Back all land on the same rail because none of it is remembered state.
   const activeId = activeModuleId(pathname)
   const isActive = (id: string) => pathname === `/${id}` || pathname.startsWith(`/${id}/`)
-  const productOpen = prefs.get<CategoryOpen>(NAV_PRODUCT_OPEN_PREF, EMPTY_OPEN)
-  const toggleExpand = (id: string) =>
-    prefs.set(NAV_PRODUCT_OPEN_PREF, toggleProduct(productOpen, id, { active: id === activeId }))
 
   // Navigate to a LEAF (a sub-page or a no-sub-page product) — closes the drawer.
   const go = (path: string) => {
     router.push(path)
     onNavigate()
   }
-  // Open a product from the list. One with sub-pages keeps the drawer open, because
-  // becoming active expands it in place and its options are the next thing to read;
-  // a leaf navigates and closes. An external launch tile opens its deployed app in a
-  // new tab.
+  // Open a product from the list. One with pages keeps the drawer open, because the
+  // rail is about to become that product's pages and they are the next thing to
+  // read; a leaf navigates and closes. An external tile opens its app in a new tab.
   const open = (entry: CatalogEntry) => {
     if (entry.kind === 'external') {
       openProduct(entry, go)
       onNavigate()
       return
     }
-    setFilter('')
-    const subs = productSubpages(entry, showAdmin)
-    if (subs.length > 1) {
-      router.push(`/${entry.id}`) // its sub-pages open beneath it
+    if (productSubpages(entry, showAdmin).length > 1) {
+      router.push(`/${entry.id}`) // the rail becomes its pages
     } else {
       go(`/${entry.id}`) // leaf — navigate + close
     }
   }
 
-  /**
-   * ONE product row — the row itself plus, for a product that has them, its sub-pages
-   * expanded beneath. Both the Pinned group and the category groups render through
-   * this, so a product looks and behaves identically wherever it appears.
-   */
-  const productRow = (entry: CatalogEntry, opts: { pinned?: boolean } = {}) => {
-    const subs = productSubpages(entry, showAdmin)
-    // A pinned product appears TWICE — once under Pinned, once in its category — and
-    // only ONE of those may carry the sub-pages. Two copies of the same list is two
-    // navs painting at once, which is the very thing this rail exists to avoid, and
-    // it doubles the rail's height for no information. The PINNED copy owns it: the
-    // user put it up there, and it is the one they read first.
-    const owns = opts.pinned || !isPinned(entry.id)
-    const expandable = owns && entry.kind === 'module' && subs.length > 1
-    const expanded = expandable && productIsOpen(productOpen, entry.id, { filtering, active: entry.id === activeId })
-    return (
-      <YStack key={`${opts.pinned ? 'pin' : 'cat'}-${entry.id}`} gap="$0.5">
-        <NavRow
-          entry={entry}
-          active={isActive(entry.id)}
-          color={colorOf(entry.id)}
-          collapsed={false}
-          pinned={opts.pinned ?? isPinned(entry.id)}
-          expandable={expandable}
-          expanded={expanded}
-          onExpand={expandable ? () => toggleExpand(entry.id) : undefined}
-          onOpen={() => open(entry)}
-          onToggle={opts.pinned ? undefined : () => toggle(entry.id)}
-          onCustomize={opts.pinned ? () => customize(entry) : undefined}
-        />
-        {expandable ? (
-          <SubRows entry={entry} subs={subs} pathname={pathname} open={expanded} onGo={go} />
-        ) : null}
-      </YStack>
-    )
-  }
+  /** ONE product row. Pinned rows carry the customize dot, catalog rows the pin star. */
+  const productRow = (entry: CatalogEntry, opts: { pinned?: boolean } = {}) => (
+    <NavRow
+      key={`${opts.pinned ? 'pin' : 'cat'}-${entry.id}`}
+      entry={entry}
+      active={isActive(entry.id)}
+      color={colorOf(entry.id)}
+      collapsed={false}
+      pinned={opts.pinned ?? isPinned(entry.id)}
+      onOpen={() => open(entry)}
+      onToggle={opts.pinned ? undefined : () => toggle(entry.id)}
+      onCustomize={opts.pinned ? () => customize(entry) : undefined}
+    />
+  )
   const openDocs = () => {
     if (typeof window !== 'undefined') window.open(config.docsUrl, '_blank', 'noopener')
     onNavigate()
@@ -580,9 +538,6 @@ function SidebarNav({
       content: <AddProductPanel />,
     })
 
-  const q = (collapsed ? '' : filter).trim().toLowerCase()
-  const filtering = q.length > 0
-
   // Grouped pins, gated so a customer never sees an admin-only surface.
   const pinnedGroups = useMemo(
     () =>
@@ -591,27 +546,42 @@ function SidebarNav({
           ...g,
           entries: g.entries.filter((e) => {
             const found = findEntry(e.id)
-            return Boolean(found) && (showAdmin || !found!.admin) && (showBeta || !found!.beta)
+            return Boolean(found) && (showAdmin || !found!.admin)
           }),
         }))
         .filter((g) => g.entries.length > 0),
-    [view, showAdmin, showBeta],
+    [view, showAdmin],
   )
 
   // Within-scope ordering is CONTINUOUS ALPHABETICAL with the SELECTED product pinned
   // first — via the ONE shared `orderEntries` helper. Categories stay in their
   // canonical order; only the items inside each are alphabetized + selected-first.
+  //
+  // "Show every product" opens the ENTITLEMENT scope, exactly as the All-products
+  // panel already does: every product is available to every org on demand, so what
+  // an org has ENABLED is a statement about use, not about permission. Off, the rail
+  // narrows to that enabled set. PERMISSION — admin surfaces, brand scope — holds
+  // either way, so nothing on the rail is ever a surface the viewer cannot open.
   const groups = useMemo(
     () =>
-      // Search is DISCOVERY: while a query is typed the entitlement scope opens
-      // to the whole catalog — the point of searching is finding what you do
-      // not have yet — while the admin and beta gates keep holding. The resting
-      // rail stays scoped to the org's enabled set.
-      visibleCatalogByCategory(showAdmin, filtering ? null : enabled, showBeta)
-        .map((g) => ({ category: g.category, entries: orderEntries(g.entries.filter((e) => entryMatches(e, q)), activeId) }))
+      visibleCatalogByCategory(showAdmin, catalogInRail ? null : enabled)
+        .map((g) => ({ category: g.category, entries: orderEntries(g.entries, activeId) }))
         .filter((g) => g.entries.length > 0),
-    [q, filtering, showAdmin, showBeta, enabled, activeId],
+    [showAdmin, catalogInRail, enabled, activeId],
   )
+
+  // ── Level 2 — the product the route is inside ─────────────────────────────
+  // Its pages become the rail, and the rest of its category follows them, so moving
+  // to a sibling stays one click.
+  const level = activeId ? findEntry(activeId) : undefined
+  // A product with no pages of its own is a LEAF: there is no second level to show,
+  // so the rail stays on the catalog with that row lit. Same rule `open` navigates by.
+  const here =
+    level && (showAdmin || !level.admin) && productSubpages(level, showAdmin).length > 1 ? level : undefined
+  const siblings =
+    here && catalogInRail
+      ? (groups.find((g) => g.category === here.category)?.entries ?? []).filter((e) => e.id !== here.id)
+      : []
 
   // ── Product-shell face — the nav IS the root module's sub-pages ────────────
   if (isProductShell(config.shell)) {
@@ -650,25 +620,16 @@ function SidebarNav({
         ) : null}
         <ScrollView flex={1}>
           <YStack gap="$1">
-            {subs.map((sp) => {
-              const active = sp.slug === activeSlug
-              const SubIcon = sp.icon ?? billingSubpageIcon(sp.slug)
-              return (
-                <Button
-                  key={sp.slug || 'overview'}
-                  onPress={() => go(sp.slug ? `/${rootId}/${sp.slug}` : `/${rootId}`)}
-                  bg={active ? '$color4' : 'transparent'}
-                  justify={collapsed ? 'center' : 'flex-start'}
-                  px={collapsed ? '$0' : '$2.5'}
-                  height={collapsed ? 44 : undefined}
-                  icon={<SubIcon size={collapsed ? ICON : 17} />}
-                  size="$3"
-                  aria-label={sp.label}
-                >
-                  {collapsed ? undefined : sp.label}
-                </Button>
-              )
-            })}
+            {subs.map((sp) => (
+              <SubRow
+                key={sp.slug || 'overview'}
+                id={rootId}
+                sub={sp}
+                active={sp.slug === activeSlug}
+                collapsed={collapsed}
+                onGo={go}
+              />
+            ))}
           </YStack>
         </ScrollView>
         <SidebarAccount collapsed={collapsed} />
@@ -684,7 +645,7 @@ function SidebarNav({
     const seen = new Set<string>()
     for (const id of [...pinnedIds, ...(activeId ? [activeId] : [])]) {
       const e = findEntry(id)
-      if (e && !seen.has(id) && (showAdmin || !e.admin) && (showBeta || !e.beta)) {
+      if (e && !seen.has(id) && (showAdmin || !e.admin)) {
         seen.add(id)
         railIds.push(id)
       }
@@ -725,9 +686,8 @@ function SidebarNav({
     )
   }
 
-  // ── The product list: brand; filter; Overview/Docs; Pinned; every category
-  //    (EXPANDED by default, collapsible), each product expanding its own sub-pages
-  //    in place; All-products; identity + wallet. ──
+  // ── The rail: switcher; filter; Overview/Docs; then ONE level — the catalog, or
+  //    the open product's pages followed by its category; All-products; identity. ──
   return (
     // The product rail is a NAVIGATION LANDMARK. It had no role at all, so a
     // screen-reader user had no way to jump to the product list and no way to
@@ -744,109 +704,139 @@ function SidebarNav({
           no switcher to carry the identity there. */}
       <ContextSwitcher />
 
-      {/* Product filter — narrows the whole list; a match from any category jumps
-          straight there. Typing hides the section chrome so the list stays scannable. */}
-      <XStack
-        items="center"
-        gap="$2"
-        px="$2.5"
-        mb="$2"
-        height={34}
-        rounded="$3"
-        borderWidth={1}
-        borderColor="$borderColor"
-        bg="$color2"
-      >
-        <Search size={14} opacity={0.6} />
-        <Input
-          flex={1}
-          unstyled
-          value={filter}
-          onChangeText={setFilter}
-          placeholder="Filter products…"
-          fontSize="$3"
-          color="$color12"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {filter ? (
-          <Button size="$1" chromeless icon={<X size={13} />} onPress={() => setFilter('')} aria-label="Clear filter" />
-        ) : null}
+      {/* Search — the SAME palette the header and the drawer open, so the whole
+          catalog (every product AND every page inside one) is one query away from
+          the rail, at either level. The rail used to carry its own text filter that
+          narrowed only the rows it had already drawn: a second search, answering a
+          smaller question. */}
+      <XStack mb="$2">
+        <CommandSearchBox />
       </XStack>
 
       <ScrollView flex={1} minH={0}>
         <YStack gap="$3.5">
-          {!filtering ? (
-            <YStack gap="$1">
-              <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed={false} onPress={() => go('/')} />
-              <FixedRow icon={BookOpen} label="Docs" external collapsed={false} onPress={openDocs} />
-            </YStack>
-          ) : null}
+          <YStack gap="$1">
+            <FixedRow icon={House} label="Overview" active={pathname === '/'} collapsed={false} onPress={() => go('/')} />
+            <FixedRow icon={BookOpen} label="Docs" external collapsed={false} onPress={openDocs} />
+          </YStack>
 
-          {!filtering && pinnedGroups.length > 0 ? (
-            <YStack gap="$1.5">
-              <XStack items="center" justify="space-between" px="$2.5">
-                <Text fontSize="$1" color="$color10" fontWeight="500">
-                  Pinned
-                </Text>
-                <Button size="$1" chromeless onPress={manage} aria-label="Manage pins">
-                  <Text fontSize="$1" color="$color10" fontWeight="700">
-                    Manage
+          {here ? (
+            /* LEVEL 2 — the open product's pages, flush, then the rest of its
+               category. The catalog is not painted underneath: one level at a
+               time, and the category row above is the way back up to it. */
+            <>
+              <YStack gap="$1">
+                <Button
+                  size="$2"
+                  chromeless
+                  height={32}
+                  px="$2.5"
+                  justify="flex-start"
+                  onPress={() => go(`/category/${categorySlug(here.category)}`)}
+                  icon={<ChevronLeft size={14} opacity={0.7} />}
+                  aria-label={`Back to ${here.category}`}
+                >
+                  <Text fontSize="$1" color="$color10" fontWeight="500">
+                    {here.category}
                   </Text>
                 </Button>
-              </XStack>
-              {pinnedGroups.map((group) => (
-                <YStack key={group.name || 'default'} gap="$1">
-                  {group.name ? (
-                    <Text px="$2.5" fontSize="$1" color="$color9" fontWeight="700">
-                      {group.label}
-                    </Text>
-                  ) : null}
-                  {group.entries.map((e) => {
-                    const entry = findEntry(e.id)
-                    if (!entry) return null
-                    return productRow(entry, { pinned: true })
-                  })}
+                {/* The product names the list below it — a heading, not a link:
+                    its index is the first row, and two ways to the same page is
+                    the duplication this level exists to remove. */}
+                <XStack items="center" gap="$2" px="$2.5" pb="$0.5">
+                  <ProductIcon icon={here.icon} color={colorOf(here.id)} size={18} />
+                  <Text fontSize="$3" fontWeight="700" color="$color12" numberOfLines={1}>
+                    {here.label}
+                  </Text>
+                </XStack>
+                {productSubpages(here, showAdmin).map((sp) => (
+                  <SubRow
+                    key={sp.slug || 'overview'}
+                    id={here.id}
+                    sub={sp}
+                    active={sp.slug === activeSubpage(pathname, here.id)}
+                    collapsed={false}
+                    onGo={go}
+                  />
+                ))}
+              </YStack>
+
+              {siblings.length > 0 ? (
+                <YStack gap="$1">
+                  <Text px="$2.5" fontSize="$1" color="$color10" fontWeight="500">
+                    More in {here.category}
+                  </Text>
+                  {siblings.map((entry) => productRow(entry))}
                 </YStack>
-              ))}
-            </YStack>
-          ) : null}
+              ) : null}
+            </>
+          ) : (
+            /* LEVEL 1 — what you pinned, then every category. */
+            <>
+              {pinnedGroups.length > 0 ? (
+                <YStack gap="$1.5">
+                  <XStack items="center" justify="space-between" px="$2.5">
+                    <Text fontSize="$1" color="$color10" fontWeight="500">
+                      Pinned
+                    </Text>
+                    <Button size="$1" chromeless onPress={manage} aria-label="Manage pins">
+                      <Text fontSize="$1" color="$color10" fontWeight="700">
+                        Manage
+                      </Text>
+                    </Button>
+                  </XStack>
+                  {pinnedGroups.map((group) => (
+                    <YStack key={group.name || 'default'} gap="$1">
+                      {group.name ? (
+                        <Text px="$2.5" fontSize="$1" color="$color9" fontWeight="700">
+                          {group.label}
+                        </Text>
+                      ) : null}
+                      {group.entries.map((e) => {
+                        const entry = findEntry(e.id)
+                        if (!entry) return null
+                        return productRow(entry, { pinned: true })
+                      })}
+                    </YStack>
+                  ))}
+                </YStack>
+              ) : null}
 
-          {groups.map((group) => (
-            <CategorySection
-              key={group.category}
-              category={group.category}
-              count={group.entries.length}
-              open={categoryIsOpen(navOpen, group.category, { filtering })}
-              onToggle={() => toggleSection(group.category)}
-            >
-              {group.entries.map((entry) => productRow(entry))}
-            </CategorySection>
-          ))}
-
-          {filtering && groups.length === 0 ? (
-            <Text px="$2.5" py="$3" fontSize="$2" color="$color10">
-              No products match “{filter.trim()}”.
-            </Text>
-          ) : null}
+              {catalogInRail ? (
+                groups.map((group) => (
+                  <CategorySection
+                    key={group.category}
+                    category={group.category}
+                    count={group.entries.length}
+                    open={categoryIsOpen(navOpen, group.category)}
+                    onToggle={() => toggleSection(group.category)}
+                  >
+                    {group.entries.map((entry) => productRow(entry))}
+                  </CategorySection>
+                ))
+              ) : level && !isPinned(level.id) ? (
+                /* The catalog is put away, so the rail is the pins — plus wherever
+                   you are, which would otherwise be the one place with no row. */
+                <YStack gap="$1">{productRow(level)}</YStack>
+              ) : null}
+            </>
+          )}
 
           {/* Browse the full catalog — pin/unpin + find what's in use. Always
               available (no enable gate; every product is always on). */}
-          {!filtering ? (
-            <Button
-              size="$2"
-              chromeless
-              justify="flex-start"
-              icon={<LayoutGrid size={16} />}
-              onPress={allProducts}
-              aria-label="All products"
-              mt="$1"
-            >
-              <Text fontSize="$2" color="$color11" fontWeight="600">
-                All products
-              </Text>
-            </Button>
-          ) : null}
+          <Button
+            size="$2"
+            chromeless
+            justify="flex-start"
+            icon={<LayoutGrid size={16} />}
+            onPress={allProducts}
+            aria-label="All products"
+            mt="$1"
+          >
+            <Text fontSize="$2" color="$color11" fontWeight="600">
+              All products
+            </Text>
+          </Button>
         </YStack>
       </ScrollView>
 
@@ -868,29 +858,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
           on phones/tablets (see globals.css); the desktop sidebar stays dense. */}
       <YStack flex={1} minH={0} p="$3" gap="$2.5" className="hz-touch-target">
         <XStack gap="$2" items="center">
-          <XStack
-            flex={1}
-            onPress={() => {
-              onOpenChange(false)
-              palette.open()
-            }}
-            cursor="pointer"
-            items="center"
-            gap="$2"
-            px="$3"
-            height={44}
-            bg="$color2"
-            borderWidth={1}
-            borderColor="$borderColor"
-            rounded="$4"
-            hoverStyle={{ borderColor: '$color8' }}
-          >
-            <Search size={15} opacity={0.6} />
-            <Text flex={1} fontSize="$3" color="$color10" numberOfLines={1}>
-              Search or ask AI…
-            </Text>
-            <Command size={13} opacity={0.5} />
-          </XStack>
+          <CommandSearchBox height={44} onOpen={() => onOpenChange(false)} />
           {/* No second "Apps" trigger here either — the search row above opens the
               very same palette, so one row is the whole affordance. */}
           {/* Explicit close — right-aligned INSIDE the drawer header, always reachable

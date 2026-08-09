@@ -20,7 +20,6 @@ import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, Plus, Search, Star } from '@hanzogui/lucide-icons-2'
 
 import { visibleCatalogByCategory, type CatalogEntry, type ProductIcon } from '~/lib/products/registry'
-import { useAppsBeta } from '~/lib/products/beta'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { usePins, useProductColors } from '~/lib/products/pins'
 import { openProduct } from '~/lib/products/open'
@@ -190,8 +189,7 @@ export function AddProductPanel() {
 
   // Source = the FULL catalog the viewer may see (ungated → both pinned and unpinned
   // appear), grouped by category.
-  const showBeta = useAppsBeta(showAdmin)
-  const groups = useMemo(() => visibleCatalogByCategory(showAdmin, null, showBeta), [showAdmin, showBeta])
+  const groups = useMemo(() => visibleCatalogByCategory(showAdmin, null), [showAdmin])
 
   // Literal, case-insensitive substring match over label/description/id — NOT a
   // compiled RegExp of user input.

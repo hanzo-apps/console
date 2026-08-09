@@ -16,15 +16,35 @@
  */
 import type { Organization } from '~/lib/api'
 
-/** The scoped org as a row — the honest answer when no wider list is reachable. */
-export function scopedOrgRow(name: string): Organization[] {
+/**
+ * The scoped org as a row — the honest answer when no wider list is reachable.
+ *
+ * It takes the org the switcher has ALREADY resolved from IAM, rather than
+ * re-deriving one from the slug. Re-deriving printed "Hanzo" in the row under a
+ * trigger reading "Hanzo AI", and a monogram under the trigger's logo: one org,
+ * named twice, from two different places. There is one org identity, and this is
+ * that identity shaped as a list.
+ */
+export function scopedOrgRow(org: { name?: string; displayName?: string; logo?: string }): Organization[] {
+  const name = org.name ?? ''
   if (!name) return []
-  return [{ owner: 'admin', name, displayName: titleCase(name) } as Organization]
+  return [{ owner: 'admin', name, displayName: orgLabel(org), logo: org.logo } as Organization]
 }
 
 /** A slug as a name, without inventing one IAM did not give us. */
 export function titleCase(name: string): string {
   return name ? name.charAt(0).toUpperCase() + name.slice(1) : name
+}
+
+/**
+ * What to CALL an org — its IAM display name when it has one, else its slug
+ * titled. ONE rule, so the switcher's trigger, the row for that same org inside
+ * it, and the rail's brand all say the same word. They used to disagree: the
+ * trigger titled the slug and the rows printed it raw, so the control could read
+ * "Acme" over an active row reading "acme".
+ */
+export function orgLabel(org: { name?: string; displayName?: string }): string {
+  return org.displayName?.trim() || titleCase(org.name ?? '')
 }
 
 /**

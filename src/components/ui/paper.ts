@@ -20,7 +20,10 @@
  */
 export const paper = {
   className: 'hz-paper hz-menu-in',
+  // `bordered` alone declares the intent and leaves the width at 0, so the sheet
+  // met the page with no edge at all. The hairline is stated.
   bordered: true,
+  borderWidth: 1,
   bg: '$color2',
   borderColor: '$borderColor',
 } as const

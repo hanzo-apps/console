@@ -3921,3 +3921,284 @@ One placement note that cost a debug cycle: the quickstart branch must return BE
 reading the ones that exist, and the moments you most need the quickstart — no agents
 yet, or the registry not answering — are exactly the ones those early returns swallow
 it in.
+
+## The rail shows ONE level, and the catalog is not an allow-list (fix/console-six)
+
+Five defects the owner hit, and all five were one thing twice.
+
+**Level 2 replaced level 1 in principle and was added to it in practice.** A product's
+pages expanded INDENTED beneath its row while the whole catalog stayed painted below,
+so two levels shared the screen. Worse, a PINNED product appeared twice — once under
+Pinned carrying the pages, once in its category carrying nothing — and the `owns` rule
+that picked which copy got the sub-list is the tell: a rule to decide which of two
+identical rows is the real one means there should have been one row.
+
+The level is a REPLACEMENT now and it is a function of the ROUTE alone. Inside a
+product the rail is: the category (the way back up), the product as a HEADING, its
+pages FLUSH, then `More in <category>` — its siblings, so sideways is still one click.
+Nothing is remembered, so a reload, a deep link and Back cannot disagree with it.
+Deleted: `NAV_PRODUCT_OPEN_PREF`, `productIsOpen`, `toggleProduct`, the `owns` rule, the
+per-row expand chevron, and `SubRows`' inert accordion. `nav-accordion.ts` → `nav.ts`
+(it holds the rail's view model, not one accordion).
+
+**`SubRow` is now the only level-2 row.** The product-shell face had its own copy plus a
+private `BILLING_SUBPAGE_ICON` map that was a strict subset of the shared `subpageIcon`.
+Both gone.
+
+**"Many products are missing" was a hard-coded list of 13 ids.** `filterBeta` kept only
+`LAUNCH_PRODUCTS` for anyone who was not a superadmin — a deny-everything-not-named list
+wearing the word "beta" (zero entries were actually stamped `beta: true`). A hanzo-org
+user saw 13 of 185 products in 6 of 14 categories. Deleted whole: `LAUNCH_PRODUCTS`,
+`isLaunchProduct`, `filterBeta`, `isBetaEntry`, `CatalogEntry.beta`, `useAppsBeta`
+(`lib/products/beta.ts`), `beta-gate.test.ts`, and the `showBeta` argument threaded
+through `visibleCatalog`, `searchDestinations`, the rail, the palette and the panel.
+
+That left TWO answers to "may I see this product": the All-products panel said every
+product is always available (`visibleCatalogByCategory(showAdmin, null)`) and the rail
+still filtered by the org's entitlement set. Same catalog, two sizes, depending which
+you asked. The `navCatalog` preference settles it: ON (default) the rail is everything
+the viewer may SEE — permission only; OFF it narrows to the org's enabled set plus pins
+and wherever you are. **Measured**: an org whose entitlement plane answers
+`{enabled: []}` — which silently collapsed the rail to the always-on essentials — now
+shows all 11 categories.
+
+Permission (admin surfaces, brand scope) still holds in both states, so nothing on the
+rail is a surface the viewer cannot open.
+
+**One search.** The rail had its own text filter that narrowed only the rows it had
+already drawn — a second search answering a smaller question, next to the header's ⌘K
+palette and a third hand-rolled copy in the mobile drawer. All three are
+`CommandSearchBox` now (`height` + `onOpen` are the only differences), so the rail's box
+opens the one palette, which asks the WHOLE catalog from either level. `filtering` left
+the rail entirely, and with it `categoryIsOpen`'s `ctx` argument.
+
+**The two ends of the rail are peers.** `@hanzo/ui@8.0.56` ships an `OrgSwitcher` +
+`UserMenu` pair built as peers, and it was surveyed: `OrgSwitcher` is better than ours
+(debounced search, real paging — ours hard-codes page 0, so an admin could never reach
+org #21 — and race protection), but its trigger is org-only and cannot say `Org /
+project`; `UserMenu` hard-codes `placement: "bottom-end"` with no prop to change it, so
+it CANNOT mount at the foot of a rail. Adopting one and not the other is not
+convergence, so both are local and both are now ONE component: `components/ui/Menu.tsx`
+— trigger, sheet and rows, worn by `ContextSwitcher` and `AccountMenu` alike.
+
+- **The org name was replaced by the org's logo.** The trigger branched on `org.logo`
+  and rendered the image INSTEAD of the name; the name survived only in the aria-label.
+  The logo is the MARK now (`OrgMark` resolves logo-else-monogram), the name is the
+  label, always.
+- `AccountMenu` was `@hanzo/iam`'s `UserMenu` — a second rendering system inside one
+  rail: raw `createElement`, an injected global `hz-iam-*` stylesheet, its own portal, a
+  28px CIRCLE with a one-letter initial against the org's 20px rounded square with two.
+  It is @hanzo/gui + `MenuRow` + `paper` now. Identity still comes from IAM
+  (`useSession`, `signOut`); only the drawing changed.
+- **The balance row is gone from the menu** — `SidebarWallet` sits one row below it,
+  reads the same `useCloudBalance`/`spendableCents`, links the same `config.payUrl`, and
+  adds the trial/prepaid split. The same number twice, the second time behind a click.
+- ONE naming rule: `orgLabel(org)` in `account/org-state.ts`. The trigger titled the
+  slug and the rows printed it raw, so the control could read "Acme" over an active row
+  reading "acme". `SidebarBrand` used the raw slug too.
+- `SidebarBrand` said "the tenant leads the chrome … never the house mark" and then
+  rendered `BrandMark` for any org without a logo — so one org wore the Hanzo glyph in
+  the collapsed rail and its own monogram in the expanded one. It matches its own rule.
+
+**Two bugs `paper` and the ladder had been hiding.** `paper` declared `bordered: true`,
+which leaves `borderWidth` at 0 — every anchored sheet in the console met the page with
+no edge. And the menu took no z-layer, so on a phone (where it opens from inside the
+account SHEET at `Z.modal`) it was measurable and unclickable; it is `Z.popover` now,
+which is the layer the ladder documents for exactly this. `up` is a preference rather
+than a promise (`allowFlip`/`stayInFrame`): at the foot of a desktop rail upward is
+right, and 365px off the top of a phone it is not.
+
+**Verification.** `tsc --noEmit` clean · `next build` clean · `vitest` **3340 passed /
+8 skipped** (267 files) · Playwright **22/22** across `e2e/rail.spec.ts` (new, 6),
+`account-menu.spec.ts` (4), `level-2-nav.spec.ts` (5) and `find-and-do.spec.ts` (7).
+`rail.spec.ts` measures what only a browser can: that the level-2 pages sit FLUSH with
+the row naming the level (x within 2px, the indentation defect), that nothing from
+another category is painted beside them, that the product is NAMED once and linked
+zero times, that both triggers share height/left-edge/type/weight and both carry a
+chevron, and that the sheet is opaque at opacity 1 and fully on screen.
+
+Two traps worth keeping: `getByLabel('Find an organization')` resolves to the
+`role="search"` DIV wrapping `SearchInput` (which takes no `aria-label`), so `.fill()`
+throws — use the placeholder. And typing at the PAGE (`keyboard.type`) puts text in a
+React-Native-Web `Input`'s DOM without ever raising `onChangeText`: the box reads
+"vector" while the list is still the unfiltered browse view, so a spec that then looks
+for "Vector" finds it in the browse list and passes without the search having run. Fill
+the input and assert where ENTER lands.
+
+**Found, not fixed — for the palette lane.** The palette's visible list disagrees with
+the list it acts on. Type `vector` and commit: Enter correctly opens `/vector`
+(`items[sel]` comes from the ranked `destResults`), while the rows on screen are the
+unfiltered `browseGroups` in catalog order with `Overview` first and `#cmdk-active` on
+it. Reproduces via ⌘K, so it predates this work and is not caused by the rail's new
+search box. `find-and-do.spec.ts` passes because it probes Enter, never DOM order.
+
+## Integrations lists the whole registry, and one org has one name (v8.5.84)
+
+The tail of the same six the owner reported. The rail work above landed first and left
+two things standing.
+
+**Google was not missing — it was filtered out.** `apps/integrations/google.go` in cloud
+registers Google on the ORG plane (Drive + Sheets: the document import and the cap-table
+import both read the token it custodies), and `GET /v1/integrations` returns it. The
+console dropped it: `OrgIntegrationsModule` rendered
+`providers.filter((p) => p.available || p.connected)`. `available` is
+`Provider.Configured()`, which for Google is `GOOGLE_CLIENT_ID != ""` — and the cloud
+Deployment carries `SLACK_CLIENT_ID` and `GITHUB_APP_ID` and no `GOOGLE_CLIENT_*`. So
+the card was not unavailable on the page, it was ABSENT from it, and the only reading
+available to a reader was that we had dropped Google.
+
+The filter is gone. The page lists the registry; a provider the deployment holds no
+credentials for wears an `Unavailable` tag, says "Awaiting app credentials on this
+deployment." on its own card, and its Connect is inert. `available` is a fact about the
+deployment, not a reason to withhold the fact that the provider exists — the same rule
+the catalog now follows in the rail. Nothing else has to change when the credentials
+land: `integrations-catalog.spec.ts` runs the identical page against `available: true`
+and the button is live.
+
+**To actually connect Google** the deployment needs `GOOGLE_CLIENT_ID` +
+`GOOGLE_CLIENT_SECRET` from KMS on the cloud Deployment. That is a credential, not code.
+
+**One org, one name.** The switcher's trigger read the org identity IAM resolved
+(`useOrgIdentity` → "Hanzo AI", with the logo); the row inside it was re-derived from the
+slug by `scopedOrgRow(name)` → "Hanzo", with a monogram. One org named twice from two
+places, which is the exact drift `orgLabel` exists to prevent — it just never reached
+the row, because the row was built before there was an identity to name it with.
+`scopedOrgRow` takes the resolved org now and shapes it as a list; it derives nothing.
+
+**Three surfaces still say "connect your AI account"** and this did not converge them:
+- `connections` → `/v1/ai/connections` (live on the gateway) — openai · anthropic · google
+- `ai-accounts` → `app/v1/ai-accounts/*`, a console-local BFF (404 on api.hanzo.ai) —
+  hanzo · codex · claude, no Google
+- `integrations` → `/v1/integrations`, the org OAuth registry — Google among ~30
+
+Two products in the AI category both claim the GCP analog "Connected accounts", over two
+different backends, with two hand-written provider lists that disagree about whether
+Google exists. That is why "I can't see Google" had three possible answers. The
+convergence is a backend question (which of `/v1/ai/connections` and the console-local
+`/v1/ai-accounts` survives), so it is named here rather than half-done.
+
+## Tags — one page for the two halves of a conversion (v8.5.87)
+
+The org's own tag manager. A site's browser pixels, the org's server-side conversion
+destinations, and the one line that installs both — over API that was already live in
+production with no console surface on it.
+
+**The two halves are the SAME conversion, sent twice.** The hosted tag fires the native
+pixel in the page and posts to `/v1/event` with a shared `event_id`; the server forwards
+that event to the platform's Conversions API carrying the same id, so the platform
+dedupes the pair instead of double-counting it. That is why one page owns both, and why
+"the pixel id is public, the API credential is KMS-sealed" is not an inconsistency: the
+pixel id ships in the page by definition, and the credential never leaves the server.
+
+**Two scopes, and they are not the same scope.** A browser pixel belongs to a SITE —
+cloud stores it on that site's project (`PATCH /v1/projects/:slug`, the `tags` map), and
+hanzo.ai and hanzo.chat carry different ids under one org. A destination belongs to the
+ORG: cloud keys a destination row by `(org, platform)` with no site column. So they get
+separate routes (`/tags` and `/tags/destinations`) and each says which scope it writes.
+Drawing a per-site destination switch would be a lie about where the write lands.
+
+**[BUG I wrote, then caught] A replacing write can delete what the form never showed.**
+`PATCH` REPLACES the whole tag set — that is the contract, and it is the right one,
+because a merge would make "remove this pixel" unexpressible. The first cut built the
+body from the four rendered platforms alone, so a site carrying any other key (the map is
+not limited to the four with a browser pixel — the server CAPI reads it too) would have
+had that key silently dropped the first time an operator touched an unrelated field.
+`mergeTags(current, draft)` starts from the site's own tags and overwrites only what the
+form renders; a cleared id is deleted, which is still how a pixel comes off. It is a pure
+function in `apps.ts` rather than inline in the component precisely so the property can be
+pinned: a test asserts an unrendered `reddit` key survives a save.
+
+**The destination form is the SERVER's spec, not a shape hardcoded here.** Each status
+card carries the platform's own `fields` (key/label/required/example) and its KMS secret
+NAMES, so the console renders inputs from the response — a platform added upstream appears
+with its real inputs and no console change. The secret rides under the camelCase of its
+KMS name, and an EMPTY secret is OMITTED rather than sent blank: cloud reads an omitted
+secret as "keep the sealed one", which is what makes editing a pixel id on a connected
+destination non-destructive when the operator cannot read the token back.
+
+**Transport, unchanged.** Everything is the one same-origin prefix-free form
+(`originV1Url` → `/v1/…`). Two heads added to `CLOUD_HEADS`: `destinations` (the handler
+resolves the org from the Bearer owner and requires the org-admin bit to mutate) and
+`tags` (the PUBLIC door, allow-listed only so the console can PREVIEW through the same
+form as every other read — the ids are SET on the `projects` head).
+
+The preview is deliberately a separate read from the form above it. The door drops a
+platform with no browser pixel and any empty id, so `GET /v1/tags?key=` answers "what the
+page will do", which the stored config alone cannot. And the install snippet names
+`api.hanzo.ai` explicitly, NOT `config.cloudUrl` — in the browser that resolves to the
+console's own origin, so the snippet would have told a customer to load `event.js` from
+whichever host the operator happened to be reading the console on.
+
+Verification: `tsc --noEmit` clean; `vitest` **3387 passed / 8 skipped** (270 files; +47
+across the tag config, the door normalizer, the install snippet, `mergeTags`, and the
+destinations connect-body/secret-omission/state logic); `next build` ✓; `npm run
+build:embed` ✓ (the go:embed gate — this surface reaches console.hanzo.ai only through a
+cloud release embedding `console@main`). RENDER-proven, not mocked-and-asserted:
+`e2e/tags.spec.ts` drives the real UI — opens a site, edits a pixel, and asserts the
+PATCH body carries the whole set with the cleared platform absent and no slug; connects a
+destination and asserts the credential input is a real password field, that the secret
+goes out under its camelCase name, and that it is nowhere in the document afterwards; and
+that neither surface scrolls the body sideways at 390px.
+
+**Two lineages, and only one of them builds.** `github.com/hanzoai/console` (`origin`) and
+`git.hanzo.ai/hanzoai/console` (`forge`) share a merge base at 03ed5663ba (Aug 4) and have
+diverged since — 1558 commits on origin, 1673 on forge. Every console IMAGE in GHCR is
+built from the FORGE lineage: 8.5.86 is `sha-348a215`, which is forge/main's HEAD and is
+NOT a commit in the GitHub repo at all (nor are 8.5.81–8.5.85's). The CI that builds is
+`.hanzo/workflows/cicd.yml` — a FORGE workflow (`.hanzo/`, not `.github/`) calling
+`hanzoai/ci` which reads `/hanzo.yml`. The console carries NO `.github/workflows/`
+whatsoever, so it is not affected by the estate-wide GitHub `docker-build.yml` breakage.
+A push to GitHub alone lands code and produces NO image. Push BOTH; forge is the one CD
+reads. Structurally the two have converged (both dropped the local `src/components/ui`
+fork for `@hanzo/ui/product`, and the files this change touches are byte-identical across
+them except `registry.tsx`, where origin additionally carries a `beta` gate that hides a
+new catalog entry until the org holds the flag — so the same entry is visible by default
+on forge and gated on origin).
+
+Rollout stays a REVIEWED pin: universe `charts/app/values/hanzo/console.yaml` currently
+pins `tag: 8.5.83` while GHCR is already at 8.5.86, and cd.hanzo.ai's selfHeal restores
+that CR from the universe pin on every poll. So building an image does not ship it — the
+pin bump is a separate, deliberate change in hanzoai/universe.
+
+## CORRECTION — the console is a PUBLISHED SITE. go:embed is gone; `CONSOLE_REF` does not exist.
+
+Every note above that says a console change reaches console.hanzo.ai "on the next
+`hanzoai/cloud` release embedding `console@main` (`CONSOLE_REF=main`, go:embed)" is
+STALE — 41 lines of this file repeat it, and following it costs an afternoon looking
+for a pin that is not there. Measured in the cloud repo, not inferred:
+
+- cloud's `Dockerfile` has **no `CONSOLE_REF`, no `FROM … AS console` stage, no
+  `npm run build:embed`, no `COPY --from=console`**. The whole stage is deleted.
+- `webui/console.go` opens with **"IT CARRIES NO BYTES."** — nothing is `go:embed`ed.
+- cloud `326c0f57` (2026-08-05, *"the console is a published site, not a binary"*) is
+  an ancestor of cloud `main`, so this is what ships.
+
+**What actually happens now.** `serve.go` calls
+`release.Load(ctx, release.ConfigFromEnv(), logger)` and mounts
+`webui.Mount(app, release.FS(consoleSrc))` — the bytes are the **ACTIVE RELEASE of a
+SITE**, read from S3 at boot and re-read on a poll:
+
+    CLOUD_CONSOLE_SITE   the site whose active release IS the console  (default hanzo-console)
+    CLOUD_CONSOLE_ORG    its org — defaults to CLOUD_SITES_FIRSTPARTY_ORG (hanzo)
+    CLOUD_CONSOLE_POLL   how often the release is re-read
+
+So shipping the console is a **publish**, not a build and not a roll: sub-second,
+rollback faster, and it neither rebuilds nor restarts cloud. "Which console is live" is
+answered by the site's active release, not by a line in a Dockerfile. The Dockerfile
+says why the old way went: a console CSS fix was a CLOUD release (~22 min) on a
+single-replica `strategy: Recreate`, which took api.hanzo.ai down for a measured 2m15s.
+
+The publish route exists and is org-gated — `GET /v1/sites/hanzo-console/releases`
+answers **403 `X-Org-Id required`**, not 404. `apps/sites` pulls no OCI image; a release
+is uploaded bytes.
+
+**Consequence, measured 2026-08-08:** console `main` carries the design-system work
+(`@hanzo/ui/dist/theme.css` in this repo's own `node_modules` has 15 `--type-scale`
+hits) while the CSS served by console.hanzo.ai has **zero**, and its `--text-base` is a
+bare `0.875rem` with no `calc()`. Main is ahead of production because nothing has
+published a release since — not because a cloud release is pending.
+
+**Still open, deliberately not guessed:** `build:embed` remains in `package.json` and
+cloud no longer consumes it. It is plausibly what produces the static bundle a release
+is cut FROM — but that was not verified here, so do not delete it on the strength of
+this note. Find the publisher first.

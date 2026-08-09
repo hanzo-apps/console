@@ -26,6 +26,7 @@ import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
 import { FieldRow, FieldSwitch, FieldText, PageHeader } from '@hanzo/ui/product'
+import { Appearance } from '@hanzo/appearance'
 
 /**
  * Read a chosen logo file into a compact data URL the IAM `logo` string can
@@ -407,9 +408,33 @@ function BrandingTab() {
   )
 }
 
+
+/**
+ * A person's own reading of the system — text size, density, accent.
+ *
+ * The panel is @hanzo/appearance, not written here: hanzo.app and hanzo.chat
+ * show the SAME screen, and three near-identical ones is how "the same product"
+ * stops looking like it. What this file contributes is where it sits.
+ *
+ * Org settings above are the ORG's; this is the signed-in person's and it lives
+ * on their device, so it needs no save button and no permission check.
+ */
+function AppearanceTab() {
+  return (
+    <YStack gap="$4">
+      <Section title="Appearance">
+        <Appearance />
+      </Section>
+    </YStack>
+  )
+}
+
 export function SettingsModule({ params }: { params: Record<string, string> }) {
   const tab = productSubpageSlug('settings', params.tab)
-  const body = tab === 'branding' ? <BrandingTab /> : <GeneralTab />
+  const body =
+    tab === 'branding' ? <BrandingTab />
+    : tab === 'appearance' ? <AppearanceTab />
+    : <GeneralTab />
 
   return (
     <>

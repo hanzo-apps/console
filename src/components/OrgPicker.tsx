@@ -110,6 +110,9 @@ export function OrgPicker() {
   const owner = account?.owner ?? ''
 
   const [orgs, setOrgs] = useState<Organization[] | null>(null)
+  // org -> the caller's role in it, straight from the membership rows. The card
+  // states the role it was GRANTED rather than one inferred from the account.
+  const [roles, setRoles] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -148,7 +151,10 @@ export function OrgPicker() {
         return
       }
       MembershipApi.mine(me)
-        .then((rows) => orgNamesFor(owner, rows))
+        .then((rows) => {
+          if (live) setRoles(Object.fromEntries(rows.map((m) => [m.org, m.role])))
+          return orgNamesFor(owner, rows)
+        })
         .then((names) =>
           // One read per org, and a row that cannot be read degrades to its slug
           // rather than dropping the org off a list the person is entitled to see.
@@ -190,8 +196,8 @@ export function OrgPicker() {
   }, [owner, isSuperAdmin, ownOrgOnly, account?.name])
 
   const ctx: PickerContext = useMemo(
-    () => ({ ownOrg: owner, isSuperAdmin, callerIsAdmin: Boolean(account?.isAdmin) }),
-    [owner, isSuperAdmin, account?.isAdmin],
+    () => ({ ownOrg: owner, isSuperAdmin, callerIsAdmin: Boolean(account?.isAdmin), roles }),
+    [owner, isSuperAdmin, account?.isAdmin, roles],
   )
 
   const view = useMemo(

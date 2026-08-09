@@ -44,6 +44,12 @@ export type PickerContext = {
   isSuperAdmin: boolean
   /** Whether the caller is an admin of their OWN org (`account.isAdmin`). */
   callerIsAdmin: boolean
+  /**
+   * The caller's role in each org they hold a MEMBERSHIP in (`org -> role`),
+   * which is the only place the truth lives once a person can see more than one
+   * org. Optional so a caller that has not loaded memberships still renders.
+   */
+  roles?: Record<string, string>
 }
 
 /** The full picker view for a query + page — everything the UI renders. */
@@ -79,16 +85,24 @@ export function initialsOf(org: Organization): string {
 /**
  * The caller's HONEST role in this org — derived from real context, never guessed:
  *   - super admin viewing another org → "Super admin" (masquerade access)
- *   - the caller's own org, they admin it → "Admin"
- *   - the caller's own org otherwise    → "Member"
- *   - super admin viewing their own org → "Admin"
+ *   - an org they hold a MEMBERSHIP in → that membership's role
+ *   - the caller's own org             → "Admin" when they admin it, else "Member"
+ *
+ * The membership is consulted BEFORE the own-org fallback, because once a person
+ * can see more than one org the fallback is a guess. It used to end with a
+ * comment calling its own last branch unreachable — "a non-global-admin only
+ * ever sees their own org" — and that stopped being true the moment the picker
+ * started listing memberships: every joined org then rendered "Member",
+ * including ones the person administers.
  */
 export function roleFor(org: Organization, ctx: PickerContext): string {
   const isOwn = org.name === ctx.ownOrg
   if (ctx.isSuperAdmin && !isOwn) return 'Super admin'
+  const membership = ctx.roles?.[org.name]
+  if (membership) return titleCase(membership)
   if (isOwn) return ctx.callerIsAdmin ? 'Admin' : 'Member'
-  // A non-global-admin only ever sees their own org, so this is unreachable in
-  // practice; be honest rather than invent a role if it ever isn't.
+  // No membership row and not their own org: say the weaker thing rather than
+  // invent authority the caller may not have.
   return ctx.isSuperAdmin ? 'Admin' : 'Member'
 }
 

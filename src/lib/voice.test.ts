@@ -1,119 +1,70 @@
 /**
- * voice — feature-detection unit tests (node-safe, pure).
+ * voice — the console's configuration of `@hanzo/voice` (node-safe, pure).
  *
- * `voiceSupported()` is the ONE gate the chrome reads to decide whether to render
- * the "Talk to Hanzo" mic (topbar) and the composer mic — a browser without
- * SpeechRecognition must NEVER show a dead control. These tests pin that gate:
+ * `voiceSupported()` is the ONE gate the chrome reads to decide whether to
+ * render the "Talk to Hanzo" mics. It now answers from the package's own
+ * `capability`/`blocker`, which widens the old gate in exactly one way: a
+ * browser with no SpeechRecognition but a MediaRecorder + microphone is STILL
+ * supported, because the platform's ear (`/v1/audio/transcriptions`) can
+ * transcribe for it. These pin that contract:
  *
- *  - in node (no `window`) it is false — so SSR and a non-speech browser both
- *    correctly hide the mic;
- *  - it flips true when EITHER `window.SpeechRecognition` OR the vendor-prefixed
- *    `window.webkitSpeechRecognition` is present (Chrome/Edge are the primary
- *    targets, hence the prefixed fallback);
- *  - a TTS-only browser (has `speechSynthesis`, NO recognition ctor) is still
- *    false — the gate is "can this browser LISTEN", not "can it speak".
+ *  - in node (no speech machinery at all) it is false — SSR never renders a mic;
+ *  - a recogniser (plain or vendor-prefixed) alone is enough;
+ *  - a recorder + microphone alone is enough — the platform-ear leg;
+ *  - text-to-speech alone is NOT — the gate is "can this browser listen";
+ *  - an insecure context is never supported, whatever else is present.
  *
- * Kept pure/robust — no DOM, no network. The repo has no @testing-library/react or
- * jsdom (see package.json / CLAUDE.md: tests are pure-logic; component-render tests
- * are the e2e layer's job), so the hook's runtime wiring (mic → start() → the
- * recognition instance) is proven by `tsc` + the Playwright render spec
- * (`e2e/chrome-brand-voice.spec.ts`), not by rendering the hook here. `window` is
- * stubbed with `vi.stubGlobal` and auto-restored, so no test leaks a global.
+ * The machine's runtime wiring (mic → waveform → turn) is the package's own
+ * test suite's job plus the Playwright render spec — not re-proven here.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import * as voice from './voice'
-import { useVoice, voiceSupported } from './voice'
+import { HANZO_SPEECH, voiceSupported } from './voice'
 
-/** A minimal, inert SpeechRecognition ctor — the shape the gate keys off. */
-class FakeRecognition {
-  lang = ''
-  continuous = false
-  interimResults = false
-  onresult: unknown = null
-  onerror: unknown = null
-  onend: unknown = null
-  started = 0
-  start() {
-    this.started += 1
-  }
-  stop() {}
-  abort() {}
-}
-
-/** Install a fake `window` for the duration of a test (auto-restored in afterEach). */
-function stubWindow(props: Record<string, unknown>): void {
-  vi.stubGlobal('window', props)
-}
+class FakeRecognition {}
+class FakeRecorder {}
 
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
 describe('module surface', () => {
-  it('exports voiceSupported and useVoice as functions', () => {
+  it('exports the gate and the console speech configuration', () => {
     expect(typeof voiceSupported).toBe('function')
-    expect(typeof useVoice).toBe('function')
-    // The named exports are the ONLY surface — a caller feature-detects with
-    // voiceSupported() and drives the mic with the useVoice hook.
-    expect(typeof voice.voiceSupported).toBe('function')
-    expect(typeof voice.useVoice).toBe('function')
+    // Same-origin platform speech: whisper ears, kokoro voice.
+    expect(HANZO_SPEECH).toBeTruthy()
   })
 })
 
-describe('voiceSupported (feature detection)', () => {
-  it('is false in node — no window, so SSR and non-speech browsers hide the mic', () => {
-    // vitest runs in the node environment (no jsdom) → `window` is undefined.
-    expect(typeof window).toBe('undefined')
+describe('voiceSupported', () => {
+  it('is false in node — SSR and a speechless browser never show a mic', () => {
     expect(voiceSupported()).toBe(false)
   })
 
-  it('is true when window.SpeechRecognition is present', () => {
-    stubWindow({ SpeechRecognition: FakeRecognition })
+  it('is true with a recogniser', () => {
+    vi.stubGlobal('SpeechRecognition', FakeRecognition)
     expect(voiceSupported()).toBe(true)
   })
 
-  it('is true via the vendor-prefixed webkitSpeechRecognition fallback (Chrome/Edge)', () => {
-    stubWindow({ webkitSpeechRecognition: FakeRecognition })
+  it('is true with the vendor-prefixed recogniser', () => {
+    vi.stubGlobal('webkitSpeechRecognition', FakeRecognition)
     expect(voiceSupported()).toBe(true)
   })
 
-  it('prefers the unprefixed ctor but accepts either', () => {
-    stubWindow({ SpeechRecognition: FakeRecognition, webkitSpeechRecognition: FakeRecognition })
+  it('is true with a recorder + microphone — the platform ear transcribes', () => {
+    vi.stubGlobal('MediaRecorder', FakeRecorder)
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: () => {} } })
     expect(voiceSupported()).toBe(true)
   })
 
-  it('is false for a TTS-only browser — speechSynthesis without a recognition ctor', () => {
-    // The gate is "can this browser LISTEN"; a browser that can only speak must
-    // still hide the mic (never a dead control that does nothing on tap).
-    stubWindow({ speechSynthesis: { speak() {}, cancel() {} } })
+  it('is false with text-to-speech alone — the gate is "can it listen"', () => {
+    vi.stubGlobal('speechSynthesis', {})
     expect(voiceSupported()).toBe(false)
   })
 
-  it('re-evaluates the live window each call (not memoized at import)', () => {
-    // false → present → absent, proving the detection reads the CURRENT environment
-    // every call (so a late-arriving polyfill or an SSR→hydrate transition is seen).
+  it('is false in an insecure context, whatever else is present', () => {
+    vi.stubGlobal('SpeechRecognition', FakeRecognition)
+    vi.stubGlobal('isSecureContext', false)
     expect(voiceSupported()).toBe(false)
-    stubWindow({ SpeechRecognition: FakeRecognition })
-    expect(voiceSupported()).toBe(true)
-    vi.unstubAllGlobals()
-    expect(voiceSupported()).toBe(false)
-  })
-})
-
-describe('the recognition contract the hook relies on', () => {
-  it('the ctor the gate accepts is newable and exposes start/stop/abort', () => {
-    // The gate admits a ctor; the hook constructs it and calls start()/stop()/abort().
-    // Prove that contract is a plain newable with those methods (what useVoice needs),
-    // independent of React — a regression to the detected shape fails here.
-    stubWindow({ SpeechRecognition: FakeRecognition })
-    expect(voiceSupported()).toBe(true)
-    const Ctor = (window as unknown as { SpeechRecognition: new () => FakeRecognition }).SpeechRecognition
-    const rec = new Ctor()
-    expect(typeof rec.start).toBe('function')
-    expect(typeof rec.stop).toBe('function')
-    expect(typeof rec.abort).toBe('function')
-    rec.start()
-    expect(rec.started).toBe(1)
   })
 })

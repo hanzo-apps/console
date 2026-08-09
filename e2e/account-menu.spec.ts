@@ -17,7 +17,9 @@
  * against is a menu that is present in the DOM and unreadable — a library that
  * paints with utility class names renders exactly that in this app, because
  * Tailwind never scanned node_modules. An `expect(locator).toBeVisible()` would
- * have passed on the broken build.
+ * have passed on the broken build. That is also why the menu is now the console's
+ * OWN `Menu` on @hanzo/gui rather than a second rendering system injecting its own
+ * global stylesheet: the rows are `MenuRow`, so they are located by ARIA role.
  */
 import { test, expect, type Page } from '@playwright/test'
 import { primeSession } from './_session'
@@ -152,7 +154,7 @@ test.describe('account control', () => {
     expect(onTop).toBe(true)
 
     // Rows are padded, tall enough to hit, and readable.
-    const rows = await menu.locator('.hz-iam-row').evaluateAll((els) =>
+    const rows = await menu.locator('[role=menuitem], [role=radio]').evaluateAll((els) =>
       els.map((el) => {
         const s = getComputedStyle(el)
         return { pl: s.paddingLeft, h: el.getBoundingClientRect().height, color: s.color, text: (el.textContent ?? '').trim() }
@@ -166,7 +168,7 @@ test.describe('account control', () => {
     }
 
     // Hover is a real state — the switch-that-rendered-identical class of bug.
-    const first = menu.locator('.hz-iam-row').first()
+    const first = menu.locator('[role=menuitem], [role=radio]').first()
     const atRest = await first.evaluate((el) => getComputedStyle(el).backgroundColor)
     await first.hover()
     expect(await first.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(atRest)
@@ -200,7 +202,7 @@ test.describe('account control', () => {
 
     // Acme is nobody's membership — it exists only in the cross-tenant list an
     // admin may search. A memberships-only switcher could not offer it at all.
-    await page.getByLabel('Find an organization').fill('acme')
+    await page.getByPlaceholder('Find an organization').fill('acme')
     // `radiogroup`/`radio`, not `listbox`/`option`: @hanzo/gui's `role` union is
     // React Native's a11y set, which carries `option` but NOT `listbox`.
     const orgList = page.getByRole('radiogroup', { name: 'Organizations' })

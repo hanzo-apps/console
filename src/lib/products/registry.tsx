@@ -109,7 +109,7 @@ import { Users,
 } from '@hanzogui/lucide-icons-2'
 
 import { config, type BrandId, type ShellId } from '~/config'
-import { ALWAYS_ON_PRODUCTS, filterBeta, filterEntitled, isLaunchProduct } from '~/lib/entitlements'
+import { ALWAYS_ON_PRODUCTS, filterEntitled } from '~/lib/entitlements'
 import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
@@ -210,6 +210,7 @@ import { AlertsModule } from '~/components/products/AlertsModule'
 // `MachinesModule` (Compute › Machines, over visor-backed `/v1/machines`).
 import { BotsModule, MachinesModule as AdminMachinesModule, ClustersModule as AdminClustersModule, FunctionsModule as AdminFunctionsModule } from '~/components/products/ComputeModule'
 import { AnalyticsModule } from '~/components/products/AnalyticsModule'
+import { TagsModule, TagDestinations } from '~/components/products/TagsModule'
 import { LogsModule } from '~/components/products/LogsModule'
 import { PipelinesModule } from '~/components/products/PipelinesModule'
 import { ReleasesModule } from '~/components/products/ReleasesModule'
@@ -421,14 +422,6 @@ type CatalogBase = {
   docs?: string
   /** Admin-gated surface (shown with a lock hint; access enforced server-side). */
   admin?: boolean
-  /**
-   * Beta (early-access) product — hidden from every nav, palette, discovery
-   * panel and search until the caller's ORG holds the `apps` beta through the
-   * enablement plane (kind `feature`, id `apps`) — the same self-service
-   * opt-in the Beta features module manages. Superadmins always see them, and
-   * the gate fails CLOSED: no enablement read, no beta surfaces.
-   */
-  beta?: boolean
   /**
    * Per-brand scope — the brands whose console shows this entry (`entryInBrandScope`).
    * OMIT for a brand-agnostic entry (the default: shown on every brand its category
@@ -2533,6 +2526,31 @@ export const catalog: CatalogEntry[] = [
     subpages: [{ slug: 'llm', label: 'LLM' }],
   },
   {
+    // Tags — the org's tag manager. Browser pixels are per SITE (stored on the site's
+    // project, `PATCH /v1/projects/:slug`); server-side conversion destinations are per
+    // ORG (cloud keys a destination by org + platform, with no site column). The two
+    // scopes get their own routes so neither implies the other's reach.
+    //
+    // `destinations` is declared BEFORE `:slug` — routes are tried in order, so the
+    // literal wins over the parameter and the sub-page is reachable.
+    id: 'tags',
+    label: 'Tags',
+    icon: Tags,
+    description: 'Browser pixels per site, server-side conversions per org, and the one-line install.',
+    gcp: 'Google Tag Manager',
+    category: 'Observe',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    routes: [
+      { path: '', component: TagsModule },
+      { path: 'destinations', component: TagDestinations },
+      { path: ':slug', component: TagsModule },
+    ],
+    subpages: [{ slug: 'destinations', label: 'Destinations' }],
+    indexLabel: 'Sites',
+  },
+  {
     id: 'dashboards',
     label: 'Dashboards',
     icon: LineChart,
@@ -3509,7 +3527,13 @@ export const catalog: CatalogEntry[] = [
       { path: ':tab', component: SettingsModule },
     ],
     indexLabel: 'General',
-    subpages: [{ slug: 'branding', label: 'Branding' }],
+    subpages: [
+      { slug: 'branding', label: 'Branding' },
+      // Appearance is a PERSON's setting, not the org's, but it sits beside
+      // Branding because both answer "how does this look" and someone
+      // hunting for one finds the other.
+      { slug: 'appearance', label: 'Appearance' },
+    ],
   },
   {
     id: 'contact',
@@ -3812,17 +3836,6 @@ export const catalogByCategory = (): { category: ProductCategory; entries: Catal
 export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
 
 /**
- * A BETA entry — hidden until the org holds the beta flag (or is a superadmin).
- *
- * Beta is the COMPLEMENT of the launch set, not a per-entry stamp: we are
- * launching with hanzo.chat, hanzo.app and the console, so everything outside
- * `LAUNCH_PRODUCTS` is beta by default and a new catalog entry is hidden the
- * day it lands. `beta: true` still forces the flag on for an entry inside the
- * launch set, which is how a launch surface can ship dark.
- */
-export const isBetaEntry = (e: CatalogEntry): boolean => e.beta === true || !isLaunchProduct(e.id)
-
-/**
  * Per-brand category scope — the ONE knob that makes each brand's console show
  * the right surfaces. `hanzo` is the full AI cloud. The sovereign-chain brands
  * (`lux`, `zoo`, `pars`) are **web3 / bootnode admin** consoles: on-chain
@@ -3855,13 +3868,7 @@ export const inBrand = (e: CatalogEntry): boolean =>
 // former `BILLING_CENTER_ID`/`MARKETING_ID`/`ADS_ID`/`SOCIAL_ID` per-mode consts were
 // collapsed into it (a name is a value in one namespace, no parallel id constants).
 
-export const visibleCatalog = (
-  showAdmin: boolean,
-  enabled?: string[] | null,
-  // Fails CLOSED on purpose: a caller that has not asked the enablement plane
-  // does not show beta surfaces.
-  showBeta = false,
-): CatalogEntry[] => {
+export const visibleCatalog = (showAdmin: boolean, enabled?: string[] | null): CatalogEntry[] => {
   // Product-shell face (billing / marketing / ads / social / sentry host, or an
   // override): the SAME console image, scoped to ONE product FACE — its root module
   // surfaced alone. Bypass the brand-category + entitlement scope so the face shows on
@@ -3877,7 +3884,7 @@ export const visibleCatalog = (
   // belong to their face, not the general nav (e.g. the sentry panels are the o11y
   // surfaces' Sentry twin, shown only on sentry.<brand>). marketing/ads/social carry
   // NO `e.shell` (normal Apps products), so they ALSO show in the full console.
-  const byAdmin = filterBeta(showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e)), showBeta, showAdmin)
+  const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e)))
     .filter((e) => !e.shell)
     .filter(inBrand)
   // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
@@ -3891,9 +3898,8 @@ export const visibleCatalog = (
 export const visibleCatalogByCategory = (
   showAdmin: boolean,
   enabled?: string[] | null,
-  showBeta = false,
 ): { category: ProductCategory; entries: CatalogEntry[] }[] => {
-  const visible = visibleCatalog(showAdmin, enabled, showBeta)
+  const visible = visibleCatalog(showAdmin, enabled)
   // In a product-shell face the root module IS the whole catalog — surface it as a
   // single group regardless of the brand's category order (its category may be
   // outside the brand's normal set). ONE branch for EVERY face.

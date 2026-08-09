@@ -77,7 +77,6 @@ import { assistantState, commandBarSystemPrompt, hanzoAssistantSystemPrompt } fr
 import { searchDestinations, type Destination } from '~/lib/products/search'
 import { DEFAULT_GROUP_LABEL, pinnedFirst } from '~/lib/products/pins-core'
 import { usePins, useProductColors } from '~/lib/products/pins'
-import { useAppsBeta } from '~/lib/products/beta'
 import { ProductIcon } from '~/components/ui/ProductIcon'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
@@ -214,6 +213,7 @@ function CatalogRow({
   return (
     <XStack
       className="hz-row-pin"
+      data-testid="palette-hit"
       onPress={onPress}
       cursor="pointer"
       items="center"
@@ -279,6 +279,7 @@ function DestinationRow({
   const Icon = subpage.icon ?? entry.icon
   return (
     <XStack
+      data-testid="palette-hit"
       onPress={onPress}
       cursor="pointer"
       items="center"
@@ -365,7 +366,6 @@ function PaletteDialog({
   const router = useRouter()
   const { signOut } = useSession()
   const showAdmin = useIsSuperAdmin()
-  const showBeta = useAppsBeta(showAdmin)
   const { colorOf } = useProductColors()
   const pins = usePins()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
@@ -441,7 +441,7 @@ function PaletteDialog({
   // a search, so the ranked branch is left strictly alone.
   const destResults = useMemo(() => {
     if (mode !== 'catalog') return []
-    const found = searchDestinations(query, showAdmin, null, showBeta)
+    const found = searchDestinations(query, showAdmin, null)
     if (sub) return found.slice(0, 50)
     return pinnedFirst(found, (d) => (d.kind === 'product' ? d.entry.id : ''), pins.pinnedIds)
   }, [mode, query, sub, showAdmin, pins.pinnedIds])
@@ -822,17 +822,26 @@ export function Palette({ children }: { children: ReactNode }) {
   )
 }
 
-/** Header trigger — a search box that opens the palette. */
-export function CommandSearchBox() {
+/**
+ * THE search box — the one control that opens the palette, wherever a surface wants
+ * to offer search. The header, the sidebar rail and the mobile drawer all mount this
+ * one component; each used to draw its own box, which is three searches for one
+ * question. `onOpen` lets a surface that is itself dismissible (the drawer) step out
+ * of the way first.
+ */
+export function CommandSearchBox({ height = 36, onOpen }: { height?: number; onOpen?: () => void } = {}) {
   const { open } = useCommandPalette()
   return (
     <XStack
-      onPress={open}
+      onPress={() => {
+        onOpen?.()
+        open()
+      }}
       cursor="pointer"
       items="center"
       gap="$2"
       px="$3"
-      height={36}
+      height={height}
       flex={1}
       maxW={420}
       bg="$color2"
