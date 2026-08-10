@@ -87,6 +87,8 @@ import { Users,
   Handshake,
   BookOpen,
   MessageSquare,
+  Phone,
+  PhoneCall,
   Search,
   KeySquare,
   SlidersHorizontal,
@@ -308,6 +310,7 @@ import { BetaFeaturesModule } from '~/components/products/BetaFeaturesModule'
 import { GitOpsModule } from '~/components/products/gitops/GitOpsModule'
 import { DeployModule } from '~/components/products/deploy/DeployModule'
 import { ContactModule } from '~/components/products/ContactModule'
+import { TelModule } from '~/components/products/TelModule'
 
 /** A Hanzo GUI icon component (e.g. `Server` from `@hanzogui/lucide-icons-2`). */
 export type ProductIcon = typeof Server
@@ -3112,6 +3115,32 @@ export const catalog: CatalogEntry[] = [
     subpages: [
       { slug: 'contacts', label: 'Contacts', icon: Users },
       { slug: 'opportunities', label: 'Opportunities', icon: Target },
+    ],
+  },
+  {
+    // Telecom — the org's phone numbers, calls and messages over the native-Go cloud
+    // `/v1/tel` surface (cloud apps/tel on Base/SQLite). Carrier-agnostic: which
+    // network carries the traffic is deployment configuration, so nothing here (or in
+    // the module) names one. Per-org through the user-bearer /v1 BFF, exactly like crm.
+    id: 'tel',
+    label: 'Telecom',
+    icon: Phone,
+    description: 'Phone numbers, calls, and messages for your org — on whatever carrier this deployment runs.',
+    category: 'Apps',
+    status: 'enabled',
+    repo: 'hanzoai/cloud',
+    kind: 'module',
+    // The index IS Numbers (`/tel`), because the backend makes a held number the
+    // PRECONDITION for both other collections — a call or a message whose `from` is
+    // not this org's is refused. Calls and Messages render via the `:tab` route.
+    routes: [
+      { path: '', component: TelModule },
+      { path: ':tab', component: TelModule },
+    ],
+    indexLabel: 'Numbers',
+    subpages: [
+      { slug: 'calls', label: 'Calls', icon: PhoneCall },
+      { slug: 'messages', label: 'Messages', icon: MessageSquare },
     ],
   },
   {

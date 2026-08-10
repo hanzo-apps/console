@@ -164,6 +164,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // cookie-only call, so it routes through /v1 exactly like crm/agents — the single
   // `tracker` head admits every sub-path (projects, a project's issues, their :num detail).
   'tracker',
+  // Telecom (cloud apps/tel): /v1/tel/{summary,numbers[/available|/:id],calls[/:id],
+  // messages}. Native per-org telecom plane on Base/SQLite (numbers held, call and
+  // message records), carrier-agnostic. Every op resolves the org from the Bearer
+  // owner (principal.RequireOrg) and 403s a cookie-only call, so it routes through
+  // /v1 exactly like crm/tracker — the single `tel` head admits every sub-path
+  // (the availability search, a number's :id release, a call's :id hangup).
+  'tel',
   // Integrations (cloud clients/integrations): /v1/integrations[/:provider[/connect|
   // /disconnect]]. The generic, provider-agnostic OAuth connector framework (Slack =
   // reference impl, GitHub = registered seam). connect/list/disconnect resolve the org

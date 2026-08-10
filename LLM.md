@@ -4204,3 +4204,98 @@ published a release since — not because a cloud release is pending.
 cloud no longer consumes it. It is plausibly what produces the static bundle a release
 is cut FROM — but that was not verified here, so do not delete it on the strength of
 this note. Find the publisher first.
+
+## Telecom — the org's numbers, calls and messages, over `/v1/tel` (feat/console-tel)
+
+A product module over cloud `apps/tel` — a carrier-agnostic, per-org telecom plane on
+Base/SQLite. Two files added, three edited. There is no new design system, no second
+API client and no second way to route; the point of the exercise was that adding a
+product should cost a catalog row and a client.
+
+**The wire is the typed-op shape, and it is not the one the doc comment implies.** zip
+typed ops write `c.JSON(out)` — bare, no casibase envelope — so a list is `{data:[…]}`
+(WRAPPED, unlike tracker's bare arrays), a create is the bare record at 201, and a
+delete answers **200 `{}`**, because the handler returns an empty struct and sets no
+`WithStatus`. `restDelete` already tolerates 200 and 204, so that one needed nothing.
+
+**Two backend rules are encoded in the SHAPE of the form, not validated after it.**
+`POST /calls` and `POST /messages` refuse unless `from` is a number the org holds
+(`store.NumberByE164` → 403), so `from` is a select over held numbers — a control that
+cannot compose the rejected request. With no numbers held, Calls and Messages say "buy
+a number first" instead of rendering a form whose only outcome is a 403. And
+`/numbers/available` 400s without `country`, so `available()` takes it as a required
+argument rather than an optional filter.
+
+That shape matters more than usual here because of a transport fact worth knowing
+generally: **`parseRestResponse` throws `ApiError('Not authorized')` on 401/403 BEFORE
+reading the body**, so a backend's own 403 reason never reaches the user. 400/424/5xx
+DO surface `error`/`msg` verbatim. Design the 403 out of reach; do not rely on its
+message.
+
+**`Number` keeps the wire's name.** The backend, the route and the UI say one word, and
+TypeScript's type and value namespaces are separate, so this shadows the global `Number`
+TYPE only — the constructor is untouched at every import site, including inside the
+client where `num()` calls it. `TelModule` aliases it on import for readability. Do not
+rename it to a compound.
+
+**`rate(minor, currency)` is not a seventh `usd()`.** A carrier quotes in its own
+currency, so the amount is formatted through `Intl` with the code the backend reported,
+and an unquoted rate (0) is an em-dash — the carrier said nothing and the UI must not
+say `$0.00`. (`usd(cents)` still exists in six places and was left alone; that
+consolidation is its own change.)
+
+**Files.** Added `src/lib/api/tel.ts` (types, defensive normalizers, `rate`,
+`searchQuery`, and a `TelApi` that is 1:1 with the ten typed ops) + `tel.test.ts`.
+Added `src/components/products/TelModule.tsx` — three tabs on the `:tab` route, over
+`PageHeader`/`SubNav`/`DataTable`/`SlideOver`/`ConfirmDelete`/`Field*`/`EmptyState`/
+`BackendStateCard`/`StatusTag`/`useToast`. Edited `registry.tsx` (one icon import, one
+module import, one `CatalogEntry`), `proxy-allow.ts` (`'tel'` in `CLOUD_HEADS`), and
+`e2e/route-ids.json`. Numbers is the index because a held number is the precondition
+for the other two collections.
+
+Nothing else needed touching, and the ones that look like they should are worth naming:
+`next.config.mjs` (a clean `/v1/<head>` falls through to the BFF — no rewrite),
+`src/lib/api/index.ts` (carries no per-app clients), `entitlements.ts`
+(`ALWAYS_ON_PRODUCTS` is deliberately tiny; an absent endpoint leaves `entitledSet`
+null, i.e. ungated), and `overview/spec.ts` (a `platform-app` health source before the
+service exists in the platform inventory renders a permanently-red band).
+
+`e2e/pages.spec.ts` was deliberately NOT edited: its `PAGES` list does not track the
+Apps category at all (no `crm`, `tracker`, `social`), so `route-ids.json` — which
+`blank-audit.spec.ts` drives — is the canonical list and the one a new id belongs in.
+
+**Measured, and the reason the module ships its honest state rather than data:**
+
+    api.hanzo.ai/v1/tel/summary       -> 404  "404 page not found"   (raw fiber; unrouted)
+    api.hanzo.ai/v1/tracker/projects  -> 403  {"status":403,…,"error":"X-Org-Id required"}
+    console.hanzo.ai/v1/tel/summary   -> 404  "404 page not found"
+    console.hanzo.ai/v1/crm/summary   -> 403  {"…":"a validated principal is required"}
+
+The tel app is committed on cloud `main` and its tests pass, but no deployed host serves
+`/v1/tel` — the controls answer the honest 403 of a routed head, tel answers the raw
+404 of an unrouted one. So every panel renders `BackendStateCard` ("not available on
+this deployment yet") until the tel plugin ships. That is the designed state, not a gap.
+
+**Verification.** `vitest` 3393 passed / 8 skipped (270 files; +15 tel). `next build`
+**✓ Compiled successfully in 42s** — the module bundles.
+
+**`tsc --noEmit` is RED on canonical main, and it is not this change.** One error,
+`src/components/Provider.tsx:46`, a `GuiInternalConfig` variance mismatch
+(`Omit<StackStyleBase, Longhands>` vs `StackStyleBase`). Proven pre-existing by
+stashing this work and re-running on a clean tree: same one error, and zero in any file
+touched here. It is a dependency ALIGNMENT problem, reproducible from this repo's own
+lockfile — `@hanzo/ui@8.0.69` was built against a newer `@hanzo/gui` than the `^8.0.0`
+this repo resolves to (8.0.0). `next build` compiles and then fails at its type step on
+it, so main's build gate is red until `@hanzo/gui` is moved. Left alone deliberately:
+bumping the design system inside a feature commit is a repo-wide change wearing a
+product change's clothes.
+
+**One more trap for whoever is next, since it cost an hour here.** This checkout's
+`main` was 1534 ahead / 1687 behind `forge/main` **with no merge base at all** — two
+different root commits. `origin/main` had been force-updated to forge's sha, so GitHub
+and the forge agree and the local branch was the odd one out: a pre-history-rewrite
+lineage whose work is all present on canonical under new shas. The tell was cheap and
+should be the first thing checked on any console task: `git merge-base HEAD forge/main`
+printing nothing. The UI primitives had moved to `@hanzo/ui/product` on canonical while
+the stale tree still had them local, so code written against the stale tree compiles
+against files that no longer exist. Rebase before you write, not after.
