@@ -50,7 +50,7 @@ export function normalizeStats(raw: unknown): RouterStats {
   const quality: QualityStats = {
     reward_rate: num(q.reward_rate),
     rewarded_events: num(q.rewarded_events),
-    engine_share: num(q.engine_share),
+    learned_share: num(q.learned_share),
     avg_confidence: num(q.avg_confidence),
     shadow_agreement: numOrNull(q.shadow_agreement),
   }

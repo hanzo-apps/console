@@ -78,11 +78,11 @@ export type CostStats = {
   priced_events: number
 }
 
-/** Quality proxy — learned-reward + engine share + confidence; shadow nullable. */
+/** Quality proxy — learned-reward + learned share + confidence; shadow nullable. */
 export type QualityStats = {
   reward_rate: number
   rewarded_events: number
-  engine_share: number
+  learned_share: number
   avg_confidence: number
   shadow_agreement: number | null
 }

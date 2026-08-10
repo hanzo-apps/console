@@ -3050,7 +3050,9 @@ origin/main did NOT build; the consistency fix is folded in here, no package bum
   — `saved_pct` headline + `routed_index` vs `counterfactual_index` (vs the premium
   `baseline_model`) + `cumulative_saved_index`, LABELED a blended `$/MTok` PROXY (the
   ledger has no token counts), honest "—" when `priced_events==0`; **(b) Quality
-  proxy** — `reward_rate` (+ `rewarded_events` coverage), `engine_share`,
+  proxy** — `reward_rate` (+ `rewarded_events` coverage), `learned_share` (the share
+  routed by the TUNED prefer table — trainer arms + admin pins — over the static conf
+  seed; the top-level `by_source` histogram is the provenance behind that one ratio),
   `avg_confidence`, and `shadow_agreement` ONLY when non-null (else an honest "not
   available yet" tile); **(c) Per-task distribution** — `by_task` as a per-task Donut
   (models by share) + a `by_model` Donut + a `throughput` LineChart (24 buckets); the

@@ -38,7 +38,7 @@ const ORG_FIXTURE = {
     baseline_model: 'zen4-pro',
     priced_events: 900,
   },
-  quality: { reward_rate: 0.72, rewarded_events: 340, engine_share: 0.65, avg_confidence: 0.81, shadow_agreement: null },
+  quality: { reward_rate: 0.72, rewarded_events: 340, learned_share: 0.65, avg_confidence: 0.81, shadow_agreement: null },
   by_task: {
     code: { events: 500, models: { 'zen4-coder': 300, 'qwen3-coder': 200 } },
     chat: { events: 700, models: { zen4: 700 } },
@@ -122,15 +122,15 @@ describe('formatters', () => {
   })
 
   it('rewardLabel is a percent for a rate, raw for out-of-unit, — with no coverage', () => {
-    expect(rewardLabel({ reward_rate: 0.72, rewarded_events: 340, engine_share: 0, avg_confidence: 0, shadow_agreement: null })).toBe('72%')
-    expect(rewardLabel({ reward_rate: 1.4, rewarded_events: 5, engine_share: 0, avg_confidence: 0, shadow_agreement: null })).toBe('1.40')
-    expect(rewardLabel({ reward_rate: 0.9, rewarded_events: 0, engine_share: 0, avg_confidence: 0, shadow_agreement: null })).toBe('—')
+    expect(rewardLabel({ reward_rate: 0.72, rewarded_events: 340, learned_share: 0, avg_confidence: 0, shadow_agreement: null })).toBe('72%')
+    expect(rewardLabel({ reward_rate: 1.4, rewarded_events: 5, learned_share: 0, avg_confidence: 0, shadow_agreement: null })).toBe('1.40')
+    expect(rewardLabel({ reward_rate: 0.9, rewarded_events: 0, learned_share: 0, avg_confidence: 0, shadow_agreement: null })).toBe('—')
   })
 
   it('shadowAgreementLabel is null (not-available) until scored, else a percent', () => {
     expect(shadowAgreementLabel(ORG_FIXTURE.quality)).toBeNull()
     expect(
-      shadowAgreementLabel({ reward_rate: 0, rewarded_events: 0, engine_share: 0, avg_confidence: 0, shadow_agreement: 0.92 }),
+      shadowAgreementLabel({ reward_rate: 0, rewarded_events: 0, learned_share: 0, avg_confidence: 0, shadow_agreement: 0.92 }),
     ).toBe('92%')
   })
 })

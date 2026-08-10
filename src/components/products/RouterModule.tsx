@@ -6,7 +6,7 @@
  * tabs:
  *   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
  *     (org-scoped): (a) cost saved (a blended $/MTok PROXY, not billed dollars),
- *     (b) a quality proxy (learned reward / engine share / confidence / shadow
+ *     (b) a quality proxy (learned reward / learned share / confidence / shadow
  *     agreement), (c) the per-task routed-model distribution, the last-retrain gate
  *     verdict when present, and the opt-in training-contribution toggle (kept in
  *     THIS one place — the toggle lives nowhere else in the console).
@@ -214,9 +214,9 @@ function RouterBoard({ stats }: { stats: RouterStats }) {
           />
           <MetricCard
             icon={<Gauge size={16} color={ACCENT} />}
-            label="Engine share"
-            value={fractionPct(q.engine_share)}
-            caption="learned engine vs heuristic"
+            label="Learned share"
+            value={fractionPct(q.learned_share)}
+            caption="tuned table vs static seed"
           />
           <MetricCard
             icon={<Activity size={16} color={ACCENT} />}
