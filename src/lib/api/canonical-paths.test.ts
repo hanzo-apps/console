@@ -8,6 +8,7 @@ import { VisorApi } from './visor'
 import { ComputeApi } from './compute'
 import { ProvisioningApi } from './provisioning'
 import { StorageApi } from './storage'
+import { KeysApi } from './keys'
 import { FrameworkApi } from '~/lib/framework/client'
 import { BillingApi } from './billing'
 import { PlansApi } from './plans'
@@ -92,6 +93,22 @@ describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /clo
     stub({ buckets: [] })
     await StorageApi.buckets()
     expect(lastUrl).toBe(`${ORIGIN}/v1/s3/buckets`)
+  })
+  // The per-user sk- credential. PIN THE ADDRESS, not the body: this client used
+  // to call /v1/iam/keys, which api.hanzo.ai routes to IAM — IAM answered 401 for a
+  // request meant for cloud, and every suite around it stayed green because each one
+  // stubbed a response and asserted the normalization. A key page that cannot be
+  // read is the same class of defect the billing routes hit.
+  it('KeysApi.status -> /v1/keys (never IAM prefix)', async () => {
+    stub({ keys: [] })
+    await KeysApi.status()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/keys`)
+    expect(lastUrl).not.toContain('/v1/iam/')
+  })
+  it('KeysApi.create -> /v1/keys', async () => {
+    stub({ accessKey: 'sk-x' })
+    await KeysApi.create()
+    expect(lastUrl).toBe(`${ORIGIN}/v1/keys`)
   })
   it('FrameworkApi.doctypes.list -> /v1/framework/doctypes', async () => {
     stub({ data: [] })

@@ -14,6 +14,9 @@
  * plus the serverless / prompt / agent surfaces.
  */
 export const CLOUD_HEADS: readonly string[] = [
+  // The per-user sk- credential. It lives on cloud's OWN head: /v1/iam/* routes to
+  // IAM, which answers a request meant for cloud with its own 401.
+  'keys',
   // Managed data resources (provisioning service) — one REST head per kind.
   'sql',
   'vector',

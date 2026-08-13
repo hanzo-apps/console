@@ -1,22 +1,25 @@
 /**
- * Cloud API key client — the per-user `sk-` credential, via the console's OWN
- * same-origin `/keys` route (`app/keys/route.ts`). The server resolves the user
- * from the first-party session cookie and mints/reads/revokes through IAM as the
- * confidential `hanzo-console` client; the browser only ever sends its cookie.
+ * Cloud API key client — the per-user `sk-` credential.
  *
- * SAME-ORIGIN by construction (the fix for the money crack): the old client hit
- * `config.cloudUrl/v1/iam/keys` — a DIFFERENT origin than console.hanzo.ai — so
- * the browser `fetch` was blocked by CORS ("Failed to fetch"), and cloud-api's own
- * `/v1/iam/keys` handler 501s on this deployment regardless. Addressing the
- * console's own `/keys` route (which uses the working IAM `mint-user-keys` path)
- * keeps the request same-origin and the credential entirely server-side.
+ * The address is `/v1/keys`, which is cloud's own. It used to be `/v1/iam/keys`,
+ * and that is the whole of this bug: `api.hanzo.ai` routes `/v1/iam/*` to IAM, so
+ * a request to the old address never reached cloud at all — IAM answered it, saw
+ * no bearer of its own, and returned its own 401. The console told a signed-in
+ * person to create a key on a card whose read had been refused by a service that
+ * was never meant to serve it. Cloud moved the surface off IAM's prefix for
+ * exactly this reason (clients/account: "the same rule that moved the key surface
+ * off /v1/iam/keys"); this follows it.
+ *
+ * One transport, the same one every other cloud call uses: `restGet`/`restPost`/
+ * `restDelete` over the shared fetch, which carries the caller's identity —
+ * a minted user Bearer where a BFF stands in front, the first-party session
+ * cookie where the console is served by cloud itself. The old code hand-rolled a
+ * bare `fetch` with `Accept` and nothing else, so it presented no identity at all.
  *
  * The secret is returned ONLY by `create()` (show once). `status()` reports
  * existence + the public prefix, never secret material.
  */
-import { ApiError, originV1Url } from './client'
-import { IS_EMBED } from '~/lib/embed'
-import { csrfRequired, csrfToken, clearCsrfToken, CSRF_HEADER } from './csrf'
+import { originV1Url, restDelete, restGet, restPost } from './client'
 
 export type KeyStatus = {
   hasKey: boolean
@@ -25,57 +28,51 @@ export type KeyStatus = {
   createdAt?: string
 }
 
-/**
- * The console's OWN same-origin key route (`<origin>/keys`); root-relative on the server.
- *
- * In the go:embed console (`IS_EMBED`) the `app/keys/route.ts` handler is stripped (no
- * Next server → the request falls through to the SPA shell), and the cloud binary serves
- * the canonical `sk-` key surface at `/v1/iam/keys` (clients/account/account.go — GET
- * status, POST mint, DELETE revoke), resolving the caller from the first-party IAM
- * session cookie. So the embed addresses `<origin>/v1/iam/keys` directly. Non-embed
- * hosts keep the Next `/keys` proxy (confidential mint client).
- */
-const keysUrl = (): string =>
-  IS_EMBED
-    ? originV1Url('iam/keys')
-    : typeof window !== 'undefined'
-      ? `${window.location.origin}/keys`
-      : '/keys'
-
-async function keysReq<T>(method: 'GET' | 'POST' | 'DELETE'): Promise<T> {
-  // In the embed build the mint/revoke write hits the cloud binary's ambient-cookie
-  // `/v1/iam/keys` (requireCSRF), so echo the anti-CSRF token; a 403 = an
-  // expired/rotated token → re-mint once and retry (blue's re-fetch-on-403 contract).
-  const send = async (): Promise<Response> => {
-    const headers: Record<string, string> = { Accept: 'application/json' }
-    if (csrfRequired(method)) {
-      const token = await csrfToken()
-      if (token) headers[CSRF_HEADER] = token
-    }
-    return fetch(keysUrl(), { method, credentials: 'include', headers })
-  }
-  let res: Response
-  try {
-    res = await send()
-    if (res.status === 403 && csrfRequired(method)) {
-      clearCsrfToken()
-      res = await send()
-    }
-  } catch (e) {
-    throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
-  }
-  const json = (await res.json().catch(() => null)) as { error?: string } | null
-  if (!res.ok) {
-    throw new ApiError(json?.error || `Request failed (HTTP ${res.status})`, res.status)
-  }
-  return json as T
+/** One key as cloud lists it. `key` is present for a publishable key only. */
+type ApiKey = {
+  type?: string
+  prefix?: string
+  key?: string
+  createdAt?: string
 }
+
+/**
+ * The SECRET key — the `sk-` credential this page manages. Cloud reads an omitted
+ * `type` as this one, so neither write sends a body; the read has to pick it out
+ * of the list, which also carries the publishable `pk-` key.
+ */
+const SECRET = 'secret'
+
+const keysUrl = (): string => originV1Url('keys')
+
+/** The secret key's row, or undefined when the caller holds none. */
+const secretOf = (keys: unknown): ApiKey | undefined =>
+  (Array.isArray(keys) ? (keys as ApiKey[]) : []).find(
+    (k) => (k?.type ?? SECRET) === SECRET,
+  )
 
 export const KeysApi = {
   /** Whether the account has a key, plus its public prefix (no secret). */
-  status: () => keysReq<KeyStatus>('GET'),
+  status: async (): Promise<KeyStatus> => {
+    const out = await restGet<{ keys?: ApiKey[] }>(keysUrl())
+    const row = secretOf(out?.keys)
+    return {
+      hasKey: Boolean(row),
+      keyPrefix: row?.prefix ?? '',
+      createdAt: row?.createdAt ?? '',
+    }
+  },
   /** Mint (or rotate) the key; returns the full `sk-` key ONCE. */
-  create: () => keysReq<{ accessKey: string }>('POST'),
+  create: async (): Promise<{ accessKey: string }> => {
+    const out = await restPost<{ accessKey?: string; key?: string }>(keysUrl())
+    // The mint answers with both spellings; either is the one-time reveal.
+    return { accessKey: out?.accessKey ?? out?.key ?? '' }
+  },
   /** Revoke the key (the old key stops working). */
-  revoke: () => keysReq<{ ok: boolean }>('DELETE'),
+  revoke: async (): Promise<{ ok: boolean }> => {
+    // restDelete resolves only on a 2xx — a refusal throws — so reaching here IS
+    // the confirmation, and there is no body to read one out of.
+    await restDelete(keysUrl())
+    return { ok: true }
+  },
 }
