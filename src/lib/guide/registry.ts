@@ -15,6 +15,7 @@
  */
 import type { ProductGuide } from './spec'
 import { isUsed, canAdminister, type GuideSignals } from './signals'
+import { CONSOLE_TOUR, PLAYGROUND_TOUR } from '~/lib/tour/steps'
 
 /** Done when the account holds a Cloud API key (a real, strong signal). */
 const hasKey = (s: GuideSignals): boolean => s.hasApiKey === true
@@ -77,12 +78,9 @@ export const GUIDES: Record<string, ProductGuide> = {
         done: usedAny('iam'),
       },
     ],
-    // The home carries stable anchors (sidebar, api-key CTA, metrics) the first-run
-    // tour already spotlights — appended after the generated step-walk.
-    tour: [
-      { id: 'nav', target: '[data-tour="nav"]', title: 'Every product, one place', body: 'Browse and open every product from the sidebar — pin the ones you use most.', placement: 'right' },
-      { id: 'metrics', target: '[data-tour="metrics"]', title: 'Live observability', body: 'Your inference metrics, logs, and traces stream here in real time.', placement: 'top' },
-    ],
+    // ONE console tour: the same walk the first-run tour opens by itself
+    // (`FirstRunTour`) is what this card's "Take the tour" replays on demand.
+    tour: CONSOLE_TOUR,
   },
 
   // ── AI ───────────────────────────────────────────────────────────────────────
@@ -209,6 +207,9 @@ export const GUIDES: Record<string, ProductGuide> = {
       },
       getKeyStep('models from your own code'),
     ],
+    // The real walk of the Playground's own surfaces — modes, model, composer, Run,
+    // the response and its cost, tuning, and taking the code away.
+    tour: PLAYGROUND_TOUR,
   },
 
   vector: {

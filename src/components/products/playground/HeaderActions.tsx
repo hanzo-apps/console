@@ -103,7 +103,7 @@ export function HeaderActions({
       {/* Code (request preview) */}
       <Popover placement="bottom-end">
         <Popover.Trigger asChild>
-          <Button size="$2" icon={<Code2 size={15} />} borderWidth={1} borderColor="$borderColor" />
+          <Button size="$2" data-tour="pg-code" aria-label="Copy as code" icon={<Code2 size={15} />} borderWidth={1} borderColor="$borderColor" />
         </Popover.Trigger>
         <Popover.Content {...paper} p="$3">
           <RequestPreview curl={curl} json={json} />
@@ -113,6 +113,7 @@ export function HeaderActions({
       {/* Share */}
       <Button
         size="$2"
+        data-tour="pg-share"
         icon={shared ? <Check size={14} color="$green10" /> : <Share2 size={14} />}
         borderWidth={1}
         borderColor="$borderColor"

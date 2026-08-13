@@ -837,6 +837,7 @@ export function CommandSearchBox({ height = 36, onOpen }: { height?: number; onO
         onOpen?.()
         open()
       }}
+      data-tour="search"
       cursor="pointer"
       items="center"
       gap="$2"

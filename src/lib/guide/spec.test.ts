@@ -84,11 +84,25 @@ describe('buildTourFromSteps', () => {
     expect(tour[0].target).toBe('[data-tour="guide-demo-use"]')
   })
 
-  it('appends authored extra tour steps after the generated walk', () => {
-    const extra: TourStep = { id: 'x', title: 't', body: 'b' }
-    const g2: ProductGuide = { ...guide, tour: [extra] }
+  /**
+   * An authored tour REPLACES the checklist walk. It used to be appended, which meant
+   * "Take the tour" opened by spotlighting rows of the very card the button lives on —
+   * the user is already reading them, and the product itself never got shown.
+   */
+  it('an authored tour wins outright over the generated step-walk', () => {
+    const authored: TourStep[] = [
+      { id: 'x', title: 't', body: 'b', target: '[data-tour="real-thing"]' },
+      { id: 'y', title: 't', body: 'b' },
+    ]
+    const g2: ProductGuide = { ...guide, tour: authored }
     const tour = buildTourFromSteps(g2, resolveSteps(g2, sig()))
-    expect(tour[tour.length - 1].id).toBe('x')
+    expect(tour.map((t) => t.id)).toEqual(['x', 'y'])
+    expect(tour.some((t) => t.target?.includes('guide-demo'))).toBe(false)
+  })
+
+  it('an empty authored tour still falls back to the step-walk', () => {
+    const g2: ProductGuide = { ...guide, tour: [] }
+    expect(buildTourFromSteps(g2, resolveSteps(g2, sig())).length).toBeGreaterThan(0)
   })
 })
 

@@ -191,7 +191,7 @@ export function WorkbenchDock() {
     )
 
   return (
-    <YStack display="none" $lg={{ display: 'flex' }} borderTopWidth={1} borderColor="$borderColor" bg="$color1">
+    <YStack display="none" $lg={{ display: 'flex' }} borderTopWidth={1} borderColor="$borderColor" bg="$color1" data-tour="workbench">
       {open ? (
         <YStack style={{ height }} borderBottomWidth={1} borderColor="$borderColor">
           {/* Drag-to-resize handle — grab the top edge and drag to ANY height. */}

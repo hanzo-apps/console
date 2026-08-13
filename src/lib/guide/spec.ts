@@ -72,9 +72,9 @@ export interface ProductGuide {
   pitch: Pitch
   steps: GuideStep[]
   /**
-   * Extra spotlight tour steps beyond the generated step-walk (e.g. the console
-   * home's nav/api-key/metrics anchors). Usually empty — the tour is generated from
-   * `steps`. Appended after the step-walk.
+   * The authored spotlight tour of the product's own surfaces. When present it IS
+   * the tour (see {@link buildTourFromSteps}); absent, the tour is generated from
+   * the incomplete `steps`.
    */
   tour?: TourStep[]
 }
@@ -124,11 +124,19 @@ export function incompleteCount(steps: StepProgress[]): number {
 }
 
 /**
- * The tour for a guide = a spotlight walk over the user's INCOMPLETE steps (each
- * highlighting that step's on-screen row), then any extra authored `tour` steps.
- * Personalized: done steps are dropped, so the walk covers only what's left.
+ * The tour for a guide.
+ *
+ * An AUTHORED tour wins outright: where we have written a real walk over the
+ * product's own surfaces (the Playground's modes, model, composer, response…), that
+ * is the tour — walking the checklist ROWS instead would spotlight a card the user is
+ * already reading and teach them nothing about the product.
+ *
+ * Otherwise the tour is generated from the user's INCOMPLETE steps, each highlighting
+ * that step's on-screen row. Personalized either way: done steps are dropped, so the
+ * generated walk covers only what is left.
  */
 export function buildTourFromSteps(guide: ProductGuide, resolved: StepProgress[]): TourStep[] {
+  if (guide.tour?.length) return guide.tour
   const stepTour: TourStep[] = resolved
     .filter((r) => !r.done)
     .map((r) => ({

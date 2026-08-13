@@ -222,7 +222,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
 
       {/* Response — full width, directly under the surface tabs, so the answer
           is the first thing on every screen size. The builder row follows. */}
-      <YStack width="100%">
+      <YStack width="100%" data-tour="pg-response">
         <ResponsePanel run={run} pricing={pricing} model={composer.model} requestJson={json} />
       </YStack>
 
@@ -233,7 +233,7 @@ export function ChatPlayground({ mode }: { mode: 'chat' | 'completions' }) {
             wrap into a clean vertical stack on a narrow screen (no h-scroll). */}
         <YStack flex={2} minW={320} gap="$3">
           <XStack gap="$3" items="flex-start" flexWrap="wrap">
-            <YStack flex={1} minW={300}>
+            <YStack flex={1} minW={300} data-tour="pg-compose">
               <Composer
                 composer={composer}
                 mode={mode}

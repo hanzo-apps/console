@@ -23,6 +23,13 @@ export type TourStep = {
   body: string
   placement?: TourPlacement
   /**
+   * The in-console route this step's anchor lives on. A step on ANOTHER route is
+   * navigated to before it is spotlighted (that is what makes a tour able to walk a
+   * user around the console rather than one screen). Absent ⟹ the anchor is expected
+   * on whatever route the tour was launched from.
+   */
+  route?: string
+  /**
    * Personalization: include the step only when this holds (default: always). Lets a
    * tour adapt to the user's real state — e.g. skip the "get your API key" step for a
    * user who already has one. Filtered by `resolveTour` in `lib/guide/spec.ts`.
@@ -32,47 +39,170 @@ export type TourStep = {
 
 /**
  * The console first-run tour — honest to what the console actually is (a cloud
- * console for AI products), no fabricated features. Anchors: `nav` (sidebar,
- * Dashboard), `api-key` + `metrics` (home, page.tsx). Missing anchors center.
+ * console for AI products), no fabricated features. Anchors: `nav` + `search`
+ * (the shell, dashboard.tsx), `guide-overview-api-key` + `metrics` (home,
+ * page.tsx), `workbench` (the Developers dock, lg+ only — it auto-skips on a
+ * phone rather than spotlighting nothing).
  */
 export const CONSOLE_TOUR: TourStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to your console',
-    body: 'A quick tour of the essentials — your products, your API key, and your live usage. Takes about 20 seconds. You can skip anytime.',
+    body: 'Sixty seconds on the essentials — every product, your API key, and what a call actually costs. Skip anytime.',
     placement: 'center',
   },
   {
     id: 'nav',
     target: '[data-tour="nav"]',
     title: 'Every product, one place',
-    body: 'Browse and open every product from the sidebar — AI, Compute, Data, Security, Deploy, Observe, and more. Pin the ones you use most.',
+    body: 'AI, Compute, Data, Security, Deploy, Observe — all behind one login and one bill. Pin the ones you use most.',
     placement: 'right',
+  },
+  {
+    id: 'search',
+    target: '[data-tour="search"]',
+    title: 'Jump anywhere with ⌘K',
+    body: 'One box searches every product and page. Type > to ask the built-in assistant, or ? to search the docs.',
+    placement: 'bottom',
   },
   {
     id: 'api-key',
     // The get-your-key affordance now lives in the home getting-started panel.
     target: '[data-tour="guide-overview-api-key"]',
-    title: 'Get your API key',
-    body: 'Create a personal key to call the models from your apps, SDKs, and CLI. It is the fastest way to start building.',
+    title: 'One key, every model',
+    body: 'Mint a personal sk- key and the whole OpenAI-compatible /v1 surface opens up — models, embeddings, search, your own services.',
     placement: 'bottom',
+    route: '/',
     // Personalized: a user who already holds a key skips straight past this step.
     when: (s) => s.hasApiKey !== true,
   },
   {
     id: 'metrics',
     target: '[data-tour="metrics"]',
-    title: 'Live observability',
-    body: 'Your inference metrics, logs, and traces stream here in real time — the same signals across every product. Open Observability for the full view.',
+    title: 'Live usage and spend',
+    body: 'Real requests, real tokens, real cost — metered as you go, on the same screen you launched from.',
+    placement: 'top',
+    route: '/',
+  },
+  {
+    id: 'playground',
+    target: '[data-tour="pg-compose"]',
+    title: 'Try it before you write code',
+    body: 'The Playground runs a live model in the browser, then hands you the exact request as cURL or JSON.',
+    placement: 'right',
+    route: '/playground',
+  },
+  {
+    id: 'workbench',
+    target: '[data-tour="workbench"]',
+    title: 'The Developers dock',
+    body: 'Your recent calls, errors and spend — plus a shell that runs read-only /v1 requests as you, without leaving the page.',
+    placement: 'top',
+  },
+]
+
+/**
+ * The Playground tour — a walk over the surfaces that make the Playground worth
+ * opening, in the order a person actually uses them: pick a modality, pick a
+ * model, write the prompt, run it, read the real answer and its real cost, tune
+ * it, then take the code. Every anchor is a REAL element on `/playground`.
+ */
+export const PLAYGROUND_TOUR: TourStep[] = [
+  {
+    id: 'modes',
+    target: '[data-tour="pg-modes"]',
+    title: 'Seven surfaces, one key',
+    body: 'Chat, Completions, Embeddings, Image, Video, Audio and Vision all run through the same gateway and the same credential.',
+    placement: 'bottom',
+  },
+  {
+    id: 'model',
+    target: '[data-tour="pg-model"]',
+    title: 'Any model, one string',
+    body: 'Zen, Claude, GPT, Llama and hundreds more behind one OpenAI-compatible endpoint. Switching model is switching this value.',
+    placement: 'bottom',
+  },
+  {
+    id: 'compose',
+    target: '[data-tour="pg-compose"]',
+    title: 'Write the prompt',
+    body: 'A system prompt plus real message turns. Use {{variables}} to parameterize it, or drop in images for a vision run.',
+    placement: 'right',
+  },
+  {
+    id: 'run',
+    target: '[data-tour="pg-run"]',
+    title: 'Run it — ⌘↵',
+    body: 'The answer streams back token by token off the live gateway. Stop mid-flight whenever you have seen enough.',
     placement: 'top',
   },
   {
-    id: 'assistant',
-    title: 'Ask the assistant anytime',
-    body: 'The built-in assistant knows the whole suite — press ⌘K or open the chat bubble to ask how to do anything, or jump straight to a product.',
-    placement: 'center',
+    id: 'response',
+    target: '[data-tour="pg-response"]',
+    title: 'The answer, and what it cost',
+    body: 'Real completion, real token counts, real price for that call. The Logs tab shows the exact request that produced it.',
+    placement: 'bottom',
+  },
+  {
+    id: 'tune',
+    target: '[data-tour="pg-tune"]',
+    title: 'Tune it',
+    body: 'Temperature, top-p, max tokens, stop sequences, seed — every control maps to a real field on the request.',
+    placement: 'left',
+  },
+  {
+    id: 'code',
+    target: '[data-tour="pg-code"]',
+    title: 'Copy as code',
+    body: 'Take the request you just ran as cURL or JSON and paste it straight into your app. No translation step.',
+    placement: 'bottom',
+  },
+  {
+    id: 'share',
+    target: '[data-tour="pg-share"]',
+    title: 'Save it, share it',
+    body: 'Save a prompt to your library, or copy a link that restores this exact prompt, model and settings for a teammate.',
+    placement: 'bottom',
+  },
+  {
+    id: 'nav',
+    target: '[data-tour="nav"]',
+    title: 'Then ship the rest',
+    body: 'Functions, deployments, vector search, identity and spend are all one click away in the sidebar.',
+    placement: 'right',
   },
 ]
+
+// ── planning: never spotlight nothing ───────────────────────────────────────────
+
+/** Compare two in-console paths ignoring a trailing slash and any query/hash. */
+export function sameRoute(a: string, b: string): boolean {
+  const norm = (p: string): string => {
+    const bare = (p || '/').split(/[?#]/)[0]
+    const trimmed = bare.replace(/\/+$/, '')
+    return trimmed === '' ? '/' : trimmed
+  }
+  return norm(a) === norm(b)
+}
+
+/**
+ * The steps this tour can actually SHOW, given where the user is standing.
+ *
+ * A step survives when it is centered (no target), when it names another route (the
+ * tour navigates there), or when its anchor is on the page right now. A step whose
+ * anchor is absent on the route it belongs to is DROPPED — so the progress count is
+ * honest from the first step and no step can spotlight an element that isn't there.
+ */
+export function planTour(
+  steps: TourStep[],
+  ctx: { pathname: string; has: (selector: string) => boolean },
+): TourStep[] {
+  return steps.filter((s) => {
+    if (!s.target) return true
+    if (s.route && !sameRoute(s.route, ctx.pathname)) return true
+    return ctx.has(s.target)
+  })
+}
 
 // ── pure index helpers ────────────────────────────────────────────────────────────
 

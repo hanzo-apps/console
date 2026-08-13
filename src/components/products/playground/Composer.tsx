@@ -118,12 +118,16 @@ export function Composer({
     >
       {/* Model chip row */}
       <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
-        <ModelSelector
-          models={models}
-          value={composer.model}
-          onChange={composer.setModel}
-          disabled={running || modelsLoading}
-        />
+        {/* Wrapped, not annotated: `ModelSelector` is THE shared picker (Evals uses it
+            too), so the Playground's tour anchor belongs to the Playground. */}
+        <YStack data-tour="pg-model" minW={0} style={{ flexShrink: 1 }}>
+          <ModelSelector
+            models={models}
+            value={composer.model}
+            onChange={composer.setModel}
+            disabled={running || modelsLoading}
+          />
+        </YStack>
         <XStack items="center" gap="$0.5">
           {/* Settings — desktop toggles the attached side-pane; the chevron shows
               its state. (Hidden below md, where the mobile trigger takes over.) */}
@@ -132,6 +136,7 @@ export function Composer({
             chromeless
             display="none"
             $md={{ display: 'flex' }}
+            data-tour="pg-tune"
             icon={<SlidersHorizontal size={15} />}
             iconAfter={<ChevronDown size={13} opacity={0.6} rotate={settingsOpen ? '0deg' : '-90deg'} />}
             onPress={onToggleSettings}
@@ -141,11 +146,13 @@ export function Composer({
               Settings
             </Text>
           </Button>
-          {/* Settings — mobile opens the bottom sheet. (Hidden at md+.) */}
+          {/* Settings — mobile opens the bottom sheet. (Hidden at md+.) The same tour
+              anchor: only one of the pair is ever visible, and the tour takes that one. */}
           <Button
             size="$2"
             chromeless
             $md={{ display: 'none' }}
+            data-tour="pg-tune"
             icon={<SlidersHorizontal size={16} />}
             onPress={onOpenSettingsSheet}
             aria-label="Model settings"
@@ -290,7 +297,7 @@ export function Composer({
         </XStack>
 
         {/* Run + caret */}
-        <XStack items="center" gap={1}>
+        <XStack items="center" gap={1} data-tour="pg-run">
           {running ? (
             <Button size="$3" icon={<Square size={14} />} onPress={onStop} bg="$color5" borderTopRightRadius={0} borderBottomRightRadius={0}>
               Stop
