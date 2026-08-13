@@ -86,27 +86,23 @@ const MODELS: { id: string; name: string; badge?: string; tags: string[] }[] = [
   { id: 'zen5-coder', name: 'Zen Coder', tags: ['Fastest', 'Lowest cost', 'High volume'] },
 ]
 
-const RESOURCES: { name: string; blurb: string; slug: string }[] = [
+const RESOURCES: { name: string; blurb: string }[] = [
   {
     name: 'Advisor mode',
     blurb:
       'Increase intelligence while minimizing cost and token usage. A cheaper model consults a stronger advisor mid-task.',
-    slug: 'advisor',
   },
   {
     name: 'Fast mode',
     blurb: 'Up to 2.5x faster output on supported models, at premium pricing. Same model, same intelligence.',
-    slug: 'fast-mode',
   },
   {
     name: 'Batch API',
     blurb: 'Move async workloads to the Batch API and save 50% on standard API prices.',
-    slug: 'batch',
   },
   {
     name: 'Prompt caching',
     blurb: 'Reuse prompt prefixes across API calls. Most orgs see input costs drop 50–90%.',
-    slug: 'prompt-caching',
   },
 ]
 
@@ -205,7 +201,7 @@ export function Home() {
               size="$1"
               borderWidth={1}
               borderColor="$borderColor"
-              onPress={() => docs('prompt-caching')}
+              onPress={() => docs()}
             >
               Set up
             </Button>
@@ -316,7 +312,7 @@ export function Home() {
                 borderWidth={1}
                 borderColor="$borderColor"
                 icon={<BookOpen size={13} />}
-                onPress={() => docs(r.slug)}
+                onPress={() => docs()}
               >
                 Open docs
               </Button>
