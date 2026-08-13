@@ -5,20 +5,26 @@
  *
  * It replaced a catalog of every Hanzo product. That page answered "what do you
  * sell", which is a question a signed-in account has already stopped asking — it
- * arrives wanting a key, a model, and its balance. The products still exist and
- * are still reachable; they are opt-in rather than the first thing in the way.
+ * arrives wanting a key, a model, and its balance. The products are still one click
+ * away, at the foot of the page and in the sidebar; they stop standing in front of
+ * the API.
  *
- * The three figures at the top are the whole state of an account: what it has,
- * what it has spent, and whether prompt caching is reusing anything. None of them
- * is fabricated — an unavailable balance reads as unavailable, never as $0.00,
- * because a zero a customer does not have is worse than a blank (billing-proxy
- * makes the same promise upstream: "it never fabricates a balance").
+ * The three figures at the top are the whole state of an account: what it has, what
+ * it has spent, and whether prompt caching is reusing anything. None of them is
+ * fabricated — an unavailable balance reads as unavailable, never as $0.00, because
+ * a zero a customer does not have is worse than a blank (billing-proxy makes the
+ * same promise upstream: "it never fabricates a balance").
  */
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight, BookOpen, KeyRound, Boxes, HandCoins, ExternalLink } from '@hanzogui/lucide-icons-2'
 
+import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
+import { ProviderLogo } from '~/components/ui/ProviderLogo'
+import { visibleCatalog } from '~/lib/products/registry'
+import { useIsSuperAdmin } from '~/lib/auth/admin'
 
 /** Greeting by local hour. Three bands, so it reads as written by a person. */
 function greeting(hour: number): string {
@@ -31,7 +37,7 @@ function greeting(hour: number): string {
 function Figure({ value, sub }: { value: string | null; sub: string }) {
   return (
     <YStack gap="$1">
-      <Text fontSize="$9" fontWeight="700">
+      <Text fontSize="$8" $md={{ fontSize: '$9' }} fontWeight="700">
         {value ?? '—'}
       </Text>
       <Text fontSize="$2" color="$color10">
@@ -51,8 +57,8 @@ function StatCard({
   action?: React.ReactNode
 }) {
   return (
-    <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" flex={1} minW={260}>
-      <XStack justify="space-between" items="center">
+    <Card borderWidth={1} borderColor="$borderColor" p="$3" $md={{ p: '$4' }} gap="$2" flex={1} minW={240}>
+      <XStack justify="space-between" items="center" gap="$2">
         <Text fontSize="$3" color="$color11">
           {title}
         </Text>
@@ -63,40 +69,54 @@ function StatCard({
   )
 }
 
-/** The model lineup, in the order an account should try them: Enso first. */
-const MODELS: { name: string; badge?: string; tags: string[]; tone: '$blue7' | '$orange7' | '$color4' | '$green7' }[] = [
-  { name: 'Enso', tags: ['Most capable', 'Research', 'Multi-day tasks'], tone: '$blue7' },
-  { name: 'Zen', badge: 'New', tags: ['Complex projects', 'Agents', 'Coding'], tone: '$orange7' },
-  { name: 'Zen VL', tags: ['Everyday tasks', 'Writing', 'Cost-efficient'], tone: '$color4' },
-  { name: 'Zen Coder', tags: ['Fastest', 'Lowest cost', 'High volume'], tone: '$green7' },
+/**
+ * The model lineup, in the order an account should try them: Enso first.
+ *
+ * The mark comes from the ONE brand resolver every model surface uses
+ * (`ProviderLogo` → `brandForModel`), so Enso and the Zen family render the house
+ * mark rather than a colour this file invented. `BRANDS` deliberately excludes the
+ * house brands from its hue table — ours are the mark, not a tile — so a bespoke
+ * palette here would have been off-brand by construction, and would have drifted
+ * the moment a vendor hue changed.
+ */
+const MODELS: { id: string; name: string; badge?: string; tags: string[] }[] = [
+  { id: 'enso', name: 'Enso', tags: ['Most capable', 'Research', 'Multi-day tasks'] },
+  { id: 'zen5', name: 'Zen', badge: 'New', tags: ['Complex projects', 'Agents', 'Coding'] },
+  { id: 'zen5-vl', name: 'Zen VL', tags: ['Everyday tasks', 'Writing', 'Cost-efficient'] },
+  { id: 'zen5-coder', name: 'Zen Coder', tags: ['Fastest', 'Lowest cost', 'High volume'] },
 ]
 
-const RESOURCES: { name: string; blurb: string; href: string }[] = [
+const RESOURCES: { name: string; blurb: string; slug: string }[] = [
   {
     name: 'Advisor mode',
     blurb:
       'Increase intelligence while minimizing cost and token usage. A cheaper model consults a stronger advisor mid-task.',
-    href: 'https://docs.hanzo.ai/advisor',
+    slug: 'advisor',
   },
   {
     name: 'Fast mode',
     blurb: 'Up to 2.5x faster output on supported models, at premium pricing. Same model, same intelligence.',
-    href: 'https://docs.hanzo.ai/fast-mode',
+    slug: 'fast-mode',
   },
   {
     name: 'Batch API',
     blurb: 'Move async workloads to the Batch API and save 50% on standard API prices.',
-    href: 'https://docs.hanzo.ai/batch',
+    slug: 'batch',
   },
   {
     name: 'Prompt caching',
     blurb: 'Reuse prompt prefixes across API calls. Most orgs see input costs drop 50–90%.',
-    href: 'https://docs.hanzo.ai/prompt-caching',
+    slug: 'prompt-caching',
   },
 ]
 
+/** The rest of the cloud, sourced from the ONE registry so it can never drift. */
+const EXPLORE = ['playground', 'agents', 'functions', 'embeddings', 'gpus', 'platform']
+
 export function Home() {
   const { account } = useSession()
+  const router = useRouter()
+  const showAdmin = useIsSuperAdmin()
   const [hour, setHour] = useState<number | null>(null)
 
   // Read the clock after mount: the server and the browser can sit in different
@@ -107,19 +127,50 @@ export function Home() {
     ?? (account as { name?: string } | null)?.name
     ?? ''
 
+  const go = (path: string) => router.push(path)
+  // Docs and status are SITES, not routes — and brand-scoped, so a Lux console
+  // sends a reader to docs.lux.network and never to Hanzo's.
+  const open = (url: string) => {
+    if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener')
+  }
+  const docs = (slug?: string) => open(slug ? `${config.docsUrl}/docs/${slug}` : config.docsUrl)
+  const catalog = visibleCatalog(showAdmin)
+  const explore = EXPLORE.map((id) => catalog.find((e) => e.id === id)).filter(
+    (e): e is NonNullable<typeof e> => Boolean(e),
+  )
+
   return (
-    <YStack gap="$5" p="$4" maxW={1040} width="100%" self="center">
+    <YStack gap="$4" $md={{ gap: '$5' }} maxW={1040} width="100%" self="center">
       <XStack justify="space-between" items="center" gap="$3" flexWrap="wrap">
-        <Text fontSize="$8" fontWeight="700">
+        <Text fontSize="$7" $md={{ fontSize: '$8' }} fontWeight="700">
           {hour === null ? 'Welcome' : greeting(hour)}
           {who ? `, ${who}` : ''}
         </Text>
         <XStack gap="$2" items="center">
-          <Button size="$2" chromeless icon={<BookOpen size={16} />} aria-label="Documentation" />
-          <Button size="$2" borderWidth={1} borderColor="$borderColor" icon={<KeyRound size={14} />}>
+          <Button
+            size="$2"
+            chromeless
+            icon={<BookOpen size={16} />}
+            aria-label="Documentation"
+            onPress={() => docs()}
+          />
+          <Button
+            size="$2"
+            borderWidth={1}
+            borderColor="$borderColor"
+            icon={<KeyRound size={14} />}
+            onPress={() => go('/api-keys')}
+          >
             Get API key
           </Button>
-          <Button size="$2" bg="$color5" borderWidth={1} borderColor="$borderColor" icon={<Boxes size={14} />}>
+          <Button
+            size="$2"
+            bg="$color5"
+            borderWidth={1}
+            borderColor="$borderColor"
+            icon={<Boxes size={14} />}
+            onPress={() => go('/agents')}
+          >
             Build an agent
           </Button>
         </XStack>
@@ -129,7 +180,13 @@ export function Home() {
         <StatCard
           title="Organization credits"
           action={
-            <Button size="$1" borderWidth={1} borderColor="$borderColor" icon={<HandCoins size={13} />}>
+            <Button
+              size="$1"
+              borderWidth={1}
+              borderColor="$borderColor"
+              icon={<HandCoins size={13} />}
+              onPress={() => go('/billing/credits')}
+            >
               Add funds
             </Button>
           }
@@ -144,7 +201,12 @@ export function Home() {
         <StatCard
           title="Prompt caching"
           action={
-            <Button size="$1" borderWidth={1} borderColor="$borderColor">
+            <Button
+              size="$1"
+              borderWidth={1}
+              borderColor="$borderColor"
+              onPress={() => docs('prompt-caching')}
+            >
               Set up
             </Button>
           }
@@ -153,38 +215,63 @@ export function Home() {
         </StatCard>
       </XStack>
 
-      <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3">
+      <Card borderWidth={1} borderColor="$borderColor" p="$3" $md={{ p: '$4' }} gap="$2">
         <Text fontSize="$3" color="$color11">
           Token volume
         </Text>
-        <XStack justify="space-between" items="flex-end">
+        <XStack justify="space-between" items="flex-end" gap="$3" flexWrap="wrap">
           <Figure value={null} sub="No activity in the last 7 days" />
-          <Button size="$2" borderWidth={1} borderColor="$borderColor">
+          <Button size="$2" borderWidth={1} borderColor="$borderColor" onPress={() => go('/playground')}>
             Try a prompt
           </Button>
         </XStack>
       </Card>
 
       <YStack gap="$3">
-        <XStack justify="space-between" items="center">
+        <XStack justify="space-between" items="center" gap="$2">
           <Text fontSize="$5" fontWeight="700">
             Models
           </Text>
-          <Button size="$2" chromeless iconAfter={<ArrowRight size={14} />}>
-            Compare models
-          </Button>
+          <XStack gap="$1" items="center">
+            <Button size="$2" chromeless onPress={() => go('/models')}>
+              All models
+            </Button>
+            <Button
+              size="$2"
+              chromeless
+              iconAfter={<ArrowRight size={14} />}
+              onPress={() => go('/models/leaderboard')}
+            >
+              Compare
+            </Button>
+          </XStack>
         </XStack>
-        <XStack gap="$3" flexWrap="wrap">
+        <XStack gap="$3" flexWrap="wrap" items="stretch">
           {MODELS.map((m) => (
-            <Card key={m.name} borderWidth={1} borderColor="$borderColor" width={228} overflow="hidden">
-              <YStack height={96} bg={m.tone} />
+            <Card
+              key={m.id}
+              borderWidth={1}
+              borderColor="$borderColor"
+              flex={1}
+              minW={200}
+              overflow="hidden"
+              cursor="pointer"
+              hoverStyle={{ borderColor: '$color8' }}
+              pressStyle={{ opacity: 0.85 }}
+              onPress={() => go('/models')}
+              accessibilityRole="link"
+              aria-label={`${m.name} — open the model catalog`}
+            >
+              <XStack height={84} bg="$color2" items="center" justify="center">
+                <ProviderLogo provider="zen" model={m.id} size={40} />
+              </XStack>
               <YStack p="$3" gap="$2">
                 <XStack gap="$2" items="center">
                   <Text fontSize="$5" fontWeight="700">
                     {m.name}
                   </Text>
                   {m.badge ? (
-                    <Text fontSize="$1" bg="$blue7" px="$2" py="$1" rounded="$2">
+                    <Text fontSize="$1" bg="$color5" px="$2" py="$1" rounded="$2">
                       {m.badge}
                     </Text>
                   ) : null}
@@ -208,14 +295,29 @@ export function Home() {
         </Text>
         <XStack gap="$3" flexWrap="wrap" items="stretch">
           {RESOURCES.map((r) => (
-            <Card key={r.name} borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" width={228}>
+            <Card
+              key={r.name}
+              borderWidth={1}
+              borderColor="$borderColor"
+              p="$3"
+              $md={{ p: '$4' }}
+              gap="$2"
+              flex={1}
+              minW={200}
+            >
               <Text fontSize="$4" fontWeight="700">
                 {r.name}
               </Text>
               <Text fontSize="$2" color="$color11" flex={1}>
                 {r.blurb}
               </Text>
-              <Button size="$1" borderWidth={1} borderColor="$borderColor" icon={<BookOpen size={13} />}>
+              <Button
+                size="$1"
+                borderWidth={1}
+                borderColor="$borderColor"
+                icon={<BookOpen size={13} />}
+                onPress={() => docs(r.slug)}
+              >
                 Open docs
               </Button>
             </Card>
@@ -223,15 +325,49 @@ export function Home() {
         </XStack>
       </YStack>
 
-      <XStack gap="$4" justify="center" py="$4">
-        <Button size="$1" chromeless iconAfter={<ExternalLink size={12} />}>
+      {explore.length > 0 ? (
+        <YStack gap="$3">
+          <Text fontSize="$5" fontWeight="700">
+            Explore the cloud
+          </Text>
+          <XStack gap="$2" flexWrap="wrap">
+            {explore.map((e) => {
+              const Icon = e.icon
+              return (
+                <Card
+                  key={e.id}
+                  borderWidth={1}
+                  borderColor="$borderColor"
+                  p="$3"
+                  gap="$1"
+                  flex={1}
+                  minW={150}
+                  cursor="pointer"
+                  hoverStyle={{ borderColor: '$color8' }}
+                  pressStyle={{ opacity: 0.85 }}
+                  onPress={() => go(`/${e.id}`)}
+                  accessibilityRole="link"
+                  aria-label={`Open ${e.label}`}
+                >
+                  <XStack gap="$2" items="center">
+                    <Icon size={16} />
+                    <Text fontSize="$3" fontWeight="700">
+                      {e.label}
+                    </Text>
+                  </XStack>
+                </Card>
+              )
+            })}
+          </XStack>
+        </YStack>
+      ) : null}
+
+      <XStack gap="$4" justify="center" py="$3" flexWrap="wrap">
+        <Button size="$1" chromeless iconAfter={<ExternalLink size={12} />} onPress={() => open(config.statusUrl)}>
           API status
         </Button>
-        <Button size="$1" chromeless>
+        <Button size="$1" chromeless onPress={() => docs()}>
           Help and support
-        </Button>
-        <Button size="$1" chromeless>
-          Feedback
         </Button>
       </XStack>
     </YStack>
