@@ -36,7 +36,7 @@ type Opt = { value: string; label: string; glyph?: React.ReactElement }
 
 /** A Popover single-select menu — a labeled trigger, a scrollable option list, an
  *  optional clear. Selecting closes via the controlled `Popover` (uncontrolled here
- *  is fine — Radix closes on outer press). */
+ *  is fine — @hanzo/gui's Popover closes on outer press). */
 function Menu({
   trigger,
   options,

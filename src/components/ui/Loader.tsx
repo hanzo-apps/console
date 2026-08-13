@@ -84,10 +84,11 @@ export const HanzoMark = BrandMark
 export function Loader({ label, size = 48 }: { label?: string; size?: number }) {
   return (
     <YStack flex={1} minH="100vh" items="center" justify="center" gap="$3">
-      <style>
-        {'@keyframes hz-pulse{0%,100%{opacity:.5}50%{opacity:1}}.hz-pulse{animation:hz-pulse 1.5s ease-in-out infinite;display:inline-flex}'}
-      </style>
-      <div className="hz-pulse">
+      {/* The breathe is `.hz-breathe` in globals.css. It used to be a <style> child
+          here defining its own `hz-pulse`, which replaced the globals.css keyframe
+          of that name for the whole document — so any Loader on screen stopped the
+          `.hz-rail-dot` live indicator from scaling. */}
+      <div className="hz-breathe">
         <BrandMark size={size} />
       </div>
       {label ? (

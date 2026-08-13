@@ -15,8 +15,9 @@
  *
  * Everything is asserted on computed style and geometry. The failure this guards
  * against is a menu that is present in the DOM and unreadable — a library that
- * paints with utility class names renders exactly that in this app, because
- * Tailwind never scanned node_modules. An `expect(locator).toBeVisible()` would
+ * paints with utility class names renders exactly that here, because this app
+ * compiles no Tailwind at all (no config, no @tailwind directive, no dependency),
+ * so a utility class name is inert text. An `expect(locator).toBeVisible()` would
  * have passed on the broken build. That is also why the menu is now the console's
  * OWN `Menu` on @hanzo/gui rather than a second rendering system injecting its own
  * global stylesheet: the rows are `MenuRow`, so they are located by ARIA role.

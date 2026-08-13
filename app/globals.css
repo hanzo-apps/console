@@ -302,7 +302,12 @@ html:root.t_light {
   animation: hz-shimmer 1.2s ease-in-out infinite;
 }
 
-/* Live-feed pulse — the "Live" dot on a streaming panel. */
+/* Live-feed pulse — the "Live" dot on a streaming panel.
+   Duplicate keyframes do NOT merge: the last definition the document parses wins
+   for every element already using that name. A component that ships its own
+   `hz-pulse` in a <style> child therefore silently replaces this one — which is
+   exactly what the Loader did until its motion moved to hz-breathe below. One
+   animation, one name, one home. */
 @keyframes hz-pulse {
   0%,
   100% {
@@ -313,6 +318,24 @@ html:root.t_light {
     opacity: 0.45;
     transform: scale(0.82);
   }
+}
+
+/* Brand-mark breathe — the full-screen Loader's mark. It lives here with the rest
+   of the motion instead of in a <style> the component injected at mount, so it
+   cannot collide with hz-pulse (or anything else) at runtime. */
+@keyframes hz-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.hz-breathe {
+  display: inline-flex;
+  animation: hz-breathe 1.5s ease-in-out infinite;
 }
 
 /* Entrance for a freshly-arrived activity row (staggerless — one row at a time). */
@@ -336,6 +359,9 @@ html:root.t_light {
     animation: none;
   }
   .hz-row-in {
+    animation: none;
+  }
+  .hz-breathe {
     animation: none;
   }
 }

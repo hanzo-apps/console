@@ -4347,3 +4347,95 @@ twice and requires it to have moved.
 Verified in a browser (`e2e/playground-modes.spec.ts`, 3/3): every mode's box on
 one row at 390 and at 1440, no horizontal body scroll at 390, the transform
 actually advances, pointerdown lands `pg-hold`, and the tap switches mode.
+
+## No Tailwind, no Radix, no shadcn — and the collision a rename pass disguised
+
+An audit for framework residue (@hanzo/gui is the ONE framework underneath;
+components come from @hanzo/ui on top of it). The headline is that there is nothing
+to remove — the console is already clean:
+
+- **Tailwind is ABSENT, not merely inert.** No `tailwind.config.*`, no
+  `postcss.config.*`, no `tailwindcss` dependency, and no `@tailwind`/`@apply`
+  directive anywhere. Nothing compiles a utility class here, so one would be dead
+  text — which is why the account-menu spec asserts on computed style in the first
+  place.
+- **Zero `@radix-ui` imports** in `app/`, `src/` or `e2e/`.
+- **Zero vendored shadcn files.**
+- **Zero Tailwind-shaped class tokens.** Every one of the 39 class tokens used
+  across `app/` + `src/` is this repo's own, defined in this repo's own CSS —
+  `hz-mono` (194), `hz-tnum` (20), `hz-skeleton` (10), `hz-paper`, the rest of the
+  `hz-*` family, the four `pg-modes-*`, `t_dark`, `voice-control`. No
+  `cn()`/`clsx()`/`twMerge()` call exists to hide one. Exactly ONE token did not
+  resolve to repo CSS, and it was the bug below.
+
+Kept deliberately, because deleting them would be wrong:
+
+- **`LICENSE` "Copyright (c) 2021 Radix"** — a copyright attribution for the upstream
+  lineage this UI stack derives from, beside Tamagui's and RNW's. Legal text.
+- **The Tailwind mentions in `app/design/{colors,elevation,spacing}.css`** —
+  provenance comments recording that the neutral ladder, the `shadow-2xl` drop and
+  the 4px ramp came from hanzo.ai's config. That directory is VENDORED from
+  hanzoai/design and carries its own "do NOT edit these files in the console — edit
+  them in hanzoai/design and re-sync" banner, so it is not ours to rewrite.
+- **`src/lib/api/families.ts`** and **`src/components/products/ModelSelector.tsx`** —
+  both explain, accurately and currently, why a local twin exists and what changed at
+  `@hanzo/ui` 8.0.56. Load-bearing.
+
+**[BUG, measured] Two `@keyframes hz-pulse`, and the component-injected one won.**
+`Loader` rendered a `<style>` child holding
+`@keyframes hz-pulse{0%,100%{opacity:.5}50%{opacity:1}}` while `app/globals.css`
+already defined a DIFFERENT `hz-pulse` — opacity 1→.45 **plus** `scale(1)→scale(.82)`
+— which is the animation `.hz-rail-dot` runs on. Duplicate keyframes do not merge:
+the last definition the document parses wins for **every** element already using that
+name. React renders that `<style>` in place (no `precedence` prop, so React 19
+neither hoists nor dedupes it), so from the moment any Loader mounted, the live dot
+stopped scaling and took the Loader's flat fade.
+
+Reachable, not theoretical: `PlatformAppsModule` mounts `<Loader label="Loading
+canvas…" />` as the `ProjectCanvas` dynamic-import fallback while its
+`ServiceDetailDrawer` renders the `hz-rail-dot` streaming indicator — one surface,
+both on screen. `RailwayDeploy` is the second user.
+
+What makes this worth writing down is HOW it survived: an earlier rename pass swept
+`pulse`→`hz-pulse`, `skeleton`→`hz-skeleton`, `row-in`→`hz-row-in` … and prefixed
+BOTH copies. Namespacing is the right instinct and it fixed nothing here, because the
+defect was never the bareness of the name — it was that two different animations
+shared one. Afterwards both copies looked correctly namespaced, which is worse than
+before: the collision reads as convention. A duplicate-name check catches this; a
+prefix convention does not.
+
+Measured in a browser rather than argued: with globals.css loaded and the dot frozen
+on its 50% frame, it read `opacity 0.45 / matrix(0.82, …)`, then `opacity 1 / none`
+the moment main's own `<style>` string was appended the way React appends it.
+
+Fixed by giving each motion one home and one name. The Loader's animation moved into
+`globals.css` as `.hz-breathe` (with a `prefers-reduced-motion` entry beside
+`.hz-skeleton`/`.hz-row-in`, matching the file's convention) and the `<style>` child
+is gone. Re-proven with the REAL shipped stylesheets — `app/design/index.css` +
+`app/globals.css` loaded into a page, not a hand-copied snippet — with both elements
+mounted together: `.hz-rail-dot` resolves to `hz-pulse` and keeps `opacity 0.45 /
+scale(0.82)` while `.hz-breathe` resolves to `hz-breathe` at `opacity 1`. Repo-wide:
+11 `@keyframes`, zero duplicates; inline `<style>` elements in components, zero.
+
+Two stale comments corrected while in here, both of the "reads correct, describes
+something that no longer exists" class:
+
+- `e2e/account-menu.spec.ts` said utility classes are dead here "because Tailwind
+  never scanned node_modules" — which implies a Tailwind build that merely missed a
+  directory. There is no Tailwind build at all, so the real reason is both simpler
+  and stronger than the one given.
+- `tracker/Toolbar.tsx` credited "Radix closes on outer press" for the close
+  behaviour of a `Popover` imported from `@hanzo/gui`. Radix is not in this app;
+  someone reasoning about that component would have gone and read the wrong docs.
+
+Flagged, not touched: the five `hanzo-*` keyframes in the vendored
+`app/design/motion.css` (`hanzo-fade-up`, `-fade-down`, `-slide-up-fade`, `-glow`,
+`-pulse-dot`) have zero uses in this repo. They belong to hanzoai/design — a re-sync
+question there, not a console edit.
+
+Verification: `tsc --noEmit` clean; `vitest` **3412 passed / 8 skipped** (272 files —
+unchanged from this tree's baseline, no regression); `next build` ✓ Compiled
+successfully. Note for the next reader: the "tsc is RED on canonical main with a
+`Provider.tsx` `GuiInternalConfig` variance error" claim above does NOT reproduce on
+a clean `pnpm install --frozen-lockfile` (which resolves @hanzo/gui 8.0.0 +
+@hanzo/ui 8.0.69) — that was drifted local `node_modules`, not the lockfile.
