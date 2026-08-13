@@ -158,7 +158,6 @@ import { AuditModule } from '~/components/products/audit/AuditModule'
 import { KmsModule } from '~/components/products/KmsModule'
 import { StorageModule } from '~/components/products/StorageModule'
 import { BaseModule } from '~/components/products/BaseModule'
-import { RecordsModule } from '~/components/products/RecordsModule'
 import { ClustersModule } from '~/components/products/ClustersModule'
 import { TenantsModule } from '~/components/products/TenantsModule'
 import { KubernetesModule } from '~/components/products/KubernetesModule'
@@ -1630,40 +1629,21 @@ export const catalog: CatalogEntry[] = [
     id: 'base',
     label: 'Base',
     icon: Boxes,
-    description: 'Realtime backends for your org — spin up a Base with content types, records, and auth.',
+    description: "Your organization's realtime backend — content types, records, and auth.",
     category: 'Data',
     status: 'enabled',
     repo: 'hanzoai/base',
     docs: `${DOCS}/base`,
     kind: 'module',
-    // Bases manager: `''` lists your Bases, `new` creates one, `:base` configures
-    // one (`:base` = its record id). `new` precedes `:base` so `/base/new` is the
-    // create flow, not a Base whose id is "new" (that slug is reserved). A Base's
-    // own data — collections + records — is the sibling `Records` product.
+    // An org HAS a Base, so there is no instance to pick and no registry to list:
+    // `''` is the content-type index, `:collection` its records, `:collection/:id`
+    // one record. Segment count disambiguates. `/records` — a second product over
+    // this same data, from when a separate orchestrator held a registry of Base
+    // instances — resolves here through SLUG_ALIASES.
     routes: [
       { path: '', component: BaseModule },
-      { path: 'new', component: BaseModule },
-      { path: ':base', component: BaseModule },
-    ],
-  },
-  {
-    // Records — browse + edit any Base collection's data BY CLICKING (the CRM/CMS
-    // surface). Renders each collection's rows/detail from its own field schema
-    // through @hanzo/data (DataTable + RecordDetail/RecordForm) over the same
-    // per-user /superbase proxy. Base is the backend; this is the app on top.
-    id: 'records',
-    label: 'Records',
-    icon: Boxes,
-    description: 'Browse and edit any Base collection as a CRM/CMS — from its own schema.',
-    category: 'Data',
-    status: 'enabled',
-    repo: 'hanzoai/base',
-    docs: `${DOCS}/base`,
-    kind: 'module',
-    routes: [
-      { path: '', component: RecordsModule },
-      { path: ':collection', component: RecordsModule },
-      { path: ':collection/:id', component: RecordsModule },
+      { path: ':collection', component: BaseModule },
+      { path: ':collection/:id', component: BaseModule },
     ],
   },
   {

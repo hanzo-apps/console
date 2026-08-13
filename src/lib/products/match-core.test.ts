@@ -176,8 +176,9 @@ const wallet = mod('wallet', { label: 'Wallet', category: 'Web3' })
 const finetuning = mod('finetuning', { label: 'Fine-tuning', category: 'Training' })
 const websearch = mod('websearch', { label: 'Web Search', category: 'AI' })
 const code = mod('code', { label: 'Code', category: 'Dev' })
+const base = mod('base', { label: 'Base', category: 'Data' })
 
-const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, automations, luxExplorer, o11y, appPlatform, plans, wallet, finetuning, websearch, code, nonModule]
+const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, automations, luxExplorer, o11y, appPlatform, plans, wallet, finetuning, websearch, code, base, nonModule]
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {

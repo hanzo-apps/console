@@ -33,7 +33,6 @@
 "s3",
 "datastore",
 "base",
-"records",
 "docdb",
 "gateway",
 "nodes",

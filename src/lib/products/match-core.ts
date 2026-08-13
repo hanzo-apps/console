@@ -95,6 +95,12 @@ export const SLUG_ALIASES: Record<string, string> = {
   // The former standalone Git product folded into the unified Code hub — a bookmarked
   // `/git` lands on the hub (never a 404); the canonical repo path is `/code/repos/:name`.
   git: 'code',
+  // Records was a second product over the org's own Base, from when a separate
+  // orchestrator deployment held a registry of Base instances and "which Base" was
+  // a question worth a page. An org has one Base, so browsing it is not a different
+  // product from having it: `/records/:collection/:id` lands on the same view under
+  // `/base`, because the route shapes are identical.
+  records: 'base',
 }
 
 /** Canonicalize the FIRST slug segment through `SLUG_ALIASES` (identity if none). */

@@ -92,7 +92,7 @@ export function CollectionView({ api, collection, onOpen, onCreate, title }: Col
   )
 
   if (state.phase === 'error') {
-    return <BackendStateCard state={state.error} onRetry={reload} hint={`base · GET /v1/collections/${collection}/records`} />
+    return <BackendStateCard state={state.error} onRetry={reload} hint={`base · GET /v1/base/collections/${collection}/records`} />
   }
 
   if (state.phase === 'missing') {
