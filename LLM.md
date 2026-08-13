@@ -4370,8 +4370,12 @@ to remove — the console is already clean:
 
 Kept deliberately, because deleting them would be wrong:
 
-- **`LICENSE` "Copyright (c) 2021 Radix"** — a copyright attribution for the upstream
-  lineage this UI stack derives from, beside Tamagui's and RNW's. Legal text.
+  (Correction to my own first draft of this note, which listed a `LICENSE` "Copyright
+  (c) 2021 Radix" attribution among the things to keep. That line is real on the
+  PRE-history-rewrite lineage, not here: canonical main's `LICENSE` is the HIP-0137
+  `MIT OR Apache-2.0` text and carries no Radix attribution at all. Writing a
+  keep-this note about something the tree does not contain is the same defect this
+  whole audit is about, so it is struck rather than left standing.)
 - **The Tailwind mentions in `app/design/{colors,elevation,spacing}.css`** —
   provenance comments recording that the neutral ladder, the `shadow-2xl` drop and
   the 4px ramp came from hanzo.ai's config. That directory is VENDORED from
