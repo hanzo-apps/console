@@ -274,8 +274,16 @@ async function request<T>(
     throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
   }
 
+  // A refusal ALWAYS throws — but it throws what the server said. This branch used
+  // to answer every 401/403 with the constant "Not authorized", discarding the body
+  // before it was read, and the classifier downstream could then only GUESS a reason.
+  // The guess was wrong in the case that matters: IAM refuses an org-scoped read with
+  // "forbidden: this credential is scoped to organization <org>" — you are signed in
+  // somewhere else — and the console rendered "it's an admin-only surface, or it isn't
+  // enabled for your organization yet". Same class as the 402 note below; the fix is
+  // the same one, applied to the branch that skipped the body entirely.
   if (res.status === 401 || res.status === 403) {
-    throw new ApiError('Not authorized', res.status)
+    throw new ApiError(reasonOf(await res.json().catch(() => null)) || 'Not authorized', res.status)
   }
 
   let json: ApiResponse<T>
@@ -286,17 +294,24 @@ async function request<T>(
   }
 
   if (!res.ok && json?.status !== 'ok') {
-    // `msg` is the casibase envelope's field. The plain-REST /v1 surfaces mounted on
-    // the same backend answer `error` instead — the paywall's 402 body is
-    // {"error":"subscription_required"} — so a response can legitimately carry either.
-    // Reading only `msg` discarded that reason and left "Request failed (HTTP 402)",
-    // which the honest-error classifier could only render as a generic top-up prompt,
-    // sending a planless org to buy credits that will not satisfy the gate.
-    const alt = (json as { error?: unknown })?.error
-    const reason = json?.msg || (typeof alt === 'string' ? alt : '')
-    throw new ApiError(reason || `Request failed (HTTP ${res.status})`, res.status)
+    throw new ApiError(reasonOf(json) || `Request failed (HTTP ${res.status})`, res.status)
   }
   return json
+}
+
+/**
+ * The server's OWN reason for a failure, from either envelope it may speak: `msg`
+ * is the casibase envelope's field, and the plain-REST `/v1` surfaces mounted on the
+ * same backend answer `error` instead (the paywall's 402 body is
+ * {"error":"subscription_required"}). Reading only `msg` discarded that reason and
+ * left "Request failed (HTTP 402)", which the honest-error classifier could only
+ * render as a generic top-up prompt, sending a planless org to buy credits that will
+ * not satisfy the gate. One reader, so no refusal loses its reason again.
+ */
+function reasonOf(body: unknown): string {
+  const b = body as { msg?: unknown; error?: unknown } | null
+  if (typeof b?.msg === 'string' && b.msg) return b.msg
+  return typeof b?.error === 'string' ? b.error : ''
 }
 
 /** GET that unwraps `data` and throws on a non-ok envelope. */

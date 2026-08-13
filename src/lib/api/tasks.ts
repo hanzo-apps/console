@@ -1,9 +1,11 @@
 /**
  * Tasks API — the durable workflow engine (hanzoai/tasks `tasksd`, the native
- * Temporal-style HTTP surface), unified into the console. Every call goes through
- * the console's OWN same-origin `/tasks` proxy (`app/tasks/[...path]/route.ts`),
- * which mints a short-lived user Bearer JWT server-side (tasksd requires a Bearer
- * and strips client identity headers, minting org from the token's `owner` claim).
+ * Temporal-style HTTP surface), unified into the console. Every call is a clean
+ * same-origin `/v1/tasks/*`, which on a split console terminates at
+ * `app/v1/tasks/[...path]/route.ts` — that route mints a short-lived user Bearer JWT
+ * server-side (tasksd requires a Bearer and strips client identity headers, minting
+ * org from the token's `owner` claim) — and in the one-binary build terminates at the
+ * embedded cloud's own tasks surface.
  * The browser sends the session cookie only. The engine returns named-key JSON
  * (`{ executions:[…] }`, `{ taskQueues:[…] }`, …) at 200, or `{ error, code }`.
  * Honest states render when a route is gated/absent/unreachable.
@@ -112,10 +114,12 @@ export type ActivityInfo = {
   taskQueue?: string
 }
 
-/** Same-origin `/tasksd` proxy base (server route mints the Bearer + forwards).
- *  NB: the proxy lives at `/tasksd`, NOT `/tasks` — the `tasks` product page owns
- *  the `/tasks/*` SPA routes, so a proxy there would shadow `/tasks/queues` etc. */
-const tasksBase = (): string => (typeof window !== 'undefined' ? `${window.location.origin}/tasksd` : '/tasksd')
+/** The clean same-origin `/v1/tasks` head. On a split console the filesystem route
+ *  `app/v1/tasks/[...path]` answers it (minting the Bearer server-side); in the
+ *  one-binary build the embedded cloud's own tasks surface does. One URL either way
+ *  — the page URLs (`/tasks/queues`) differ at the first segment and never collide. */
+const tasksBase = (): string =>
+  typeof window !== 'undefined' ? `${window.location.origin}/v1/tasks` : '/v1/tasks'
 const u = (path: string): string => `${tasksBase()}/${path.replace(/^\/+/, '')}`
 const enc = encodeURIComponent
 

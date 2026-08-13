@@ -10,8 +10,6 @@
  * even though cloud serves the single root `index.html` for every path. One
  * definition, both entry points — no duplicated routing.
  */
-import { notFound } from 'next/navigation'
-
 import { resolveView, isAdminRoute } from '~/lib/products/match'
 import { findEntry } from '~/lib/products/registry'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
@@ -20,12 +18,18 @@ import { ProductSubpageModule } from '~/components/products/subpage/ProductSubpa
 import { ProductInterstitial } from '~/components/products/ProductInterstitial'
 import { AdminManagedNotice } from '~/components/products/AdminManagedNotice'
 import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
+import { NotFound } from '~/components/NotFound'
 
 export function ProductRoute({ slug }: { slug: string[] }) {
   const showAdmin = useIsSuperAdmin()
   const view = resolveView(slug)
 
-  if (view.kind === 'notfound') notFound()
+  // Rendered, not Next's `notFound()`: the production console IS the static embed,
+  // where the cloud binary answers every path with the same index.html — there is no
+  // server render to carry a 404 status, and the throw would only trade the shell for
+  // a bare page with no way back. Rendering keeps the sidebar (and the way out) and
+  // behaves identically on both topologies, which is the point of one renderer.
+  if (view.kind === 'notfound') return <NotFound slug={slug} />
 
   if (view.kind === 'external') return <ProductInterstitial id={view.entry.id} />
 

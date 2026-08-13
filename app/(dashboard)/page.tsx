@@ -30,7 +30,6 @@ import { Spinner, XStack } from '@hanzo/gui'
 
 import { config } from '~/config'
 import { shellFor } from '~/lib/products/shell'
-import { resolveView } from '~/lib/products/match'
 import { ProductRoute } from '~/components/ProductRoute'
 import { Home } from '~/components/home/Home'
 
@@ -48,9 +47,11 @@ export default function DashboardHome() {
 
   const segments =
     mounted && pathname ? pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean) : []
-  if (segments.length > 0 && resolveView(segments).kind !== 'notfound') {
-    return <ProductRoute slug={segments} />
-  }
+  // ANY address but the root belongs to the renderer, including one that resolves to
+  // nothing: it answers "no such page". This used to fall through to the board when
+  // the address was unknown, which is why a wrong link and a typo both rendered the
+  // home screen and neither said so.
+  if (segments.length > 0) return <ProductRoute slug={segments} />
 
   if (shellHome) {
     return (

@@ -12,11 +12,20 @@ import { Text, XStack } from '@hanzo/gui'
 import { ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import { findEntry, categoryFromSlug } from '~/lib/products/registry'
-import { productSubpages } from '~/lib/products/match'
+import { productSubpages, resolveView } from '~/lib/products/match'
+import { canonicalSlug } from '~/lib/products/match-core'
 
-type Crumb = { label: string; href?: string }
+export type Crumb = { label: string; href?: string }
 
-function crumbsFor(pathname: string): Crumb[] {
+/**
+ * The trail for a path. Exported because it is the whole decision — the render
+ * below is a map over it — and because one line of it was a lie worth locking
+ * down: an unresolvable head used to be spelled out segment by segment, so
+ * `/login` (a sibling app's redirect that this console does not serve) read
+ * `Home / login`, as if login were a place here. A trail is a claim about where
+ * you are, and there is nowhere to be at an address that resolves to nothing.
+ */
+export function crumbsFor(pathname: string): Crumb[] {
   const segs = pathname.split('/').filter(Boolean)
   const crumbs: Crumb[] = [{ label: 'Home', href: '/' }]
   if (segs.length === 0) return crumbs
@@ -37,22 +46,31 @@ function crumbsFor(pathname: string): Crumb[] {
     return crumbs
   }
 
-  const entry = findEntry(segs[0])
+  // The SAME resolver the page renders from, so the trail and the page can never
+  // disagree about whether the address exists. It also canonicalizes an alias
+  // (`/traces` → o11y), which is why the head is read from `canonicalSlug` below
+  // rather than from the raw segments — spelling the alias out was how `Traces`
+  // read as `traces`.
+  if (resolveView(segs).kind === 'notfound') {
+    crumbs.push({ label: 'Not found' })
+    return crumbs
+  }
+
+  const canon = canonicalSlug(segs)
+  const entry = findEntry(canon[0])
   if (entry) {
     // Skip the category crumb when it just repeats the product's own name — the
     // `Settings` product lives in the `Settings` category, and `Home / Settings /
     // Settings / …` says the same word twice.
     if (entry.category !== entry.label) crumbs.push({ label: entry.category })
-    crumbs.push({ label: entry.label, href: segs.length > 1 ? `/${entry.id}` : undefined })
+    crumbs.push({ label: entry.label, href: canon.length > 1 ? `/${entry.id}` : undefined })
     // Label trailing segments from the product's own sub-page list (so `/settings/logs`
     // reads `… / Logs`, not the raw slug); detail params that aren't sub-pages pass through.
     const subs = productSubpages(entry)
-    for (let i = 1; i < segs.length; i++) {
-      const sp = subs.find((s) => s.slug === segs[i])
-      crumbs.push({ label: sp ? sp.label : decodeURIComponent(segs[i]) })
+    for (let i = 1; i < canon.length; i++) {
+      const sp = subs.find((s) => s.slug === canon[i])
+      crumbs.push({ label: sp ? sp.label : decodeURIComponent(canon[i]) })
     }
-  } else {
-    for (const s of segs) crumbs.push({ label: decodeURIComponent(s) })
   }
   return crumbs
 }

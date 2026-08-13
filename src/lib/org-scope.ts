@@ -38,12 +38,19 @@ function read(key: string): string | null {
   }
 }
 
-/** Navigate to the console home, reloading so every module refetches under the
- *  active scope. The ONE way the two-level model changes level (enter/leave). */
-function goHome(): void {
+/** Navigate, reloading so every module refetches under the active scope. The ONE
+ *  way the two-level model changes level (enter/leave); only the DESTINATION
+ *  differs, and each caller states its own. */
+function go(to: string): void {
   if (typeof window !== 'undefined' && typeof window.location?.assign === 'function') {
-    window.location.assign('/')
+    window.location.assign(to)
   }
+}
+
+/** The address currently being asked for — path + query + fragment. */
+function here(): string {
+  const l = typeof window !== 'undefined' ? window.location : undefined
+  return l ? `${l.pathname || '/'}${l.search ?? ''}${l.hash ?? ''}` : '/'
 }
 
 /** The org the console is currently scoped to (default: the brand org). */
@@ -78,11 +85,6 @@ export function hasSelectedOrg(): boolean {
 }
 
 /**
- * Enter an org from the picker: set the active scope AND mark it selected, then
- * drop into the scoped console home (reload refetches every module under the new
- * `X-Org-Id`). This is the "click an org card" transition.
- */
-/**
  * The reserved admin org is not a scope a brand host can wear.
  *
  * SuperAdmin is resolved by authenticating INTO that org through the
@@ -102,6 +104,18 @@ function handedOffToAdminConsole(org: string): boolean {
   return true
 }
 
+/**
+ * Enter an org from the picker: set the active scope AND mark it selected, then
+ * reload the address the person is already on (the reload refetches every module
+ * under the new `X-Org-Id`). This is the "click an org card" transition.
+ *
+ * It reloads WHERE THEY ARE rather than the home board, because the picker also
+ * stands in front of a deep link: open a bookmarked /models with no org entered
+ * and the picker renders AT /models. Sending them home discarded the address they
+ * asked for, so every shared or bookmarked link lost its destination at exactly
+ * the moment it needed it. At the real home this is the same navigation it always
+ * was — '/' reloads as '/'.
+ */
 export function enterOrg(org: string): void {
   if (!org) return
   if (handedOffToAdminConsole(org)) return
@@ -113,7 +127,7 @@ export function enterOrg(org: string): void {
       // Storage blocked — selection can't persist; the picker will reappear.
     }
   }
-  goHome()
+  go(here())
 }
 
 /**
@@ -130,7 +144,7 @@ export function leaveOrg(): void {
     }
   }
   setCurrentOrg(config.iamOrgName) // clears the override
-  goHome()
+  go('/')
 }
 
 /**

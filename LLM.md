@@ -4443,3 +4443,110 @@ successfully. Note for the next reader: the "tsc is RED on canonical main with a
 `Provider.tsx` `GuiInternalConfig` variance error" claim above does NOT reproduce on
 a clean `pnpm install --frozen-lockfile` (which resolves @hanzo/gui 8.0.0 +
 @hanzo/ui 8.0.69) — that was drifted local `node_modules`, not the lockfile.
+
+## An address that resolves to nothing says so — and three things it was hiding
+
+The console had no 404. `app/(dashboard)/page.tsx` resolved the live path and, when
+the answer was `notfound`, fell through to the home board; the breadcrumb then spelled
+the unknown segments out. So a typo and a broken link produced the same screen, and
+that screen looked like it had worked.
+
+What it hid, measured on console.hanzo.ai signed in as z@hanzo.ai:
+
+- `/tracker` never reaches this console. The cloud binary mounts its OWN SPAs at
+  `/tasks`, `/tracker` and `/meet` (`apps/tracker/tracker.go:250`,
+  `apps/tasks/tasks.go:209`, each with an `openapi.DescribeSPA`), and console.hanzo.ai
+  IS that binary serving the static embed — the whole host routes to `svc/cloud:8000`.
+  Measured: `/tracker` → `server: hanzo`, 1560 bytes, `<title>Hanzo Tracker</title>`;
+  `/trackerz` → `server: zip`, 372641 bytes, this console. An exact-prefix claim by
+  something else, the same tell `products/reserved-routes.test.ts` records for `/api`.
+- The nav chain a person actually walks is `/tracker` → (cloud's SPA, no console
+  session) → `/login` → the dashboard. Three navigations, no error, and the honest
+  reading of the screen is "Tracker opens the dashboard". The Tracker entry is NOT
+  unimplemented — `TrackerModule` is real and reachable on a split console
+  (console.dev.hanzo.ai serves `/tracker` from this app) — it is SHADOWED on the
+  one-binary hosts.
+- `/tasks/namespaces` is the same shadow with its consequences on show: cloud's Tasks
+  SPA renders "Hanzo Tasks · SELF-HOSTED · v2.49.0 · LOCAL · local" and fails at
+  `identity required`, because the console session is not propagated into that embed.
+
+Fixed here: `ProductRoute` (the ONE product-route renderer) renders a `NotFound`
+surface for a `notfound` view, and the home page hands EVERY non-root address to it
+instead of resolving routes itself. Rendered rather than Next's `notFound()`: in the
+one-binary build the cloud binary answers every path with the same index.html, so
+there is no server render to carry a 404 status and the throw would only trade the
+shell — and the way back — for a bare page. `app/not-found.tsx` renders the same
+component for a path no route file claims. The breadcrumb now resolves through the
+same `resolveView` the page does (and through `canonicalSlug`, so `/traces` reads
+`Traces` rather than the raw alias), and says `Not found` instead of presenting an
+unresolvable address as a location.
+
+NOT fixed here, because it is not this repo's to fix: the shadow itself. Whoever owns
+it should decide whether cloud drops those SPA mounts on the console host (making the
+console's own Tracker/Tasks modules reachable) or the console retires its duplicates —
+but a console that ships both while cloud wins the address is two implementations of
+one product, and only one of them is reachable.
+
+## Tasks read `/tasksd`, which nothing serves
+
+The tasks client called `${origin}/tasksd/*`, a private prefix taken on the theory
+that a proxy at `/tasks/*` would shadow the product's page URLs. It cannot — they
+differ at the FIRST segment, exactly as `app/v1/billing` and `/billing/reports`
+already coexist. And nothing serves `/tasksd` on any live deployment: the one-binary
+console has no server routes at all, and a split console's SPA fallback answers it,
+so every tasks read came back as HTML at HTTP 200. Reproduced locally before the
+move: `GET /tasksd/v1/tasks/namespaces` → 200 `text/html`.
+
+The route moved to `app/v1/tasks/[...path]` (the /v1-first law, the same shape
+billing and commerce use: more specific than the `app/v1/[...path]` cloud BFF, so it
+wins) and the client builds the clean `/v1/tasks/*`. Proven by the bytes: `GET
+/v1/tasks/namespaces` → 401 `{"error":"Sign in to view tasks."}`, a string that exists
+only in that proxy, while `/v1/agents` still answers the BFF's own
+`{"error":"Sign in to use Hanzo Cloud."}`. One address now works in BOTH topologies —
+the proxy on a split console, the embedded cloud's own tasks surface in one-binary.
+
+## A refusal arrives carrying the reason the server gave
+
+`client.ts` answered every 401/403 with the constant `"Not authorized"`, returning
+before the body was read at all. The 402 branch below it already carries a note about
+exactly this mistake ("reading only `msg` discarded that reason"); the 401/403 branch
+skipped the body entirely.
+
+The guess it forced was wrong in the case that found it. Signed in as z@hanzo.ai (org
+`hanzo`) with the console scoped to `lux` or `zoo`,
+`/v1/iam/get-organization-projects?organization=lux` answers 403
+`{"msg":"forbidden: this credential is scoped to organization hanzo"}` — IAM pins a
+credential to the org it was minted in and NAMES that org
+(`hanzo/iam internal/authz/authz.go` `Scope`: "AN ORG-SCOPED REQUEST IS HONOURED OR
+REFUSED, NEVER SILENTLY REINTERPRETED"). The console rendered "it's an admin-only
+surface, or it isn't enabled for your organization yet" — two claims that are both
+false. The account is an admin; the surface is enabled; the sign-in belongs elsewhere.
+
+Now the reason survives (one `reasonOf` reader for both envelope shapes, `msg` or
+`error`), and `honestError` matches the org out of it the same way it already matches
+`subscription_required` — machine-readable token, not prose — and says "Signed in to
+hanzo… switch back to hanzo". Before/after driven in a browser on the same page.
+
+Worth knowing, and NOT a console bug: the org picker offers lux/zoo/pars because the
+caller holds real IAM MEMBERSHIP rows there ("Admin"), and IAM authorizes a member to
+read those orgs' rows (`get-organization` → 200) while its org-scope gate consults
+only `user.Owner`. So membership grants a role that IAM's own gate ignores on
+org-scoped routes. That inconsistency lives in hanzoai/iam.
+
+## The org picker stands in front of deep links
+
+`enterOrg` navigated to `/`. But the picker is not only the login landing: open a
+bookmarked `/models` with no org entered and the picker renders AT `/models`, so
+entering an org discarded the address at the moment it was being used. It now reloads
+`here()` (path + query + fragment); `leaveOrg` still goes home, because de-scoping has
+no page to keep. Same one `go(to)` navigation, two stated destinations.
+
+Verification: `tsc --noEmit` clean. `vitest` **3438 passed / 8 skipped (274 files)**
+after rebasing onto the admin-org hand-off that landed mid-session, against a control
+of **3414 / 8 (271 files)** measured on clean `forge/main` in this same worktree —
++3 files, +24 tests (4 of them upstream's), no regression. Every new guard was watched
+failing against a deliberately broken tree and then passing again: 6/8 in
+`components/not-found.test.ts`, 2/3 in `api/tasks.test.ts`, 3/4 in
+`api/client-refusal.test.ts`, 2/3 in the new `states-logic` 403 block, 1 in
+`org-scope.test.ts`. `e2e/not-found.spec.ts` runs the four browser assertions and was
+also confirmed failing on pre-fix source.

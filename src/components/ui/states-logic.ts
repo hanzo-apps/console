@@ -76,12 +76,27 @@ export function honestError(err: ApiError, copy: HonestCopy = {}): HonestError {
       body: 'Your session has expired or isn’t recognized here. Sign in again to continue where you left off.',
       reauth: true,
     }
-  if (err.status === 403 || /sign ?in|login|unauthorized/i.test(err.message))
+  if (err.status === 403 || /sign ?in|login|unauthorized/i.test(err.message)) {
+    // An org-scoped read refused because the SIGN-IN belongs to another org is not an
+    // authorization level at all — the account may be an admin here and still be
+    // refused, because IAM pins a credential to the org it was minted in and names
+    // that org in its refusal. Read the org out of it (machine-readable, like the 402
+    // token above) and say which one you are actually signed in to. The generic 403
+    // copy guessed "admin-only surface, or not enabled for your organization", and
+    // both halves were false: a person watching that card had no way to learn that
+    // switching back to their own org is the whole fix.
+    const pinned = /scoped to organization (\S+)/.exec(err.message)?.[1]
+    if (pinned)
+      return {
+        title: `Signed in to ${pinned}`,
+        body: `This belongs to another organization. Your sign-in is scoped to ${pinned}, so only ${pinned}'s resources load here — switch back to ${pinned}, or sign in to the organization that owns this.`,
+      }
     return {
       title: 'Access required',
       body:
         copy.unauthorized ??
         "You're signed in, but this account isn't authorized for this — it's an admin-only surface, or it isn't enabled for your organization yet.",
     }
+  }
   return { title: 'Could not load', body: err.message }
 }

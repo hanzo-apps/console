@@ -80,3 +80,34 @@ describe('402 — subscription vs balance are different asks', () => {
     expect(s.topUp).toBeFalsy()
   })
 })
+
+describe('403 — refused HERE is not the same as refused', () => {
+  // IAM pins a credential to the org it was minted in and NAMES that org when it
+  // refuses (`internal/authz`: "AN ORG-SCOPED REQUEST IS HONOURED OR REFUSED, NEVER
+  // SILENTLY REINTERPRETED"). Measured on console.hanzo.ai signed in as z@hanzo.ai
+  // while scoped to lux: GET /v1/iam/get-organization-projects?organization=lux →
+  // 403 {"msg":"forbidden: this credential is scoped to organization hanzo"}.
+  const PINNED = new ApiError('forbidden: this credential is scoped to organization hanzo', 403)
+
+  it('names the org the sign-in belongs to instead of guessing at a role', () => {
+    const s = honestError(PINNED)
+    expect(s.title).toMatch(/hanzo/)
+    expect(s.body).toMatch(/hanzo/)
+    // The old copy asserted two things that are both false here: the account IS an
+    // admin, and the surface IS enabled — it just belongs to another org.
+    expect(s.body).not.toMatch(/admin-only/i)
+    expect(s.body).not.toMatch(/isn’t enabled|isn't enabled/i)
+    expect(s.reauth).toBeUndefined() // signing in again lands in the same org
+    expect(s.topUp).toBeUndefined()
+  })
+
+  it('a surface `copy` override cannot bury the org it names', () => {
+    const s = honestError(PINNED, { unauthorized: 'Ask an administrator.' })
+    expect(s.body).toMatch(/hanzo/)
+  })
+
+  it('leaves every other 403 on the generic access copy', () => {
+    const s = honestError(new ApiError('Not authorized', 403))
+    expect(s.title).toMatch(/access required/i)
+  })
+})

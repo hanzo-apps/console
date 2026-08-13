@@ -79,10 +79,40 @@ describe('two-level selection (picker → scoped console → back)', () => {
     expect(hasSelectedOrg()).toBe(false)
   })
 
-  it('entering an org sets the scope, marks it selected, and navigates home', () => {
+  it('entering an org sets the scope, marks it selected, and reloads where you are', () => {
     enterOrg('adnexus')
     expect(currentOrg()).toBe('adnexus')
     expect(hasSelectedOrg()).toBe(true)
+    expect(assign).toHaveBeenCalledWith('/')
+  })
+
+  /** Put the browser at a deep link — the address the picker stands in front of. */
+  const atDeepLink = () => {
+    ;(globalThis as { window?: unknown }).window = {
+      location: {
+        origin: 'https://console.hanzo.ai',
+        hostname: 'console.hanzo.ai',
+        pathname: '/models',
+        search: '?tab=catalog',
+        hash: '#top',
+        assign,
+      },
+      localStorage: store,
+    }
+  }
+
+  it('entering an org KEEPS the address that was asked for (the deep-link case)', () => {
+    // The picker also stands in front of a deep link: a bookmarked /models with no
+    // org entered renders the picker AT /models. Entering used to navigate to '/',
+    // so every shared link lost its destination at the moment it was opened.
+    atDeepLink()
+    enterOrg('adnexus')
+    expect(assign).toHaveBeenCalledWith('/models?tab=catalog#top')
+  })
+
+  it('leaving still goes home even from a deep link (de-scoping has no page to keep)', () => {
+    atDeepLink()
+    leaveOrg()
     expect(assign).toHaveBeenCalledWith('/')
   })
 
