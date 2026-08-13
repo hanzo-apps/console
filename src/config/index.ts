@@ -277,6 +277,30 @@ export function isAdminHost(host?: string | null): boolean {
  * exactly. IAM's `isSuperAdmin` JWT claim is DERIVED from the same equality, so reading
  * the claim as well would be two signals for one fact — this predicate is the only one.
  */
+export const adminOrgName = ADMIN_ORG
+
+/**
+ * The admin console for `host`'s brand — `admin.<brand>`, the ONE host that
+ * authenticates through the `admin-console` app and therefore into the reserved
+ * org. Returns null when already on one, so a caller can tell "go there" from
+ * "you are there".
+ *
+ * SuperAdmin is a HOST, not a scope. Setting `X-Org-Id: admin` on a brand host
+ * asks the API to act as an org the session was never issued for: the token was
+ * minted for the brand's own app, its `owner` is the brand, and no header changes
+ * that. Reaching the reserved org means re-authenticating where that org's app
+ * lives, which is exactly what this address is for.
+ */
+export function adminConsoleUrl(host?: string | null): string | null {
+  const h = normHost(host)
+  if (!h || isAdminHost(h)) return null
+  // Drop the service label: console.hanzo.ai and cloud.hanzo.ai both belong to
+  // hanzo.ai, whose admin console is admin.hanzo.ai.
+  const parts = h.split('.')
+  const domain = parts.length > 2 ? parts.slice(1).join('.') : h
+  return `https://admin.${domain}`
+}
+
 export function isSuperAdminOwner(owner?: string | null): boolean {
   return (owner ?? '').trim().toLowerCase() === ADMIN_ORG
 }

@@ -8,6 +8,7 @@ import {
   hasSelectedOrg,
   enterOrg,
   leaveOrg,
+  switchOrg,
 } from './org-scope'
 
 /** A minimal in-memory localStorage, enough for the org-scope store. */
@@ -120,5 +121,53 @@ describe('org filter (the switcher search box)', () => {
   })
   it('returns nothing when no org matches', () => {
     expect(filterOrgs(orgs, 'zzz')).toHaveLength(0)
+  })
+})
+
+describe('the reserved admin org is a host, not a scope', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  // These functions guard on `typeof window`, so the suite runs without one.
+  // The hand-off is a navigation, which only exists when there IS a window.
+  function onHost(host: string) {
+    const assign = vi.fn()
+    const reload = vi.fn()
+    vi.stubGlobal('window', {
+      location: { host, hostname: host, origin: `https://${host}`, href: `https://${host}/`, assign, reload },
+      localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    })
+    return { assign, reload }
+  }
+
+  // Stamping X-Org-Id: admin on a brand host asks the API to act as an org this
+  // session was never issued for — the token's owner is the brand, and no header
+  // rewrites that. The switch would look like it worked and every read refuse.
+  it('picking admin from a brand host goes to the admin console', () => {
+    const { assign } = onHost('console.hanzo.ai')
+    switchOrg('admin')
+    expect(assign).toHaveBeenCalledWith('https://admin.hanzo.ai')
+  })
+
+  it('the same holds for the enter-an-org card', () => {
+    const { assign } = onHost('cloud.hanzo.ai')
+    enterOrg('admin')
+    expect(assign).toHaveBeenCalledWith('https://admin.hanzo.ai')
+  })
+
+  // On the admin console there is nowhere to hand off TO, so it is an ordinary switch.
+  it('on the admin console it is a normal switch', () => {
+    const { assign } = onHost('admin.hanzo.ai')
+    switchOrg('admin')
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  // One clause, for one reserved name — every other org is untouched.
+  it('an ordinary org still switches in place', () => {
+    const { assign, reload } = onHost('console.hanzo.ai')
+    switchOrg('lux')
+    expect(assign).not.toHaveBeenCalled()
+    expect(reload).toHaveBeenCalled() // an ordinary switch reloads in place
   })
 })

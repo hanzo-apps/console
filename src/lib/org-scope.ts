@@ -22,7 +22,7 @@
  * clears the flag to de-scope back to the picker. `currentOrg()` stays the pure
  * value read that stamps `X-Org-Id` once entered.
  */
-import { config } from '~/config'
+import { adminConsoleUrl, adminOrgName, config } from '~/config'
 
 const KEY = 'hanzo.console.org'
 /** Selection flag — '1' once an org has been explicitly ENTERED (picker → shell). */
@@ -82,8 +82,29 @@ export function hasSelectedOrg(): boolean {
  * drop into the scoped console home (reload refetches every module under the new
  * `X-Org-Id`). This is the "click an org card" transition.
  */
+/**
+ * The reserved admin org is not a scope a brand host can wear.
+ *
+ * SuperAdmin is resolved by authenticating INTO that org through the
+ * `admin-console` app, which only `admin.<brand>` does. Stamping
+ * `X-Org-Id: admin` here would ask the API to act as an org this session was
+ * never issued for — the token's `owner` is the brand, and no header rewrites
+ * that — so the switch would appear to work and every read would refuse. Handing
+ * off to the admin console is the switch: it is where that identity is minted.
+ *
+ * Returns true when it took the navigation, so a caller stops.
+ */
+function handedOffToAdminConsole(org: string): boolean {
+  if (org !== adminOrgName || typeof window === 'undefined') return false
+  const url = adminConsoleUrl(window.location.host)
+  if (!url) return false // already on the admin console — a normal scope switch
+  window.location.assign(url)
+  return true
+}
+
 export function enterOrg(org: string): void {
   if (!org) return
+  if (handedOffToAdminConsole(org)) return
   setCurrentOrg(org)
   if (typeof window !== 'undefined') {
     try {
@@ -120,6 +141,7 @@ export function leaveOrg(): void {
  */
 export function switchOrg(org: string): void {
   if (!org || org === currentOrg()) return
+  if (handedOffToAdminConsole(org)) return
   setCurrentOrg(org)
   if (typeof window !== 'undefined') {
     try {
