@@ -31,8 +31,14 @@ import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from
 
 /** Product base path — must match the registry entry id (`records`). */
 const RECORDS_PATH = '/records'
-/** Same-origin Base proxy prefix (the proxy injects the user bearer server-side). */
-const BASE_PROXY = '/v1/superbase'
+/**
+ * Same-origin Base data-plane root (the proxy injects the user bearer server-side).
+ *
+ * `/v1` is cloud's forward to the org's managed Base — the same instance and the
+ * same records the studio at base.hanzo.ai/studio shows, so a collection browsed
+ * here and a collection browsed there are one thing seen twice, not two stores.
+ */
+const BASE_PROXY = '/v1'
 
 export function RecordsModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
