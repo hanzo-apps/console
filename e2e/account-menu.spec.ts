@@ -15,8 +15,9 @@
  *
  * Everything is asserted on computed style and geometry. The failure this guards
  * against is a menu that is present in the DOM and unreadable — a library that
- * paints with utility class names renders exactly that in this app, because
- * Tailwind never scanned node_modules. An `expect(locator).toBeVisible()` would
+ * paints with utility class names renders exactly that here, because this app
+ * compiles no Tailwind at all (no config, no @tailwind directive, no dependency),
+ * so a utility class name is inert text. An `expect(locator).toBeVisible()` would
  * have passed on the broken build.
  */
 import { test, expect, type Page } from '@playwright/test'

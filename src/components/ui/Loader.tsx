@@ -84,10 +84,10 @@ export const HanzoMark = BrandMark
 export function Loader({ label, size = 48 }: { label?: string; size?: number }) {
   return (
     <YStack flex={1} minH="100vh" items="center" justify="center" gap="$3">
-      <style>
-        {'@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}.pulse{animation:pulse 1.5s ease-in-out infinite;display:inline-flex}'}
-      </style>
-      <div className="pulse">
+      {/* The breathe is `.hz-breathe` in globals.css. It used to be a <style> child
+          here, which defined a second `pulse` keyframe in the document every time
+          a Loader mounted and silently replaced the one `.hz-rail-dot` runs on. */}
+      <div className="hz-breathe">
         <BrandMark size={size} />
       </div>
       {label ? (

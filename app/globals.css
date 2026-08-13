@@ -302,8 +302,12 @@ html:root.t_light {
   animation: shimmer 1.2s ease-in-out infinite;
 }
 
-/* Live-feed pulse — the "Live" dot on a streaming panel. */
-@keyframes pulse {
+/* Live-feed pulse — the "Live" dot on a streaming panel.
+   Named `hz-pulse`, not `pulse`, because duplicate keyframes do not merge:
+   the last one the document parses wins for every element already using the name.
+   A bare `pulse` is the first name any component or library reaches for, and one
+   of ours did — see hz-breathe below. */
+@keyframes hz-pulse {
   0%,
   100% {
     opacity: 1;
@@ -313,6 +317,24 @@ html:root.t_light {
     opacity: 0.45;
     transform: scale(0.82);
   }
+}
+
+/* Brand-mark breathe — the full-screen Loader's mark. It lives here with the rest
+   of the motion instead of in a <style> the component injected at mount, which is
+   what let it redefine `pulse` for the whole document. */
+@keyframes hz-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.hz-breathe {
+  display: inline-flex;
+  animation: hz-breathe 1.5s ease-in-out infinite;
 }
 
 /* Entrance for a freshly-arrived activity row (staggerless — one row at a time). */
@@ -336,6 +358,9 @@ html:root.t_light {
     animation: none;
   }
   .row-in {
+    animation: none;
+  }
+  .hz-breathe {
     animation: none;
   }
 }
@@ -376,7 +401,7 @@ html:root.t_light {
 }
 
 .hz-rail-dot {
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: hz-pulse 1.5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

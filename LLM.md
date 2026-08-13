@@ -3891,3 +3891,78 @@ fixture, with `e2e-shots/level2-siblings-nested.png` showing Models › Blend op
 Agents and AI Accounts sitting right below Metrics. The 18-product sweep is
 `test.slow()` — it is 18 full page loads, minutes against a dev server that compiles
 each route on demand.
+
+## No Tailwind, no Radix, no shadcn — and the one collision that hid behind them
+
+An audit for framework residue (@hanzo/gui is the ONE framework; components come
+from @hanzo/ui on top of it). The headline is that there is nothing to remove:
+
+- **Tailwind is ABSENT, not merely inert.** No `tailwind.config.*`, no
+  `postcss.config.*`, no `tailwindcss` dependency, and no `@tailwind`/`@apply`
+  directive in any of the 11 CSS files. Nothing compiles a utility class here, so
+  one would be dead text.
+- **Zero `@radix-ui` imports** anywhere in `app/`, `src/` or `e2e/`.
+- **Zero vendored shadcn files.**
+- **Zero Tailwind-shaped class tokens.** All 37 class tokens used across `app/` +
+  `src/` are this repo's own semantic classes, every one defined in this repo's own
+  CSS: `mono` (182), `tnum` (20), `skeleton` (11), `paper`, `row`, `slide`, `fade`,
+  `fade-up`, `drag`, `collapse`, `menu-in`, `elevation-4`, `t_dark`, and the `hz-*`
+  family. There are no `cn()`/`clsx()`/`twMerge()` calls to hide any.
+
+Kept deliberately, with reasons, because deleting them would be wrong:
+
+- **`LICENSE:11` "Copyright (c) 2021 Radix"** — a copyright attribution for the
+  upstream lineage this UI stack derives from, sitting beside Tamagui's and RNW's.
+  Legal text, not residue.
+- **The three Tailwind mentions in `app/design/{colors,elevation,spacing}.css`** —
+  provenance comments recording that the neutral ladder, the `shadow-2xl` drop and
+  the 4px ramp came from hanzo.ai's config. That whole directory is VENDORED from
+  hanzoai/design and carries its own "do NOT edit these files in the console — edit
+  them in hanzoai/design and re-sync" banner, so it is not ours to rewrite.
+- **`src/lib/api/families.ts:182`** — explains why the console keeps a local twin of
+  `@hanzo/ui/models` `groupModelsByFamily` (it runs @hanzo/gui, not @hanzo/ui's
+  shadcn backend). Accurate and load-bearing.
+
+**[BUG, measured] The real find: two `@keyframes pulse`, and the component-injected
+one won.** `Loader` rendered a `<style>` child holding
+`@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}` — while `app/globals.css`
+already defined a DIFFERENT `pulse` (opacity 1→.45 **plus** `scale(1)→scale(0.82)`)
+that `.hz-rail-dot` runs on. Duplicate keyframes do not merge: the last definition
+the document parses wins for **every** element already using that name. React
+renders that `<style>` in place (no `precedence` prop, so React 19 does not hoist or
+dedupe it), so from the moment any Loader mounted, the rail dot silently stopped
+scaling and flipped to the Loader's flat fade. Reachable, not theoretical:
+`PlatformAppsModule` mounts `<Loader label="Loading canvas…" />` as the
+`ProjectCanvas` dynamic-import fallback while its `ServiceDetailDrawer` renders the
+`hz-rail-dot` streaming indicator — one surface, both on screen.
+
+Proven in a browser, not by arithmetic: frozen on the 50% frame, the dot read
+`opacity 0.45 / matrix(0.82, …)` before a Loader mounted and `opacity 1 / none`
+after — the injected style appended at runtime exactly as React does it.
+
+Fixed by giving each motion one home and one name. The Loader's animation moved
+into `globals.css` as `.hz-breathe` (+ a `prefers-reduced-motion` entry beside
+`.skeleton`/`.row-in`, matching the file's convention) and the `<style>` child is
+gone; the dot's keyframe is namespaced `pulse` → `hz-pulse`. Both are now what
+every other keyframe in the file already was — `hz-`-prefixed — so a bare `pulse`
+from any future component or library cannot capture them. Re-proven with the REAL
+shipped stylesheets (`app/design/index.css` + `app/globals.css` loaded into a page,
+not a hand-copied snippet): mounted together, `.hz-rail-dot` resolves to `hz-pulse`
+and keeps `opacity 0.45 / scale(0.82)` while `.hz-breathe` resolves to `hz-breathe`
+at `opacity 1`. `@keyframes` names across the repo: 15, zero duplicates. Inline
+`<style>` elements in components: zero.
+
+Also corrected: `e2e/account-menu.spec.ts`'s rationale said the app's utility
+classes are dead "because Tailwind never scanned node_modules", which implies a
+Tailwind build that merely missed a directory. There is no Tailwind build at all —
+the reason a utility class is inert here is stronger and simpler than the reason
+given.
+
+Flagged, not touched: the five `hanzo-*` keyframes in the vendored
+`app/design/motion.css` (`hanzo-fade-up`, `-fade-down`, `-slide-up-fade`, `-glow`,
+`-pulse-dot`) have zero uses in this repo. They belong to hanzoai/design, so they
+are a re-sync question there, not a console edit.
+
+Verification: `tsc --noEmit` clean; `vitest` **3212 passed** / 8 skipped (260 files
+— unchanged from baseline, no regression); `next build` ✓; `npm run build:embed` ✓
+(the go:embed gate, 30 handlers stashed+restored).
