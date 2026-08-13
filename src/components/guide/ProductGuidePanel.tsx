@@ -26,12 +26,7 @@ import { PitchHero } from './PitchHero'
 export function landingProductId(pathname?: string): string | undefined {
   if (!pathname) return undefined
   const segs = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
-  // The console HOME leads with the account's own board — credits, spend, caching,
-  // the model lineup — not a pitch. A signed-in account has already been sold to;
-  // stacking "what Hanzo is" above what it currently HAS pushes the real state of
-  // the account below the fold. The pitch still leads every product landing, which
-  // is the surface where a reader genuinely has not met the product yet.
-  if (segs.length === 0) return undefined
+  if (segs.length === 0) return 'overview' // the console home
   if (segs.length !== 1) return undefined // the pitch leads the landing only, not sub-pages
   return matchRoute(segs)?.module.id
 }
