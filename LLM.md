@@ -4299,3 +4299,51 @@ should be the first thing checked on any console task: `git merge-base HEAD forg
 printing nothing. The UI primitives had moved to `@hanzo/ui/product` on canonical while
 the stale tree still had them local, so code written against the stale tree compiles
 against files that no longer exist. Rebase before you write, not after.
+
+## The Playground's modes are one line, and on a phone they crawl
+
+The seven modes wrapped onto two rows inside one grey pill — a container that
+looks broken rather than a control. They are one line now, and on a phone the
+line crawls: a track holding TWO copies of the row, translated by exactly one
+copy's width, so the wrap has no seam. Same structure hanzo.app uses for its
+starter chips (`hz-crawl`), same reason.
+
+Desktop keeps the static row — seven modes fit, and a moving target earns
+nothing when there is room to hold still — so there the duplicate is
+`display: none` and a screen reader hears seven modes, not fourteen.
+
+**A moving mode has to stay catchable, and here that matters more than it does
+on a marketing page, because this is navigation.** Hover pauses the crawl for a
+pointer and a touch has no hover, so without more the mode a thumb aims at
+slides out from under the press and the tap lands on the track between two of
+them. `:active` holds it for the press itself — the element under the finger at
+pointerdown is the one that decides the click — and the component sets
+`pg-hold` on pointerdown so a missed aim has somewhere to land instead of
+chasing the row.
+
+The crawl wrapper is a plain `<div>` deliberately: it needs a real DOM node to
+put the class on, and a gui primitive's ref is a `GuiElement`, not an
+`HTMLElement`. A cast would have bought a ref that type-checks and has no
+`classList` at runtime.
+
+**Two things the render spec cost, both worth keeping.**
+
+A page-wide `getByRole('button', { name })` does not find a mode. Five of the
+seven mode names are also PRODUCT names in the sidebar, so "Embeddings" matched
+the nav row at x=14 as well as the mode at x=512, and `.first()` took the nav
+row — DOM order puts the sidebar first. That read as a two-row strip (y=708 vs
+696) on a strip that was measurably one row, and the component was never at
+fault. Scope to `.pg-modes-crawl`.
+
+And Playwright cannot scroll to a moving element: `scrollIntoViewIfNeeded()` on
+a mode hangs on its own actionability check ("element is not stable") precisely
+because the thing being scrolled to is the thing that moves. Scroll the shell,
+which holds still.
+
+`animationName` alone is not evidence the ticker works — it passes on a paused
+or zero-distance animation — so the spec reads the track's composited transform
+twice and requires it to have moved.
+
+Verified in a browser (`e2e/playground-modes.spec.ts`, 3/3): every mode's box on
+one row at 390 and at 1440, no horizontal body scroll at 390, the transform
+actually advances, pointerdown lands `pg-hold`, and the tap switches mode.
