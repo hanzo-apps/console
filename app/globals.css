@@ -663,3 +663,77 @@ body {
   width: 15px;
   height: 15px;
 }
+
+/* ── The playground's mode strip, on one line ─────────────────────────────
+ *
+ * Seven modes wrapped onto two rows inside one pill, which reads as a broken
+ * container rather than a control. They are one line now, and on a phone the
+ * line crawls — the same treatment hanzo.app gives its starter chips, and the
+ * same structure: a track holding TWO copies of the row, translated by exactly
+ * one copy's width, so the wrap has no seam.
+ *
+ * A MODE YOU CANNOT CATCH IS WORSE THAN A WRAPPED ONE. This is navigation, not
+ * decoration, so the freeze matters more here than it does on the marketing
+ * page. Hover pauses it for a mouse, and a touch has no hover — so without the
+ * rest of this, the tab a thumb aims at slides out from under the press and the
+ * tap lands on the track between two of them. `:active` holds it for the press
+ * itself (the element under the finger at pointerdown is the one that decides
+ * the click), and `.pg-hold`, set on pointerdown by the component, keeps it
+ * still long enough for a correction to land too.
+ *
+ * Desktop keeps the static row: seven modes fit, and a moving target earns
+ * nothing when there is room to hold still. */
+.pg-modes-shell { align-self: stretch; }
+.pg-modes-crawl {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent);
+}
+.pg-modes-track {
+  display: flex;
+  width: max-content;
+}
+.pg-modes-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  /* Trailing gap == internal gap, so copy-2's first mode sits the same distance
+     from copy-1's last as any two neighbours: no seam at the wrap. */
+  padding-right: 4px;
+}
+@media (max-width: 767px) {
+  .pg-modes-track {
+    will-change: transform;
+    animation: pg-modes-scroll 26s linear infinite;
+  }
+  .pg-modes-crawl:hover .pg-modes-track,
+  .pg-modes-crawl:focus-within .pg-modes-track,
+  .pg-modes-crawl:active .pg-modes-track,
+  .pg-modes-crawl.pg-hold .pg-modes-track {
+    animation-play-state: paused;
+  }
+}
+/* Room to hold still: one copy, no motion, and the duplicate would only be a
+   second set of the same seven controls for a screen reader to read twice. */
+@media (min-width: 768px) {
+  /* Room to hold still, so the pill shrinks back to its contents. */
+  .pg-modes-shell { align-self: flex-start; }
+  .pg-modes-crawl { flex: 0 1 auto; -webkit-mask-image: none; mask-image: none; }
+  .pg-modes-track { width: auto; }
+  .pg-modes-group { padding-right: 0; }
+  .pg-modes-group[aria-hidden='true'] { display: none; }
+}
+@keyframes pg-modes-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+/* Motion off → no crawl, drop the duplicate, hand-scroll the single row. */
+@media (prefers-reduced-motion: reduce) {
+  .pg-modes-track { animation: none; transform: none; width: auto; }
+  .pg-modes-crawl { overflow-x: auto; scrollbar-width: none; }
+  .pg-modes-crawl::-webkit-scrollbar { display: none; }
+  .pg-modes-group[aria-hidden='true'] { display: none; }
+  .pg-modes-group { padding-right: 0; }
+}

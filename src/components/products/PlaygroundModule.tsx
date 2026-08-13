@@ -15,7 +15,7 @@
  * Nothing is fabricated — every output, token count and price is real, and each
  * surface renders an honest state on failure.
  */
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { ComponentType } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { MessageSquare, FileText, Binary, AudioLines, ScanEye, Image as ImageIcon, Clapperboard } from '@hanzogui/lucide-icons-2'
@@ -40,14 +40,27 @@ const TABS: { id: Tab; label: string; Icon: ComponentType<{ size?: number }> }[]
   { id: 'vision', label: 'Vision', Icon: ScanEye },
 ]
 
-function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+/** One copy of the seven modes. Rendered twice inside the track, so the crawl
+ *  can translate by exactly one copy's width and land seamlessly. The second is
+ *  a visual duplicate: `aria-hidden` and out of the tab order, so a screen
+ *  reader hears seven modes and not fourteen — but it still switches on press,
+ *  because a thumb aiming at what it can see should not be told it is a copy. */
+function ModeRow({
+  tab,
+  onChange,
+  dup = false,
+}: {
+  tab: Tab
+  onChange: (t: Tab) => void
+  dup?: boolean
+}) {
   return (
-    <XStack gap="$1" bg="$color3" rounded="$10" p="$1" self="flex-start" flexWrap="wrap">
+    <XStack className="pg-modes-group" gap="$1" {...(dup ? { 'aria-hidden': true } : {})}>
       {TABS.map(({ id, label, Icon }) => {
         const active = tab === id
         return (
           <Button
-            key={id}
+            key={(dup ? 'b-' : 'a-') + id}
             size="$2"
             chromeless={!active}
             bg={active ? '$color1' : 'transparent'}
@@ -56,12 +69,46 @@ function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
             icon={<Icon size={15} />}
             onPress={() => onChange(id)}
           >
-            <Text fontSize="$2" color={active ? '$color12' : '$color10'} fontWeight="600">
+            <Text fontSize="$2" color={active ? '$color12' : '$color10'} fontWeight="600" whiteSpace="nowrap">
               {label}
             </Text>
           </Button>
         )
       })}
+    </XStack>
+  )
+}
+
+function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+  const crawl = useRef<HTMLDivElement>(null)
+  const release = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /* Freeze on touch. The element under the finger at pointerdown is the one the
+     click resolves to, so pausing here is what makes a moving mode hittable at
+     all; holding it a few seconds after gives a missed aim somewhere to land
+     instead of chasing the row. Hover cannot do this job — a touch has no
+     hover. */
+  const hold = () => {
+    const el = crawl.current
+    if (!el) return
+    el.classList.add('pg-hold')
+    if (release.current) clearTimeout(release.current)
+    release.current = setTimeout(() => el.classList.remove('pg-hold'), 4000)
+  }
+  useEffect(() => () => { if (release.current) clearTimeout(release.current) }, [])
+
+  return (
+    /* A plain div, not a YStack, and deliberately: this element needs a real DOM
+       node to put `pg-hold` on, and a gui primitive's ref is a GuiElement, not
+       an HTMLElement. Reaching for a cast here would have bought a ref that
+       type-checks and has no classList at runtime. */
+    <XStack className="pg-modes-shell" bg="$color3" rounded="$10" p="$1" data-tour="pg-modes">
+      <div ref={crawl} className="pg-modes-crawl" onPointerDown={hold}>
+        <XStack className="pg-modes-track">
+          <ModeRow tab={tab} onChange={onChange} />
+          <ModeRow tab={tab} onChange={onChange} dup />
+        </XStack>
+      </div>
     </XStack>
   )
 }
