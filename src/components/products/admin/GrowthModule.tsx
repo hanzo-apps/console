@@ -327,7 +327,7 @@ function BlueprintPanel({
         onMutated()
         return true
       } catch (e) {
-        toast.error('Could not update', asApiError(e).message)
+        toast.error(`Could not update ${SINGULAR[c]} · ${label}`, asApiError(e).message)
         return false
       } finally {
         setBusy('')
@@ -351,7 +351,7 @@ function BlueprintPanel({
       if (showHistory) setVersions(await GuideBlueprintApi.versions())
       reload()
     } catch (e) {
-      toast.error('Could not publish', asApiError(e).message)
+      toast.error('The blueprint version was not published', asApiError(e).message)
     } finally {
       setPublishing(false)
     }
@@ -847,10 +847,10 @@ function LivePanel({ nonce }: { nonce: number }) {
       <YStack gap="$2">
         <XStack items="center" gap="$2" flexWrap="wrap">
           <Text fontSize="$5" color="$color12">Next-best moves</Text>
-          <Text fontSize="$1" color="$color10">Ranked by leverage from the org&apos;s live progress.</Text>
+          <Text fontSize="$1" color="$color10">Ranked by what each move unblocks, read from the org&apos;s live progress.</Text>
         </XStack>
         {!suggest || suggest.suggestions.length === 0 ? (
-          <Text fontSize="$2" color="$color9">{suggest ? 'The journey is complete — no moves queued.' : 'Suggestions unavailable.'}</Text>
+          <Text fontSize="$2" color="$color9">{suggest ? 'The journey is complete — no moves queued.' : 'Next-best moves did not load. Reload the page to try again.'}</Text>
         ) : (
           <YStack gap="$1.5">
             {suggest.suggestions.map((m) => (

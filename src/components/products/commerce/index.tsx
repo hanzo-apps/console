@@ -66,7 +66,7 @@ function ProductDelete({ product, onDeleted }: { product: CommerceProduct; onDel
       disabled={working}
       icon={<Trash2 size={15} />}
       onPress={async () => {
-        if (typeof window !== 'undefined' && !window.confirm(`Delete ${product.name}? This cannot be undone.`)) return
+        if (typeof window !== 'undefined' && !window.confirm(`Delete the product ${product.name}? It leaves your store, and this cannot be undone.`)) return
         setWorking(true)
         try {
           await CommerceApi.deleteProduct(product.id)

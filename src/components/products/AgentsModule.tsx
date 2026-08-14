@@ -211,7 +211,7 @@ export function AgentsModule(props: { params: Record<string, string> }) {
                   .catch((e) => {
                     // Never a silent failure: surface why the delete didn't take (the row stays).
                     if (typeof window !== 'undefined') {
-                      window.alert(`Couldn’t delete “${a.name}”: ${e instanceof Error ? e.message : 'request failed'}`)
+                      window.alert(`Couldn’t delete “${a.name}” — ${e instanceof Error ? e.message : 'the request never reached the server'}. The agent is still here; try again.`)
                     }
                   })
               }}

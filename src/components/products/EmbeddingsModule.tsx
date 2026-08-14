@@ -82,7 +82,7 @@ export function EmbeddingsModule({ params }: { params: Record<string, string> })
       await EmbeddingsApi.addStore(s)
       openCollection(s.name)
     } catch (e) {
-      setNotice(e instanceof ApiError ? e.message : 'Failed to create collection')
+      setNotice(e instanceof ApiError ? e.message : 'The collection was not created. Try again.')
     }
   }
 

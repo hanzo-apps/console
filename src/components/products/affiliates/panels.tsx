@@ -141,7 +141,7 @@ export function LinksPanel() {
         setLabel('')
         reload()
       })
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Could not create the link. Try again.'))
+      .catch((e) => setErr(e instanceof Error ? e.message : 'The link was not created. Try again.'))
       .finally(() => setBusy(false))
   }, [label, reload])
 
@@ -259,7 +259,7 @@ export function LeaderboardPanel({ initialHandle }: { initialHandle: string }) {
         setTimeout(() => setSaved(false), 1500)
         reload()
       })
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Could not save your handle. Try again.'))
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Your handle was not saved. The old one still stands — try again.'))
       .finally(() => setBusy(false))
   }, [handle, reload])
 

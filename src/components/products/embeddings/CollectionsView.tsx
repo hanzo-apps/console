@@ -94,7 +94,7 @@ export function CollectionsView({
   const pageRows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
 
   const onDelete = async (c: Collection) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete collection "${c.name}"? This removes its vectors.`)) return
+    if (typeof window !== 'undefined' && !window.confirm(`Delete collection “${c.name}”? Its vectors go with it and cannot be recovered — the documents have to be ingested again.`)) return
     try {
       await EmbeddingsApi.remove(c.owner, c.name)
       setRows((rs) => rs.filter((r) => r.name !== c.name))

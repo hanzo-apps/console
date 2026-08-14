@@ -142,7 +142,7 @@ export function DatasetsModule(_props: { params: Record<string, string> }) {
 
   // Delete a dataset + its items (real DELETE /v1/evals/datasets/:name, org-scoped).
   const onDeleteDataset = async (d: EvalDataset) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete dataset "${d.name}" and all its items?`)) return
+    if (typeof window !== 'undefined' && !window.confirm(`Delete dataset “${d.name}” and all its items? This cannot be undone — the items have to be added again.`)) return
     try {
       await EvalsApi.deleteDataset(d.name)
       setCreateMsg({ tone: 'ok', text: `Deleted dataset "${d.name}".` })

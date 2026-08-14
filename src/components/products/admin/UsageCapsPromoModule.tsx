@@ -377,14 +377,14 @@ function CapCard({ org, cap, onChanged }: { org: string; cap: AdminCap; onChange
       onChanged()
     } catch (e) {
       const a = asApiError(e)
-      setError(isForbidden(a) ? 'SuperAdmin required.' : a.message || 'Could not save the cap.')
+      setError(isForbidden(a) ? 'The cap was not saved. Caps on another org take a SuperAdmin — a member of the reserved admin org, which an org admin is not.' : a.message || 'The cap was not saved. It still runs on its old settings — try again.')
     } finally {
       setSaving(false)
     }
   }
 
   const remove = async () => {
-    if (typeof window !== 'undefined' && !window.confirm(`Remove the cap "${cap.title}" (${label}) on ${org}?`)) return
+    if (typeof window !== 'undefined' && !window.confirm(`Remove the cap “${cap.title}” (${label}) on ${org}? Spend at that scope runs uncapped from then on. You can create the cap again, but its settings are not kept.`)) return
     setRemoving(true)
     setError(null)
     try {
@@ -392,7 +392,7 @@ function CapCard({ org, cap, onChanged }: { org: string; cap: AdminCap; onChange
       onChanged()
     } catch (e) {
       const a = asApiError(e)
-      setError(isForbidden(a) ? 'SuperAdmin required.' : a.message || 'Could not remove the cap.')
+      setError(isForbidden(a) ? 'The cap was not removed. Caps on another org take a SuperAdmin — a member of the reserved admin org, which an org admin is not.' : a.message || 'The cap was not removed. It still applies — try again.')
       setRemoving(false)
     }
   }
@@ -508,7 +508,7 @@ function AddCapForm({ org, onDone, onCancel }: { org: string; onDone: () => void
       onDone()
     } catch (e) {
       const a = asApiError(e)
-      setError(isForbidden(a) ? 'SuperAdmin required.' : a.message || 'Could not create the cap.')
+      setError(isForbidden(a) ? 'The cap was not created. Caps on another org take a SuperAdmin — a member of the reserved admin org, which an org admin is not.' : a.message || 'The cap was not created. Your settings are still here — try again.')
       setSaving(false)
     }
   }

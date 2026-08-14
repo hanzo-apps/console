@@ -349,21 +349,21 @@ function BudgetCard({ alert, onChanged }: { alert: SpendAlert; onChanged: () => 
       setEditing(false)
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save the budget.')
+      setError(e instanceof Error ? e.message : 'The budget was not saved. It still runs on its old settings — try again.')
     } finally {
       setSaving(false)
     }
   }
 
   const remove = async () => {
-    if (typeof window !== 'undefined' && !window.confirm(`Remove the budget "${alert.title}" (${label})?`)) return
+    if (typeof window !== 'undefined' && !window.confirm(`Remove the budget “${alert.title}” (${label})? Nothing then caps or warns on spend at that scope. You can create it again, but its settings are not kept.`)) return
     setRemoving(true)
     setError(null)
     try {
       await BillingApi.deleteSpendAlert(alert.id)
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not remove the budget.')
+      setError(e instanceof Error ? e.message : 'The budget was not removed. It still applies — try again.')
       setRemoving(false)
     }
   }
@@ -495,7 +495,7 @@ function AddBudgetForm({ onDone, onCancel }: { onDone: () => void; onCancel: () 
       })
       onDone()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not create the budget.')
+      setError(e instanceof Error ? e.message : 'The budget was not created. Your settings are still here — try again.')
       setSaving(false)
     }
   }

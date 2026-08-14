@@ -87,7 +87,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
       })
       await load()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to provision cluster')
+      setError(e instanceof ApiError ? e.message : 'The cluster was not provisioned. Check the region and node size, then try again.')
     } finally {
       setProvisioning(false)
     }
@@ -131,7 +131,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     )
 
   const onDeletePool = (c: Cluster, p: NodePool) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete node pool "${p.name || poolId(p)}"? Its machines are destroyed.`)) return
+    if (typeof window !== 'undefined' && !window.confirm(`Delete node pool “${p.name || poolId(p)}”? Its machines are destroyed and cannot be brought back — add a new pool to replace the capacity.`)) return
     void runPool(() => PlatformApi.deletePool(clusterId(c), poolId(p)), 'Node pool removed.')
   }
 

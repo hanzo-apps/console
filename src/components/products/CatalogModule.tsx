@@ -382,7 +382,7 @@ function CatalogForm({
       else await CatalogAdminApi.update(entry.slug, input)
       onSaved()
     } catch (e) {
-      setErr(asApiError(e).message || 'Failed to save.')
+      setErr(asApiError(e).message || 'The entry was not saved. Your changes are still here — try again.')
       setBusy(false)
     }
   }, [creating, entry, slug, name, category, description, price, pricingId, cost, margin, order, published, rows, onSaved])

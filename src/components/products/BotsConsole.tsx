@@ -99,7 +99,7 @@ export function BotsConsole() {
         setRuns((prev) => prev.map((r) => (r.runId === runId ? { ...r, status } : r)))
         setActive((a) => (a && a.runId === runId ? { ...a, status } : a))
       } catch (e) {
-        setStopErr(e instanceof Error && e.message ? e.message : 'Stop failed. Try again.')
+        setStopErr(e instanceof Error && e.message ? e.message : 'The bot was not stopped. It is still running — try again.')
       } finally {
         setStoppingId(null)
       }
@@ -125,7 +125,7 @@ export function BotsConsole() {
             ? 'This launch needs funds. Add credit to your org to run bots.'
             : e instanceof Error && e.message
               ? e.message
-              : 'Launch failed. Try again.',
+              : 'The bot did not launch. Your task is still here — try again.',
         needsFunds: status === 402,
       })
     } finally {

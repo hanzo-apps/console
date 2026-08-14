@@ -58,7 +58,7 @@ export function ClustersTab({ data }: { data: ComputeData }) {
       await PlatformApi.provisionCluster(currentOrg(), { region, nodeSize, nodeCount: count })
       data.reload()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to provision cluster')
+      setError(e instanceof ApiError ? e.message : 'The cluster was not provisioned. Check the region and node size, then try again.')
     } finally {
       setProvisioning(false)
     }

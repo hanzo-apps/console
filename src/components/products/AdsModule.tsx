@@ -101,7 +101,7 @@ function CreatePanel({ onCreated }: { onCreated: () => void }) {
       })
       onCreated()
     } catch (e) {
-      setError(classifyBackend(e).message || 'Failed to create campaign.')
+      setError(classifyBackend(e).message || 'The campaign was not created. Your details are still here — try again.')
     } finally {
       setSaving(false)
     }

@@ -76,7 +76,7 @@ function BulkDelete({ ids, onDelete }: { ids: string[]; onDelete: (ids: string[]
       icon={<Trash2 size={15} />}
       disabled={working}
       onPress={async () => {
-        if (typeof window !== 'undefined' && !window.confirm(`Delete ${ids.length} record${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return
+        if (typeof window !== 'undefined' && !window.confirm(`Delete the ${ids.length} selected record${ids.length > 1 ? 's' : ''} from this collection? This cannot be undone.`)) return
         setWorking(true)
         try { await onDelete(ids) } finally { setWorking(false) }
       }}

@@ -294,7 +294,7 @@ export function AIAccountsMachines(_props: { params: Record<string, string> }) {
 
   const revokeLink = useCallback(
     async (l: Link) => {
-      if (typeof window !== 'undefined' && !window.confirm(`Log out ${accountTitle(l)} on ${l.host || l.machine}? This revokes the account and stops its running sessions.`)) {
+      if (typeof window !== 'undefined' && !window.confirm(`Log out ${accountTitle(l)} on ${l.host || l.machine}? This revokes the account and stops its running sessions. Signing in again on that machine brings it back.`)) {
         return
       }
       setBusyId(l.id)
@@ -312,7 +312,7 @@ export function AIAccountsMachines(_props: { params: Record<string, string> }) {
 
   const revokeDevice = useCallback(
     async (d: Device) => {
-      if (typeof window !== 'undefined' && !window.confirm(`Log out every account on ${d.host || d.machine}? This stops the device's running sessions.`)) {
+      if (typeof window !== 'undefined' && !window.confirm(`Log out every account on ${d.host || d.machine}? This stops the device’s running sessions. Each account comes back when you sign in again on that machine.`)) {
         return
       }
       setBusyId(d.machine)

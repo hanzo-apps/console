@@ -48,7 +48,7 @@ export function BotModule() {
         setErr('The bot gateway is not routed on this host. It runs at hanzo.bot — open it below.')
       } else {
         setStatus('error')
-        setErr(e instanceof ApiError ? e.message : 'Failed to reach the bot gateway')
+        setErr(e instanceof ApiError ? e.message : 'Couldn’t reach the bot gateway, so its status is unknown. Refresh to try again.')
       }
     } finally {
       setLoading(false)

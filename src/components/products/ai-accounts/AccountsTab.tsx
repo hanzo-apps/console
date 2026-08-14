@@ -62,7 +62,7 @@ function ProviderRow({
       reset()
       onChanged()
     } catch (e) {
-      toast.error('Could not connect', e instanceof Error ? e.message : undefined)
+      toast.error(`Could not connect ${provider.label}`, e instanceof Error ? e.message : 'The key was not saved. Check it and try again.')
     } finally {
       setBusy(false)
     }
@@ -75,7 +75,7 @@ function ProviderRow({
       toast.success(`Disconnected ${provider.label}`)
       onChanged()
     } catch (e) {
-      toast.error('Could not disconnect', e instanceof Error ? e.message : undefined)
+      toast.error(`Could not disconnect ${provider.label}`, e instanceof Error ? e.message : 'It is still connected. Try again.')
     } finally {
       setBusy(false)
     }

@@ -76,7 +76,7 @@ export function ChatView({ owner, name, onDone }: { owner?: string; name: string
         }
       })
       .catch((e: unknown) => {
-        if (live) setError(e instanceof ApiError ? e.message : 'Failed to load chat')
+        if (live) setError(e instanceof ApiError ? e.message : 'Couldn’t load this chat. Reload the page to try again.')
       })
       .finally(() => {
         if (live) setLoading(false)

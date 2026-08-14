@@ -444,7 +444,7 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
     { key: 'email', header: 'Email', render: (s) => <Text fontSize="$3" color="$color11" numberOfLines={1}>{s.email}</Text> },
     { key: 'rel', header: 'Relationship', width: 150, render: (s) => <StatusTag status={enumLabel(s.currentRelationship)} /> },
     { key: 'type', header: 'Type', width: 120, render: (s) => <Text fontSize="$2" color="$color10">{enumLabel(s.stakeholderType)}</Text> },
-    { key: 'actions', header: '', width: 56, align: 'right', render: (s) => <Button chromeless width={40} height={40} icon={<Trash2 size={15} />} aria-label="Remove" onPress={() => setDialog({ kind: 'deleteStakeholder', row: s })} /> },
+    { key: 'actions', header: '', width: 56, align: 'right', render: (s) => <Button chromeless width={40} height={40} icon={<Trash2 size={15} />} aria-label={`Remove ${s.name || s.email}`} onPress={() => setDialog({ kind: 'deleteStakeholder', row: s })} /> },
   ]
   const shareCols: Column<Share>[] = [
     { key: 'cert', header: 'Certificate', render: (s) => <Text fontSize="$3" className="hz-mono" color="$color12" numberOfLines={1}>{s.certificateId}</Text> },
@@ -452,7 +452,7 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
     { key: 'class', header: 'Class', width: 150, render: (s) => <Text fontSize="$2" color="$color11" numberOfLines={1}>{s.shareClassName}</Text> },
     { key: 'qty', header: 'Shares', width: 120, align: 'right', mono: true, render: (s) => int(s.quantity) },
     { key: 'status', header: 'Status', width: 100, render: (s) => <StatusTag status={s.status} /> },
-    { key: 'actions', header: '', width: 56, align: 'right', render: (s) => <Button chromeless width={40} height={40} icon={<Trash2 size={15} />} aria-label="Delete" onPress={() => setDialog({ kind: 'deleteShare', row: s })} /> },
+    { key: 'actions', header: '', width: 56, align: 'right', render: (s) => <Button chromeless width={40} height={40} icon={<Trash2 size={15} />} aria-label={`Delete certificate ${s.certificateId}`} onPress={() => setDialog({ kind: 'deleteShare', row: s })} /> },
   ]
   const classCols: Column<ShareClass>[] = [
     { key: 'name', header: 'Class', render: (c) => <XStack items="center" gap="$2" minW={0}><Text fontSize="$3" color="$color12" numberOfLines={1}>{c.name}</Text><StatusTag status={enumLabel(c.classType)} /></XStack> },
@@ -466,7 +466,7 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
     { key: 'capital', header: 'Capital', width: 130, align: 'right', mono: true, render: (s) => usd(s.capital) },
     { key: 'cap', header: 'Cap', width: 130, align: 'right', mono: true, render: (s) => (s.valuationCap ? usd(s.valuationCap) : '—') },
     { key: 'type', header: 'Type', width: 120, render: (s) => <Text fontSize="$2" color="$color10">{enumLabel(s.type)}</Text> },
-    { key: 'actions', header: '', width: 56, align: 'right', render: (s) => <Button chromeless width={40} height={40} icon={<Trash2 size={15} />} aria-label="Delete" onPress={() => setDialog({ kind: 'deleteSafe', row: s })} /> },
+    { key: 'actions', header: '', width: 56, align: 'right', render: (s) => <Button chromeless width={40} height={40} icon={<Trash2 size={15} />} aria-label={`Delete SAFE ${s.publicId}`} onPress={() => setDialog({ kind: 'deleteSafe', row: s })} /> },
   ]
   const roundCols: Column<Round>[] = [
     { key: 'name', header: 'Round', render: (r) => <Text fontSize="$3" color="$color12" numberOfLines={1}>{r.name}</Text> },
@@ -557,9 +557,9 @@ export function CapTableModule({ params }: { params: Record<string, string> }) {
           : dialog.kind === 'class' ? <CreateClassForm onDone={afterMutation} />
           : dialog.kind === 'safe' ? <RecordSafeForm stakeholders={stakeholderList} onDone={afterMutation} />
           : dialog.kind === 'round' ? <RecordRoundForm classes={classList} onDone={afterMutation} />
-          : dialog.kind === 'deleteStakeholder' ? <ConfirmDelete message={`Remove ${dialog.row.name}? A stakeholder that still holds shares or options cannot be removed.`} confirmLabel="Remove" run={() => CapTableApi.stakeholders.remove(dialog.row.id)} onDone={afterMutation} />
-          : dialog.kind === 'deleteShare' ? <ConfirmDelete message={`Delete certificate ${dialog.row.certificateId} (${int(dialog.row.quantity)} shares)?`} confirmLabel="Delete" run={() => CapTableApi.shares.remove(dialog.row.id)} onDone={afterMutation} />
-          : dialog.kind === 'deleteSafe' ? <ConfirmDelete message={`Delete SAFE ${dialog.row.publicId}?`} confirmLabel="Delete" run={() => CapTableApi.safes.remove(dialog.row.id)} onDone={afterMutation} />
+          : dialog.kind === 'deleteStakeholder' ? <ConfirmDelete message={`Remove the stakeholder ${dialog.row.name} (${dialog.row.email})? Their row leaves the cap table and cannot be restored. A stakeholder who still holds shares or options is refused.`} confirmLabel="Remove stakeholder" run={() => CapTableApi.stakeholders.remove(dialog.row.id)} onDone={afterMutation} />
+          : dialog.kind === 'deleteShare' ? <ConfirmDelete message={`Delete certificate ${dialog.row.certificateId} — ${int(dialog.row.quantity)} ${dialog.row.shareClassName} shares held by ${dialog.row.stakeholderName}? The cap table stops counting them, and this cannot be undone.`} confirmLabel="Delete certificate" run={() => CapTableApi.shares.remove(dialog.row.id)} onDone={afterMutation} />
+          : dialog.kind === 'deleteSafe' ? <ConfirmDelete message={`Delete SAFE ${dialog.row.publicId} — ${usd(dialog.row.capital)} from ${dialog.row.stakeholderName}? It leaves the cap table and stops counting toward outstanding convertibles, and this cannot be undone.`} confirmLabel="Delete SAFE" run={() => CapTableApi.safes.remove(dialog.row.id)} onDone={afterMutation} />
           : null}
       </SlideOver>
     </YStack>

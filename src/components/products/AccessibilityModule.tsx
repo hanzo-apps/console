@@ -45,7 +45,7 @@ export function AccessibilityModule(_props: { params: Record<string, string> }) 
     try {
       const mod = (await import('axe-core')) as unknown as { default?: AxeModule } & Partial<AxeModule>
       const axe = mod.default ?? (mod as AxeModule)
-      if (typeof axe.run !== 'function') throw new Error('axe-core failed to load')
+      if (typeof axe.run !== 'function') throw new Error('The accessibility scanner did not load, so nothing was scanned. Reload the page and scan again.')
       const { violations } = await axe.run(document, { resultTypes: ['violations'] })
       const issues = toIssues(violations)
       setState({ phase: 'done', issues, summary: summarize(issues) })

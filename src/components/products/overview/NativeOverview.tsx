@@ -117,8 +117,8 @@ function HealthBand({ service, label }: { service: string; label: string }) {
           </Text>
         </XStack>
         <Text fontSize="$2" color="$color10">
-          Live health comes from the platform control plane, which is not wired on this
-          deployment yet. The status lights up automatically once it is — no fabricated state is shown.
+          Health comes from the platform control plane, which is not wired on this
+          deployment yet. The status appears once it is.
         </Text>
       </Card>
     )
@@ -135,7 +135,7 @@ function HealthBand({ service, label }: { service: string; label: string }) {
         </XStack>
         <Text fontSize="$2" color="$color10">
           The control plane&apos;s operator inventory reports no running {label} service for your
-          organization. Its health lights up here automatically once one is reported — no status is fabricated.
+          organization. Health appears here once one is reported.
         </Text>
       </Card>
     )

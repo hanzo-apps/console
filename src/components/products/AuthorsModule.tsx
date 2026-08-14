@@ -103,7 +103,7 @@ function AuthorConnect({ onConnected }: { onConnected: () => void }) {
     setError(null)
     AuthorsApi.connect(login.trim())
       .then(() => onConnected())
-      .catch((e) => setError(e instanceof Error ? e.message : 'Could not connect GitHub. Try again.'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'GitHub was not connected. Check the login and try again.'))
       .finally(() => setSubmitting(false))
   }, [login, onConnected])
 
@@ -419,7 +419,7 @@ function RepositoriesCard({
       })
       // Surface the server message on 400 (malformed / connect-first), 409 (owned by
       // another author), 422 (could-not-verify) — honest, never a fabricated success.
-      .catch((e) => setError(e instanceof Error ? e.message : 'Could not verify that repository.'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'That repository was not verified. It has to be owned by your connected GitHub account, or carry a hanzo.json file.'))
       .finally(() => setVerifying(false))
   }, [repoUrl, onChanged])
 

@@ -179,7 +179,7 @@ export function ApiKeysView() {
       setStatus(await KeysApi.status())
       setError(null)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to load API key status')
+      setError(e instanceof ApiError ? e.message : 'Couldn’t read your API key. Nothing changed — reload the page to try again.')
     } finally {
       setLoading(false)
     }
@@ -206,7 +206,7 @@ export function ApiKeysView() {
         }))
         if (mode === 'create') analytics.capture(EVENTS.API_KEY_CREATED)
       } catch (e) {
-        setError(e instanceof ApiError ? e.message : 'Failed to create the API key')
+        setError(e instanceof ApiError ? e.message : 'Couldn’t issue the API key. No key was created, and any key you already had still works. Try again.')
       } finally {
         setWorking(null)
       }
@@ -215,7 +215,7 @@ export function ApiKeysView() {
   )
 
   const revoke = useCallback(async () => {
-    if (typeof window !== 'undefined' && !window.confirm('Revoke your API key? Any app using it will stop working immediately.')) return
+    if (typeof window !== 'undefined' && !window.confirm('Revoke your API key? Every app using it stops working immediately. A revoked key can’t be restored — you create a new one and update everything that used the old key.')) return
     setWorking('revoke')
     setError(null)
     try {
@@ -224,7 +224,7 @@ export function ApiKeysView() {
       // Revoking the secret leaves the publishable keys standing — they are separate grants.
       setStatus((s) => ({ hasKey: false, keyPrefix: '', publishable: s?.publishable ?? [] }))
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to revoke the API key')
+      setError(e instanceof ApiError ? e.message : 'Couldn’t revoke the API key. It’s still active and every app using it keeps working. Try again.')
     } finally {
       setWorking(null)
     }

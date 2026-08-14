@@ -172,7 +172,7 @@ export function ConnectionsModule(_props: { params: Record<string, string> }) {
         .catch((e) => {
           const notConfigured = e instanceof ApiError && e.status === 503
           toast.error(
-            notConfigured ? `${provider} login is not available` : 'Could not start sign-in',
+            notConfigured ? `${provider} login is not available` : `Could not start the ${provider} sign-in`,
             notConfigured ? 'This deployment has no OAuth app for this provider — paste an API key instead.' : e instanceof Error ? e.message : String(e),
           )
           setBusy(null)

@@ -375,7 +375,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
           {topGpus.length ? (
             <DataTable columns={catalogColumns} rows={topGpus} rowKey={(c) => c.slug} onRowPress={launchGpu} empty="No GPU sizes available." />
           ) : (
-            <Text fontSize="$2" color="$color10">The accelerator catalog isn’t reachable right now — nothing is fabricated.</Text>
+            <Text fontSize="$2" color="$color10">The accelerator catalog isn’t reachable right now.</Text>
           )}
         </YStack>
       </YStack>
@@ -406,7 +406,7 @@ export function CustomerGpus({ params }: { params?: Record<string, string> }) {
               <Server size={20} />
               <Text fontSize="$3" fontWeight="700">GPU catalog unavailable</Text>
               <Text fontSize="$2" color="$color11" text="center" maxW={420}>
-                The accelerator catalog isn’t reachable right now. GPU machines you launch will still appear above — nothing is fabricated.
+                The accelerator catalog isn’t reachable right now. GPU machines you launch still appear above.
               </Text>
             </Card>
           )}

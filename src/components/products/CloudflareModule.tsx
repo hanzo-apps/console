@@ -123,8 +123,8 @@ function Phase2Panel({ tab }: { tab: 'r2' | 'kv' | 'd1' }) {
         {PHASE2_COPY[tab]}
       </Text>
       <Text fontSize="$2" color="$color10">
-        Not yet available. The API route exists and answers honestly rather than pretending to succeed, so nothing here
-        is fabricated — this tab lights up automatically once the capability ships.
+        Not yet available. The API route answers, but the capability behind it has not shipped. This tab fills in when
+        it does.
       </Text>
     </Card>
   )
@@ -195,7 +195,7 @@ function ProjectForm({ onDone }: { onDone: () => void }) {
       toast.success(`Created Pages project ${p.name || name.trim()}`)
       onDone()
     } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to create project.')
+      setErr(classifyBackend(e).message || 'The Pages project was not created. Try again.')
       setSaving(false)
     }
   }
@@ -237,7 +237,7 @@ function DomainForm({ project, onDone }: { project: string; onDone: () => void }
       toast.success(`Added ${name.trim()} to ${project}`)
       onDone()
     } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to add domain.')
+      setErr(classifyBackend(e).message || `The domain was not added to ${project}. Try again.`)
       setSaving(false)
     }
   }
@@ -274,7 +274,7 @@ function DeployForm({ project, onDone }: { project: PagesProject; onDone: () => 
       toast.success(`Deployment queued for ${project.name}`)
       onDone()
     } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to start deployment.')
+      setErr(classifyBackend(e).message || `No deployment was queued for ${project.name}. Try again.`)
       setBusy(false)
     }
   }
@@ -321,7 +321,7 @@ function ScriptForm({ script, onDone }: { script?: WorkerScript; onDone: () => v
       toast.success(`${editing ? 'Updated' : 'Uploaded'} Worker ${name.trim()}`)
       onDone()
     } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to upload script.')
+      setErr(classifyBackend(e).message || 'The Worker was not uploaded. Nothing changed on Cloudflare — try again.')
       setSaving(false)
     }
   }
@@ -364,7 +364,7 @@ function RouteForm({ zone, scripts, onDone }: { zone: string; scripts: WorkerScr
       toast.success(`Route ${pattern.trim()} created`)
       onDone()
     } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to create route.')
+      setErr(classifyBackend(e).message || 'The route was not created. Traffic still routes as it did — try again.')
       setSaving(false)
     }
   }
@@ -870,7 +870,7 @@ function WorkersTab() {
           <RouteForm zone={zone} scripts={scripts} onDone={() => void afterRouteChange()} />
         ) : dialog.kind === 'deleteRoute' ? (
           <ConfirmDelete
-            message={`Delete the route “${dialog.route.pattern}”? Requests matching it stop going to ${dialog.route.script || 'the bypass'}.`}
+            message={`Delete the route “${dialog.route.pattern}”? Requests matching it stop going to ${dialog.route.script || 'the bypass'}. This cannot be undone — the route has to be created again.`}
             confirmLabel="Delete route"
             run={() => CloudflareApi.workers.routes.remove(zone, dialog.route.id)}
             onDone={() => void afterRouteChange()}

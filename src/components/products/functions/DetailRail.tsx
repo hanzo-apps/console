@@ -78,7 +78,7 @@ export function DetailRail({
     try {
       const data = await FunctionsApi.get(name)
       if (!data) {
-        setState({ phase: 'error', error: { kind: 'unavailable', message: `Function "${name}" not found.` } })
+        setState({ phase: 'error', error: { kind: 'unavailable', message: `Function “${name}” not found. It may have been deleted — close this panel and reload the list.` } })
         return
       }
       setState({ phase: 'ready', data })

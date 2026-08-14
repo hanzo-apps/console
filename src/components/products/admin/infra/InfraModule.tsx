@@ -342,7 +342,7 @@ function NodesTab({ data, loading, reload, toast }: { data: InfraSnapshot; loadi
       toast.success(next ? `Cordoned ${r.name || n.name}` : `Uncordoned ${r.name || n.name}`, next ? 'No new pods will schedule here.' : 'The node is schedulable again.')
       reload()
     } catch (e) {
-      toast.error('Could not change scheduling', classifyBackend(e).message)
+      toast.error(`Could not change scheduling on ${n.name}`, classifyBackend(e).message)
     } finally {
       setBusy(null)
     }

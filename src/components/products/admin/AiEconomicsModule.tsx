@@ -541,8 +541,7 @@ export function AiEconomicsModule() {
           <Text fontSize="$3" color="$color11">
             The only training data the platform holds is the eval dataset registry below — input/expected pairs a human
             uploaded — plus whatever an org feeds <Text className="hz-mono">/v1/training</Text> directly. Those are the
-            curated sources the router and fine-tunes learn from; the numbers above are the real registry counts, never a
-            fabricated pipeline.
+            curated sources the router and fine-tunes learn from, and the numbers above are the registry counts.
           </Text>
           {datasetsErr && !datasets ? (
             <Text fontSize="$2" color="$color10">

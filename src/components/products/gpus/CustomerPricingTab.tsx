@@ -76,7 +76,7 @@ export function CustomerPricingTab({ catalog, onLaunch }: { catalog: VisorGpuSiz
           <Server size={20} />
           <Text fontSize="$3" fontWeight="700">Pricing catalog unavailable</Text>
           <Text fontSize="$2" color="$color11" text="center" maxW={420}>
-            The accelerator catalog isn’t reachable right now, so no rates are shown — nothing is fabricated. Try again shortly.
+            The accelerator catalog isn’t reachable right now, so no rates are shown. Try again shortly.
           </Text>
         </Card>
       )}

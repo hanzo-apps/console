@@ -38,8 +38,8 @@ export function SettingsTab({ onNav }: { onNav: (to: string) => void }) {
         </XStack>
         <Text fontSize="$3" color="$color11">
           Hanzo Cloud GPUs resell capacity over DigitalOcean (primary) and AWS (secondary). Add a provider by
-          storing its credentials in KMS — live inventory, telemetry, pricing, and alerts light up across this
-          surface once the credentials resolve.
+          storing its credentials in KMS. Inventory, telemetry, pricing, and alerts fill in across this surface
+          once the credentials resolve.
         </Text>
         <XStack>
           <HintButton icon={<KeyRound size={15} />} onPress={() => onNav('/secrets')}>

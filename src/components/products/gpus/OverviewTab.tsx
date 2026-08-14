@@ -204,7 +204,7 @@ export function OverviewTab({
             <XStack p="$3" gap="$2" items="center"><Spinner /><Text color="$color11">Loading…</Text></XStack>
           ) : alerts.phase === 'error' ? (
             alerts.error.kind === 'error' ? (
-              <Text fontSize="$2" color="$color10">Alerts unavailable right now.</Text>
+              <Text fontSize="$2" color="$color10">Alerts did not load. Reload the page to try again.</Text>
             ) : (
               <Text fontSize="$2" color="$color10">Alerting connects with a GPU provider — no alerts to show.</Text>
             )

@@ -180,7 +180,7 @@ export function WorkflowDetailPanel({ ns, wid, runId, onClose }: { ns: string; w
         <YStack p="$4" items="center" borderWidth={1} borderColor="$borderColor" borderStyle="dashed" rounded="$3">
           <Text fontSize="$2" color="$color10" text="center" maxW={360}>
             The engine does not expose {sub} as a distinct per-workflow feed — it’s folded into Events and Timeline
-            above. This tab reads {sub} live wherever the API serves it; nothing is fabricated here.
+            above. This tab reads {sub} wherever the API serves it.
           </Text>
         </YStack>
       )}

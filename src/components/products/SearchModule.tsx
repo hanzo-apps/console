@@ -118,7 +118,7 @@ function OverviewTab({ health }: { health: SearchHealth }) {
             engines (Google, Bing, DuckDuckGo, Brave, Wikipedia, and more) and returns ranked results.
           </Text>
           <Text fontSize="$2" color="$color11">
-            • Crawl extracts any page to clean, LLM-ready markdown via a self-hosted Crawl4AI (Firecrawl-compatible).
+            • Crawl turns a page into clean markdown an agent can read, on a Crawl4AI you host yourself.
           </Text>
           <Text fontSize="$2" color="$color11">
             • In {config.brandName === 'Hanzo Cloud' ? 'hanzo.chat' : 'Chat'}, turn on the Web Search toggle in the composer

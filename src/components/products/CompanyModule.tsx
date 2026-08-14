@@ -152,7 +152,7 @@ function useAction(onUpdate: (v: FormationView) => void) {
         onUpdate(await fn())
         if (ok) toast.success(ok)
       } catch (e) {
-        toast.error('Could not continue', classifyBackend(e).message)
+        toast.error('That step did not go through', classifyBackend(e).message)
       } finally {
         setBusy(false)
       }
@@ -353,7 +353,7 @@ function KycPanel({ view, onUpdate }: { view: FormationView; onUpdate: (v: Forma
           onPress={() => void run(() => CompanyApi.advance('payment'), 'On to payment')}
         />
       </XStack>
-      {!ready ? <Text fontSize="$1" color="$color10">Payment unlocks once every founder is verified.</Text> : null}
+      {!ready ? <Text fontSize="$1" color="$color10">Payment opens once every founder is verified.</Text> : null}
     </Panel>
   )
 }

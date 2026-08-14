@@ -149,7 +149,7 @@ function ZoneForm({ onDone }: { onDone: (created?: Zone) => void }) {
       toast.success(`Created zone ${displayZone(z.name)}`)
       onDone(z)
     } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to create zone.')
+      setErr(classifyBackend(e).message || 'The zone was not created. Try again.')
       setSaving(false)
     }
   }
@@ -233,7 +233,7 @@ function RecordForm({ zone, record, onDone }: { zone: Zone; record?: DnsRecord; 
       }
       onDone()
     } catch (e) {
-      setErr(classifyBackend(e).message || 'Failed to save record.')
+      setErr(classifyBackend(e).message || 'The record was not saved. Your changes are still here — try again.')
       setSaving(false)
     }
   }
@@ -386,7 +386,7 @@ export function DnsModule(_props: { params: Record<string, string> }) {
         window.location.assign(authorizeUrl)
         return
       }
-      toast.error('Could not start the Cloudflare connection.')
+      toast.error('Could not start the Cloudflare connection', 'The connector returned no authorize URL, so nothing opened. Try again.')
     } catch (e) {
       const s = classifyBackend(e)
       toast.error(
@@ -583,7 +583,7 @@ export function DnsModule(_props: { params: Record<string, string> }) {
           />
         ) : dialog.kind === 'deleteRecord' ? (
           <ConfirmDelete
-            message={`Delete the ${dialog.record.type} record “${dialog.record.name || '@'}” → ${dialog.record.content}?`}
+            message={`Delete the ${dialog.record.type} record “${dialog.record.name || '@'}” → ${dialog.record.content}? Anything that resolves through it stops resolving. This cannot be undone — the record has to be added again.`}
             confirmLabel="Delete record"
             run={() => DnsApi.records.remove(dialog.zone.name, dialog.record.id)}
             onDone={afterRecordChange}

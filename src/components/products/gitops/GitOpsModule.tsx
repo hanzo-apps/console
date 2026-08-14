@@ -360,7 +360,7 @@ function SyncConfirm({ app, onClose, onDone, toast }: { app: Application | null;
       onDone()
     } catch (e) {
       const err = asApiError(e)
-      toast.error(err.status === 404 ? 'Sync not available yet' : 'Sync failed', err.message)
+      toast.error(err.status === 404 ? 'Sync not available yet' : `${app.name} was not synced`, err.message)
     } finally {
       setBusy(false)
     }
@@ -417,7 +417,7 @@ function RollbackPanel({ app, onClose, onDone, toast }: { app: Application | nul
       onDone()
     } catch (e) {
       const err = asApiError(e)
-      toast.error(err.status === 404 ? 'Rollback not available yet' : 'Rollback failed', err.message)
+      toast.error(err.status === 404 ? 'Rollback not available yet' : `${app.name} was not rolled back`, err.message)
     } finally {
       setBusy('')
     }

@@ -299,7 +299,7 @@ function ZtOverview() {
         <BackendStateCard
           state={error ?? { kind: 'unavailable', message: '' }}
           onRetry={reload}
-          hint="Zero Trust mesh data lights up when hanzoai/zt is deployed (GET /v1/zt/*). The post-quantum posture above is the platform transport and applies regardless."
+          hint="Zero Trust mesh data arrives when hanzoai/zt is deployed (GET /v1/zt/*). The post-quantum posture above is the platform transport and applies regardless."
         />
       ) : null}
     </YStack>

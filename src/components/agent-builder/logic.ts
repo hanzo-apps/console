@@ -300,5 +300,5 @@ function messageOf(e: unknown): string {
     const m = (e as { message?: unknown }).message
     if (typeof m === 'string' && m) return m
   }
-  return 'The agent was not created and nothing was saved. Try again.'
+  return 'Could not create the agent.'
 }

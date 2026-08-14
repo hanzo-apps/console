@@ -86,7 +86,7 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
       invalidateBalance() // refresh the shared balance on every surface
       setSubmit({ state: 'done', addedCents: cents, balanceCents: res.balanceCents })
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'The charge could not be completed.'
+      const message = e instanceof Error ? e.message : 'The top-up did not complete. Try again.'
       setSubmit({ state: 'error', message })
     }
   }, [card, cents, amountError, submit.state])
@@ -229,7 +229,7 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
               ) : null}
               {cardPhase === 'error' ? (
                 <Text fontSize="$2" color="$red10">
-                  {card.error || 'Could not load the card form.'}
+                  {card.error || 'The card field did not load. Reload the page to pay by card.'}
                 </Text>
               ) : null}
             </Card>

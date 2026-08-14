@@ -64,7 +64,7 @@ export function GpuInventory({
       description="Hanzo Cloud GPUs resell H100/A100 capacity over DigitalOcean and AWS, metered hourly. Connect a provider or create a GPU cluster to get started."
       bullets={[
         'Create a GPU cluster on your own DOKS in Clusters',
-        'Per-GPU telemetry lights up once a provider or node agent is connected',
+        'Per-GPU telemetry arrives once a provider or node agent is connected',
       ]}
       primary={{ label: 'Create cluster', onPress: () => onNav('clusters') }}
       secondary={{ label: 'View pricing', onPress: () => onNav('pricing') }}

@@ -129,7 +129,7 @@ export const WEBSEARCH_ENDPOINTS: readonly WebSearchEndpoint[] = [
   {
     method: 'POST',
     path: '/v1/websearch/scrape',
-    summary: 'Scrape a URL to clean markdown (Crawl4AI, Firecrawl-compatible). Body { url } → { success, data:{ markdown, metadata } }.',
+    summary: 'Scrape a URL to clean markdown, on Crawl4AI. Body { url } → { success, data:{ markdown, metadata } }.',
     liveInConsole: false,
   },
 ]

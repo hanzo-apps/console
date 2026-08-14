@@ -93,7 +93,7 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
       )
       toast.success(next ? 'Smart routing enabled' : 'Smart routing disabled')
     } catch (e) {
-      toast.error('Could not save preference', e instanceof Error ? e.message : undefined)
+      toast.error('Smart routing was not changed', e instanceof Error ? e.message : 'The setting is as it was. Try again.')
     } finally {
       setBusy(false)
     }

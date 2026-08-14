@@ -23,7 +23,7 @@ export function ChatListView({ onOpen, onBack }: { onOpen: (c: Chat) => void; on
       setRows(rows ?? [])
       setError(null)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to load chats')
+      setError(e instanceof ApiError ? e.message : 'Couldn’t load your chats. Reload the page to try again.')
     } finally {
       setLoading(false)
     }
@@ -34,12 +34,12 @@ export function ChatListView({ onOpen, onBack }: { onOpen: (c: Chat) => void; on
   }, [load])
 
   const onDelete = async (c: Chat) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete chat "${c.name}"?`)) return
+    if (typeof window !== 'undefined' && !window.confirm(`Delete chat “${c.name}”? Its history goes with it and cannot be recovered.`)) return
     try {
       await ChatApi.remove(c)
       setRows((rs) => rs.filter((r) => r.name !== c.name))
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to delete chat')
+      setError(e instanceof ApiError ? e.message : 'Couldn’t delete that chat. It’s still here — try again.')
     }
   }
 

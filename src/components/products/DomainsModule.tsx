@@ -153,7 +153,7 @@ export function DomainsModule(_props: { params: Record<string, string> }) {
         } else if (e instanceof ApiError && e.status === 409) {
           setNotice(`${domain} is no longer available.`)
         } else {
-          setNotice(e instanceof Error ? e.message : 'Could not complete the purchase.')
+          setNotice(e instanceof Error ? e.message : `${domain} was not registered. Try again.`)
         }
       } finally {
         setBuying(null)

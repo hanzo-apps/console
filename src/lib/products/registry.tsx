@@ -3011,7 +3011,7 @@ export const catalog: CatalogEntry[] = [
     id: 'lux-network',
     label: 'Lux Network',
     icon: Waypoints,
-    description: 'Live validators, node and pod memory, and Lux service health across the fleet — real telemetry.',
+    description: 'Validators, node and pod memory, and Lux service health across the fleet, as each node reports it.',
     category: 'Web3',
     status: 'enabled',
     stage: 'admin',

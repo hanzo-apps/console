@@ -89,7 +89,7 @@ function AffiliateApply({ defaultRateBps, onApplied }: { defaultRateBps: number;
     setError(null)
     AffiliatesApi.apply(code.trim())
       .then(() => onApplied())
-      .catch((e) => setError(e instanceof Error ? e.message : 'Could not submit your application. Try again.'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Your application was not submitted. Try again.'))
       .finally(() => setSubmitting(false))
   }, [code, onApplied])
 
