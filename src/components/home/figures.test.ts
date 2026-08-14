@@ -47,8 +47,12 @@ const summary = (over: {
 describe('formatting', () => {
   it('prints dollars to the cent, the way the sidebar wallet does', () => {
     // The header and this tile read the SAME cents; they must not round differently.
-    expect(usd(14976270)).toBe('$149762.70')
+    expect(usd(14976270)).toBe('$149,762.70')
     expect(usd(0)).toBe('$0.00')
+    // Grouped: the tile sits beside a request count that already groups, and a
+    // six-figure balance printed flat is a number you count digits in.
+    expect(usd(100000)).toBe('$1,000.00')
+    expect(usd(99999)).toBe('$999.99')
   })
 
   it('abbreviates token counts the way /usage does', () => {
@@ -60,7 +64,7 @@ describe('formatting', () => {
 
 describe('credit — the balance tile', () => {
   it('shows the live balance once it lands', () => {
-    expect(credit('ready', 14976270, undefined, false)).toEqual({ value: '$149762.70', sub: 'View billing' })
+    expect(credit('ready', 14976270, undefined, false)).toEqual({ value: '$149,762.70', sub: 'View billing' })
   })
 
   it('shows a real empty wallet as $0.00, never as a dash', () => {

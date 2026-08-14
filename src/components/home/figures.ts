@@ -28,7 +28,12 @@ const unknown = (sub: string): Reading => ({ value: null, sub })
 
 /** Dollars to the cent — the form the sidebar wallet prints, so the tile beside it
  *  can never show a differently-rounded balance. */
-export const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
+// Grouped, because these are money read at a glance: $149760.70 is a number you
+// have to count digits in, $149,760.70 is one you recognise. toFixed gives two
+// decimals and no separators; the request count beside it already groups, so
+// without this the same tile renders one figure grouped and the other not.
+export const usd = (cents: number): string =>
+  `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 /** Token counts abbreviated the way /usage abbreviates the same figure. */
 export const compact = (n: number): string => {
