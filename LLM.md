@@ -4550,3 +4550,55 @@ failing against a deliberately broken tree and then passing again: 6/8 in
 `api/client-refusal.test.ts`, 2/3 in the new `states-logic` 403 block, 1 in
 `org-scope.test.ts`. `e2e/not-found.spec.ts` runs the four browser assertions and was
 also confirmed failing on pre-fix source.
+
+## An org has one Base, so the console has one Base product
+
+Base and Records were two catalog entries over one concept — same icon, same
+repo, same rows — and the split came from a model that had stopped being true.
+`Base` was a Bases MANAGER: it listed the `tenants` collection, one row per Base
+instance, each on its own `<slug>.base.hanzo.ai`. `Records` browsed a Base's
+data. Picking which Base only makes sense if an org can have several.
+
+**The registry was empty, and it could not have been anything else.** An
+authenticated request is scoped to the caller's org and opens THAT org's Base,
+which has no `tenants` collection — so a registry of every org's Bases answered
+only to callers who had not signed in, and every real client sends a bearer.
+Measured: `base.hanzo.ai/v1/collections/tenants/records` returns `totalItems: 0`
+anonymously and 404 `Missing collection context` with a token. It held zero rows
+for its whole life, so the manager listed nothing and the New-Base flow wrote
+into a collection nobody could read back.
+
+They are one product now, `base`, with the route shapes Records already had:
+`'' | :collection | :collection/:id`. `/records` resolves through `SLUG_ALIASES`
+— the `git: 'code'` precedent — because the shapes are identical, so a bookmark
+keeps working. `BasesManager`, `base/bases-logic.ts` and `lib/base-data/tenants.ts`
+are deleted.
+
+**The door moved with it, and that is the larger half.** `/v1/collections` was
+cloud reverse-proxying to a SEPARATE Base deployment; `/v1/base/*` is the engine
+cloud hosts itself, per org, on its own encrypted store. Two engines answering
+one question from two disks — a record written through one was invisible through
+the other. Measured before choosing, which is why it was cheap: the orchestrator
+held one org at 404K and a 598K root, cloud held eleven fresh schemas, and
+neither held real records. cloud `c828d7160` deletes the forward.
+
+`BaseDataApi` takes the API ROOT as `baseUrl` and appends `/collections/…`, so
+the whole repoint is `BASE_ROOT = '/v1/base'`. Base is told that prefix at router
+build (`BASE_API_PREFIX`, which REPLACES its `/v1` default), so its collections
+API answers natively underneath it and nothing here rewrites a path.
+
+**Stale above, and worth knowing before you read it:** every section describing
+the `base` product as a Bases manager, the `superbase` orchestrator, or the
+`/superbase` proxy (v8.4.23's "Base is a Supabase-style content-type dashboard",
+v8.4.42's "Base = the Bases manager (multi-base)") describes a model that no
+longer exists. The `/superbase` BFF route is likewise gone from the data path —
+`/v1/superbase/collections` answers `404 page not found` in production, which is
+what sent Records looking for a door that was not there.
+
+Still on the orchestrator, deliberately: **base-studio** (base.hanzo.ai/studio).
+Its reads speak the PostgREST dialect (`@hanzo/base/rest` → `/rest/v1/{table}`)
+and its writes the collections one, and cloud now serves BOTH per-org from the
+one engine — `/rest/v1/*` reaches the same handler as `/v1/base/*`. What blocks
+the move is the writes: they need `@hanzo/base` ≥ 0.2.4 for the `prefix` option,
+and that publish is stuck on an npm credential. Do not point `BASE_ORIGIN` at
+cloud before that ships.
