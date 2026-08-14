@@ -48,7 +48,7 @@ export const CONSOLE_TOUR: TourStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to your console',
-    body: 'Sixty seconds on the essentials — every product, your API key, and what a call actually costs. Skip anytime.',
+    body: 'A walk through the console: where the products are, how to get an API key, and where your usage and spend show up. Skip anytime.',
     placement: 'center',
   },
   {
@@ -70,7 +70,7 @@ export const CONSOLE_TOUR: TourStep[] = [
     // The get-your-key affordance now lives in the home getting-started panel.
     target: '[data-tour="guide-overview-api-key"]',
     title: 'One key, every model',
-    body: 'Mint a personal sk- key and the whole OpenAI-compatible /v1 surface opens up — models, embeddings, search, your own services.',
+    body: 'Mint a personal sk- key. The same key calls models, embeddings, search and your own services on /v1.',
     placement: 'bottom',
     route: '/',
     // Personalized: a user who already holds a key skips straight past this step.
@@ -79,8 +79,8 @@ export const CONSOLE_TOUR: TourStep[] = [
   {
     id: 'metrics',
     target: '[data-tour="metrics"]',
-    title: 'Live usage and spend',
-    body: 'Real requests, real tokens, real cost — metered as you go, on the same screen you launched from.',
+    title: 'Usage and spend',
+    body: 'Requests, tokens and what they cost, counted as the calls come in.',
     placement: 'top',
     route: '/',
   },
@@ -111,7 +111,7 @@ export const PLAYGROUND_TOUR: TourStep[] = [
   {
     id: 'modes',
     target: '[data-tour="pg-modes"]',
-    title: 'Seven surfaces, one key',
+    title: 'Every surface, one key',
     body: 'Chat, Completions, Embeddings, Image, Video, Audio and Vision all run through the same gateway and the same credential.',
     placement: 'bottom',
   },
@@ -119,7 +119,7 @@ export const PLAYGROUND_TOUR: TourStep[] = [
     id: 'model',
     target: '[data-tour="pg-model"]',
     title: 'Any model, one string',
-    body: 'Zen, Claude, GPT, Llama and hundreds more behind one OpenAI-compatible endpoint. Switching model is switching this value.',
+    body: 'Zen, Claude, GPT and Llama models all answer on the same endpoint. Switching model is changing this string.',
     placement: 'bottom',
   },
   {
@@ -133,14 +133,14 @@ export const PLAYGROUND_TOUR: TourStep[] = [
     id: 'run',
     target: '[data-tour="pg-run"]',
     title: 'Run it — ⌘↵',
-    body: 'The answer streams back token by token off the live gateway. Stop mid-flight whenever you have seen enough.',
+    body: 'The answer streams back token by token from a live model. Stop it whenever you have seen enough.',
     placement: 'top',
   },
   {
     id: 'response',
     target: '[data-tour="pg-response"]',
     title: 'The answer, and what it cost',
-    body: 'Real completion, real token counts, real price for that call. The Logs tab shows the exact request that produced it.',
+    body: 'The completion, its token counts and the price of that call. The Logs tab shows the request that produced it.',
     placement: 'bottom',
   },
   {
@@ -167,8 +167,8 @@ export const PLAYGROUND_TOUR: TourStep[] = [
   {
     id: 'nav',
     target: '[data-tour="nav"]',
-    title: 'Then ship the rest',
-    body: 'Functions, deployments, vector search, identity and spend are all one click away in the sidebar.',
+    title: 'The rest of the console',
+    body: 'Functions, deployments, vector search, identity and spend each have their own section in the sidebar.',
     placement: 'right',
   },
 ]
