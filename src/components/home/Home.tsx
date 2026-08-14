@@ -9,22 +9,36 @@
  * away, at the foot of the page and in the sidebar; they stop standing in front of
  * the API.
  *
- * The three figures at the top are the whole state of an account: what it has, what
- * it has spent, and whether prompt caching is reusing anything. None of them is
- * fabricated — an unavailable balance reads as unavailable, never as $0.00, because
- * a zero a customer does not have is worse than a blank (billing-proxy makes the
- * same promise upstream: "it never fabricates a balance").
+ * The figures at the top are the state of an account: what it has, what it has
+ * spent, and what it has been running. They are READ, from the two sources the
+ * neighbouring screens already read — the shared live balance (`useCloudBalance`,
+ * the sidebar wallet's own value) and the one usage roll-up (`GET /v1/usage/summary`,
+ * what /usage renders). Nothing here is fabricated and nothing here is a second
+ * opinion: month-to-date has three readers already, and this is not a fourth.
+ *
+ * Every dash on this screen means UNKNOWN and says why underneath (`figures.ts`).
+ * A balance the account really has spent to nothing prints $0.00 — a zero a customer
+ * does not have is worse than a blank, and a blank a customer cannot explain is
+ * worse still.
  */
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { BookOpen, KeyRound, Boxes, HandCoins, ExternalLink } from '@hanzogui/lucide-icons-2'
+import { classifyBackend, type BackendState } from '@hanzo/ui/product'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { Models } from '~/components/home/Models'
+import { credit, month, volume, RANGE, type Reading } from '~/components/home/figures'
+import { tileView, TILE_LOAD_TIMEOUT_MS } from '~/components/products/billing/logic'
+import { UsageSummaryApi, type UsageSummary } from '~/lib/api/usage-summary'
+import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
+import { useTimedOut } from '~/lib/use-timed-out'
 import { visibleCatalog } from '~/lib/products/registry'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
+
+type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
 /** Greeting by local hour. Three bands, so it reads as written by a person. */
 function greeting(hour: number): string {
@@ -33,8 +47,8 @@ function greeting(hour: number): string {
   return 'Good evening'
 }
 
-/** A figure that is not known yet renders as an em dash, never as a zero. */
-function Figure({ value, sub }: { value: string | null; sub: string }) {
+/** A figure that is not known renders as an em dash, and `sub` says why. */
+function Figure({ value, sub }: Reading) {
   return (
     <YStack gap="$1">
       <Text fontSize="$8" $md={{ fontSize: '$9' }} fontWeight="700">
@@ -102,6 +116,35 @@ export function Home() {
   // Read the clock after mount: the server and the browser can sit in different
   // zones, and a greeting that changes on hydration is a visible flicker.
   useEffect(() => setHour(new Date().getHours()), [])
+
+  // The balance: the ONE shared live value, so this tile and the sidebar wallet a
+  // few hundred pixels away read the same cents and cannot contradict each other.
+  const { phase: balPhase, balance, error: balError } = useCloudBalance()
+
+  // The roll-up: ONE call feeds both the month-to-date tile and the token volume
+  // card, which is why they can never tell two stories about the same window.
+  const [summary, setSummary] = useState<Async<UsageSummary>>({ phase: 'loading' })
+  const loadSummary = useCallback(() => {
+    setSummary({ phase: 'loading' })
+    UsageSummaryApi.summary(RANGE)
+      .then((data) => setSummary({ phase: 'ready', data }))
+      .catch((e) => setSummary({ phase: 'error', error: classifyBackend(e) }))
+  }, [])
+  useEffect(() => {
+    loadSummary()
+  }, [loadSummary])
+
+  // Loading has a ceiling: a request left hanging by a backend blip degrades to the
+  // honest dash at the bound instead of spinning under the figure forever.
+  const balTimedOut = useTimedOut(balPhase === 'loading' || balPhase === 'idle', TILE_LOAD_TIMEOUT_MS)
+  const sumTimedOut = useTimedOut(summary.phase === 'loading', TILE_LOAD_TIMEOUT_MS)
+  const sumView = tileView(summary.phase, sumTimedOut)
+  const rollup = summary.phase === 'ready' ? summary.data : null
+  const rollupError = summary.phase === 'error' ? summary.error : undefined
+
+  const credits = credit(balPhase, spendableCents(balance), balError, balTimedOut)
+  const spend = month(sumView, rollup, rollupError)
+  const tokens = volume(sumView, rollup, rollupError)
 
   const who = (account as { displayName?: string; name?: string } | null)?.displayName
     ?? (account as { name?: string } | null)?.name
@@ -171,13 +214,17 @@ export function Home() {
             </Button>
           }
         >
-          <Figure value={null} sub="View billing" />
+          <Figure {...credits} />
         </StatCard>
 
         <StatCard title="Spend this month">
-          <Figure value={null} sub="No limit set" />
+          <Figure {...spend} />
         </StatCard>
 
+        {/* Reuse is not metered anywhere yet — the roll-up carries prompt and
+            completion tokens, and neither is a cache read. So this stays a dash and
+            says it is unmeasured, rather than borrowing a number that means
+            something else. It becomes a figure when the warehouse reports one. */}
         <StatCard
           title="Prompt caching"
           action={
@@ -191,7 +238,7 @@ export function Home() {
             </Button>
           }
         >
-          <Figure value={null} sub="tokens reused" />
+          <Figure value={null} sub="Reuse is not measured yet" />
         </StatCard>
       </XStack>
 
@@ -200,7 +247,7 @@ export function Home() {
           Token volume
         </Text>
         <XStack justify="space-between" items="flex-end" gap="$3" flexWrap="wrap">
-          <Figure value={null} sub="No activity in the last 7 days" />
+          <Figure {...tokens} />
           <Button size="$2" borderWidth={1} borderColor="$borderColor" onPress={() => go('/playground')}>
             Try a prompt
           </Button>
