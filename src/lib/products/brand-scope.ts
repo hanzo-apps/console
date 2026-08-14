@@ -10,38 +10,62 @@
 // surfaces. `null` = every category.
 import type { BrandId } from '~/config'
 
+// TEN categories a customer browses, and they are not this file's invention —
+// they are the ten the rest of the estate already names, in its order:
+//
+//   AI  Compute  Data  Network  Security / Dev  Platform  Observe  Web3  Apps
+//
+// `@hanzogui/shell` renders exactly these as the Products mega-menu (two rows of
+// five), `api.hanzo.ai/v1/commerce/catalog?brand=hanzo` groups the brand catalog
+// under exactly these ten ids, and this registry's own header has claimed "the
+// ten canonical Open AI Cloud categories" all along. It had drifted to fourteen
+// by growing a category per product FAMILY rather than per surface a customer
+// uses, so three families moved to the surface that already owns them:
+//
+//   Training -> AI       one entry (Fine-tuning). Tuning a model is done TO a
+//                        model, in the surface where models live.
+//   Commerce -> Apps     Products, Orders, Customers, Inventory, Promotions.
+//                        A storefront is an application you run, and it lands
+//                        beside the CRM, the ERP, the CMS and the Help Center.
+//   Billing  -> Observe  Spend is the other axis of usage: seven of these eight
+//                        are the fleet's own revenue/margin boards, and the
+//                        eighth is Usage itself. The catalog files billing under
+//                        observe for the same reason. A customer's own invoices
+//                        are the billing FACE (billing.hanzo.ai), not a tile.
+//
+// A move never drops a product: every entry keeps a category in this list, and
+// taxonomy.test.ts asserts both halves against the shipped registry. Settings is
+// account administration rather than a product, so it is here but not browsed.
 export type ProductCategory =
   | 'AI'
   | 'Compute'
-  | 'Training'
   | 'Data'
   | 'Network'
   | 'Security'
-  | 'Observe'
-  | 'Platform'
   | 'Dev'
+  | 'Platform'
+  | 'Observe'
   | 'Web3'
   | 'Apps'
-  | 'Commerce'
-  | 'Billing'
   | 'Settings'
 
+/** The ten, in the estate's order (two rows of five), with Settings last. */
 export const categoryOrder: ProductCategory[] = [
   'AI',
   'Compute',
-  'Training',
   'Data',
   'Network',
   'Security',
-  'Observe',
-  'Platform',
   'Dev',
+  'Platform',
+  'Observe',
   'Web3',
   'Apps',
-  'Commerce',
-  'Billing',
   'Settings',
 ]
+
+/** The ten a customer browses. Settings administers the account, so it is not one. */
+export const PUBLIC_CATEGORIES: ProductCategory[] = categoryOrder.filter((c) => c !== 'Settings')
 
 export const BRAND_CATEGORIES: Record<BrandId, ProductCategory[] | null> = {
   hanzo: null,
@@ -102,19 +126,16 @@ export const categoryFromSlug = (slug: string): ProductCategory | null =>
  * product list on the page is always the live catalog, so nothing here is data.
  */
 export const CATEGORY_SUMMARY: Record<ProductCategory, string> = {
-  AI: 'Models, providers, inference, agents, embeddings, prompts, and the playground — the hub for everything you build and ship with AI.',
+  AI: 'Models, providers, inference, agents, embeddings, prompts, fine-tuning, and the playground — everything you build and ship with AI.',
   Compute: 'Kubernetes, containers, functions, GPUs, machines, and tasks — the infrastructure your workloads run on.',
-  Training: 'Fine-tuning and ML pipelines — build, tune, and improve your own models.',
-  Data: 'Vector, SQL, key-value, object, document, and memory stores — managed data primitives for your apps.',
+  Data: 'Vector, SQL, key-value, object, document, and memory stores — managed data for your apps.',
   Network: 'Gateway, DNS, CDN, load balancing, VPC, and service mesh — connect, route, and expose your services.',
   Security: 'IAM, authorization, KMS, HSM, secrets, MPC, and audit — identity and secrets for your organization.',
-  Observe: 'Traces, metrics, logs, dashboards, alerts, evals, and LLM research — observe and evaluate what your models and workloads do.',
-  Platform: 'Projects, environments, builds, registry, releases, and pipelines — ship and run your applications.',
   Dev: 'API, SDKs, CLI, IDE, desktop, and keys — the developer tools to build against the cloud.',
+  Platform: 'Projects, environments, builds, registry, releases, and pipelines — ship and run your applications.',
+  Observe: 'Traces, metrics, logs, dashboards, alerts, evals, usage and spend — what your models, workloads and money are doing.',
   Web3: 'Networks, tokens, wallets, oracles, indexer, and settlement — the on-chain surface.',
-  Apps: 'Chat, bot, search, marketplace, and studio — end-user AI applications.',
-  Commerce: 'Products, orders, customers, inventory, and promotions — run your store on Hanzo Commerce (payments via Square in Billing).',
-  Billing: 'Balance, credits, usage-based spend, invoices, payment methods, revenue, and grants — your account\'s money, metering, and the Square-backed billing console.',
+  Apps: 'Chat, bot, search, studio, marketplace, CRM, ERP, and your storefront — applications you run on the cloud.',
   Settings: 'Members, organization, and profile — administer your account.',
 }
 

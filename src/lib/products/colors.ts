@@ -100,7 +100,6 @@ export const swatchHex = (key: string | undefined | null): string => {
 export const CATEGORY_COLORS: Record<string, string> = {
   AI: 'violet',
   Compute: 'blue',
-  Training: 'purple',
   Data: 'cyan',
   Network: 'sky',
   Security: 'red',
@@ -109,8 +108,6 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Dev: 'indigo',
   Web3: 'amber',
   Apps: 'pink',
-  Commerce: 'orange',
-  Billing: 'lime',
   Settings: 'slate',
 }
 

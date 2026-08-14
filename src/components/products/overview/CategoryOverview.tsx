@@ -22,16 +22,13 @@ import {
   ArrowRight,
   BookOpen,
   Blocks,
-  Brain,
   Code2,
   Cpu,
-  CreditCard,
   Database,
   Lock,
   Network,
   Rocket,
   Shield,
-  ShoppingBag,
   SlidersHorizontal,
   Sparkles,
   Store,
@@ -58,7 +55,6 @@ import { FadeIn, PageHeader, asColor } from '@hanzo/ui/product'
 const CATEGORY_ICON: Record<ProductCategory, ProductIcon> = {
   AI: Sparkles,
   Compute: Cpu,
-  Training: Brain,
   Data: Database,
   Network: Network,
   Security: Shield,
@@ -67,8 +63,6 @@ const CATEGORY_ICON: Record<ProductCategory, ProductIcon> = {
   Dev: Code2,
   Web3: Blocks,
   Apps: Store,
-  Commerce: ShoppingBag,
-  Billing: CreditCard,
   Settings: SlidersHorizontal,
 }
 

@@ -22,7 +22,7 @@ import type { BrandId } from '~/config'
 // mocking and without loading the (React-heavy) registry.
 
 const WEB3: ProductCategory[] = ['Web3', 'Network', 'Security', 'Dev', 'Settings']
-const AI_ONLY: ProductCategory[] = ['AI', 'Compute', 'Training', 'Data', 'Observe', 'Apps', 'Platform', 'Billing']
+const AI_ONLY: ProductCategory[] = ['AI', 'Compute', 'Data', 'Observe', 'Apps', 'Platform']
 
 describe('per-brand catalog scope', () => {
   it('hanzo sees every category (full AI cloud)', () => {
