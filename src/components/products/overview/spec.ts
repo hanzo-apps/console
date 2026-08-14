@@ -101,7 +101,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
   },
   dns: {
     summary:
-      'Managed authoritative DNS for your domains. Hanzo DNS hosts your zones across a global anycast network with API- and console-driven record management, so records propagate fast and resolve everywhere.',
+      'Managed authoritative DNS for your domains. Hanzo DNS hosts your zones on a global anycast network and takes record changes from this console or the API, so a record you add is answered from wherever the query arrives.',
     health: { kind: 'platform-app', service: 'dns' },
     facts: [
       { label: 'Record types', value: 'A · AAAA · CNAME · TXT · MX · SRV' },
@@ -124,7 +124,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
   },
   cdn: {
     summary:
-      'Global content delivery and edge caching. Hanzo CDN caches your static assets and API responses at the edge, close to your users, with cache-control honoring and on-demand purges — so origin load drops and time-to-first-byte improves worldwide.',
+      'Global content delivery and edge caching. Hanzo CDN keeps your static assets and API responses close to the people asking for them, honors your cache-control headers, and purges on demand — so requests are answered at the edge instead of travelling back to your origin.',
     health: { kind: 'platform-app', service: 'cdn' },
     facts: [
       { label: 'Edge locations', value: 'Global' },
@@ -175,7 +175,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
   // ── Dev ──────────────────────────────────────────────────────────────────
   cli: {
     summary:
-      'The hanzo command-line interface — the fastest way to drive Hanzo Cloud from a terminal or CI. Authenticate once, then deploy services, stream logs, manage keys and secrets, and call any product API from scripts.',
+      'The hanzo command-line interface — Hanzo Cloud from a terminal or a CI job. Authenticate once, then deploy services, stream logs, manage keys and secrets, and call any product API from a script.',
     health: { kind: 'none' },
     facts: [
       { label: 'Install', value: 'curl hanzo.sh | sh' },
@@ -206,12 +206,12 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
   },
   sdks: {
     summary:
-      'Official SDKs for Python, TypeScript, Go, and Rust. Each wraps the unified api.hanzo.ai/v1 surface — auth, retries, streaming, and typed responses — so you call Hanzo Cloud idiomatically in your language.',
+      'Official SDKs for Python, TypeScript, Go, and Rust. Each one wraps api.hanzo.ai/v1 — auth, retries, streaming, and typed responses — so a call reads the way your language reads.',
     health: { kind: 'none' },
     facts: [
       { label: 'Languages', value: 'Python · TS · Go · Rust' },
       { label: 'Base URL', value: 'api.hanzo.ai/v1' },
-      { label: 'Compat', value: 'OpenAI-compatible' },
+      { label: 'Request shape', value: 'Standard /v1 chat completions' },
     ],
     actions: [
       { label: 'Create API key', to: '/api-keys', icon: 'key' },
@@ -225,7 +225,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
       },
       {
         heading: 'First call',
-        body: 'Clients default to api.hanzo.ai/v1. Because the gateway is OpenAI-compatible, you can also point an OpenAI SDK at the same base URL.',
+        body: 'Clients default to api.hanzo.ai/v1. The gateway serves the standard chat-completions shape at that URL, so an SDK you already use can be pointed at it instead.',
         code: 'from hanzoai import Hanzo\nHanzo().chat.completions.create(model="zen-1", messages=[...])',
       },
     ],
@@ -364,7 +364,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
   },
   studio: {
     summary:
-      'Build AI apps and pipelines visually. Hanzo Studio is a node-based canvas for composing models, tools, and data into runnable flows, then publishing them as endpoints — no glue code required.',
+      'Build AI apps and pipelines visually. Hanzo Studio is a node-based canvas: wire models, tools, and data into a flow, run it, then publish the flow as an endpoint you can call.',
     health: { kind: 'platform-app', service: 'studio' },
     facts: [
       { label: 'Builder', value: 'Visual flows' },
@@ -388,7 +388,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
   },
   console: {
     summary:
-      'The unified cloud console — this application. One place to see, manage, and bill every Hanzo Cloud product: AI, compute, data, network, security, deploys, observability, and more, all scoped to your organization.',
+      'The cloud console — this application. One place to see, manage, and bill every Hanzo Cloud product: AI, compute, data, network, security, deploys, observability, and more, all scoped to your organization.',
     health: { kind: 'platform-app', service: 'console' },
     facts: [
       { label: 'Products', value: 'All of Hanzo Cloud' },

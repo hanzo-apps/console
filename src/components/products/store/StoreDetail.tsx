@@ -207,7 +207,7 @@ export function StoreDetail({ params }: { params: Record<string, string> }) {
         <YStack flex={1} minW={0}>
           <PageHeader
             title={app.name}
-            subtitle={app.description || 'Open-source app — deploy it to your cloud in one click.'}
+            subtitle={app.description || 'An open-source app you can deploy to your cloud.'}
             actions={
               <XStack gap="$2" items="center" flexWrap="wrap">
                 {app.links.github ? (
@@ -278,7 +278,7 @@ export function StoreDetail({ params }: { params: Record<string, string> }) {
           {!deployable ? (
             <Card bg="$color2" borderWidth={1} borderColor="$borderColor" p="$3.5" gap="$1">
               <Text fontSize="$3" fontWeight="600">
-                Not one-click deployable
+                No source to build from
               </Text>
               <Text fontSize="$2" color="$color11">
                 This entry publishes no buildable source, so Hanzo has nothing to build from.

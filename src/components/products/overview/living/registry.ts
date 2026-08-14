@@ -163,7 +163,7 @@ const platformOverview: LivingOverviewConfig = {
 const overlordOverview: LivingOverviewConfig = {
   id: 'overlord',
   title: 'Overlord',
-  subtitle: 'God-view of the whole platform — every product’s health, tenants, and usage across all orgs.',
+  subtitle: 'Every product, tenant, and org on the platform in one read — health and usage, nothing scoped away.',
   live: { pollMs: 20000, countUp: true },
   rows: [
     [

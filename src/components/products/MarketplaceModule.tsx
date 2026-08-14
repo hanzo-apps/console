@@ -252,7 +252,7 @@ export function MarketplaceModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Marketplace"
-        subtitle="Browse and deploy AI models and providers — real pricing, live availability, one unified API."
+        subtitle="Browse and deploy AI models and providers. Prices are what you are charged, availability is what is live right now, and everything answers on the same /v1 API."
         actions={
           <Button size="$2" icon={<RefreshCw size={15} />} onPress={run}>
             Refresh

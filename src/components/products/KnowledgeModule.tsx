@@ -75,7 +75,7 @@ export function KnowledgeModule() {
     <YStack gap="$4">
       <PageHeader
         title="Knowledge"
-        subtitle="Your wiki, agent memory, and ingested sources as one force-directed graph."
+        subtitle="Your wiki, your agents' memory, and the sources you have ingested — one graph, so you can see what connects to what."
         actions={
           <XStack gap="$2" items="center">
             <TabButton active={tab === 'graph'} onPress={() => setTab('graph')} icon={<Network size={14} />} label="Graph" />

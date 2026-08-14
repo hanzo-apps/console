@@ -172,7 +172,7 @@ export function DomainsModule(_props: { params: Record<string, string> }) {
     <YStack gap="$4">
       <PageHeader
         title="Domains"
-        subtitle="Search, register, and renew domain names — billed to your org, born on Hanzo nameservers."
+        subtitle="Search, register, and renew domain names. They are billed to your org and served by Hanzo nameservers from the moment you buy them."
         actions={
           <Button size="$3" onPress={loadOwned} disabled={loadingOwned}>
             Refresh

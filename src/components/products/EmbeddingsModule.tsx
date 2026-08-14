@@ -108,7 +108,7 @@ export function EmbeddingsModule({ params }: { params: Record<string, string> })
     <YStack gap="$3">
       <PageHeader
         title="Embeddings"
-        subtitle="Generate, store, and search vector embeddings at scale."
+        subtitle="Turn text into vectors, keep them in a collection, and search by meaning rather than by keyword."
         actions={
           <XStack gap="$2">
             <Button size="$2" icon={<Sparkles size={15} />} onPress={() => go('models')}>

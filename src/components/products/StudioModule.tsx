@@ -41,7 +41,7 @@ export function StudioModule() {
       <EmptyState
         icon={Sparkles}
         title="Studio isn’t provisioned for this cloud yet"
-        description="Hanzo Studio is the visual AI engine — generate, edit, and compose with a node editor, render queue, and GPU fleet. Ask your cloud operator to provision a Studio instance for this brand."
+        description="Studio is where you generate, edit, and compose media — a node editor, a render queue, and GPUs behind it. Ask your cloud operator to provision a Studio instance for this brand."
       />
     )
   }

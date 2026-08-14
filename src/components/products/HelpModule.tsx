@@ -66,8 +66,8 @@ export function HelpModule({ params = {} }: { params?: Record<string, string> })
       client={client}
       module={MODULE}
       label="Help Center"
-      subtitle="A native, metadata-driven support desk on the Hanzo Framework — tickets, agents, teams, SLAs, and canned responses as DocTypes, per organization. The ticket lifecycle is a status field on the engine; no separate helpdesk to run."
-      setupDescription="The Help Center is your support desk — tickets, agents, teams, SLAs, and canned responses — as DocTypes on the Hanzo Framework, per organization. A ticket's lifecycle (Open → Pending → Resolved → Closed) is a status field."
+      subtitle="Answer your customers here. Tickets, agents, teams, SLAs, and canned responses, scoped to your organization — and no separate helpdesk to run alongside it."
+      setupDescription="The Help Center is your support desk: tickets, agents, teams, SLAs, and canned responses, all scoped to your organization. A ticket moves Open → Pending → Resolved → Closed."
       setupBullets={[
         'Installs the helpdesk DocTypes into your organization',
         'Tickets move through their status workflow on the framework — assigned to agents and teams',

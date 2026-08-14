@@ -71,7 +71,7 @@ export function DeployModule({ params }: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Deploy"
-        subtitle={SUBTITLE[tab] ?? 'Everything you have shipped, and the planes that carry it.'}
+        subtitle={SUBTITLE[tab] ?? 'Everything you have shipped, and the machinery that builds, reconciles, and serves it.'}
         actions={
           <XStack gap="$2">
             <Button size="$2" icon={<RefreshCw size={15} />} onPress={() => void board.reload()}>

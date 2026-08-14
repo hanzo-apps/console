@@ -39,7 +39,7 @@ function PayoutBanner() {
         <HandCoins size={22} color="$color11" />
         <YStack flex={1} minW={240} gap="$0.5">
           <Text fontSize="$4" fontWeight="700">
-            Open source developer? Earn up to 20%.
+            Earn from your open-source project
           </Text>
           <Text fontSize="$2" color="$color11">
             Every time an organization runs your project on {config.brandName}, you earn up to 20% of the
@@ -72,7 +72,7 @@ export function StoreModule(_props: { params: Record<string, string> }) {
     <YStack gap="$4">
       <PageHeader
         title="App Store"
-        subtitle={`Deploy 1000+ open-source apps — Postgres, n8n, Grafana, and more — to your ${config.brandName} in one click.`}
+        subtitle={`Open-source apps that deploy to your ${config.brandName} in one click — Postgres, n8n, Grafana, and a thousand others.`}
         actions={
           <Button size="$2" icon={<RefreshCw size={15} />} onPress={() => load(true)}>
             Refresh
@@ -91,7 +91,10 @@ export function StoreModule(_props: { params: Record<string, string> }) {
       ) : state.apps.length === 0 ? (
         <XStack gap="$2" items="center" py="$4">
           <Store size={18} color="$color10" />
-          <Text color="$color10">The catalog is empty right now. Try refreshing.</Text>
+          <Text color="$color10">
+            The catalog came back with nothing in it. That is almost always a hiccup at the source rather than an empty
+            catalog — refresh to read it again.
+          </Text>
         </XStack>
       ) : (
         <StoreGrid apps={state.apps} base={config.ossCatalogUrl} />

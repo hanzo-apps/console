@@ -401,7 +401,7 @@ export function AiEconomicsModule() {
     <YStack p="$4" gap="$6" testID="ai-economics">
       <PageHeader
         title="AI Economics"
-        subtitle="The model request mix, unit economics, and the eval → training flywheel across the fleet. Global-admin only."
+        subtitle="Which models the fleet actually calls, what each request earns and costs, and how evals feed the next round of training. Global-admin only."
         actions={
           <XStack items="center" gap="$2">
             <RangeTabs value={range} onChange={onRange} />

@@ -124,8 +124,8 @@ function PostureCard({ posture }: { posture: ZtPosture }) {
         </Text>
       </XStack>
       <Text fontSize="$3" color="$color11">
-        Hanzo zap secures the data plane end-to-end with NIST post-quantum cryptography — so object
-        storage moving across the mesh stays sealed against a harvest-now-decrypt-later adversary.
+        Hanzo zap encrypts traffic across the mesh with NIST post-quantum algorithms. Data captured on the
+        wire today stays unreadable to a quantum computer built later.
       </Text>
       <YStack>
         <PostureRow icon={KeyRound} label="Key exchange" value={posture.kem} />
@@ -286,8 +286,8 @@ function ZtOverview() {
             </Text>
           ) : topologyIsEmpty(topo) ? (
             <Text fontSize="$3" color="$color10">
-              No routers, services, or identities yet. Enroll a router and define a service to populate the
-              mesh — every edge is mutually authenticated and post-quantum encrypted.
+              No routers, services, or identities yet. Enroll a router, then define a service for it to reach.
+              Each connection the mesh makes authenticates both ends before it carries anything.
             </Text>
           ) : (
             <TopologyStrip topo={topo} />
@@ -315,7 +315,7 @@ export function ZeroTrustModule({ params }: { params: Record<string, string> }) 
     <>
       <PageHeader
         title="Zero Trust"
-        subtitle="Private, identity-aware service access secured by post-quantum transport."
+        subtitle="Reach a private service without putting it on the public internet. Both ends prove who they are before any traffic moves."
         actions={
           <Button size="$2" icon={<RefreshCw size={15} />} onPress={() => router.refresh()}>
             Refresh

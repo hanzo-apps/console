@@ -140,7 +140,7 @@ export function AuditModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Audit"
-        subtitle="Your organization's tamper-evident security trail — every access-controlled action, hash-chained and append-only. Filter, inspect, and export for a compliance review."
+        subtitle="Every access-controlled action taken in your organization, in the order it happened. Entries are hash-chained and append-only, so an edit would show. Filter, inspect, and export for a compliance review."
         actions={
           <XStack gap="$2" items="center">
             <Button size="$2" icon={<Download size={15} />} onPress={onExport} disabled={!rows.length} aria-label="Export audit CSV">

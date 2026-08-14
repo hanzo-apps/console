@@ -107,7 +107,7 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Smart routing"
-        subtitle="Route each request to the best, cheapest capable model — for up to 90% lower spend."
+        subtitle="Send each request to the cheapest model that can answer it, instead of paying top rate for every call."
       />
 
       {state.phase === 'loading' ? (
@@ -157,7 +157,7 @@ export function AIAccountsRouting(_props: { params: Record<string, string> }) {
             <XStack items="center" gap="$2">
               <Sparkles size={15} color={toneColor('positive')} />
               <Text fontSize="$3" fontWeight="600" color="$color12">
-                Up to 90% lower spend — workload-dependent.
+                What you save depends on the work — simple calls drop furthest.
               </Text>
             </XStack>
 

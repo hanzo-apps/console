@@ -88,7 +88,7 @@ function FeaturedApps() {
           </Text>
         </XStack>
         <Button size="$2" chromeless iconAfter={<ArrowRight size={14} />} onPress={() => router.push('/store')}>
-          Browse 1000+ apps
+          Browse the catalog
         </Button>
       </XStack>
       {apps === null ? (
@@ -118,7 +118,7 @@ export function PlatformHome() {
           Deploy anything.
         </Text>
         <Text fontSize="$4" color="$color11" maxW={620}>
-          Ship your projects and 1000+ open-source apps — Postgres, n8n, Grafana, and more — to production on{' '}
+          Ship your own projects, and open-source apps like Postgres, n8n and Grafana, to production on{' '}
           {config.brandName} in one click.
         </Text>
         <XStack gap="$2" flexWrap="wrap" pt="$1">
@@ -133,7 +133,7 @@ export function PlatformHome() {
 
       {/* Deploy primitives — quick tiles. */}
       <XStack gap="$3" flexWrap="wrap">
-        <DeployTile icon={Store} title="App Store" subtitle="1000+ open-source apps, one-click deploy." onPress={() => push('/store')} />
+        <DeployTile icon={Store} title="App Store" subtitle="Open-source apps, deployed in one click." onPress={() => push('/store')} />
         <DeployTile icon={Container} title="Containers" subtitle="Your running container apps + workloads." onPress={() => push('/containers')} />
         <DeployTile icon={Zap} title="Functions" subtitle="Event-driven serverless functions." onPress={() => push('/functions')} />
         <DeployTile icon={BarChart3} title="Usage" subtitle="Track spend and resource usage." onPress={() => push('/usage')} />

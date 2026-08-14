@@ -56,7 +56,7 @@ export function AutomationsModule({ params }: { params: Record<string, string> }
     <YStack gap="$4" p="$4">
       <PageHeader
         title="Automations"
-        subtitle="Build and run automation flows — 706 connectors on the native engine, in-console."
+        subtitle="Build and run automation flows here — a trigger, a few connector steps, and it runs without you."
       />
 
       <SubNav id="automations" />
@@ -400,7 +400,7 @@ function ConnectorsView() {
       ) : loading ? (
         <Loader label="Loading the connector catalogue…" />
       ) : pieces.length === 0 ? (
-        <EmptyState icon={Blocks} title="No connectors reported" description="The catalogue lights up once the /v1/automations engine reports its pieces." />
+        <EmptyState icon={Blocks} title="No connectors reported" description="Connectors appear here once the /v1/automations engine reports its pieces." />
       ) : (
         <>
           <Text fontSize="$2" color="$color11">

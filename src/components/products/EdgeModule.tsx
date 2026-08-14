@@ -106,11 +106,11 @@ export function EdgeModule(_props: { params: Record<string, string> }) {
         <EmptyState
           icon={Radio}
           title="No edge nodes yet"
-          description="Globally-distributed edge compute — run functions and containers close to your users, managed by Hanzo. Nodes tagged to your org appear here as your edge fabric comes online; until then your workloads run on the shared Hanzo Cloud regions."
+          description="Edge compute runs your functions and containers close to the people calling them, on nodes Hanzo manages. Nodes tagged to your org appear here as they come online; until then your workloads run in the shared Hanzo Cloud regions."
           bullets={[
             'Deploy once — served from the edge location nearest each request',
             'Backed by the same functions + containers you already run',
-            'Nodes and traffic appear here as your edge fabric comes online',
+            'Nodes and traffic appear here as each edge location comes online',
           ]}
           primary={{ label: 'Edge docs', href: `${config.docsUrl}/docs/edge` }}
           secondary={{ label: 'Containers', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/containers') } }}

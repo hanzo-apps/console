@@ -326,7 +326,7 @@ function TemplatesView() {
     <>
       <PageHeader
         title="Templates"
-        subtitle="Production-ready starter kits — fork a template and deploy."
+        subtitle="Starter apps you can fork and deploy — a working project on the first commit."
         actions={
           <Button size="$2" icon={<RefreshCw size={15} />} onPress={load}>
             Refresh
@@ -339,7 +339,7 @@ function TemplatesView() {
       ) : state.phase === 'loading' ? (
         <Text color="$color11">Loading…</Text>
       ) : all.length === 0 ? (
-        <Text color="$color10">No templates available.</Text>
+        <Text color="$color10">No templates available. Templates are starter kits you fork into a project and deploy; the catalog came back empty.</Text>
       ) : (
         <YStack gap="$3">
           <XStack gap="$2" items="center" flexWrap="wrap">

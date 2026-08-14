@@ -171,7 +171,7 @@ export function LoadBalancerModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Load Balancers"
-        subtitle="L4/L7 traffic distribution."
+        subtitle="Spread incoming traffic across your services — at the connection level or the request level."
         actions={
           <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
             Refresh

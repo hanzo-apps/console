@@ -107,7 +107,7 @@ function RouterOverview() {
     <>
       <PageHeader
         title="Router"
-        subtitle="How your org's requests are routed to the best, cheapest capable model — cost saved, quality, and per-task model mix."
+        subtitle="Where your org's requests went and why — which model answered each task, what it cost, and how the answers scored."
         actions={
           <XStack gap="$1" flexWrap="wrap">
             {ROUTER_RANGES.map((r) => (
@@ -154,7 +154,7 @@ function RouterBoard({ stats }: { stats: RouterStats }) {
         <EmptyState
           icon={Waypoints}
           title="No routing activity yet"
-          description="Once your org sends traffic through the auto/zen-router model, cost-saved, quality, and per-task routing stats appear here — never fabricated."
+          description="Send traffic through the auto/zen-router model and cost-saved, quality, and per-task routing stats appear here."
           bullets={[
             'Point requests at the "auto" model (or any pooled task) to start routing.',
             'Set your task pools and cost ceiling in the Policy tab.',

@@ -111,7 +111,7 @@ export function StoreCard({
       </XStack>
 
       <Text fontSize="$2" color="$color11" minH={40} numberOfLines={2}>
-        {app.description || 'Open-source app — deploy it to your cloud in one click.'}
+        {app.description || 'An open-source app you can deploy to your cloud.'}
       </Text>
 
       {app.tags.length ? (
