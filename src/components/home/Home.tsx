@@ -37,15 +37,10 @@ import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
 import { useTimedOut } from '~/lib/use-timed-out'
 import { visibleCatalog } from '~/lib/products/registry'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { greet } from '~/components/home/greeting'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
 
-/** Greeting by local hour. Three bands, so it reads as written by a person. */
-function greeting(hour: number): string {
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
-}
 
 /** A figure that is not known renders as an em dash, and `sub` says why. */
 function Figure({ value, sub }: Reading) {
@@ -111,11 +106,11 @@ export function Home() {
   const { account } = useSession()
   const router = useRouter()
   const showAdmin = useIsSuperAdmin()
-  const [hour, setHour] = useState<number | null>(null)
+  const [today, setToday] = useState<Date | null>(null)
 
-  // Read the clock after mount: the server and the browser can sit in different
+  // Read the date after mount: the server and the browser can sit in different
   // zones, and a greeting that changes on hydration is a visible flicker.
-  useEffect(() => setHour(new Date().getHours()), [])
+  useEffect(() => setToday(new Date()), [])
 
   // The balance: the ONE shared live value, so this tile and the sidebar wallet a
   // few hundred pixels away read the same cents and cannot contradict each other.
@@ -166,8 +161,7 @@ export function Home() {
     <YStack gap="$4" $md={{ gap: '$5' }} maxW={1040} width="100%" self="center">
       <XStack justify="space-between" items="center" gap="$3" flexWrap="wrap">
         <Text fontSize="$7" $md={{ fontSize: '$8' }} fontWeight="700">
-          {hour === null ? 'Welcome' : greeting(hour)}
-          {who ? `, ${who}` : ''}
+          {today === null ? 'Welcome' : greet(today, who)}
         </Text>
         <XStack gap="$2" items="center">
           <Button
