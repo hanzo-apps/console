@@ -232,12 +232,15 @@ export const RESOURCE_SPECS: Record<ResourceKind, ResourceSpec> = {
     ],
     tool: { id: 'query', label: 'Query', icon: 'Terminal', blurb: 'Run analytical SQL from the console' },
     connectHint: 'Connect over the Datastore HTTP/native protocol using the connection string.',
-    // Names the client the user can actually install. The native protocol is
-    // unchanged, so upstream clickhouse-client connects to a datastore instance
-    // as-is; our own datastore-client package has no published repo yet
-    // (packages.hanzo.ai/{deb,rpm} 404). Switch this to `datastore-client` only
-    // once that repo serves it, or users get a command they cannot install.
-    connectCmd: (host) => `clickhouse-client --host ${host.split(':')[0]} --secure --password PASSWORD`,
+    // Runs OUR client, from the artifact we publish. It used to name upstream's
+    // `clickhouse-client` because our own package repo 404s — still true, there
+    // is no apt/tgz lane — but the image ships the client either way: the
+    // Dockerfile symlinks /usr/bin/datastore-<tool> for each tool, so
+    // `datastore-client` exists in it. Naming the image rather than a package
+    // gives a command that runs today without sending anyone to another
+    // project's build.
+    connectCmd: (host) =>
+      `docker run --rm -it ghcr.io/hanzoai/datastore datastore-client --host ${host.split(':')[0]} --secure --password PASSWORD`,
     repo: 'hanzoai/datastore',
   },
   s3: {
