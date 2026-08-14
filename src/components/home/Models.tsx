@@ -18,11 +18,39 @@
  * its hue table — ours are the mark, not a tile — so a bespoke palette here would
  * be off-brand by construction and would drift the moment a vendor hue changed.
  */
+import { useEffect, useState } from 'react'
+
 import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight } from '@hanzogui/lucide-icons-2'
 
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
+import { fetchCatalog } from '~/lib/api/aicatalog'
+
+/**
+ * The card's headline is a COUNT, and the count is measured.
+ *
+ * It read "Every other family", which says the shape of the thing and not the
+ * size of it — and the size is the argument. What it must never be is a number
+ * somebody typed: this estate has a build gate for exactly that (hanzo.ai's
+ * `audit-model-counts.mjs` went red on a hand-typed "400+"), because a figure in
+ * copy drifts from the catalog the first week and nothing notices.
+ *
+ * So it counts what the catalog actually serves and floors to a hundred — the
+ * same derivation hanzo.ai's `AI_MODELS_PHRASE` uses, so the two surfaces cannot
+ * quote different numbers. Floor, never round: "400+" over 432 is true, and
+ * rounding 432 up to "500+" is not. It says 500+ on its own the day the catalog
+ * crosses 500.
+ *
+ * Until the count lands — and if it never does — the card keeps its old
+ * headline. A door that cannot say how many is still a door; a door showing
+ * "0+ AI models" is a broken one.
+ */
+const FALLBACK_TITLE = 'Every other family'
+
+function phrase(n: number): string {
+  return `${Math.floor(n / 100) * 100}+ AI models`
+}
 
 /** The families behind the third card, ordered by how often they are asked for. */
 const FAMILIES = ['anthropic', 'openai', 'google', 'qwen', 'deepseek', 'meta', 'mistral', 'moonshot']
@@ -94,6 +122,22 @@ function HouseCard({ house, onOpen }: { house: House; onOpen: () => void }) {
 }
 
 function EveryOtherFamily({ onOpen }: { onOpen: () => void }) {
+  // Counted, not typed. `fetchCatalog` is the same read the /models page makes,
+  // so the number on the home card is the number that page will show. A failed
+  // read keeps the old headline rather than rendering a zero — see FALLBACK_TITLE.
+  const [title, setTitle] = useState(FALLBACK_TITLE)
+  useEffect(() => {
+    let live = true
+    fetchCatalog()
+      .then((rows) => {
+        if (live && rows.length > 0) setTitle(phrase(rows.length))
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [])
+
   return (
     <Card
       borderWidth={1}
@@ -109,7 +153,17 @@ function EveryOtherFamily({ onOpen }: { onOpen: () => void }) {
       accessibilityRole="link"
       aria-label="Explore every model family"
     >
-      <XStack
+      {/* Eight marks, in a settled 4x2 grid.
+          They used to free-wrap inside the clipped panel, so the row broke
+          wherever the diagonal happened to cut it — a ragged 4+4 that re-ragged
+          at every width, with the last mark drifting under the first. A grid
+          places them, so the block reads as a set of PEERS (which is what the
+          card is saying: every other family, equally) and it holds its shape at
+          every breakpoint. The clip still draws the diagonal edge; it no longer
+          decides the layout.
+          `justify-items: center` keeps each mark centred in its cell, so marks
+          of different aspect (a square H, a wide wordmark) still line up. */}
+      <YStack
         position="absolute"
         t={0}
         r={0}
@@ -118,20 +172,28 @@ function EveryOtherFamily({ onOpen }: { onOpen: () => void }) {
         bg="$color2"
         items="center"
         justify="center"
-        gap="$2"
         p="$3"
-        flexWrap="wrap"
         style={{ clipPath: 'polygon(22% 0, 100% 0, 100% 100%, 0 100%)' }}
         pointerEvents="none"
       >
-        {FAMILIES.map((f) => (
-          <ProviderLogo key={f} provider={f} size={28} />
-        ))}
-      </XStack>
+        <YStack
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 14,
+            justifyItems: 'center',
+            alignItems: 'center',
+          }}
+        >
+          {FAMILIES.map((f) => (
+            <ProviderLogo key={f} provider={f} size={26} />
+          ))}
+        </YStack>
+      </YStack>
 
       <YStack p="$3" $md={{ p: '$4' }} gap="$2" maxW="50%" justify="center">
         <Text fontSize="$5" fontWeight="700">
-          Every other family
+          {title}
         </Text>
         <Text fontSize="$2" color="$color11">
           Claude, GPT, Gemini, Qwen, DeepSeek, Llama and more — one key, one bill, one API.
