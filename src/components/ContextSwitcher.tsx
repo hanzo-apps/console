@@ -165,7 +165,7 @@ export function ContextSwitcher() {
 
             {projects.length === 0 && !loadingProjects ? (
               <Text px="$2" py="$1.5" fontSize="$2" color="$color10">
-                No projects yet.
+                No projects yet. A project scopes API keys, usage and deploys to one piece of work — create one below.
               </Text>
             ) : null}
 

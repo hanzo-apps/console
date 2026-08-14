@@ -217,19 +217,24 @@ export function AddProductPanel() {
         ? {
             icon: Star,
             title: 'No pinned products yet',
-            description: 'Pin a product to add it to your sidebar’s quick-access section.',
+            description: 'Star a product in the list to pin it. Pinned products sit at the top of the sidebar, in whatever order you put them.',
           }
-        : { icon: Search, title: 'No products', description: 'There are no products to show.' }
+        : {
+            icon: Search,
+            title: 'Nothing matches that search',
+            description: 'This panel lists every product your organization can open. Clear the search to see them all.',
+          }
 
   return (
     <YStack p="$3" gap="$4">
       <YStack gap="$1">
         <Text fontSize="$2" color="$color10">
-          Every product is available on demand — pin the ones you use to your sidebar. You only pay for what you use.
+          Everything your organization can open, in one list. Pin the ones you use and they move to the sidebar.
         </Text>
         {usageFailed ? (
           <Text fontSize="$1" color="$color9">
-            Usage signal unavailable — in-use products can’t be highlighted right now.
+            We could not read your recent usage, so the products you already use are not marked. Everything is still
+            listed.
           </Text>
         ) : null}
       </YStack>

@@ -55,7 +55,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
         <Text fontSize="$3" color="$color11">
           {chunk
             ? 'A newer version of the console just shipped. Reload to load the latest.'
-            : 'The rest of the console still works. Try again, or reload the page.'}
+            : 'Something on this page threw an error, so it could not finish drawing. The rest of the console is unaffected — try drawing it again, or reload.'}
         </Text>
         <XStack gap="$2">
           {!chunk ? (

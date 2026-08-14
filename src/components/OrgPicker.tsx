@@ -317,7 +317,7 @@ export function OrgPicker() {
           <EmptyState
             icon={Building2}
             title="No organizations yet"
-            description="Create your first organization to start using the console."
+            description="An organization holds your members, projects, keys and billing. You can rename it later, and you can belong to more than one."
             primary={{ label: 'Create organization', icon: <Plus size={15} />, onPress: () => setCreating(true) }}
           />
         ) : (

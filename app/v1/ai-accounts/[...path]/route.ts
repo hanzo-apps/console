@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const mode = body?.mode as ConnectMode
   const secret = typeof body?.secret === 'string' ? body.secret.trim() : ''
   if (!MODES.includes(mode) || !secret) {
-    return NextResponse.json({ error: 'A link mode and a non-empty credential are required.' }, { status: 400 })
+    return NextResponse.json({ error: 'Connecting an account needs both how to connect it and the credential itself. One of the two was missing or empty.' }, { status: 400 })
   }
 
   const cred: StoredCredential = {

@@ -360,7 +360,7 @@ const SubRow = memo(function SubRow({
       size="$3"
       opacity={wired ? 1 : 0.6}
       aria-current={active ? 'page' : undefined}
-      aria-label={wired ? sub.label : `${sub.label} (not available yet)`}
+      aria-label={wired ? sub.label : `${sub.label} — not available on this deployment`}
     >
       {collapsed ? undefined : sub.label}
     </Button>
@@ -550,7 +550,7 @@ function SidebarNav({
       content: <ProductCustomize id={entry.id} />,
     })
   const manage = () =>
-    detail.open({ title: 'Manage pins', subtitle: 'Reorder · group · organize', icon: Star, content: <ManagePins /> })
+    detail.open({ title: 'Manage pins', subtitle: 'Drag to reorder, and file pins into groups', icon: Star, content: <ManagePins /> })
   // Browse the FULL catalog: pin/unpin to the sidebar + find what's in use (the
   // reworked panel — no enable gate; every product is always available).
   const allProducts = () =>
@@ -1204,7 +1204,7 @@ export function Dashboard({ children }: { children: ReactNode }) {
           <XStack items="center" gap="$2">
             <HanzoAppLauncher currentApp="console" align="right" quickSwitchKey={false} />
             <Text fontSize="$3" color="$color11">
-              Hanzo apps
+              {config.brandName} apps
             </Text>
           </XStack>
         </YStack>

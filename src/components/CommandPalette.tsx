@@ -665,7 +665,10 @@ function PaletteDialog({
             {mode === 'catalog' ? (
               items.length === 0 ? (
                 <YStack p="$5" items="center">
-                  <Text color="$color10">No commands or products match “{sub}”.</Text>
+                  <Text color="$color10">
+                    Nothing matches “{sub}”. Clear the search to browse everything, or type &gt; for commands and ? for
+                    help.
+                  </Text>
                 </YStack>
               ) : (
                 <ScrollView flex={1} p="$2" showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">

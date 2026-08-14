@@ -98,7 +98,7 @@ export function AdminBanner() {
       flexWrap="wrap"
     >
       <Text fontSize="$2" color="$yellow11" flex={1}>
-        {'Admin ops (IAM · KMS · orgs) → '}
+        {'IAM, KMS and org administration live on the admin console: '}
         <Text fontSize="$2" color="$yellow12" fontWeight="700">
           {`admin.${brand.adminDomain}`}
         </Text>
@@ -107,7 +107,7 @@ export function AdminBanner() {
         <Button size="$2" bg="$yellow4" borderColor="$yellow7" onPress={() => window.location.assign(adminUrl)}>
           {`Open admin`}
         </Button>
-        <Button size="$2" chromeless theme="yellow" onPress={dismiss}>
+        <Button size="$2" chromeless theme="yellow" onPress={dismiss} aria-label="Dismiss this notice">
           ✕
         </Button>
       </XStack>

@@ -29,7 +29,7 @@ export default function DocsRedirect() {
   }, [])
   return (
     <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
-      Opening documentation… {url ? <a href={url}>Continue</a> : null}
+      Opening documentation… {url ? <a href={url}>Open the docs site</a> : null}
     </main>
   )
 }

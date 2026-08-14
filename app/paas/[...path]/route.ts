@@ -58,7 +58,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   }
   if (!TOKEN) {
     return NextResponse.json(
-      { error: 'PaaS control plane is not configured (PAAS_SERVICE_TOKEN missing).' },
+      { error: 'The PaaS control plane is not configured on this deployment, so app and project reads cannot be served. Your cloud operator configures it.' },
       { status: 501 },
     )
   }

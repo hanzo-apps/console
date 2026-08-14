@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   if (!user) return unauthorized()
   if (!mintConfigured()) {
     // Honest, non-leaking: the confidential client isn't wired on this deployment.
-    return NextResponse.json({ error: 'API key management is not configured on this deployment.' }, { status: 501 })
+    return NextResponse.json({ error: 'API keys cannot be minted on this deployment — the console has no credential to mint them with. Your cloud operator configures it.' }, { status: 501 })
   }
   try {
     const { accessKey, updatedAt } = await getUserKey(user)
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (e) {
     console.error('keys: could not read key state:', msgOf(e))
-    return NextResponse.json({ error: 'Could not read the API key state.' }, { status: 502 })
+    return NextResponse.json({ error: 'Could not read whether you have an API key. Nothing changed. Reload the page to ask again.' }, { status: 502 })
   }
 }
 
@@ -66,14 +66,14 @@ export async function POST(req: NextRequest) {
   const user = await resolveUser(req)
   if (!user) return unauthorized()
   if (!mintConfigured()) {
-    return NextResponse.json({ error: 'API key management is not configured on this deployment.' }, { status: 501 })
+    return NextResponse.json({ error: 'API keys cannot be minted on this deployment — the console has no credential to mint them with. Your cloud operator configures it.' }, { status: 501 })
   }
   try {
     const accessKey = await mintUserKey(user)
     return NextResponse.json({ accessKey })
   } catch (e) {
     console.error('keys: could not mint key:', msgOf(e))
-    return NextResponse.json({ error: 'Could not create the API key.' }, { status: 502 })
+    return NextResponse.json({ error: 'The API key was not created. No key was issued and your existing key, if you had one, still works. Try again.' }, { status: 502 })
   }
 }
 
@@ -84,13 +84,13 @@ export async function DELETE(req: NextRequest) {
   const user = await resolveUser(req)
   if (!user) return unauthorized()
   if (!mintConfigured()) {
-    return NextResponse.json({ error: 'API key management is not configured on this deployment.' }, { status: 501 })
+    return NextResponse.json({ error: 'API keys cannot be minted on this deployment — the console has no credential to mint them with. Your cloud operator configures it.' }, { status: 501 })
   }
   try {
     await revokeUserKey(user)
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('keys: could not revoke key:', msgOf(e))
-    return NextResponse.json({ error: 'Could not revoke the API key.' }, { status: 502 })
+    return NextResponse.json({ error: 'The API key was not revoked — assume it still works. Try again, and if it keeps failing contact support before relying on it being dead.' }, { status: 502 })
   }
 }

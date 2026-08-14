@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest) {
 
   const body = (await req.json().catch(() => null)) as { routingEnabled?: unknown } | null
   if (typeof body?.routingEnabled !== 'boolean') {
-    return NextResponse.json({ error: 'routingEnabled (boolean) is required.' }, { status: 400 })
+    return NextResponse.json({ error: 'Say whether routing should be on or off — the request carried neither.' }, { status: 400 })
   }
   const settings = normalizeSettings(body)
 
