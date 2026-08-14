@@ -30,10 +30,17 @@ images:
 # and it uses pnpm — the packageManager this repo pins (npm would fetch a stray
 # next and fail). Same steps the Dockerfile runs, so the runner export matches the
 # image bundle byte-for-byte.
+#
+# That match includes the ingest key, and it is why NEXT_PUBLIC_PUBLISHABLE_KEY is
+# spelled here. KMS holds the one plain name, PUBLISHABLE_KEY, and each lane maps it
+# to the name the bundler inlines: the image lane in the Dockerfile (ARG → ENV), this
+# lane on the command. Only the image lane had the mapping, so console.hanzo.ai —
+# which serves THIS export, not the image — shipped a bundle with no key at all and
+# reported nothing for signed-out views while every gate upstream read green.
 site:
   slug: hanzo-console
   dir: out
-  build: corepack enable && pnpm install --frozen-lockfile && pnpm build:embed
+  build: corepack enable && pnpm install --frozen-lockfile && NEXT_PUBLIC_PUBLISHABLE_KEY=$PUBLISHABLE_KEY pnpm build:embed
   on: [main]
 
 # The KMS tenant this repo's build secrets come from. Stated rather than derived:
