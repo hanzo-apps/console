@@ -18,11 +18,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { ArrowRight, BookOpen, KeyRound, Boxes, HandCoins, ExternalLink } from '@hanzogui/lucide-icons-2'
+import { BookOpen, KeyRound, Boxes, HandCoins, ExternalLink } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
-import { ProviderLogo } from '~/components/ui/ProviderLogo'
+import { Models } from '~/components/home/Models'
 import { visibleCatalog } from '~/lib/products/registry'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 
@@ -69,22 +69,6 @@ function StatCard({
   )
 }
 
-/**
- * The model lineup, in the order an account should try them: Enso first.
- *
- * The mark comes from the ONE brand resolver every model surface uses
- * (`ProviderLogo` → `brandForModel`), so Enso and the Zen family render the house
- * mark rather than a colour this file invented. `BRANDS` deliberately excludes the
- * house brands from its hue table — ours are the mark, not a tile — so a bespoke
- * palette here would have been off-brand by construction, and would have drifted
- * the moment a vendor hue changed.
- */
-const MODELS: { id: string; name: string; badge?: string; tags: string[] }[] = [
-  { id: 'enso', name: 'Enso', tags: ['Most capable', 'Research', 'Multi-day tasks'] },
-  { id: 'zen5', name: 'Zen', badge: 'New', tags: ['Complex projects', 'Agents', 'Coding'] },
-  { id: 'zen5-vl', name: 'Zen VL', tags: ['Everyday tasks', 'Writing', 'Cost-efficient'] },
-  { id: 'zen5-coder', name: 'Zen Coder', tags: ['Fastest', 'Lowest cost', 'High volume'] },
-]
 
 const RESOURCES: { name: string; blurb: string }[] = [
   {
@@ -223,67 +207,7 @@ export function Home() {
         </XStack>
       </Card>
 
-      <YStack gap="$3">
-        <XStack justify="space-between" items="center" gap="$2">
-          <Text fontSize="$5" fontWeight="700">
-            Models
-          </Text>
-          <XStack gap="$1" items="center">
-            <Button size="$2" chromeless onPress={() => go('/models')}>
-              All models
-            </Button>
-            <Button
-              size="$2"
-              chromeless
-              iconAfter={<ArrowRight size={14} />}
-              onPress={() => go('/models/leaderboard')}
-            >
-              Compare
-            </Button>
-          </XStack>
-        </XStack>
-        <XStack gap="$3" flexWrap="wrap" items="stretch">
-          {MODELS.map((m) => (
-            <Card
-              key={m.id}
-              borderWidth={1}
-              borderColor="$borderColor"
-              flex={1}
-              minW={200}
-              overflow="hidden"
-              cursor="pointer"
-              hoverStyle={{ borderColor: '$color8' }}
-              pressStyle={{ opacity: 0.85 }}
-              onPress={() => go('/models')}
-              accessibilityRole="link"
-              aria-label={`${m.name} — open the model catalog`}
-            >
-              <XStack height={84} bg="$color2" items="center" justify="center">
-                <ProviderLogo provider="zen" model={m.id} size={40} />
-              </XStack>
-              <YStack p="$3" gap="$2">
-                <XStack gap="$2" items="center">
-                  <Text fontSize="$5" fontWeight="700">
-                    {m.name}
-                  </Text>
-                  {m.badge ? (
-                    <Text fontSize="$1" bg="$color5" px="$2" py="$1" rounded="$2">
-                      {m.badge}
-                    </Text>
-                  ) : null}
-                </XStack>
-                <XStack gap="$1" flexWrap="wrap">
-                  {m.tags.map((t) => (
-                    <Text key={t} fontSize="$1" color="$color11" bg="$color3" px="$2" py="$1" rounded="$2">
-                      {t}
-                    </Text>
-                  ))}
-                </XStack>
-              </YStack>
-            </Card>
-          ))}
-        </XStack>
-      </YStack>
+      <Models />
 
       <YStack gap="$3">
         <Text fontSize="$5" fontWeight="700">

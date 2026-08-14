@@ -628,7 +628,6 @@ function DestinationCard({ dest, onChanged }: { dest: Destination; onChanged: ()
                 onChange={(v: string) => setSecrets((s) => ({ ...s, [name]: v }))}
                 placeholder={dest.connected ? 'Leave blank to keep the stored one' : ''}
                 secure
-                autoComplete="off"
                 disabled={busy}
               />
             </FieldRow>
