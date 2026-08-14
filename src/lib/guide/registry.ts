@@ -58,14 +58,14 @@ export const GUIDES: Record<string, ProductGuide> = {
       {
         id: 'first-call',
         title: 'Try it in the Playground',
-        body: 'Send your first prompt to a live model right in the browser — no code needed — then copy the request as curl or SDK.',
+        body: 'Send your first prompt to a live model in the browser, with no code, then copy the request as curl or JSON.',
         action: { label: 'Open Playground', to: '/playground' },
         done: usedAny('playground', 'chat', 'models'),
       },
       {
         id: 'ship',
-        title: 'Deploy a function or an app',
-        body: 'Deploy a serverless function, or an app from Git, and get a URL you can call.',
+        title: 'Deploy a function',
+        body: 'Deploy a serverless function and call it over HTTP.',
         action: { label: 'Open Functions', to: '/functions' },
         done: usedAny('functions', 'projects', 'applications'),
       },
@@ -93,8 +93,8 @@ export const GUIDES: Record<string, ProductGuide> = {
         'Zen, Claude, GPT, Llama and more, all called through a single /v1 endpoint. Switching model means changing one string.',
       points: [
         { title: 'Same request shape', body: 'The /v1 endpoints keep the shape your SDK already sends, so it needs a new base URL and key.', icon: 'plug' },
-        { title: 'Per-token pricing', body: 'Per-Mtok rates on every model, metered into one bill.', icon: 'coins' },
-        { title: 'Routing and fallback', body: 'A request can fall back from a primary model to a second one.', icon: 'gauge' },
+        { title: 'Per-token pricing', body: 'Per-Mtok rates in the catalog, metered into one bill.', icon: 'coins' },
+        { title: 'Routing and fallback', body: 'Give a model a primary provider and up to two fallbacks.', icon: 'gauge' },
       ],
     },
     steps: [
@@ -113,11 +113,11 @@ export const GUIDES: Record<string, ProductGuide> = {
     id: 'chat',
     label: 'Chat',
     pitch: {
-      headline: 'Chat with any model, over your own documents.',
+      headline: 'Multi-turn chat over any model in the catalog.',
       subhead:
-        'Multi-turn conversations against any model in the catalog, with retrieval over the collections you have indexed. Replies stream as they are written.',
+        'Conversations against any model, streamed as they are written, with the Hanzo docs available to answer from.',
       points: [
-        { title: 'Retrieval', body: 'An answer can draw on the documents in your collections.', icon: 'sparkles' },
+        { title: 'Retrieval', body: 'An answer can draw on the Hanzo documentation.', icon: 'sparkles' },
         { title: 'Any model', body: 'Default to Zen or pick any model in the catalog per conversation.', icon: 'zap' },
         { title: 'Streaming', body: 'Replies arrive as they are written, not after the turn ends.', icon: 'gauge' },
       ],
@@ -144,7 +144,7 @@ export const GUIDES: Record<string, ProductGuide> = {
       points: [
         { title: 'Managed collections', body: 'Cosine-indexed collections with ingest and search built in.', icon: 'database' },
         { title: 'Any embedding model', body: 'Generate vectors with the model that fits your recall and your budget.', icon: 'sparkles' },
-        { title: 'Semantic search', body: 'Query by meaning and get ranked matches, each with its source.', icon: 'search' },
+        { title: 'Semantic search', body: 'Query by meaning and get ranked matches.', icon: 'search' },
       ],
     },
     steps: [
@@ -163,12 +163,12 @@ export const GUIDES: Record<string, ProductGuide> = {
     id: 'agents',
     label: 'Agents',
     pitch: {
-      headline: 'Agents that call your tools and keep context across turns.',
+      headline: 'An agent, its tools, and a record of every run.',
       subhead:
-        'Define an agent, give it tools, and start a run. What the run did stays in the console after it finishes.',
+        'Define an agent, give it tools, and start a run. Its output, status and duration are kept in the console.',
       points: [
         { title: 'Tool use', body: 'Give an agent tools and let it decide when to call them.', icon: 'plug' },
-        { title: 'Observable runs', body: 'The steps and logs of a run show up here.', icon: 'gauge' },
+        { title: 'Runs on the record', body: 'A run keeps its output, its status and how long it took.', icon: 'gauge' },
         { title: 'Multi-agent', body: 'Several agents can work on one task.', icon: 'sparkles' },
       ],
     },
@@ -190,10 +190,10 @@ export const GUIDES: Record<string, ProductGuide> = {
     pitch: {
       headline: 'Prompt any model, then ship the code.',
       subhead:
-        'Test prompts against live models in the browser, tune parameters, and copy a working request as curl or an SDK snippet.',
+        'Test prompts against live models in the browser, tune the parameters, and copy the request that ran as curl or JSON.',
       points: [
         { title: 'No setup', body: 'Prompt a live model from the browser. Nothing to install.', icon: 'zap' },
-        { title: 'Copy as code', body: 'Take any run away as a curl command or an SDK call.', icon: 'code' },
+        { title: 'Copy as code', body: 'Take any run away as a curl command or the raw JSON request.', icon: 'code' },
         { title: 'Tune it', body: 'Adjust temperature, tokens, and system prompt and see the effect.', icon: 'gauge' },
       ],
     },
@@ -218,11 +218,11 @@ export const GUIDES: Record<string, ProductGuide> = {
     pitch: {
       headline: 'A vector database you create from the console.',
       subhead:
-        'Store, index and query embeddings with cosine similarity. It is what retrieval and semantic search run on.',
+        'Store, index and query embeddings with cosine similarity, from your own client. It is what retrieval and semantic search run on.',
       points: [
         { title: 'On-demand', body: 'Provision a collection in the console — no cluster to run.', icon: 'database' },
         { title: 'Semantic queries', body: 'Nearest-neighbor search over your vectors.', icon: 'search' },
-        { title: 'Open source', body: 'Built on an open-source vector engine, which you can also run yourself.', icon: 'globe' },
+        { title: 'Open source', body: 'Built on hanzoai/vector, which is open source.', icon: 'globe' },
       ],
     },
     steps: [
@@ -240,12 +240,12 @@ export const GUIDES: Record<string, ProductGuide> = {
     id: 'functions',
     label: 'Functions',
     pitch: {
-      headline: 'Deploy a function, get a URL.',
+      headline: 'Functions run your code on demand.',
       subhead:
-        'Code that runs on demand, with no server to manage. Triggers, secrets and per-invocation metrics come with it.',
+        'Deploy from the CLI. The console lists each function with its endpoint, its triggers, the secrets it reads and its per-invocation metrics.',
       points: [
         { title: 'No servers', body: 'Push a function and it scales to zero when idle.', icon: 'zap' },
-        { title: 'Triggers & secrets', body: 'Attach HTTP or event triggers, and inject secrets at run time.', icon: 'plug' },
+        { title: 'Triggers & secrets', body: 'HTTP and event triggers, and the names of the secrets a function reads.', icon: 'plug' },
         { title: 'Per-call metrics', body: 'Invocations, duration, and errors tracked per function.', icon: 'gauge' },
       ],
     },
@@ -253,7 +253,7 @@ export const GUIDES: Record<string, ProductGuide> = {
       {
         id: 'deploy',
         title: 'Deploy your first function',
-        body: 'Open Functions and create one — it gets an invocation URL immediately.',
+        body: 'Deploy one from the CLI, then open Functions to see it with its endpoint.',
         action: { label: 'Open Functions', to: '/functions' },
         done: usedAny('functions'),
       },
@@ -265,20 +265,20 @@ export const GUIDES: Record<string, ProductGuide> = {
     id: 'projects',
     label: 'Projects',
     pitch: {
-      headline: 'From Git to a live URL.',
+      headline: 'Group your work under a project.',
       subhead:
-        'Deploy an app from a repository or an upload and get a production URL, with its builds, environments and releases tracked in the console.',
+        'A project is what everything else is scoped to — API keys, datasets, deploys and observability. Make one your active scope and the console follows it.',
       points: [
-        { title: 'Git or upload', body: 'Deploy from a repository, or upload a build.', icon: 'code' },
-        { title: 'Live URL', body: 'A deploy gets its URL once its health check passes.', icon: 'globe' },
-        { title: 'Environments', body: 'Promote across environments with tracked releases.', icon: 'gauge' },
+        { title: 'One scope', body: 'API keys, datasets, deploys and logs all belong to a project.', icon: 'code' },
+        { title: 'Switch in the top bar', body: 'Pick a project and every module reads that project.', icon: 'globe' },
+        { title: 'Environments', body: 'Each project carries its own environments.', icon: 'gauge' },
       ],
     },
     steps: [
       {
         id: 'create',
         title: 'Create a project',
-        body: 'Point Projects at a repo or an upload to run your first deploy.',
+        body: 'Name a project, then use it as the scope for the work that follows.',
         action: { label: 'Open Projects', to: '/projects' },
         done: usedAny('projects', 'applications'),
       },
@@ -303,7 +303,7 @@ export const GUIDES: Record<string, ProductGuide> = {
       {
         id: 'invite',
         title: 'Invite a teammate',
-        body: 'Add a user to your organization and assign their role.',
+        body: 'Add a user to your organization and set their role in IAM.',
         action: { label: 'Open IAM', to: '/iam' },
         when: (s) => canAdminister(s.role),
         done: usedAny('iam'),

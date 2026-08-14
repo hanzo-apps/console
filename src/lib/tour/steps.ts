@@ -55,7 +55,7 @@ export const CONSOLE_TOUR: TourStep[] = [
     id: 'nav',
     target: '[data-tour="nav"]',
     title: 'Every product, one place',
-    body: 'AI, Compute, Data, Security, Deploy, Observe — all behind one login and one bill. Pin the ones you use most.',
+    body: 'Products are grouped by what they do — AI, Compute, Data, Network, Security and the rest. Star the ones you use and they move to the top.',
     placement: 'right',
   },
   {
@@ -96,7 +96,7 @@ export const CONSOLE_TOUR: TourStep[] = [
     id: 'workbench',
     target: '[data-tour="workbench"]',
     title: 'The Developers dock',
-    body: 'Your recent calls, errors and spend — plus a shell that runs read-only /v1 requests as you, without leaving the page.',
+    body: 'Your recent calls, errors and spend. The Inspector reads any /v1 resource as you, and the Shell is a terminal in your org sandbox.',
     placement: 'top',
   },
 ]
@@ -111,8 +111,8 @@ export const PLAYGROUND_TOUR: TourStep[] = [
   {
     id: 'modes',
     target: '[data-tour="pg-modes"]',
-    title: 'Every surface, one key',
-    body: 'Chat, Completions, Embeddings, Image, Video, Audio and Vision all run through the same gateway and the same credential.',
+    title: 'Pick a modality',
+    body: 'Chat, Completions, Embeddings, Image, Video, Audio and Vision. Every mode runs on the same API, on the same key.',
     placement: 'bottom',
   },
   {
@@ -126,7 +126,7 @@ export const PLAYGROUND_TOUR: TourStep[] = [
     id: 'compose',
     target: '[data-tour="pg-compose"]',
     title: 'Write the prompt',
-    body: 'A system prompt plus real message turns. Use {{variables}} to parameterize it, or drop in images for a vision run.',
+    body: 'A system prompt and the message turns under it. Use {{variables}} to parameterize it, or add images for a vision run.',
     placement: 'right',
   },
   {
@@ -147,21 +147,21 @@ export const PLAYGROUND_TOUR: TourStep[] = [
     id: 'tune',
     target: '[data-tour="pg-tune"]',
     title: 'Tune it',
-    body: 'Temperature, top-p, max tokens, stop sequences, seed — every control maps to a real field on the request.',
+    body: 'Temperature, top-p, max tokens, stop sequences, seed. Every control here is a field on the request.',
     placement: 'left',
   },
   {
     id: 'code',
     target: '[data-tour="pg-code"]',
     title: 'Copy as code',
-    body: 'Take the request you just ran as cURL or JSON and paste it straight into your app. No translation step.',
+    body: 'Take the request you just ran as cURL or JSON, and paste it into your app as it is.',
     placement: 'bottom',
   },
   {
     id: 'share',
     target: '[data-tour="pg-share"]',
     title: 'Save it, share it',
-    body: 'Save a prompt to your library, or copy a link that restores this exact prompt, model and settings for a teammate.',
+    body: 'Save a prompt to your library, or copy a link that reopens this prompt, model and settings for a teammate.',
     placement: 'bottom',
   },
   {
