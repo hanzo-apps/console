@@ -23,8 +23,13 @@ images:
 # The site publish — what reaches console.hanzo.ai. Without this block the site step
 # skips and a console change lands on main but never ships. slug is cloud's
 # CLOUD_CONSOLE_SITE default; dir is what the build emits; the publish reads
-# HANZO_API_TOKEN + HANZO_ORG from KMS (kms.org below), so a missing credential FAILS
-# the publish rather than shipping empty. On main only.
+# HANZO_DEPLOY_TOKEN from KMS (kms.org below), so a missing credential FAILS the
+# publish rather than shipping empty. On main only.
+#
+# The export no longer travels as one request, so the 16 MiB edge ceiling recorded
+# above it no longer bounds a release: each file goes straight to object storage
+# against a presigned grant. It stopped being theoretical the moment every product
+# route became a real route — 281 of them, 627 files, 116 MB.
 #
 # build runs on a FRESH runner checkout with no node_modules, so it installs first,
 # and it uses pnpm — the packageManager this repo pins (npm would fetch a stray
