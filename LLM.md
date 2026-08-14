@@ -4595,10 +4595,17 @@ longer exists. The `/superbase` BFF route is likewise gone from the data path �
 `/v1/superbase/collections` answers `404 page not found` in production, which is
 what sent Records looking for a door that was not there.
 
-Still on the orchestrator, deliberately: **base-studio** (base.hanzo.ai/studio).
-Its reads speak the PostgREST dialect (`@hanzo/base/rest` → `/rest/v1/{table}`)
-and its writes the collections one, and cloud now serves BOTH per-org from the
-one engine — `/rest/v1/*` reaches the same handler as `/v1/base/*`. What blocks
-the move is the writes: they need `@hanzo/base` ≥ 0.2.4 for the `prefix` option,
-and that publish is stuck on an npm credential. Do not point `BASE_ORIGIN` at
-cloud before that ships.
+Still on the orchestrator: **base-studio** (base.hanzo.ai/studio). Its reads
+speak the table wire and its writes the collections one, and cloud serves both
+per-org from the one engine — two renderings of a single read, not two doors.
+
+Nothing blocks the move now. Both wires sit under the api prefix, so the whole
+studio reaches cloud by naming where the API is rooted and nothing else:
+
+    BASE_ORIGIN=https://api.hanzo.ai  BASE_API_PREFIX=/v1/base
+
+`@hanzo/base` ≥ 0.2.4 carries the `prefix` option the writes need and is
+published (0.2.7 at this writing); the npm credential that held it up is the
+`NPM_TOKEN` in `hanzo/shared-credentials`. The table wire moved off its old root
+address in the same pass, so a checkout still calling `/rest/v1/{table}` is
+addressing a path nothing serves.
