@@ -71,7 +71,7 @@ export function StatusBoard() {
         <EmptyState
           icon={Zap}
           title="No endpoints to report on yet"
-          description="Deploy a model-serving endpoint and its live health, availability, and activity appear here — nothing is fabricated."
+          description="Deploy a model-serving endpoint and its health, availability, and activity appear here."
           primary={{ label: 'Documentation', href: `${config.docsUrl}/docs/gateway` }}
         />
       ) : (

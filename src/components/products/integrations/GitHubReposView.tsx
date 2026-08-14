@@ -119,7 +119,7 @@ export function GitHubReposView({ onBack }: { onBack: () => void }) {
           next.delete(r.name)
           return next
         })
-        toast.error(`Could not import ${r.name}`, e instanceof ApiError ? e.message : 'Please try again.')
+        toast.error(`Could not import ${r.name}`, e instanceof ApiError ? e.message : 'It was not queued, and nothing was mirrored. Try again.')
       } finally {
         setBusy(false)
       }
@@ -142,7 +142,7 @@ export function GitHubReposView({ onBack }: { onBack: () => void }) {
       scheduleRefresh()
     } catch (e) {
       setImporting(new Set())
-      toast.error('Could not import repositories', e instanceof ApiError ? e.message : 'Please try again.')
+      toast.error('Could not import repositories', e instanceof ApiError ? e.message : 'None were queued, and nothing was mirrored. Try again.')
     } finally {
       setBusy(false)
     }

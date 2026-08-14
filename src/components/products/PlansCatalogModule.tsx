@@ -253,7 +253,7 @@ export function PlansCatalogModule(_props: { params: Record<string, string> }) {
       <SlideOver
         open={edit.mode === 'delete'}
         onClose={() => setEdit({ mode: 'closed' })}
-        title={edit.mode === 'delete' ? `Delete ${edit.plan.name || edit.plan.slug}?` : 'Delete'}
+        title={edit.mode === 'delete' ? `Delete ${edit.plan.name || edit.plan.slug}?` : 'Delete plan'}
         icon={Trash2}
         size={480}
       >
@@ -358,7 +358,7 @@ function PlanForm({
       else await PlansAdminApi.update(plan.slug, input) // slug immutable — path slug wins
       onSaved()
     } catch (e) {
-      setErr(asApiError(e).message || 'Failed to save.')
+      setErr(asApiError(e).message || `${creating ? 'The plan was not created' : 'The changes were not saved'}. Nothing changed in the catalog — try again.`)
       setBusy(false)
     }
   }, [creating, plan, slug, name, category, description, price, annual, trialDays, contactSales, popular, perSeat, rows, onSaved])
@@ -469,7 +469,7 @@ function PlanForm({
             ml="auto"
             style={{ color: toneVar('critical') }}
           >
-            Delete
+            Delete plan
           </Button>
         ) : null}
       </XStack>

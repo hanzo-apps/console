@@ -61,7 +61,13 @@ export function useInferenceData(): InferenceData {
     // has nothing real to render). If either succeeded, we show what we have — a
     // failed deployed-source (ML not routed) is expected and never an error.
     if (cat.status === 'rejected' && dep.status === 'rejected') {
-      setError(classifyRead(cat.reason) ?? classifyRead(dep.reason) ?? { kind: 'error', message: 'Could not load endpoints' })
+      setError(
+        classifyRead(cat.reason) ??
+          classifyRead(dep.reason) ?? {
+            kind: 'error',
+            message: 'Neither the model catalog nor your deployed endpoints could be read.',
+          },
+      )
     } else {
       setError(null)
     }

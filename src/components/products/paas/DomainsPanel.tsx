@@ -60,7 +60,7 @@ export function DomainsPanel({ projectSlug, appSlug }: { projectSlug: string; ap
       setHost('')
       await load()
     } catch (e) {
-      setAddError(classifyPaasError(e).message || 'Could not add that domain.')
+      setAddError(classifyPaasError(e).message || `“${h}” was not added, and the app’s domains are unchanged. Try again.`)
     } finally {
       setAdding(false)
     }
@@ -97,7 +97,7 @@ export function DomainsPanel({ projectSlug, appSlug }: { projectSlug: string; ap
           onPress={add}
           disabled={adding || host.trim() === ''}
         >
-          Add
+          Add domain
         </PrimaryButton>
       </XStack>
       {addError ? <Text fontSize="$1" color="$red10">{addError}</Text> : null}

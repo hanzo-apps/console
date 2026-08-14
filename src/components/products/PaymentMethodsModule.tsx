@@ -127,7 +127,7 @@ export function PaymentMethodsModule(_props: { params: Record<string, string> })
       setMsg({ tone: 'ok', text: 'Card added.' })
       load()
     } catch (e) {
-      setSave({ state: 'error', message: e instanceof Error ? e.message : 'Could not save the card.' })
+      setSave({ state: 'error', message: e instanceof Error ? e.message : 'The card was not saved. Nothing was added to your organization — try again.' })
     }
   }, [card, save.state, load])
 
@@ -201,9 +201,9 @@ export function PaymentMethodsModule(_props: { params: Record<string, string> })
             disabled={removingId === m.id}
             opacity={removingId === m.id ? 0.5 : 1}
             onPress={() => void remove(m)}
-            aria-label={`Remove ${describe(m)}`}
+            aria-label={`Remove card ${describe(m)}`}
           >
-            {removingId === m.id ? 'Removing…' : 'Remove'}
+            {removingId === m.id ? 'Removing card…' : 'Remove card'}
           </Button>
         </XStack>
       ),
@@ -306,7 +306,7 @@ export function PaymentMethodsModule(_props: { params: Record<string, string> })
                 ) : null}
                 {card.phase === 'error' ? (
                   <Text fontSize="$2" color="$red10">
-                    {card.error || 'Could not load the card form.'}
+                    {card.error || 'The secure card field did not load, so there is nowhere to type a card. Close this panel and open it again.'}
                   </Text>
                 ) : null}
               </Card>

@@ -48,7 +48,8 @@ function UsageOverviewCard({ data }: { data: InferenceData }) {
     >
       {!hasLedger ? (
         <Text fontSize="$2" color="$color10">
-          Usage metrics light up when the billing ledger is connected for your organization — nothing is fabricated here.
+          Requests, tokens, and spend come from your organization&apos;s usage ledger. It is not connected here, so there
+          are no numbers to show yet.
         </Text>
       ) : (
         <YStack gap="$3.5">

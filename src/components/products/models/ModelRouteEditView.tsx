@@ -105,7 +105,7 @@ export function ModelRouteEditView({
           <XStack gap="$2">
             <Button onPress={onDone}>Back</Button>
             <Button disabled={saving} onPress={() => void save(false)}>
-              Save
+              Save route
             </Button>
             <Button theme="light" disabled={saving} onPress={() => void save(true)}>
               Save & Exit

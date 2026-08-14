@@ -119,7 +119,7 @@ function PhotoCard() {
       // And re-read the session so every other surface in this tab agrees.
       void reload()
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : 'Could not update your photo.')
+      setErr(e instanceof ApiError ? e.message : 'Your photo was not saved. Nothing changed — try again.')
     } finally {
       setBusy(false)
       if (picker.current) picker.current.value = ''
@@ -248,7 +248,7 @@ function TwoFactorCard() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  const fail = (e: unknown) => setErr(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
+  const fail = (e: unknown) => setErr(e instanceof ApiError ? e.message : 'Two-factor authentication was not changed. Try again.')
 
   const start = async () => {
     setBusy(true); setErr(null)

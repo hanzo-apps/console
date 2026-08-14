@@ -116,7 +116,7 @@ function MemoryListView({ onOpen }: { onOpen: (m: Memory) => void }) {
       setRows((rs) => rs.filter((r) => r.id !== m.id))
       toast.success('Deleted')
     } catch (e) {
-      toast.error('Could not delete', classifyBackend(e).message)
+      toast.error('Could not delete that memory', classifyBackend(e).message)
     }
   }
 
@@ -148,7 +148,7 @@ function MemoryListView({ onOpen }: { onOpen: (m: Memory) => void }) {
       render: (m) => (
         <XStack gap="$2" justify="flex-end" flex={1}>
           <Button size="$2" onPress={() => onOpen(m)}>
-            Open
+            Open memory
           </Button>
           <Button size="$2" icon={<Trash size={14} />} onPress={() => void onDelete(m)} />
         </XStack>
@@ -280,7 +280,7 @@ function MemoryDetailView({ id, onBack }: { id: string; onBack: () => void }) {
       toast.success('Saved')
       await load()
     } catch (e) {
-      toast.error('Could not save', classifyBackend(e).message)
+      toast.error('Could not save this memory', classifyBackend(e).message)
     } finally {
       setSaving(false)
     }
@@ -293,7 +293,7 @@ function MemoryDetailView({ id, onBack }: { id: string; onBack: () => void }) {
       toast.success('Deleted')
       onBack()
     } catch (e) {
-      toast.error('Could not delete', classifyBackend(e).message)
+      toast.error('Could not delete this memory', classifyBackend(e).message)
     }
   }
 
@@ -343,7 +343,7 @@ function MemoryDetailView({ id, onBack }: { id: string; onBack: () => void }) {
                 {saving ? 'Saving…' : 'Save'}
               </Button>
               <Button theme="red" icon={<Trash size={16} />} onPress={() => void onDelete()}>
-                Delete
+                Delete memory
               </Button>
             </XStack>
           </Card>

@@ -106,8 +106,8 @@ export function LogsView() {
             </Text>
           </XStack>
           <Text fontSize="$3" color="$color11">
-            Recorded inference requests appear here from your organization's usage ledger, and full request/response
-            logs stream in once observability is connected. Nothing is fabricated until a real source is reachable.
+            Recorded inference requests appear here from your organization's usage ledger, which is not connected on
+            this deployment. Full request and response text streams in once observability is connected too.
           </Text>
         </Card>
       ) : (

@@ -233,7 +233,7 @@ function SessionCard({
         if (cmd === 'message') setMsg('')
         toast.success(cmd === 'message' ? 'Message sent' : `Session ${cmd === 'stop' ? 'stopped' : cmd + 'd'}`)
       } catch (e) {
-        toast.error('Control failed', e instanceof Error ? e.message : undefined)
+        toast.error(`Could not ${cmd === 'message' ? 'send that message' : `${cmd} the session`}`, e instanceof Error ? e.message : undefined)
       } finally {
         setBusy('')
       }
@@ -285,7 +285,7 @@ function SessionCard({
           </Button>
         )}
         <Button size="$3" theme="red" icon={<Square size={14} />} onPress={() => void run('stop')} disabled={!steerable || !!busy}>
-          Stop
+          Stop session
         </Button>
         {busy ? <Spinner size="small" color="$color10" /> : null}
       </XStack>
@@ -398,7 +398,7 @@ function DeviceCard({ d, onRemove, onToggle }: { d: Device; onRemove: (id: strin
             {online ? 'Mark offline' : 'Mark online'}
           </Button>
           <Button size="$2" chromeless theme="red" icon={<Trash2 size={13} />} onPress={() => onRemove(d.id)} aria-label="Remove target">
-            Remove
+            Remove target
           </Button>
         </XStack>
       ) : null}
@@ -430,7 +430,7 @@ function LinkComputerForm({ open, onClose, onDone }: { open: boolean; onClose: (
       onDone()
       onClose()
     } catch (e) {
-      toast.error('Could not link', e instanceof Error ? e.message : undefined)
+      toast.error(`Could not link ${label.trim()}`, e instanceof Error ? e.message : undefined)
     } finally {
       setBusy(false)
     }
@@ -459,7 +459,7 @@ function LinkComputerForm({ open, onClose, onDone }: { open: boolean; onClose: (
             Cancel
           </Button>
           <Button theme="light" onPress={() => void submit()} disabled={busy} icon={busy ? <Spinner size="small" /> : <Plus size={15} />}>
-            Link
+            Link computer
           </Button>
         </XStack>
       </YStack>
@@ -479,7 +479,7 @@ function DevicesView({ live }: { live: LiveState }) {
         toast.success('Removed')
         await live.reloadTargets()
       } catch (e) {
-        toast.error('Remove failed', e instanceof Error ? e.message : undefined)
+        toast.error('Could not remove that target', e instanceof Error ? e.message : undefined)
       }
     },
     [live, toast],
@@ -492,7 +492,7 @@ function DevicesView({ live }: { live: LiveState }) {
         await MissionControlApi.patchTarget(d.id, { status: next })
         await live.reloadTargets()
       } catch (e) {
-        toast.error('Update failed', e instanceof Error ? e.message : undefined)
+        toast.error(`Could not mark ${d.label} ${next}`, e instanceof Error ? e.message : undefined)
       }
     },
     [live, toast],

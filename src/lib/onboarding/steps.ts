@@ -57,7 +57,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStepMeta[] = [
   { id: 'secure', title: 'Secure your account', blurb: 'Two-factor authentication' },
   { id: 'consent', title: 'Data & consent', blurb: 'Terms and data preferences' },
   { id: 'team', title: 'Your organization', blurb: 'Confirm or name your organization' },
-  { id: 'credits', title: 'Free trial credits', blurb: 'Add a card to unlock credits' },
+  { id: 'credits', title: 'Free trial credits', blurb: 'Add a card and the credits are granted' },
   { id: 'ai', title: 'AI access', blurb: 'Connect, bring keys, or use Hanzo' },
   { id: 'launch', title: "You're ready", blurb: 'Take your first action' },
 ]

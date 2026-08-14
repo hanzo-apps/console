@@ -147,7 +147,7 @@ export function ProjectsModule(_props: { params: Record<string, string> }) {
           >
             {scope.project === p.name ? 'In use' : 'Use'}
           </Button>
-          <Button size="$2" chromeless icon={<Trash size={14} />} onPress={() => void remove(p)} aria-label="Delete" />
+          <Button size="$2" chromeless icon={<Trash size={14} />} onPress={() => void remove(p)} aria-label={`Delete ${p.name}`} />
         </XStack>
       ),
     },

@@ -34,7 +34,7 @@ export function HistoryCard({
         {history.length > 0 ? (
           <Button size="$1" chromeless icon={<Eraser size={13} />} onPress={onClear}>
             <Text fontSize="$1" color="$color10">
-              Clear
+              Clear history
             </Text>
           </Button>
         ) : null}

@@ -115,7 +115,7 @@ export function describeAttachError(e: unknown): { kind: AttachErrorKind; title:
   if (status === 400)
     return {
       kind: 'invalid',
-      title: 'Check the form',
+      title: 'A required field is missing',
       detail: message || 'A name and a kubeconfig are both required.',
     }
   if (status === 402)
@@ -124,7 +124,7 @@ export function describeAttachError(e: unknown): { kind: AttachErrorKind; title:
       title: 'Add credits to attach a cluster',
       detail: message || 'Attaching a cluster carries a nominal management fee. Add credits to your balance and try again.',
     }
-  return { kind: 'error', title: 'Couldn’t attach the cluster', detail: message || 'Please try again in a moment.' }
+  return { kind: 'error', title: 'The cluster was not attached', detail: message || 'Try again in a moment. Your name and kubeconfig are still in the form.' }
 }
 
 /**

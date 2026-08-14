@@ -112,7 +112,7 @@ export function ProductInterstitial({ id }: { id: string }) {
             iconAfter={<ArrowRight size={16} />}
             onPress={() => openProduct(entry, (p) => router.push(p))}
           >
-            Open
+            {`Open ${entry.label}`}
           </Button>
         </XStack>
         {stageOf(entry) === 'admin' ? (

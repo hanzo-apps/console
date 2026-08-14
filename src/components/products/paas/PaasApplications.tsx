@@ -259,7 +259,7 @@ function AppDetail({ app, onClose, onChanged }: { app: PaasAppWithProject; onClo
           <Button size="$2" icon={<ExternalLink size={14} />} onPress={() => openUrl(url)}>Open</Button>
         ) : null}
       </XStack>
-      {redeploy === 'error' ? <Text fontSize="$2" color="$red10">Redeploy failed. Retry.</Text> : null}
+      {redeploy === 'error' ? <Text fontSize="$2" color="$red10">The redeploy did not start. The running version is untouched — press Redeploy to try again.</Text> : null}
 
       <DomainsPanel projectSlug={projectSlug} appSlug={appSlug} />
 

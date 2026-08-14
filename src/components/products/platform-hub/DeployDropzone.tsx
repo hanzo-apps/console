@@ -52,7 +52,7 @@ export function DeployDropzone({
       const bytes = await filesToTarGz(result.files)
       await onDeploy(bytes, ARTIFACT_GZIP, result.label)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not pack the folder.')
+      setError(e instanceof Error ? e.message : 'The folder could not be packed, so nothing was uploaded. Choose a .zip or .tar.gz of the built site instead.')
     } finally {
       setPacking(false)
     }

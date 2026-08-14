@@ -260,7 +260,7 @@ export function KubernetesModule(_props: { params: Record<string, string> }) {
         setNotice(`Detached "${c.name}".`)
         load({ background: true })
       })
-      .catch((e) => setNotice(e instanceof ApiError ? e.message : 'Failed to detach cluster'))
+      .catch((e) => setNotice(e instanceof ApiError ? e.message : `“${c.name}” was not detached. It is still in your fleet — try again.`))
   }
 
   const columns: Column<Cluster>[] = [

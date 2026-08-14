@@ -119,11 +119,11 @@ function OverviewTab({
         </PrimaryButton>
         {isDeployed(app) && app.status !== 'stopped' ? (
           <Button size="$3" icon={Square} disabled={!!busy} onPress={() => void act('stop', () => PlatformAppsApi.stop(project, app.slug))}>
-            Stop
+            Stop app
           </Button>
         ) : isDeployed(app) ? (
           <Button size="$3" icon={Play} disabled={!!busy} onPress={() => void act('start', () => PlatformAppsApi.start(project, app.slug))}>
-            Start
+            Start app
           </Button>
         ) : null}
       </XStack>
@@ -278,7 +278,7 @@ function EnvEditor({ app, project, onDone }: { app: PlatformApp; project: string
           ? 'Secrets service unavailable — no changes were saved.'
           : e instanceof Error
             ? e.message
-            : 'Could not save variables.',
+            : 'The variables were not saved — nothing changed. Try again.',
       )
       setBusy(false)
     }
@@ -481,7 +481,7 @@ function MetricsTab({ app }: { app: PlatformApp }) {
           </Text>
           <Text fontSize="$2" color="$color10">
             The observability service is not reachable on this deployment yet. Requests, errors, and latency for this app appear
-            here as soon as o11y is wired — we never show a fabricated chart.
+            here once o11y is wired.
           </Text>
         </YStack>
       ) : m && !m.hasData ? (
@@ -626,7 +626,11 @@ function SbomTab({ app }: { app: PlatformApp }) {
       .then((s) => live && setSbom(s))
       .catch((e) => {
         if (!live) return
-        setNote(e instanceof ApiError && e.status === 503 ? 'SBOM datastore unavailable.' : 'Could not load the SBOM.')
+        setNote(
+          e instanceof ApiError && e.status === 503
+            ? 'The SBOM store is not reachable on this deployment, so the components of this image cannot be listed yet.'
+            : 'The SBOM for this image did not load. Reopen this tab to try again.',
+        )
       })
       .finally(() => live && setLoading(false))
     return () => {

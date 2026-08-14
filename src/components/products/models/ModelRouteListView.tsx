@@ -112,7 +112,7 @@ export function ModelRouteListView({
         subtitle="Model routes and routing policy."
         actions={
           <Button icon={<Plus size={16} />} onPress={onNew}>
-            Add
+            Add route
           </Button>
         }
       />

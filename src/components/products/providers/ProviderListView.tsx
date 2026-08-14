@@ -42,7 +42,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
     ])
     if (globalOut.status === 'rejected' && customOut.status === 'rejected') {
       const e = globalOut.reason
-      setError(e instanceof ApiError ? e.message : 'Failed to load providers')
+      setError(e instanceof ApiError ? e.message : 'Neither the built-in nor your custom providers could be read. Reload the page to try again.')
       setRows([])
       setLoading(false)
       return
@@ -63,7 +63,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
       await ProviderApi.add(p)
       onOpen(p)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to add provider')
+      setError(e instanceof ApiError ? e.message : 'The provider was not created. Nothing was added — try again.')
     }
   }
 
@@ -73,7 +73,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
       await ProviderApi.remove(p)
       setRows(rs => rs.filter(r => r.name !== p.name || r._builtin))
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to delete provider')
+      setError(e instanceof ApiError ? e.message : `“${p.name}” was not deleted. It is still in the list — try again.`)
     }
   }
 

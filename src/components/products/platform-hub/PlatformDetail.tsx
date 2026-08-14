@@ -357,7 +357,7 @@ function ConfigSection({ site, onSaved }: { site: Site; onSaved: () => void }) {
       toast.success('Saved', 'Project configuration updated.')
       onSaved()
     } catch (e) {
-      toast.error('Could not save', asApiError(e).message)
+      toast.error('Could not save the configuration', asApiError(e).message)
     } finally {
       setBusy(false)
     }

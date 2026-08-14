@@ -102,7 +102,7 @@ function EndpointDetailBody({ endpoint, records, hasLedger }: { endpoint: Endpoi
             <LineChart data={points} formatValue={(v) => fmtCount(v)} height={140} />
           ) : (
             <Text fontSize="$2" color="$color10">
-              {hasLedger ? 'Not enough recorded activity for a trend yet.' : 'Per-endpoint request metrics light up when the usage ledger is connected.'}
+              {hasLedger ? 'Not enough recorded activity for a trend yet.' : 'Request counts come from the usage ledger, which is not connected.'}
             </Text>
           )}
         </YStack>
@@ -110,7 +110,7 @@ function EndpointDetailBody({ endpoint, records, hasLedger }: { endpoint: Endpoi
         <YStack gap="$2">
           <Text fontSize="$3" fontWeight="700" color="$color12">Call this endpoint</Text>
           <CodeBlock>{call}</CodeBlock>
-          <Text fontSize="$1" color="$color10">P95 latency and uptime appear per endpoint once observability is connected — never fabricated.</Text>
+          <Text fontSize="$1" color="$color10">P95 latency and uptime appear per endpoint once observability is connected.</Text>
         </YStack>
       </YStack>
     </ScrollView>
@@ -186,9 +186,8 @@ function LogDetailBody({ line }: { line: LogLine }) {
           <Text fontSize="$3" fontWeight="700" color="$color12">Request &amp; response</Text>
           <YStack bg="$color1" borderWidth={1} borderColor="$borderColor" rounded="$4" p="$3" gap="$1.5">
             <Text fontSize="$2" color="$color11">
-              This row is the org’s REAL usage-ledger entry for the call above. The full prompt and response text
-              streams here from observability once its trace runtime is connected — until then it is not shown
-              rather than fabricated.
+              This row is the org’s usage-ledger entry for the call above. The full prompt and response text streams
+              here from observability once its trace runtime is connected.
             </Text>
           </YStack>
         </YStack>
@@ -264,8 +263,8 @@ function DeployForm({ onDeployed, nav }: { onDeployed: () => void; nav: (path: s
       <YStack gap="$3" p="$1">
         <Text fontSize="$4" fontWeight="700" color="$color12">Endpoint “{name}” submitted</Text>
         <Text fontSize="$3" color="$color11">
-          Your InferenceService is provisioning. It appears in the endpoints list with its live status as the
-          cluster rolls it out — nothing is fabricated.
+          Your InferenceService is provisioning. It appears in the endpoints list with its status as the cluster
+          rolls it out.
         </Text>
       </YStack>
     )

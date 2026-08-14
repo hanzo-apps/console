@@ -135,7 +135,7 @@ function ProductCard({
           onPress={onOpen}
           iconAfter={<ArrowRight size={14} />}
         >
-          Open
+          {`Open ${entry.label}`}
         </Button>
       </XStack>
     </Card>

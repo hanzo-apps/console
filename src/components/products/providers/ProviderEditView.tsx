@@ -40,7 +40,7 @@ export function ProviderEditView({ name, onDone }: { name: string; onDone: () =>
         }
       })
       .catch((e: unknown) => {
-        if (live) setError(e instanceof ApiError ? e.message : 'Failed to load provider')
+        if (live) setError(e instanceof ApiError ? e.message : `“${name}” did not load. Go back and open it again.`)
       })
       .finally(() => {
         if (live) setLoading(false)
@@ -80,7 +80,7 @@ export function ProviderEditView({ name, onDone }: { name: string; onDone: () =>
       await ProviderApi.update(p.owner, name, p)
       if (exit) onDone()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to save provider')
+      setError(e instanceof ApiError ? e.message : 'The provider was not saved. Your edits are still here — try again.')
     } finally {
       setSaving(false)
     }
@@ -97,7 +97,7 @@ export function ProviderEditView({ name, onDone }: { name: string; onDone: () =>
             {!disabled ? (
               <>
                 <Button disabled={saving} onPress={() => void save(false)}>
-                  Save
+                  Save provider
                 </Button>
                 <Button theme="light" disabled={saving} onPress={() => void save(true)}>
                   Save & Exit

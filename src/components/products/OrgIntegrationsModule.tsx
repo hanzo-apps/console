@@ -183,7 +183,7 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
       toast.success(`Connected ${connectedId}`, account ? `Account: ${account}` : undefined)
       load()
     } else if (erroredId) {
-      toast.error(`Could not connect ${erroredId}`, reason || 'The connection could not be completed.')
+      toast.error(`Could not connect ${erroredId}`, reason || 'No reason came back with it. Nothing is connected — press Connect to start again.')
     }
     // The latch covers this mount; stripping the params covers the NEXT one, so a
     // refresh or a back-navigation does not replay a connection that already happened.
@@ -201,9 +201,9 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
           window.location.href = authorizeUrl
           return
         }
-        toast.error(`Could not connect ${p.name}`, 'No authorization URL was returned.')
+        toast.error(`Could not connect ${p.name}`, `No ${p.name} sign-in page came back, so nothing was connected. Try again.`)
       } catch (e) {
-        toast.error(`Could not connect ${p.name}`, e instanceof ApiError ? e.message : 'Please try again.')
+        toast.error(`Could not connect ${p.name}`, e instanceof ApiError ? e.message : 'Nothing was connected. Try again.')
       } finally {
         setBusyId('')
       }
@@ -222,7 +222,7 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
         toast.success(`Disconnected ${p.name}`)
         load()
       } catch (e) {
-        toast.error(`Could not disconnect ${p.name}`, e instanceof ApiError ? e.message : 'Please try again.')
+        toast.error(`Could not disconnect ${p.name}`, e instanceof ApiError ? e.message : 'It is still connected. Try again.')
       } finally {
         setBusyId('')
       }
@@ -275,7 +275,7 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
         <EmptyState
           icon={Cable}
           title="No integrations available yet"
-          description="Connectors light up here as they are configured on this deployment. Nothing is fabricated — real providers appear automatically."
+          description="This deployment has no connectors registered yet. They appear here as they are added."
         />
       </YStack>
     )

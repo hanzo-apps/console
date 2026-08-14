@@ -92,7 +92,7 @@ export function HeaderActions({
               </Button>
               <Button size="$2" bg="$color12" icon={<Bookmark size={13} color="$color1" />} onPress={doSave}>
                 <Text fontSize="$2" color="$color1" fontWeight="600">
-                  Save
+                  Save prompt
                 </Text>
               </Button>
             </XStack>
