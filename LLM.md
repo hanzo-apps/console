@@ -4689,9 +4689,44 @@ sidebar rows are memoized and the assistant's context value is a stable `useMemo
 so the shell stops re-rendering when only the route changed. That is the React-level
 cost of a navigation; this is the document-level one. Both were the same report.
 
-**Deploy, unresolved and NOT guessed.** The `## CORRECTION` section above is right
-that go:embed is gone and the console is a published SITE — cloud reads the active
-release of `hanzo-console` from S3 at boot and on a poll. It is also right that the
-PUBLISHER was never found, and this change did not find it either. The code is on
-`forge/main` and `origin/main`; it is not live until something cuts a release, and
-building an image does not do it.
+**The publisher, found.** The `## CORRECTION` section above is right that go:embed
+is gone and the console is a published SITE, and it asks whoever came next to find
+the publisher before deleting `build:embed`. It is this repo's own `/hanzo.yml`,
+read by hanzoai/ci — `build:embed` is exactly what a release is cut from:
+
+    site:
+      slug: hanzo-console
+      dir: out
+      build: corepack enable && pnpm install --frozen-lockfile && … pnpm build:embed
+      on: [main]
+
+So a push to forge `main` IS the deploy: the forge CI (`.hanzo/workflows/cicd.yml` →
+`hanzoai/ci`) runs that build on a fresh checkout and uploads `out/` as the new active
+release, reading its credentials from KMS. cloud re-reads it on the poll. The `console`
+GHCR image is a SEPARATE artifact serving the same bundle behind `hanzoai/static` for
+the white-label admin hosts — it is not what console.hanzo.ai serves, which is why
+bumping it ships nothing here.
+
+**A release has a hard ceiling, and it does not announce itself.** Uploading is one
+request through the public edge, so it is bounded by `GATEWAY_BODY_LIMIT` — 16 MiB
+(cloud `config.go:398`). Past it fasthttp rejects the body before any handler runs, and
+its wire error is the opaque `400 "Error when parsing request"`, which reads like a
+malformed payload rather than a size cap — cloud's own `config.go:214` says so, having
+been bitten by the same string on a 1M-token prompt. A concurrent lane fixed this same
+navigation bug the other way, by prerendering all 281 registry routes so an RSC payload
+would exist; each of the 287 HTML files is a ~373KB copy of one shell, the release went
+9.4MB/70 objects → 116MB/627, and the publish died on that 400 for every commit — the
+memoization work, a missing ingest key and this fix all sat on main unshipped. Reverted
+(`3c0b41af96`); navigation is fixed a layer up, and prerendering could only ever cover
+addresses it can enumerate — every `:param` route (`/models/routing/:name`,
+`/category/:slug`) still hard-navigated, and it enumerated by reading `registry.tsx` as
+TEXT, so a product's routes depended on its indentation. Keep the export near 10MB.
+
+**Live.** Release `rel_cfd7f8aa` (8,996,204 bytes, 67 objects) is active and serving.
+The same spec that measures the reload runs against production —
+`BASE_URL=https://console.hanzo.ai pnpm exec playwright test e2e/navigation.spec.ts` —
+and it is the honest before/after: **3 failed** on the old bundle (Profile, Back, a rail
+product, each `{realm: false, node: false}`), **6/6 passing** now. Worth knowing for the
+next person: the Profile screen looks identical either way. A reload is invisible at
+rest, which is the whole reason this survived so long and the whole reason the probe
+measures the JS realm and a shell-owned DOM node rather than a screenshot.

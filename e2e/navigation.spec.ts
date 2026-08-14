@@ -143,6 +143,23 @@ test.describe('navigation keeps the app', () => {
     expect(await survived(page)).toEqual({ realm: true, node: true })
   })
 
+  test('a product opened from ⌘K is a client transition', async ({ page }) => {
+    // The third surface that moves the app. All three call the same `router.push`,
+    // so all three were the same reload — and all three are asserted, because "we
+    // fixed the account menu" is the shape of claim that leaves two behind.
+    await mountConsole(page)
+    await plant(page)
+
+    await page.keyboard.press('ControlOrMeta+k')
+    const input = page.getByPlaceholder('Search apps and commands…')
+    await input.waitFor()
+    await input.fill('billing')
+    await page.keyboard.press('Enter')
+
+    await expect(page).toHaveURL(/\/billing/)
+    expect(await survived(page)).toEqual({ realm: true, node: true })
+  })
+
   test('a product opened from the rail is a client transition', async ({ page }) => {
     // The reported symptom was Profile, but the cause was the router, so the fix has
     // to hold for the rail — the navigation people make all day.
