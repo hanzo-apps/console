@@ -63,7 +63,7 @@ export function BotModule() {
     <YStack p="$6" gap="$5" maxW={820}>
       <PageHeader
         title="Bot"
-        subtitle="Agent gateway — channels, skills, and an OpenAI-compatible API, served at /v1/bot."
+        subtitle="Agent gateway — channels, skills, and a chat-completions API, served at /v1/bot."
         actions={
           <Button
             size="$2"

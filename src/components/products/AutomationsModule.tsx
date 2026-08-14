@@ -177,7 +177,7 @@ function FlowsView({ onBrowse }: { onBrowse: () => void }) {
         <EmptyState
           icon={Workflow}
           title="No flows yet"
-          description="Create your first flow above, then add a trigger and connector steps. Browse the 706-connector catalogue to see what you can wire together."
+          description="Create your first flow above, then add a trigger and connector steps. Browse the connector catalogue to see what you can wire together."
           bullets={[
             'Name a flow, then wire a trigger to one or more connector actions',
             'Enable it to run on a schedule, or run it on demand',

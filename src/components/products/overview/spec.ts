@@ -76,7 +76,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
     facts: [
       { label: 'Base URL', value: 'api.hanzo.ai/v1' },
       { label: 'Auth', value: 'IAM bearer / sk- key' },
-      { label: 'Surface', value: 'OpenAI-compatible /v1' },
+      { label: 'Surface', value: '/v1 — chat, embeddings, models' },
     ],
     actions: [
       { label: 'Create API key', to: '/api-keys', icon: 'key' },
@@ -90,7 +90,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
       },
       {
         heading: 'Call a model',
-        body: 'The gateway is OpenAI-compatible, so any OpenAI SDK works by pointing its base URL at api.hanzo.ai/v1.',
+        body: 'The gateway serves the standard chat-completions request shape. Point your SDK at api.hanzo.ai/v1 as its base URL and send the key as a bearer token.',
         code: 'POST https://api.hanzo.ai/v1/chat/completions\n{ "model": "zen-1", "messages": [{ "role": "user", "content": "hi" }] }',
       },
       {

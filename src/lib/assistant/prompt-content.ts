@@ -53,7 +53,7 @@ export function entryOpensAt(e: { kind: string; id: string; href?: string }): st
 export function overviewSection(brand: string): string {
   return [
     `# What ${brand} is`,
-    `${brand} is a full AI cloud — an open-source equivalent of Google Cloud / AWS — for building, shipping, and running AI software. Everything lives under one organization, one balance, and one OpenAI-compatible API (\`/v1\`). This console is where you manage it all.`,
+    `${brand} is a full AI cloud — an open-source equivalent of Google Cloud / AWS — for building, shipping, and running AI software. Everything lives under one organization, one balance, and one API (\`/v1\`). This console is where you manage it all.`,
     '',
     'The product families (each is a category in the catalog below):',
     '- **AI** — Hanzo serves its own **Zen** family of open models (the default) alongside leading third-party models through ONE gateway (api.hanzo.ai). Browse the live list in **Models** (/models) or try any of them in the **Playground** (/playground); also Agents, Inference, Embeddings, and Prompts.',

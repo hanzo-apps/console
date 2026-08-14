@@ -83,19 +83,19 @@ const RESOURCES: { name: string; blurb: string }[] = [
   {
     name: 'Advisor mode',
     blurb:
-      'Increase intelligence while minimizing cost and token usage. A cheaper model consults a stronger advisor mid-task.',
+      'A cheaper model runs the task and consults a stronger one mid-task. You get the stronger model where it matters without sending every token through it.',
   },
   {
     name: 'Fast mode',
-    blurb: 'Up to 2.5x faster output on supported models, at premium pricing. Same model, same intelligence.',
+    blurb: 'Faster output on supported models, at a higher price per token. Same model, same intelligence.',
   },
   {
     name: 'Batch API',
-    blurb: 'Move async workloads to the Batch API and save 50% on standard API prices.',
+    blurb: 'Send work that can wait to the Batch API. It runs when there is room and costs less per token.',
   },
   {
     name: 'Prompt caching',
-    blurb: 'Reuse prompt prefixes across API calls. Most orgs see input costs drop 50–90%.',
+    blurb: 'Reuse a prompt prefix across calls instead of paying to send it again every time.',
   },
 ]
 
@@ -204,7 +204,7 @@ export function Home() {
               icon={<HandCoins size={13} />}
               onPress={() => go('/billing/credits')}
             >
-              Add funds
+              Add credits
             </Button>
           }
         >
@@ -228,7 +228,7 @@ export function Home() {
               borderColor="$borderColor"
               onPress={() => docs()}
             >
-              Set up
+              Open docs
             </Button>
           }
         >

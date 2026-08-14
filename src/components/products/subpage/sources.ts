@@ -238,7 +238,7 @@ export function settingsConfigFor(entry: CatalogEntry): SettingsConfig {
       facts: [
         { label: 'Endpoint', value: 'api.hanzo.ai/v1' },
         { label: 'Auth', value: 'Bearer — IAM token or sk- key' },
-        { label: 'Compatibility', value: 'OpenAI-compatible' },
+        { label: 'Request shape', value: 'Standard /v1 chat completions' },
       ],
       links: [apiKeys, openSelf],
     }
