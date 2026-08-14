@@ -68,7 +68,7 @@ export function ErpModule({ params = {} }: { params?: Record<string, string> }) 
       client={client}
       module={MODULE}
       label="ERP"
-      subtitle="A native, metadata-driven ERP on the Hanzo Framework — items, warehouses, customers, sales & purchasing, accounting, and HR as DocTypes, per organization. Business logic (line totals, stock ledger, double-entry GL) runs as native hooks on the engine."
+      subtitle="Run the business here — items, warehouses, customers, sales and purchasing, accounting and HR, scoped to your organization. Line totals, the stock ledger and double-entry postings are computed for you as records are saved."
       setupDescription="ERP is your accounting, inventory, sales, purchasing, and HR model — items, warehouses, sales orders, invoices, stock entries, journal entries, and payments — as DocTypes on the Hanzo Framework, per organization."
       setupBullets={[
         'Installs the ERPNext-core DocTypes into your organization',

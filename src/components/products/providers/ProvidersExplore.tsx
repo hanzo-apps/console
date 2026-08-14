@@ -428,21 +428,21 @@ export function ProvidersExplore({ onAddCustom }: { onAddCustom: () => void }) {
             <ActionCard
               icon={<Boxes size={18} />}
               title="Deploy custom models"
-              body="Configure and deploy models from any provider in seconds."
+              body="Point Hanzo at a model on a provider you already use, and call it through the same /v1 API."
               cta="Create custom model"
               onPress={onAddCustom}
             />
             <ActionCard
               icon={<Upload size={18} />}
               title="Bring your own weights"
-              body="Upload your model weights and deploy securely on Hanzo."
+              body="Upload your own weights and serve them on Hanzo, private to your organization."
               cta="Upload weights"
               onPress={onAddCustom}
             />
             <ActionCard
               icon={<Code2 size={18} />}
               title="Build with APIs"
-              body="Access providers using our unified API and SDK."
+              body="Reach every provider here through one API and one SDK, with one key."
               cta="View docs"
               onPress={() => typeof window !== 'undefined' && window.open(docsUrl, '_blank', 'noopener')}
             />

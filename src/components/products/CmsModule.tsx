@@ -77,7 +77,7 @@ export function CmsModule({ params = {} }: { params?: Record<string, string> }) 
       client={client}
       module={MODULE}
       label="Content"
-      subtitle="A native, metadata-driven CMS on the Hanzo Framework — pages, posts, articles, media, and navigation as DocTypes, per organization."
+      subtitle="Write and publish here — pages, posts, articles, media and navigation, scoped to your organization."
       onOpen={openCollection}
     />
   )

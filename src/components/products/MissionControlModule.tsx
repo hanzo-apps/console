@@ -550,7 +550,7 @@ export function MissionControlModule() {
   const header = (
     <PageHeader
       title="Mission Control"
-      subtitle="See and drive every agent session — swipe between live terminals, from anywhere."
+      subtitle="Every agent session your org is running, as a live terminal you can watch, message, pause or stop."
       actions={
         <XStack gap="$2" items="center" flexWrap="wrap">
           <XStack items="center" gap="$1.5" px="$2.5" py="$1" rounded="$10" style={{ backgroundColor: live.live ? 'var(--color4)' : 'var(--color3)' }}>
@@ -603,7 +603,7 @@ export function MissionControlModule() {
           icon={Terminal}
           title="No agent sessions yet"
           description="Run `hanzo code` on your laptop, dispatch @hanzo in Slack, or link a GPU box — every session shows here as a live terminal you can drive."
-          bullets={['Swipe between one live terminal per agent', 'Pause · resume · stop · message any session', 'See which machine each session runs on']}
+          bullets={['One live terminal per agent, side by side', 'Pause, resume, stop or message any session', 'See which machine each session runs on']}
           primary={{ label: 'Link a computer', icon: <Plus size={15} />, onPress: () => setTab('devices') }}
         />
       ) : (

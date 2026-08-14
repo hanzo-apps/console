@@ -131,9 +131,9 @@ function PillRow({
  * balanced default. An honest surface: no projected numbers, no fabricated #1.
  */
 const ENSO_TIERS: { id: string; name: string; note: string; isDefault?: boolean }[] = [
-  { id: 'enso-flash', name: 'Enso Flash', note: 'Cheapest — high-volume, escalate only if needed' },
-  { id: 'enso', name: 'Enso Pro', note: 'The balanced default — routed to the best-fit model per request', isDefault: true },
-  { id: 'enso-ultra', name: 'Enso Ultra', note: 'Maximum verified quality — adaptive fan-out on the hardest problems' },
+  { id: 'enso-flash', name: 'Enso Flash', note: 'The cheapest tier — for volume, escalating only when a call needs it' },
+  { id: 'enso', name: 'Enso Pro', note: 'The default — each request goes to a model sized for it', isDefault: true },
+  { id: 'enso-ultra', name: 'Enso Ultra', note: 'Several models attempt the hardest problems and the answers are compared' },
 ]
 
 function EnsoTiers({ benchmark }: { benchmark: string }) {
