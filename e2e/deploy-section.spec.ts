@@ -28,9 +28,11 @@ const SHOTS = join(process.cwd(), 'e2e-shots')
 requireFixtureServer()
 
 /** `GET /v1/platform/projects` — a bare array, as `apps/platform` serves it. */
-const PROJECTS = [{ id: 'p1', org: 'hanzo', slug: 'web', name: 'Web', applications: 2, createdAt: 1_700_000_000_000 }]
+const PROJECTS = [{ id: 'p1', org: 'hanzo', slug: 'web', name: 'Web', applications: 2, createdAt: 1_700_000_000 }]
 
-/** `GET /v1/platform/projects/web/apps` — bare `appList`. */
+/** `GET /v1/platform/projects/web/apps` — bare `appList`. Timestamps are Unix
+ *  SECONDS, as the platform serves them; this fixture used to carry milliseconds,
+ *  which is the assumption that dated every row on the live board 1/21/1970. */
 const APPS = [
   {
     id: 'a1',
@@ -47,7 +49,7 @@ const APPS = [
     replicas: 2,
     port: 8080,
     env: [],
-    updatedAt: 1_754_400_000_000,
+    updatedAt: 1_754_400_000,
   },
   {
     id: 'a2',
@@ -61,7 +63,7 @@ const APPS = [
     status: 'building',
     replicas: 1,
     env: [],
-    updatedAt: 1_754_300_000_000,
+    updatedAt: 1_754_300_000,
   },
 ]
 
@@ -76,8 +78,8 @@ const SITES = [
     framework: 'next',
     status: 'live',
     liveUrl: 'https://docs.hanzo.app',
-    createdAt: 1_754_000_000_000,
-    updatedAt: 1_754_350_000_000,
+    createdAt: 1_754_000_000,
+    updatedAt: 1_754_350_000,
   },
 ]
 
@@ -174,6 +176,13 @@ test('the board folds apps and sites into one list, in the console chrome', asyn
   await expect(board.getByText('Deployments', { exact: true })).toBeVisible()
   await expect(board.getByText('3', { exact: true })).toBeVisible()
   await expect(board.getByText('Sites', { exact: true })).toBeVisible()
+
+  // The Updated column reads a real date. The platform sends Unix SECONDS, and
+  // handing those straight to `new Date()` (which takes milliseconds) dated EVERY
+  // row on the live board "1/21/1970, 8:17:57 AM". The fixtures above are 2025
+  // timestamps, so the year is the assertion that tells the two units apart.
+  await expect(board.getByText(/1970/)).toHaveCount(0)
+  await expect(board.getByText(/2025/).first()).toBeVisible()
 
   // It is IN the console, not a bolt-on page: the shell's breadcrumb trail sits
   // above it, and its level-2 nav is DECLARED. That strip hides itself at lg+ —

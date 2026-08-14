@@ -64,7 +64,7 @@ describe('rows', () => {
       status: 'live',
       phase: 'Running',
       health: 'healthy',
-      updatedAt: 200,
+      updatedAt: 200_000, // 200s in, as MILLISECONDS
     })
   })
 
@@ -114,7 +114,27 @@ describe('rows', () => {
   })
 
   it('uses createdAt when the row was never updated', () => {
-    expect(rowOfApp(app({ updatedAt: undefined, createdAt: 42 })).updatedAt).toBe(42)
+    expect(rowOfApp(app({ updatedAt: undefined, createdAt: 42 })).updatedAt).toBe(42_000)
+  })
+
+  // THE DEFECT: every row of the live board read "1/21/1970, 8:17:57 AM" because the
+  // API's Unix SECONDS reached `new Date()`, which takes milliseconds. The old fixtures
+  // (200, 42, 50) were too small to tell the units apart, so the suite stayed green
+  // while the page was wrong. A REALISTIC timestamp asserted as a CALENDAR YEAR is what
+  // catches it: read as seconds this lands in 1970, read as ms it lands in 2025.
+  it('renders a realistic timestamp in this decade, not at the epoch', () => {
+    const seconds = 1_754_400_000 // 2025-08-05T13:20:00Z
+    for (const row of [
+      rowOfApp(app({ updatedAt: seconds })),
+      rowOfSite(site({ updatedAt: seconds })),
+    ]) {
+      expect(row.updatedAt).toBe(seconds * 1000)
+      expect(new Date(row.updatedAt).getUTCFullYear()).toBe(2025)
+    }
+  })
+
+  it('keeps an absent timestamp at 0 rather than scaling it to the epoch', () => {
+    expect(rowOfSite(site({ updatedAt: undefined, createdAt: undefined })).updatedAt).toBe(0)
   })
 })
 

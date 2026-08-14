@@ -269,8 +269,11 @@ export function StoragePanel() {
       key: 'createdAt',
       header: 'Created',
       width: 200,
-      // The backend carries Unix SECONDS here, unlike the ms timestamps the
-      // platform rows use.
+      // The backend carries Unix SECONDS here — as it does for the platform rows too.
+      // (This comment used to claim those were milliseconds; believing that is what
+      // left every row of the deploy board dated 1/21/1970. `DeployRow.updatedAt` now
+      // states its unit and converts at the boundary; this raw bucket record does not
+      // pass through it, so it converts here.)
       render: (b) => (
         <Text fontSize="$3" color="$color11">
           {when(b.createdAt ? b.createdAt * 1000 : undefined)}

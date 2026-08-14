@@ -48,8 +48,18 @@ export type DeployRow = {
   /** Operator reconciliation, read straight off the App CR. Apps only. */
   phase?: string
   health?: string
+  /**
+   * Epoch MILLISECONDS — what `new Date()` takes — or 0 when the row carries no
+   * timestamp. The platform API reports Unix SECONDS, and every row on this board
+   * rendered as 1/21/1970 because that unit reached `new Date()` unconverted. The
+   * unit is stated here, and converted once at the boundary below, so no call site
+   * has to know which of the two it is holding.
+   */
   updatedAt: number
 }
+
+/** Unix SECONDS (what `/v1/platform/*` reports) as epoch MILLISECONDS; 0 when absent. */
+const secondsToMs = (seconds?: number): number => (seconds && seconds > 0 ? seconds * 1000 : 0)
 
 /** Every non-blank bound host, order preserved. */
 export const boundHosts = (domains?: string[]): string[] =>
@@ -71,7 +81,7 @@ export function rowOfApp(app: PaasAppWithProject): DeployRow {
     status: app.status || 'draft',
     phase: app.phase,
     health: app.health,
-    updatedAt: app.updatedAt ?? app.createdAt ?? 0,
+    updatedAt: secondsToMs(app.updatedAt ?? app.createdAt),
   }
 }
 
@@ -87,7 +97,7 @@ export function rowOfSite(site: Site): DeployRow {
     host,
     hosts: host ? [host] : [],
     status: site.status || 'draft',
-    updatedAt: site.updatedAt ?? site.createdAt ?? 0,
+    updatedAt: secondsToMs(site.updatedAt ?? site.createdAt),
   }
 }
 
