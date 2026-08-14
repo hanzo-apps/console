@@ -94,6 +94,7 @@ import {
 
 import { config } from '~/config'
 import {
+  visibleCatalog,
   visibleCatalogByCategory,
   findEntry,
   categorySlug,
@@ -121,6 +122,7 @@ import { usePreferences } from '~/lib/products/preferences'
 import { useViewer } from '~/lib/products/viewer'
 import { listed, stageOf } from '~/lib/products/stage'
 import { useEntitlements } from '~/lib/entitlements-context'
+import { ALWAYS_ON_PRODUCTS, isAlwaysOn } from '~/lib/entitlements'
 import { AddProductPanel } from '~/components/AddProductPanel'
 import { SidebarWallet } from '~/components/SidebarWallet'
 import { CommandSearchBox, useCommandPalette } from '~/components/CommandPalette'
@@ -591,6 +593,18 @@ function SidebarNav({
     [viewer, catalogInRail, enabled, activeId],
   )
 
+  // The essentials the rail keeps when the catalog is put away. Derived from the
+  // ONE always-on list so it cannot drift from what the entitlement layer refuses
+  // to gate, filtered through the SAME visibility the catalog uses — a stage or a
+  // brand scope that hides a product must hide it here too, or the compact rail
+  // becomes a way to reach something the full one does not offer.
+  const essentials = useMemo(() => {
+    const visible = new Map(visibleCatalog(viewer, null).map((e) => [e.id, e]))
+    return ALWAYS_ON_PRODUCTS.map((id) => visible.get(id)).filter(
+      (e): e is NonNullable<typeof e> => Boolean(e) && !isPinned(e!.id),
+    )
+  }, [viewer, isPinned])
+
   // ── Level 2 — the product the route is inside ─────────────────────────────
   // Its pages become the rail, and the rest of its category follows them, so moving
   // to a sibling stays one click.
@@ -835,11 +849,31 @@ function SidebarNav({
                     {group.entries.map((entry) => productRow(entry))}
                   </CategorySection>
                 ))
-              ) : level && !isPinned(level.id) ? (
-                /* The catalog is put away, so the rail is the pins — plus wherever
-                   you are, which would otherwise be the one place with no row. */
-                <YStack gap="$1">{productRow(level)}</YStack>
-              ) : null}
+              ) : (
+                /* The catalog is put away, so the rail is the pins — plus the
+                   essentials, plus wherever you are, which would otherwise be the
+                   one place with no row.
+
+                   THE ESSENTIALS SURVIVE IT. `ALWAYS_ON_PRODUCTS` is declared as
+                   the set "without which the console is unusable — you must always
+                   be able to see your home, pay, and manage your org", and putting
+                   the catalog away used to drop every one of them: 152 rows became
+                   9, with no Billing, Settings, Profile, Members or API Keys
+                   anywhere in the rail. That reads as a console that lost its
+                   account, and the only way back was to turn the catalog on again.
+
+                   Hiding the CATALOG is what the control says it does. The set the
+                   entitlement layer already refuses to gate is not part of the
+                   catalog in that sense, so it is not what gets hidden. One list,
+                   read here rather than restated — a second copy of "the
+                   essentials" is how the two drift. */
+                <YStack gap="$1">
+                  {essentials.map((entry) => productRow(entry))}
+                  {level && !isPinned(level.id) && !isAlwaysOn(level.id)
+                    ? productRow(level)
+                    : null}
+                </YStack>
+              )}
             </>
           )}
 
