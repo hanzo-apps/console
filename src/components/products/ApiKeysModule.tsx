@@ -13,6 +13,7 @@
  * `ApiKeysModule` wraps it with the page header for the standalone Dev route.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Copy, Check, KeyRound, RefreshCw, Trash2, TriangleAlert, Plus } from '@hanzogui/lucide-icons-2'
 
@@ -23,12 +24,27 @@ import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { config } from '~/config'
 import { ErrorState } from '~/components/ui/States'
+import { toCurl } from '~/components/products/playground/request-preview'
 import { CopyButton, PageHeader, SecretInput } from '@hanzo/ui/product'
 
 // The docs site serves everything under the `/docs` base path (a bare
 // `docs.hanzo.ai/<slug>` 404s), so the API reference is `/docs/api` — white-labeled
 // off the brand's docs host.
 const DOCS_API = `${config.docsUrl}/docs/api`
+
+// The request a new key is FOR. A page that mints a credential and then says only
+// "use it with the SDKs" leaves its reader to go and find out how; this is the
+// smallest call that works, so the first request is a paste rather than a search.
+//
+// Built by the Playground's own toCurl, so the command copied here is byte-identical
+// to the one copied there — one spelling of "how you call this API", not a second.
+//
+// `auto` is the model because it is the one that needs no catalog knowledge to run:
+// routing picks the model. Measured against the live gateway with a real key —
+// `auto` answers 402 insufficient_balance, which is the refusal this card describes,
+// while a named model can answer 400 for its own reasons (zen5-mini: "Reasoning is
+// mandatory for this endpoint"), which would read as a broken key on a first call.
+const FIRST_CALL = toCurl({ model: 'auto', messages: [{ role: 'user', content: 'Hello' }] })
 
 /** Honest date label for the key's last mint/rotate; empty string when unknown. */
 function fmtKeyDate(iso?: string): string {
@@ -61,9 +77,48 @@ function NewKeyCard({ accessKey, onDone }: { accessKey: string; onDone: () => vo
   )
 }
 
+/**
+ * The request the key is for, and the one thing that will stop it working.
+ *
+ * Access here is money, not plan: a funded org may call anything and an unfunded one
+ * is refused. That refusal is clean and says so, but only to whoever reads the
+ * response body — so a first-time holder who has not topped up spends their first
+ * minutes wondering whether they minted the key wrong. Saying it beside the key is
+ * cheaper than letting them find out from a 402.
+ */
+function FirstCall({ onAddCredits }: { onAddCredits: () => void }) {
+  return (
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
+      <Text fontSize="$4" fontWeight="700">
+        Your first request
+      </Text>
+      <Text fontSize="$3" color="$color11">
+        Export your key as <Text fontSize="$2" style={{ fontFamily: 'monospace' }}>HANZO_API_KEY</Text>, then run this.
+      </Text>
+      <YStack overflow="scroll" bg="$color2" rounded="$3" p="$3">
+        <Text fontSize="$2" color="$color11" selectable style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}>
+          {FIRST_CALL}
+        </Text>
+      </YStack>
+      <XStack gap="$2" items="center" flexWrap="wrap">
+        <CopyButton value={FIRST_CALL} />
+        <Button size="$2" chromeless onPress={onAddCredits}>
+          Add credits
+        </Button>
+      </XStack>
+      <Text fontSize="$2" color="$color11">
+        Calls draw on the balance for this organization. With none, the answer is{' '}
+        <Text fontSize="$2" style={{ fontFamily: 'monospace' }}>402 insufficient_balance</Text> — the key is fine,
+        the wallet is empty.
+      </Text>
+    </Card>
+  )
+}
+
 /** The credential surface — embeddable (no page header). */
 export function ApiKeysView() {
   const { account, loading: sessionLoading } = useSession()
+  const router = useRouter()
   const analytics = useAnalytics()
   const [status, setStatus] = useState<KeyStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -218,6 +273,8 @@ export function ApiKeysView() {
           </>
         )}
       </Card>
+
+      {hasKey || newKey ? <FirstCall onAddCredits={() => router.push('/billing/credits')} /> : null}
 
       <Button
         size="$2"
