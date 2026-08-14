@@ -117,7 +117,7 @@ export function ReleasesModule(_props: { params: Record<string, string> }) {
           rows={rows}
           loading={loading}
           rowKey={(r) => r.id}
-          empty="No releases yet."
+          empty="No releases yet. A release is a version deployed to one environment — deploys are recorded here as they ship."
         />
       )}
     </>

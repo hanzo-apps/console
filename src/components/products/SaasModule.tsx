@@ -189,7 +189,7 @@ export function SaasModule() {
                   MRR by plan category
                 </Text>
               </XStack>
-              <DataTable columns={CAT_COLS} rows={rev?.byCategory ?? []} loading={m.loading} rowKey={(r) => r.category} empty="No active subscriptions." />
+              <DataTable columns={CAT_COLS} rows={rev?.byCategory ?? []} loading={m.loading} rowKey={(r) => r.category} empty="No active subscriptions. MRR splits by plan category here once a tenant is on a paid plan." />
             </Card>
             <Card flex={2} minW={360} p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
               <XStack items="center" gap="$2">
@@ -198,7 +198,7 @@ export function SaasModule() {
                   Subscriptions by plan
                 </Text>
               </XStack>
-              <DataTable columns={PLAN_COLS} rows={subs?.byPlan ?? []} loading={m.loading} rowKey={(r) => r.plan} empty="No subscriptions." />
+              <DataTable columns={PLAN_COLS} rows={subs?.byPlan ?? []} loading={m.loading} rowKey={(r) => r.plan} empty="No subscriptions. Each plan's active, trialing, seat, and MRR counts show here once tenants subscribe." />
             </Card>
           </XStack>
 
@@ -213,7 +213,7 @@ export function SaasModule() {
                 (created / canceled this window — upgrades/downgrades are not instrumented)
               </Text>
             </XStack>
-            <DataTable columns={EVENT_COLS} rows={subs?.recent ?? []} loading={m.loading} rowKey={(r) => `${r.at}:${r.org}:${r.type}`} empty="No subscription changes this window." />
+            <DataTable columns={EVENT_COLS} rows={subs?.recent ?? []} loading={m.loading} rowKey={(r) => `${r.at}:${r.org}:${r.type}`} empty="No subscription changes this window. Subscriptions created or canceled show here with the MRR they moved — widen the range above to look further back." />
           </Card>
 
           {/* Top customers. */}
@@ -229,7 +229,7 @@ export function SaasModule() {
                 Open the Customers board to drill into an org's subs, usage & invoices.
               </Text>
             </XStack>
-            <DataTable columns={CUST_COLS} rows={d?.customers ?? []} loading={m.loading} rowKey={(r) => r.org} empty="No customers with revenue or usage." />
+            <DataTable columns={CUST_COLS} rows={d?.customers ?? []} loading={m.loading} rowKey={(r) => r.org} empty="No customers with revenue or usage. An org appears here once it carries a plan or metered usage, highest revenue first." />
           </Card>
 
           {/* AI / LLM observability — the SHARED fleet o11y aggregate. */}
@@ -258,11 +258,11 @@ export function SaasModule() {
                   <Kpi icon={<AlertTriangle size={15} />} label="Error rate" value={ai ? pct1(ai.totals.traceErrorRate) : '—'} caption={ai ? `${count(ai.totals.errors)} errors` : ''} />
                   <Kpi icon={<Boxes size={15} />} label="Models · orgs" value={ai ? `${count(ai.totals.models)} · ${count(ai.totals.orgs)}` : '—'} caption="serving traffic" />
                 </XStack>
-                <DataTable columns={MODEL_COLS} rows={ai?.topModels ?? []} loading={o.loading} rowKey={(r) => r.model} empty="No model usage in this window." />
+                <DataTable columns={MODEL_COLS} rows={ai?.topModels ?? []} loading={o.loading} rowKey={(r) => r.model} empty="No model usage in this window. Models appear here with their requests, tokens, and cost as the fleet serves traffic." />
                 <Text fontSize="$2" color="$color10">
                   Per-model latency is not captured anywhere in the stack, and per-model error rate is recorded but not
-                  yet surfaced by the fleet aggregate — latency/errors above are fleet + per-service (see Fleet
-                  Observability), never fabricated per model.
+                  surfaced by the fleet aggregate. The latency and errors above are fleet-wide and per-service — see
+                  Fleet Observability.
                 </Text>
               </>
             )}

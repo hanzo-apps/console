@@ -171,11 +171,11 @@ export function WorkflowDetailPanel({ ns, wid, runId, onClose }: { ns: string; w
               </XStack>
             ))}
           </YStack>
-        ) : <Text fontSize="$2" color="$color10">No history events.</Text>
+        ) : <Text fontSize="$2" color="$color10">No history events. The engine records an event for every step a run takes; this run has none yet.</Text>
       ) : sub === 'Events' ? (
-        <DataTable columns={EVENT_COLUMNS} rows={events} rowKey={(e) => String(e.eventId ?? Math.random())} empty="No history events." />
+        <DataTable columns={EVENT_COLUMNS} rows={events} rowKey={(e) => String(e.eventId ?? Math.random())} empty="No history events. The engine records an event for every step a run takes; this run has none yet." />
       ) : sub === 'Activities' ? (
-        <DataTable columns={EVENT_COLUMNS} rows={activityEvents} rowKey={(e) => String(e.eventId ?? Math.random())} empty="No activity events in this run." />
+        <DataTable columns={EVENT_COLUMNS} rows={activityEvents} rowKey={(e) => String(e.eventId ?? Math.random())} empty="No activity events in this run. They appear once the workflow schedules an activity on a worker." />
       ) : (
         <YStack p="$4" items="center" borderWidth={1} borderColor="$borderColor" borderStyle="dashed" rounded="$3">
           <Text fontSize="$2" color="$color10" text="center" maxW={360}>

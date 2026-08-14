@@ -451,7 +451,7 @@ export function TenantDetail({
             ))}
           </YStack>
         ) : (
-          <Text fontSize="$2" color="$color10">No IAM apps for this org yet.</Text>
+          <Text fontSize="$2" color="$color10">No IAM apps for this org yet. An app is what users of this org sign in through — create one below.</Text>
         )}
         <YStack gap="$2" borderTopWidth={1} borderColor="$borderColor" pt="$3">
           <FieldRow label="New app">

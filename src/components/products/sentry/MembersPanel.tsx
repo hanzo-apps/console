@@ -117,7 +117,7 @@ export function MembersPanel() {
               rows={data.members}
               loading={state.phase === 'loading'}
               rowKey={(u) => `${u.owner}/${u.name}`}
-              empty="No members found for this organization."
+              empty="No members found for this organization. Members come from your Hanzo IAM org — use Manage members to invite someone."
             />
           </YStack>
 

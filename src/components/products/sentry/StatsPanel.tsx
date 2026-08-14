@@ -106,7 +106,7 @@ function EmptyChart({ loading }: { loading: boolean }) {
   return (
     <Card p="$6" items="center" bg="transparent">
       <Text fontSize="$3" color="$color10">
-        {loading ? 'Loading…' : 'No data in this window yet.'}
+        {loading ? 'Loading…' : 'No data in this window yet. Points appear as your projects report events — pick a longer period above.'}
       </Text>
     </Card>
   )

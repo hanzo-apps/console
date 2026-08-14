@@ -92,8 +92,8 @@ function MakerStatusCard({ status, loading }: { status: MakerStatus | null; load
           <Text fontSize="$3" fontWeight="700">Metrics not reporting</Text>
         </XStack>
         <Text fontSize="$2" color="$color10">
-          The maker’s :2112 metrics did not answer{status?.error ? ` — ${status.error}` : ''}. Live quote quality lights up
-          automatically once the maker is reachable; no placeholder metrics are shown.
+          The maker’s :2112 metrics did not answer{status?.error ? ` — ${status.error}` : ''}. Quote quality fills in
+          once the maker is reachable.
         </Text>
       </Card>
     )
@@ -126,7 +126,7 @@ function MakerStatusCard({ status, loading }: { status: MakerStatus | null; load
         <Text fontSize="$2" color="$color10">
           Per-market peg error — how tightly the book mid tracks the reference (the maker’s income is the spread, not this error).
         </Text>
-        <DataTable fields={SYMBOL_FIELDS} records={symbolRows} empty="No markets reported." />
+        <DataTable fields={SYMBOL_FIELDS} records={symbolRows} empty="No markets reported. A row appears per market this maker quotes, with its peg error, once it starts pegging." />
       </YStack>
     </YStack>
   )
@@ -150,7 +150,7 @@ function OrderBookCard({ book, loading }: { book: OrderBook | null; loading: boo
         </XStack>
         <Text fontSize="$2" color="$color10">
           The DEX did not answer{book?.error ? ` — ${book.error}` : ''}. The native D-Chain CLOB is an in-cluster surface;
-          the book renders here once it is reachable — no fabricated bids/asks.
+          the book renders here once it is reachable.
         </Text>
       </Card>
     )
@@ -162,7 +162,7 @@ function OrderBookCard({ book, loading }: { book: OrderBook | null; loading: boo
       <Text fontSize="$2" color="$color10">
         Resting orders on the DEX book{book.symbol ? ` for ${book.symbol}` : ''} (live from the D-Chain CLOB).
       </Text>
-      <DataTable fields={BOOK_FIELDS} records={rows} empty="No resting orders on this book." />
+      <DataTable fields={BOOK_FIELDS} records={rows} empty="No resting orders on this book. Open orders appear here as they land on the DEX book for this market." />
     </YStack>
   )
 }

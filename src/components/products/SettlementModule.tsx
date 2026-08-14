@@ -148,7 +148,7 @@ export function SettlementModule(_props: { params: Record<string, string> }) {
           rows={rows}
           loading={loading}
           rowKey={(s) => s.id}
-          empty="No payouts yet."
+          empty="No payouts yet. A payout sends your settled balance to a bank account or card — each one lands here with its amount and status."
         />
       )}
     </>

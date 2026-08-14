@@ -135,7 +135,7 @@ export function TokensModule(_props: { params: Record<string, string> }) {
           rows={rows}
           loading={loading}
           rowKey={(t) => t.id}
-          empty="No tokens issued yet."
+          empty="No tokens issued yet. Tokens you issue appear here with their supply, holder count, and contract address per chain."
         />
       )}
     </>

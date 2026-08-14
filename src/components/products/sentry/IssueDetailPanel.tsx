@@ -146,7 +146,7 @@ export function IssueDetailPanel({ id }: { id: string }) {
               rows={events}
               loading={loading}
               rowKey={(e) => e.id}
-              empty="No individual occurrences recorded for this issue yet."
+              empty="No individual occurrences recorded for this issue yet. Each time this error is seen it lands here with its release, environment, and time."
             />
           </YStack>
         </>

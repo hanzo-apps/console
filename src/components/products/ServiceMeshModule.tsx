@@ -98,7 +98,7 @@ export function ServiceMeshModule(_props: { params: Record<string, string> }) {
           rows={rows}
           loading={loading}
           rowKey={(m) => m.id}
-          empty="No mesh services yet."
+          empty="No mesh services yet. Workloads appear here once they route through the mesh, each with its namespace, mTLS mode, and request count."
         />
       )}
     </>

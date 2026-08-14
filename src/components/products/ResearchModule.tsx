@@ -118,8 +118,8 @@ export function ResearchModule() {
           </Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
-          Falsifiable R&amp;D experiments across the platform — every proof and every refutation, first-class. Each run
-          states a hypothesis and a prediction, logs what it saw, then proves or refutes it.
+          Falsifiable R&amp;D experiments across the platform. Each run states a hypothesis and a prediction, logs what it
+          saw, then proves or refutes it — and a refutation is kept exactly as a proof is.
         </Text>
       </YStack>
 
@@ -164,7 +164,7 @@ export function ResearchModule() {
               </YStack>
             ) : (
               <Text fontSize="$3" color="$color10">
-                No refutations recorded yet.
+                No refutations recorded yet. When a run rules a hypothesis out, it lands here with the reason it was refuted.
               </Text>
             )}
           </Card>
@@ -193,7 +193,7 @@ export function ResearchModule() {
               onRowPress={(e) => setOpenId((id) => (id === rowKeyOf(e) ? null : rowKeyOf(e)))}
               isRowExpanded={(e) => rowKeyOf(e) === openId}
               renderExpanded={(e) => <Detail e={e} />}
-              empty={kind ? `No ${kind} experiments yet.` : 'No experiments recorded yet.'}
+              empty={kind ? `No ${kind} experiments yet. Pick another kind above, or All for the whole corpus.` : 'No experiments recorded yet. Each run logs its hypothesis, its prediction, and whether the result proved or refuted it.'}
             />
           </YStack>
         </>

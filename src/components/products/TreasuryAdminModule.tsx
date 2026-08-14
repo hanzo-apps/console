@@ -410,7 +410,7 @@ function ByProgramPanel({ referral, affiliate, author }: { referral: number; aff
       <Text fontSize="$1" color="$color10">
         Lifetime cash backed out of the reserve fund to each growth-loop program.
       </Text>
-      <DataTable<ProgramRow> columns={cols} rows={rows} rowKey={(r) => r.program} empty="No program payouts yet." />
+      <DataTable<ProgramRow> columns={cols} rows={rows} rowKey={(r) => r.program} empty="No program payouts yet. The referral, affiliate, and author programs are paid out of the reserve fund; each one's lifetime total shows here." />
     </YStack>
   )
 }
@@ -473,7 +473,7 @@ function JournalPanel({ journal }: { journal: JournalEntry[] }) {
       <Text fontSize="$1" color="$color10">
         Recent double-entry lines, newest first — each entry&apos;s postings net to zero.
       </Text>
-      <DataTable<JournalEntry> columns={cols} rows={journal} rowKey={(e) => e.id} empty="No journal entries yet." />
+      <DataTable<JournalEntry> columns={cols} rows={journal} rowKey={(e) => e.id} empty="No journal entries yet. Lines are written as the fund accrues revenue-share, backs a payout, or is seeded — run a sweep or seed the reserve above." />
     </YStack>
   )
 }

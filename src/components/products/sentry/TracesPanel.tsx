@@ -187,7 +187,7 @@ function Waterfall({ spans, traceDurationMs }: { spans: SentrySpan[]; traceDurat
   if (spans.length === 0) {
     return (
       <Card p="$4" borderWidth={1} borderColor="$borderColor">
-        <Text color="$color11">No spans recorded for this trace.</Text>
+        <Text color="$color11">No spans recorded for this trace. Spans are the timed steps inside a transaction — the waterfall draws them once your service sends them.</Text>
       </Card>
     )
   }

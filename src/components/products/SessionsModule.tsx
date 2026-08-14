@@ -195,7 +195,7 @@ function SessionDetailView({ id, onBack, onOpenTrace }: { id: string; onBack: ()
               columns={traceColumns}
               rows={session.traces ?? []}
               rowKey={(t) => t.id}
-              empty="No traces in this session."
+              empty="No traces in this session. Traces join a session when they carry its session id."
             />
           </YStack>
         </>

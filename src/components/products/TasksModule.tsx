@@ -166,7 +166,7 @@ function Rail({ data }: { data: NsData }) {
         {queues.length ? (
           <BarRows bars={queues.slice(0, 6).map((q) => ({ label: q.name, value: q.running ?? q.workflows ?? 0 }))} />
         ) : (
-          <Text fontSize="$2" color="$color10">No active task queues.</Text>
+          <Text fontSize="$2" color="$color10">No active task queues. Each queue&apos;s load shows here once workflows run.</Text>
         )}
       </Panel>
 
@@ -181,7 +181,7 @@ function Rail({ data }: { data: NsData }) {
             ))}
           </YStack>
         ) : (
-          <Text fontSize="$2" color="$color10">No recent workflows.</Text>
+          <Text fontSize="$2" color="$color10">No recent workflows. The latest runs in this namespace show here with their status.</Text>
         )}
       </Panel>
     </YStack>
@@ -311,10 +311,10 @@ export function TasksModule({ params }: { params: Record<string, string> }) {
         </YStack>
       )
     }
-    if (tab === 'schedules') return data.schedules.phase === 'error' ? <BackendStateCard state={data.schedules.error} onRetry={data.reload} /> : <DataTable columns={scheduleColumns} rows={data.schedules.phase === 'ready' ? data.schedules.data : []} loading={data.schedules.phase === 'loading'} rowKey={(s) => s.scheduleId} empty="No schedules in this namespace." />
-    if (tab === 'queues') return data.queues.phase === 'error' ? <BackendStateCard state={data.queues.error} onRetry={data.reload} /> : <DataTable columns={queueColumns} rows={data.queues.phase === 'ready' ? data.queues.data : []} loading={data.queues.phase === 'loading'} rowKey={(q) => q.name} empty="No task queues in this namespace." />
+    if (tab === 'schedules') return data.schedules.phase === 'error' ? <BackendStateCard state={data.schedules.error} onRetry={data.reload} /> : <DataTable columns={scheduleColumns} rows={data.schedules.phase === 'ready' ? data.schedules.data : []} loading={data.schedules.phase === 'loading'} rowKey={(s) => s.scheduleId} empty="No schedules in this namespace. A schedule starts a workflow on a cadence; schedules created against this engine appear here with their next run." />
+    if (tab === 'queues') return data.queues.phase === 'error' ? <BackendStateCard state={data.queues.error} onRetry={data.reload} /> : <DataTable columns={queueColumns} rows={data.queues.phase === 'ready' ? data.queues.data : []} loading={data.queues.phase === 'loading'} rowKey={(q) => q.name} empty="No task queues in this namespace. A task queue is where workflows hand work to workers — one appears here once work is scheduled on it." />
     if (tab === 'workers') return data.workers.phase === 'error' ? <BackendStateCard state={data.workers.error} onRetry={data.reload} hint="Workers appear once one heartbeats against a task queue." /> : <DataTable columns={workerColumns} rows={data.workers.phase === 'ready' ? data.workers.data : []} loading={data.workers.phase === 'loading'} rowKey={(w) => w.identity || Math.random().toString()} empty="No workers registered yet." />
-    return data.activities.phase === 'error' ? <BackendStateCard state={data.activities.error} onRetry={data.reload} /> : <DataTable columns={activityColumns} rows={activities} loading={data.activities.phase === 'loading'} rowKey={(a) => a.activityId || Math.random().toString()} empty="No activities in this namespace." />
+    return data.activities.phase === 'error' ? <BackendStateCard state={data.activities.error} onRetry={data.reload} /> : <DataTable columns={activityColumns} rows={activities} loading={data.activities.phase === 'loading'} rowKey={(a) => a.activityId || Math.random().toString()} empty="No activities in this namespace. An activity is one step of a workflow; they appear here while workflows are running." />
   })()
 
   return (

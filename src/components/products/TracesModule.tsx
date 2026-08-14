@@ -231,7 +231,7 @@ function TraceDetailView({ id, onBack }: { id: string; onBack: () => void }) {
                 columns={obsColumns}
                 rows={trace.observations ?? []}
                 rowKey={(o) => o.id}
-                empty="No observations on this trace."
+                empty="No observations on this trace. Observations are the spans inside a trace — model calls, tool calls, nested steps — sent by your app."
               />
             )}
           </YStack>
@@ -244,7 +244,7 @@ function TraceDetailView({ id, onBack }: { id: string; onBack: () => void }) {
               columns={scoreColumns}
               rows={trace.scores ?? []}
               rowKey={(s) => s.id}
-              empty="No scores on this trace."
+              empty="No scores on this trace. Scores appear here once an evaluation or human feedback is recorded against it."
             />
           </YStack>
         </>

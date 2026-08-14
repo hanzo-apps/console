@@ -280,7 +280,7 @@ function ServiceDetail({
             </XStack>
           ) : ops.length === 0 ? (
             <Text fontSize="$2" color="$color10">
-              No operations recorded in this window.
+              No operations recorded in this window. Operations are the named calls this service handled — they appear here once it reports spans.
             </Text>
           ) : (
             <YStack gap="$1.5">
