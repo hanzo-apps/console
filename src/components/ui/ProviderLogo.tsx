@@ -18,7 +18,7 @@
  */
 import { Text, XStack, useTheme } from '@hanzo/gui'
 
-import { normalizeBrand, brandForModel, BRANDS, providerInitials } from './brand'
+import { normalizeBrand, brandForModel, BRANDS, providerInitials, usesHouseMark } from './brand'
 import { BRAND_MARK, type BrandMark } from './brand-marks'
 import { tileRadius } from './color'
 import { Monogram } from '~/components/ui/Monogram'
@@ -165,10 +165,10 @@ export function ProviderLogo({
     )
   }
 
-  // First-party house — Zen, Hanzo, and Enso all render the block-H mark, knocked out
-  // of a filled tile so our own models read on-brand. They NEVER show an upstream
-  // family glyph (brand policy) — the house IS the Hanzo mark.
-  if (brand === 'zen' || brand === 'hanzo' || brand === 'enso') {
+  // Hanzo's own — the gateway brand and the Enso router render the block-H, knocked
+  // out of a filled tile. Zen is NOT here: Zoo Labs builds it, so it carries Zoo's
+  // trefoil from BRAND_MARK like every other family whose maker is not Hanzo.
+  if (brand && usesHouseMark(brand)) {
     const tileBg = mono ? monoTileBg : theme.color12?.get() ?? '#111111'
     const fg = mono ? monoFg : theme.color1?.get() ?? '#ffffff' // cut-out mark: the tile's contrast color
     return (

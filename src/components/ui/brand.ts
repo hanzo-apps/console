@@ -64,9 +64,11 @@ export function brandForModel(idOrName: string, provider: string): BrandKey | nu
   return normalizeBrand(idOrName) ?? normalizeBrand(provider)
 }
 
-/** Brand-colored monogram tiles for third-party families. Fixed brand hues.
- *  The house brands (zen/hanzo/enso) render the Hanzo mark, not a hue tile. */
-export const BRANDS: Record<Exclude<BrandKey, 'zen' | 'hanzo' | 'enso'>, { bg: string; label: string }> = {
+/** Brand-colored monogram tiles, one per family that has a maker of its own. Hanzo's
+ *  own (hanzo/enso) render the block-H instead and take no hue. Zen's hue is Zoo's
+ *  primary green (@zooai/logo `getColorSVG`), so the tile agrees with the mark. */
+export const BRANDS: Record<Exclude<BrandKey, 'hanzo' | 'enso'>, { bg: string; label: string }> = {
+  zen:       { bg: '#00A652', label: 'Z' },
   openai:    { bg: '#000000', label: 'AI' },
   qwen:      { bg: '#615CED', label: 'Q' },
   deepseek:  { bg: '#4D6BFE', label: 'DS' },
@@ -86,8 +88,8 @@ export const BRANDS: Record<Exclude<BrandKey, 'zen' | 'hanzo' | 'enso'>, { bg: s
 /**
  * Full vendor display name per brand — for a MODEL card's provider label, so a
  * gateway-served third-party model reads as its true vendor ("Qwen") rather than the
- * house label. The house brands map to "Zen" (our models are branded Zen, never the
- * bare company name), matching `displayProvider`.
+ * house label. These are FAMILY names — what the models are called — which is what a
+ * picker groups by. Who BUILT the family is a different fact; see `BRAND_MAKER`.
  */
 export const BRAND_LABEL: Record<BrandKey, string> = {
   zen: 'Zen',
@@ -112,6 +114,42 @@ export const BRAND_LABEL: Record<BrandKey, string> = {
 /** The full vendor display name for a resolved brand key. */
 export function brandLabel(brand: BrandKey): string {
   return BRAND_LABEL[brand]
+}
+
+/**
+ * Who BUILDS a family, when that is not what the family is called.
+ *
+ * Zen is Zoo Labs': Hanzo serves it through the gateway, Zoo builds it, and a label
+ * that says "Zen" answers "which models" while a maker answers "whose". Enso is the
+ * router Hanzo builds, and bare `hanzo` is the gateway itself — both are Hanzo's.
+ * Anything absent here is a family whose name IS its maker's (DeepSeek, Mistral,
+ * Anthropic …), so it falls through to `brandLabel` rather than being restated.
+ */
+export const BRAND_MAKER: Partial<Record<BrandKey, string>> = {
+  zen: 'Zoo Labs',
+  enso: 'Hanzo',
+  hanzo: 'Hanzo',
+}
+
+/** The company behind a brand — its maker when that differs, else the family name. */
+export function brandMaker(brand: BrandKey): string {
+  return BRAND_MAKER[brand] ?? BRAND_LABEL[brand]
+}
+
+/**
+ * Does this brand render Hanzo's block-H rather than a mark of its own?
+ *
+ * Only what Hanzo BUILDS does: the gateway brand and the Enso router. It lived as a
+ * condition inside ProviderLogo's JSX, where the one rule that decides whose logo
+ * appears on whose model could not be read or tested without a DOM. It is a fact
+ * about brands, so it lives with the brands.
+ *
+ * A type PREDICATE, not a bool: narrowing it leaves `Exclude<BrandKey,'hanzo'|'enso'>`,
+ * which is exactly `BRANDS`' key type — so the compiler, not a reviewer, is what stops
+ * a hue tile being looked up for a brand that has none.
+ */
+export function usesHouseMark(brand: BrandKey): brand is 'hanzo' | 'enso' {
+  return brand === 'hanzo' || brand === 'enso'
 }
 
 /** 1–2 uppercase initials from a provider name: words→first letters, else first 2 chars. */

@@ -23,7 +23,7 @@
  */
 import { restGet, originV1Url } from './client'
 import type { BlendModel } from '~/lib/models/blend'
-import { brandForModel, brandLabel } from '~/components/ui/brand'
+import { brandForModel, brandMaker } from '~/components/ui/brand'
 import catalogFixture from './catalog.data.json'
 
 /** A model as the rich pricing catalog publishes it. All fields optional-safe. */
@@ -300,7 +300,7 @@ export function toBlendModel(m: CatalogEntry): BlendModel {
   return {
     id,
     name: modelDisplayName(m),
-    vendor: brand ? brandLabel(brand) : displayProvider(m.provider),
+    vendor: brand ? brandMaker(brand) : displayProvider(m.provider),
     priceIn: typeof m.pricing?.input === 'number' ? m.pricing.input : null,
     priceOut: typeof m.pricing?.output === 'number' ? m.pricing.output : null,
   }

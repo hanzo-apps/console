@@ -14,8 +14,10 @@
  * asset. The body is a build-time-trusted constant (never user input), so inlining it
  * via `dangerouslySetInnerHTML` is safe — the same pattern as `BrandLogo`/`brands.ts`.
  *
- * Brand policy (repo LLM.md): **Zen is the house brand** and renders the Hanzo mark
- * (handled in `ProviderLogo`, not here) — it NEVER carries an upstream family glyph.
+ * Brand policy: a mark names the MAKER. Zen is made by Zoo Labs, so it carries Zoo's
+ * trefoil here rather than the Hanzo block-H — Hanzo serves Zen, it does not build it,
+ * and a logo that says otherwise misattributes someone else's work. `hanzo` and `enso`
+ * are Hanzo's own and still render the block-H from `ProviderLogo`.
  * The brands below are the real model VENDORS the api.hanzo.ai gateway serves —
  * open-weight families (Qwen/Meta/DeepSeek/Mistral) AND the proprietary vendors it
  * proxies (OpenAI/Anthropic/Google Gemini/xAI) — so an evocative mark for each is the
@@ -35,6 +37,18 @@ export type BrandMark = {
 // gateway serves. Each is visually distinct from the others AND from the first-party
 // Hanzo block-H, so no two families ever read as the same glyph.
 export const BRAND_MARK: Partial<Record<BrandKey, BrandMark>> = {
+  // Zen (Zoo Labs) — the trefoil: three equal rings overlapping at the centre, the
+  // additive colour-mixing mark Zoo builds its identity on (@zooai/logo draws it in
+  // green/red/blue; monochrome here, like every other mark on this map).
+  zen: {
+    viewBox: '0 0 24 24',
+    body:
+      '<g fill="none" stroke="currentColor" stroke-width="1.6">' +
+      '<circle cx="12" cy="9.2" r="4.4"/>' +
+      '<circle cx="9.1" cy="14.2" r="4.4"/>' +
+      '<circle cx="14.9" cy="14.2" r="4.4"/>' +
+      '</g>',
+  },
   // Anthropic (Claude) — the sunburst/spark: tapered rays radiating from a center,
   // its signature radial burst mark (knocked out white on the coral tile).
   anthropic: {

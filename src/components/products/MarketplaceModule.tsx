@@ -35,7 +35,7 @@ import {
 import { categorize, featured, applyFilters, marketStats, listingTitle } from './marketplace/logic'
 import { playgroundPathForModel } from './playground/share'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
-import { brandForModel, brandLabel } from '~/components/ui/brand'
+import { brandForModel, brandMaker } from '~/components/ui/brand'
 import { ErrorState, asApiError } from '~/components/ui/States'
 import { Loader } from '~/components/ui/Loader'
 import { Filters } from '~/components/ui/Filters'
@@ -113,7 +113,7 @@ function ListingCard({ m, onOpen }: { m: CatalogEntry; onOpen: () => void }) {
   const id = modelId(m)
   const brand = brandForModel(id, m.provider ?? '')
   const house = brand === 'zen' || brand === 'hanzo'
-  const providerLabel = brand && !house ? brandLabel(brand) : displayProvider(m.provider)
+  const providerLabel = brand ? brandMaker(brand) : displayProvider(m.provider)
   return (
     <YStack
       width={300}

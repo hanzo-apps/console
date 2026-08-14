@@ -10,7 +10,7 @@
  *      mark (`BRAND_MARK`) — no two families read as the same glyph.
  */
 import { describe, it, expect } from 'vitest'
-import { normalizeBrand, brandForModel, brandLabel } from './brand'
+import { normalizeBrand, brandForModel, brandLabel, brandMaker, usesHouseMark } from './brand'
 import { BRAND_MARK } from './brand-marks'
 import { FAMILIES } from '~/lib/api/families'
 
@@ -31,11 +31,11 @@ describe('normalizeBrand', () => {
     }
   })
 
-  it('gives every third-party family its OWN distinct mark (Zen uses the Hanzo mark)', () => {
+  it('gives every family with its own maker a distinct mark (only Hanzo\'s render the block-H)', () => {
     const bodies = new Set<string>()
     for (const f of FAMILIES) {
       const brand = normalizeBrand(f.logo)
-      if (brand === 'zen' || brand === 'hanzo' || brand === 'enso') continue // first-party → Hanzo block-H
+      if (brand === 'hanzo' || brand === 'enso') continue // Hanzo's own → block-H
       const mark = brand ? BRAND_MARK[brand] : undefined
       expect(mark, `family ${f.id} (brand ${brand}) must have a curated mark`).toBeDefined()
       // No two families share the same glyph body → every family is visually distinct.
@@ -123,8 +123,38 @@ describe('brandLabel — full vendor names for the model-card label', () => {
     expect(brandLabel('minimax')).toBe('MiniMax')
   })
 
-  it('brands both house keys as "Zen" (our models are Zen, never the bare company)', () => {
+  it('keeps Zen the FAMILY name and Zoo Labs the MAKER — two facts, two fields', () => {
     expect(brandLabel('zen')).toBe('Zen')
-    expect(brandLabel('hanzo')).toBe('Zen')
+    expect(brandMaker('zen')).toBe('Zoo Labs')
+    // Hanzo serves Zen; it does not build it.
+    expect(brandMaker('zen')).not.toBe(brandMaker('hanzo'))
+    // A family whose name IS its maker's is not restated in the maker map.
+    expect(brandMaker('deepseek')).toBe(brandLabel('deepseek'))
+  })
+
+  it('sends every zen model down the OWN-mark path, never the block-H', () => {
+    // This is the bug in one assertion: a zen id used to render Hanzo's mark.
+    for (const id of ['zen', 'zenlm', 'zen5', 'zen5-coder', 'zen3-vl']) {
+      const brand = brandForModel(id, 'hanzo')!
+      expect(brand, id).toBe('zen')
+      expect(usesHouseMark(brand), `${id} must not render the block-H`).toBe(false)
+      expect(BRAND_MARK[brand], `${id} must have its own mark to render instead`).toBeDefined()
+    }
+    // What Hanzo actually builds still does.
+    expect(usesHouseMark('hanzo')).toBe(true)
+    expect(usesHouseMark('enso')).toBe(true)
+  })
+
+  it('gives Zen a mark of its own, and it is not the block-H the Hanzo keys use', () => {
+    // The whole point of the change: Zen must not be indistinguishable from Hanzo.
+    expect(BRAND_MARK.zen, 'Zen must carry its own mark').toBeDefined()
+    expect(BRAND_MARK.hanzo, 'Hanzo renders the block-H in ProviderLogo, not a BRAND_MARK').toBeUndefined()
+    expect(BRAND_MARK.enso, 'Enso renders the block-H in ProviderLogo, not a BRAND_MARK').toBeUndefined()
+  })
+
+  it('still resolves every zen id and alias to the zen brand', () => {
+    for (const id of ['zen', 'zenlm', 'zen5', 'zen5-coder', 'zen3-vl']) {
+      expect(normalizeBrand(id), id).toBe('zen')
+    }
   })
 })
