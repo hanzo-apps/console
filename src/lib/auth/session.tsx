@@ -15,7 +15,7 @@
  * the user is never bounced. The REACTIVE half (a 401 -> refresh -> retry) lives in the
  * API client. Both go through the ONE single-flight `refreshSession`.
  */
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { AccountApi, type Account } from '~/lib/api'
 import { withTimeout } from '~/lib/with-timeout'
@@ -150,8 +150,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [applyAccount])
 
+  // Auth truth as ONE value: it changes when the account or the load state does, and
+  // not merely because this provider re-rendered. It sits above the entire console,
+  // so a fresh literal here is an app-wide redraw.
+  const state = useMemo(
+    () => ({ account, loading, signIn, signOut, reload }),
+    [account, loading, signIn, signOut, reload],
+  )
+
   return (
-    <SessionContext.Provider value={{ account, loading, signIn, signOut, reload }}>
+    <SessionContext.Provider value={state}>
       {children}
     </SessionContext.Provider>
   )

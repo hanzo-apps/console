@@ -814,8 +814,13 @@ export function Palette({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // `seed` is deliberately not in the API — typing into the palette must not be an
+  // app-wide render. Memoized for the same reason the assistant's is: this provider
+  // wraps the whole app, so a fresh literal re-renders every consumer of it.
+  const api = useMemo(() => ({ isOpen, open, close }), [isOpen, open, close])
+
   return (
-    <Ctx.Provider value={{ isOpen, open, close }}>
+    <Ctx.Provider value={api}>
       {children}
       <PaletteDialog open={isOpen} seed={seed} onOpenChange={setIsOpen} />
     </Ctx.Provider>

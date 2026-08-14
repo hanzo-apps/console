@@ -39,7 +39,7 @@
  *
  * Mounted once in the dashboard layout, so a single instance serves all children.
  */
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Dialog, Text, VisuallyHidden, XStack, YStack, useMedia } from '@hanzo/gui'
 import { Mic, PanelRight, PanelRightClose, Sparkles, X } from '@hanzogui/lucide-icons-2'
@@ -357,8 +357,18 @@ export function Chat({ children }: { children: ReactNode }) {
     setVoiceSignal((n) => n + 1)
   }, [setDocked])
 
+  // The assistant's API as ONE value that changes only when the assistant does.
+  // `Chat` reads `usePathname()`, so it re-renders on every navigation — and a fresh
+  // object literal here is a fresh context value, which re-renders every consumer.
+  // `Dashboard` is one of them (it reads `column`), so the whole console shell was
+  // redrawing on each route change to be handed the identical assistant.
+  const api = useMemo(
+    () => ({ isOpen, open, close, toggle, column, setDocked, ask, seed, openChat, startVoice, voiceSignal }),
+    [isOpen, open, close, toggle, column, setDocked, ask, seed, openChat, startVoice, voiceSignal],
+  )
+
   return (
-    <Ctx.Provider value={{ isOpen, open, close, toggle, column, setDocked, ask, seed, openChat, startVoice, voiceSignal }}>
+    <Ctx.Provider value={api}>
       {children}
 
       {/* The assistant's ONE entry point — bottom-right, over every page. Hidden

@@ -11,7 +11,7 @@
  * console behaves exactly as today (zero regression). `addProducts`/`removeProducts`
  * POST the patch and update the set in place.
  */
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { useSession } from './auth/session'
 import { useIsSuperAdmin } from './auth/admin'
@@ -78,8 +78,15 @@ export function EntitlementsProvider({ children }: { children: ReactNode }) {
   const addProducts = useCallback((ids: string[]) => apply({ add: ids }), [apply])
   const removeProducts = useCallback((ids: string[]) => apply({ remove: ids }), [apply])
 
+  // The gate as ONE value, so the sidebar and palette re-render when entitlements
+  // move and not when this provider happens to render again.
+  const state = useMemo(
+    () => ({ enabled, gated, loading, refresh, addProducts, removeProducts }),
+    [enabled, gated, loading, refresh, addProducts, removeProducts],
+  )
+
   return (
-    <EntitlementsContext.Provider value={{ enabled, gated, loading, refresh, addProducts, removeProducts }}>
+    <EntitlementsContext.Provider value={state}>
       {children}
     </EntitlementsContext.Provider>
   )
