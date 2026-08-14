@@ -72,6 +72,27 @@ function Chip({ label, tone = 'muted' }: { label: string; tone?: 'muted' | 'meas
   )
 }
 
+/**
+ * How a score's provenance reads — the ONE place a source string becomes a badge.
+ *
+ * It READS the source rather than asserting one. Both callers used to hard-code
+ * "measured": the tier strip printed "Hanzo-measured" under every tier, and a row
+ * for an Enso model printed "Enso · measured" from the model id alone. Neither
+ * looked at `score.source`, so a vendor-reported number would have carried our
+ * harness's name — on the one surface whose entire job is to say whose harness
+ * produced a figure.
+ */
+function SourceBadge({ source, enso = false }: { source: string; enso?: boolean }) {
+  if (sourceClass(source) !== 'measured') {
+    return (
+      <Text fontSize="$1" color="$color10" numberOfLines={1}>
+        {source}
+      </Text>
+    )
+  }
+  return <Chip label={enso ? 'Enso · measured' : 'Hanzo-measured'} tone={enso ? 'enso' : 'measured'} />
+}
+
 /** A horizontally scrolling row of selector pills (benchmarks, vendors, source). */
 function PillRow({
   options,
@@ -163,7 +184,7 @@ function EnsoTiers({ benchmark }: { benchmark: string }) {
               <Text className={TNUM} fontSize="$2" color="$color11">
                 {t.price == null ? '—' : `$${t.price.toFixed(2)}/M blended`}
               </Text>
-              <Chip label="Hanzo-measured" tone="measured" />
+              <SourceBadge source={t.score!.source} enso />
             </XStack>
             <Text fontSize="$1" color="$color10" numberOfLines={2}>
               {t.note}
@@ -262,16 +283,7 @@ export function LeaderboardView() {
       key: 'source',
       header: 'Source',
       width: 190,
-      render: (r) =>
-        isEnsoModel(r.model) ? (
-          <Chip label="Enso · measured" tone="enso" />
-        ) : sourceClass(r.score.source) === 'measured' ? (
-          <Chip label="Hanzo-measured" tone="measured" />
-        ) : (
-          <Text fontSize="$1" color="$color10" numberOfLines={1}>
-            {r.score.source}
-          </Text>
-        ),
+      render: (r) => <SourceBadge source={r.score.source} enso={isEnsoModel(r.model)} />,
     },
     {
       key: 'price',
