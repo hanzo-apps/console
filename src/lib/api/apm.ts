@@ -526,10 +526,22 @@ export function normalizeDashboard(r: unknown): Dashboard {
   }
 }
 
-/** Normalize the dashboards-list response (`{status, data:[…]}` or a bare array). */
+/**
+ * The dashboard rows, in whichever envelope the runtime used: a bare array,
+ * `{data:[…]}`, or the shape the live surface answers today —
+ * `{status, data:{dashboards:[…], total, tags}}`. Reading only the first two
+ * silently emptied a 200 that carried real dashboards.
+ */
+const dashboardRows = (body: unknown): unknown[] => {
+  const data = (body as { data?: unknown })?.data ?? body
+  if (Array.isArray(data)) return data
+  const rows = (data as { dashboards?: unknown })?.dashboards
+  return Array.isArray(rows) ? rows : []
+}
+
+/** Normalize the dashboards-list response → Dashboard[]. */
 export function normalizeDashboards(body: unknown): Dashboard[] {
-  const rows = Array.isArray(body) ? body : Array.isArray((body as { data?: unknown[] })?.data) ? (body as { data: unknown[] }).data : []
-  return rows.map(normalizeDashboard).filter((d) => d.uuid !== '')
+  return dashboardRows(body).map(normalizeDashboard).filter((d) => d.uuid !== '')
 }
 
 // ── Logs + Traces (O11y v5 composite query_range) ────────────────────────────

@@ -231,6 +231,19 @@ describe('normalizeDashboard / normalizeDashboards', () => {
     const out = normalizeDashboards({ status: 'success', data: [{ uuid: 'a', data: { title: 'A' } }, { data: { title: 'no uuid' } }] })
     expect(out.map((d) => d.uuid)).toEqual(['a'])
   })
+  // The shape GET /v1/o11y/dashboards actually answers today. Reading only
+  // `data` as an array emptied a 200 that carried real dashboards.
+  it('reads the live {status,data:{dashboards:[…],total,tags}} envelope', () => {
+    const out = normalizeDashboards({
+      status: 'success',
+      data: { dashboards: [{ uuid: 'd1', data: { title: 'Egress' } }], total: 1, tags: [] },
+    })
+    expect(out.map((d) => d.uuid)).toEqual(['d1'])
+    expect(out[0].title).toBe('Egress')
+  })
+  it('an empty live envelope is honestly empty, never a fabricated row', () => {
+    expect(normalizeDashboards({ status: 'success', data: { dashboards: [], total: 0, tags: [] } })).toEqual([])
+  })
 })
 
 describe('rawQueryPayload (O11y v5 query_range RAW)', () => {

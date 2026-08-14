@@ -3,59 +3,29 @@
 /**
  * The ONE honest state for an observability surface whose fetch failed.
  *
- * The `/v1/o11y` runtime returns 503 until its telemetry stores + query service
- * are initialized (and 404 where the surface is unrouted, 401/403 on access). We
- * never fabricate traces, sessions, scores, or charts — this card explains the
- * real reason and names the endpoint, so an empty observability area always reads
- * truthfully.
+ * The verdict and the words are `runtime.ts` (pure, tested against real statuses);
+ * this file only renders them. We never fabricate traces, sessions, scores, or
+ * charts — the card explains what the backend actually did and names the endpoint,
+ * so an empty observability area always reads truthfully.
  */
 import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { BarChart3, TriangleAlert } from '@hanzogui/lucide-icons-2'
 
-import { ApiError } from '~/lib/api'
 import { config } from '~/config'
 import { startReauth } from '~/lib/auth/iam'
-
-export type RuntimeStatus = 'not-initialized' | 'unavailable' | 'access' | 'signin' | 'error'
+import { runtimeCopy, type RuntimeStatus } from './runtime'
 
 /**
- * Map a failed o11y fetch to an honest runtime status. 401 = the session lapsed
- * (`signin` — re-auth fixes it); 403 = signed in but observability isn't enabled
- * for this org yet (`access`). A signed-in user is NEVER told to "sign in" for a
- * 403 — that reads like a bug ("I AM signed in").
+ * The states where AI Metrics is a genuine alternative: the org's own usage data
+ * (from the commerce billing ledger) is real and readable while the trace runtime
+ * is unprovisioned, unrouted, or not enabled for them. A 405 or a 5xx is a defect
+ * or an outage — offering a different page instead of naming the fault would read
+ * as a shrug, so those states link nowhere.
  */
-export function classifyRuntime(e: unknown): RuntimeStatus {
-  const s = e instanceof ApiError ? e.status : 0
-  if (s === 503) return 'not-initialized'
-  if (s === 404) return 'unavailable'
-  if (s === 401) return 'signin'
-  if (s === 403) return 'access'
-  return 'error'
-}
-
-const TITLE: Record<RuntimeStatus, string> = {
-  'not-initialized': 'Observability runtime initializing',
-  unavailable: 'Not routed on this host',
-  access: 'Observability not enabled yet',
-  signin: 'Your session expired',
-  error: 'Could not reach observability',
-}
+const OFFERS_METRICS: readonly RuntimeStatus[] = ['not-initialized', 'unavailable', 'access']
 
 export function RuntimeNotice({ surface, error }: { surface: string; error: unknown }) {
-  const status = classifyRuntime(error)
-  const message = error instanceof Error ? error.message : String(error)
-  const body: Record<RuntimeStatus, string> = {
-    'not-initialized': `Observability runtime initializing — your ${surface} will appear here once it's enabled. The /v1/o11y routes are mounted, but the runtime (telemetry stores, query service) is not initialized on this deployment yet. This page shows live ${surface} the moment the runtime is online.`,
-    unavailable: `The /v1/o11y/${surface} surface is not proxied on this host yet.`,
-    // 403 for a signed-in user — observability isn't provisioned for their org.
-    access: `Observability isn't enabled for your organization yet, so your ${surface} can't be read. It appears here automatically once it is.`,
-    // 401 — the session itself lapsed.
-    signin: `Your session has expired or isn't recognized here. Sign in again to view your ${surface}.`,
-    error: message,
-  }
-  // While the trace runtime is initializing / not enabled, AI Metrics already has
-  // real, per-org usage data (from the commerce billing ledger) — so we point there.
-  const showMetricsLink = status === 'not-initialized' || status === 'unavailable' || status === 'access'
+  const { status, title, body } = runtimeCopy(surface, error)
   const goToMetrics = () => {
     if (typeof window !== 'undefined') window.location.assign('/ai-metrics')
   }
@@ -64,17 +34,17 @@ export function RuntimeNotice({ surface, error }: { surface: string; error: unkn
       <XStack gap="$2" items="center">
         <TriangleAlert size={16} />
         <Text fontSize="$4" fontWeight="700">
-          {TITLE[status]}
+          {title}
         </Text>
       </XStack>
       <Text fontSize="$3" color="$color11">
-        {body[status]}
+        {body}
       </Text>
       {status === 'signin' ? (
         <Button size="$2" theme="light" self="flex-start" onPress={startReauth}>
           Sign in again
         </Button>
-      ) : showMetricsLink ? (
+      ) : OFFERS_METRICS.includes(status) ? (
         <Button size="$2" self="flex-start" icon={<BarChart3 size={15} />} onPress={goToMetrics}>
           View AI Metrics
         </Button>
