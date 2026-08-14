@@ -28,8 +28,8 @@ images:
 #
 # The export no longer travels as one request, so the 16 MiB edge ceiling recorded
 # above it no longer bounds a release: each file goes straight to object storage
-# against a presigned grant. It stopped being theoretical the moment every product
-# route became a real route — 281 of them, 627 files, 116 MB.
+# against a presigned grant. That ceiling is what a per-route export met at 627
+# files and 116 MB, and it is no longer the reason not to have one.
 #
 # build runs on a FRESH runner checkout with no node_modules, so it installs first,
 # and it uses pnpm — the packageManager this repo pins (npm would fetch a stray
