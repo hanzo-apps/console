@@ -4609,3 +4609,89 @@ published (0.2.7 at this writing); the npm credential that held it up is the
 `NPM_TOKEN` in `hanzo/shared-credentials`. The table wire moved off its old root
 address in the same pass, so a checkout still calling `/rest/v1/{table}` is
 addressing a path nothing serves.
+
+## Every navigation was a full page load, and the dev loop could not show it
+
+Clicking Profile in the account menu rebuilt the entire console — providers
+remounted, the session refetched, the screen went black for ~305ms. So did every
+other navigation in the app. The account menu is only where it was noticed,
+because a chrome affordance throwing the whole screen away reads as a bug in a way
+a page-to-page move does not.
+
+`AccountMenu` was never at fault: it calls `router.push('/profile')`, which is the
+correct client-side move and is what the sidebar, ⌘K and every other surface call
+too. The defect is one layer down, and it is structural.
+
+**Next's `router.push` must fetch an RSC payload for the target route.** This app
+is served as ONE index.html for every address — the export cannot pre-generate
+arbitrary product slugs — so there is none to fetch. Measured on console.hanzo.ai:
+
+    GET /profile   (RSC: 1)  ->  200  content-type: text/html
+    GET /profile.txt         ->  200  text/html, 380,392 bytes
+    GET /            	     ->  200  text/html, 380,392 bytes   (byte-identical)
+    GET /index.txt           ->  200  text/plain,  9,576 bytes   (the ONLY flight payload)
+
+`fetchServerResponse` checks `content-type` for `text/x-component`, gets HTML, and
+takes `doMpaNavigation` — `window.location.href = href`. That is not a fallback
+that occasionally fires; on this topology it is EVERY navigation. The app's own
+home page has carried a comment about "a client nav that hard-falls-back" since it
+was written, so the mechanism was known and its cost was not.
+
+**Navigation is a change of address now** (`src/lib/router.ts`). Next PATCHES
+`window.history.pushState` (`client/components/app-router.js`) to dispatch
+`ACTION_RESTORE` with the CURRENT tree, so `usePathname` holds the new address with
+no fetch, no route change and nothing unmounted; it copies its own `__NA` marker
+onto the entry, so Back and Forward stay client-side too (without it, `onPopState`
+calls `window.location.reload()`). Using the platform's own history API is what
+makes that work — it is not a bypass of the router, it is the seam the router
+publishes. Only `push` and `replace` are ours; `back`, `forward`, `refresh` and
+`prefetch` are Next's. Call sites keep the `router.push(path)` they already wrote:
+the import is the entire change in 103 of the files.
+
+Three things follow from the address being the truth:
+
+- **`ProductRoute` reads `usePathname()` instead of taking a slug.** A route param
+  is a snapshot of the address the DOCUMENT was loaded with, so once the address
+  moves without a load it keeps rendering the screen you came from. One renderer,
+  one source, and the two entry points become identical rather than merely similar.
+- **`/discover/<id>` joined the registry's router**, beside the category landing.
+  It existed only as a Next page file, which means it resolved on a dev server and
+  nowhere else — "Learn more" on every category page had quietly become a
+  no-such-page in production. Its `app/` file is deleted; one router.
+- **The content column goes back to the top on arrival.** A document load did that
+  for free. `TopOnArrival` is a leaf for the same reason `BreadcrumbsBar` is: it is
+  the only thing that subscribes to the route, so the shell around it still does not
+  re-render on a navigation.
+
+**This shipped because the dev loop cannot reproduce it.** `next dev` and
+`next start` are REAL Next servers: they generate an RSC payload for any route on
+demand, so `router.push` navigates client-side and everything looks right. The
+whole class of bug is invisible until the static export is served under
+production's one rule. `scripts/serve-export.mjs` is that rule and nothing else —
+the file, else index.html — so the topology now runs on a laptop:
+
+    pnpm build:embed && node scripts/serve-export.mjs 4123
+    BASE_URL=http://localhost:4123 pnpm exec playwright test e2e/navigation.spec.ts
+
+`e2e/navigation.spec.ts` measures the reload in the two layers a reload destroys —
+the JS realm (a value on `window`) and the DOM (an attribute stamped on a node the
+SHELL renders, which React replaces if it remounts the subtree). `window` alone
+cannot see a same-document navigation that nonetheless tears the app down; the DOM
+probe can. Both are proven able to FAIL against a real document load in the same
+run, because "it survived" is worthless from a probe that measures nothing.
+
+Proven both ways, in production's topology: against a static export of the parent
+commit the three navigation tests FAIL (`{realm: false, node: false}` — Profile,
+Back, and a rail product alike); against this one all five pass.
+
+**Concurrent and complementary**, landed in the same window by another lane: the
+sidebar rows are memoized and the assistant's context value is a stable `useMemo`,
+so the shell stops re-rendering when only the route changed. That is the React-level
+cost of a navigation; this is the document-level one. Both were the same report.
+
+**Deploy, unresolved and NOT guessed.** The `## CORRECTION` section above is right
+that go:embed is gone and the console is a published SITE — cloud reads the active
+release of `hanzo-console` from S3 at boot and on a poll. It is also right that the
+PUBLISHER was never found, and this change did not find it either. The code is on
+`forge/main` and `origin/main`; it is not live until something cuts a release, and
+building an image does not do it.
