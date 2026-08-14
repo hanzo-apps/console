@@ -205,8 +205,12 @@ function BoardView({ board, only }: { board: ReturnType<typeof useBoard>; only?:
         rows={rows}
         loading={board.loading}
         rowKey={(r) => `${r.kind}:${r.project ?? ''}:${r.slug}`}
+        // A site has a detail route (`platform/:name`); App Platform has only its index,
+        // so an app row opened `/app-platform/<slug>` — an address the registry never
+        // declared, i.e. "No such page" for every app on the board. Send it to the
+        // surface that does list apps rather than to a 404.
         onRowPress={(r) =>
-          router.push(r.kind === 'app' ? `/app-platform/${encodeURIComponent(r.slug)}` : `/platform/${encodeURIComponent(r.slug)}`)
+          router.push(r.kind === 'app' ? '/app-platform' : `/platform/${encodeURIComponent(r.slug)}`)
         }
         empty="Nothing deployed yet — start with New deployment."
       />

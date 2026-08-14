@@ -40,8 +40,13 @@ export function NotFound({ slug = [] }: { slug?: string[] }) {
             'Nothing was loaded and nothing was invented — an address that resolves to no product says so.',
             'Every product is reachable from the sidebar, or from search (⌘K).',
           ]}
+          // "Browse all products" used to push `/discover`, which is not an address:
+          // the product directory is a PANEL the shell opens (AddProductPanel), and
+          // only the per-product interstitial `/discover/<id>` is routed. So the page
+          // that exists to explain a dead link ended on one. The directory is reachable
+          // from the sidebar and ⌘K — as the bullets above already say — so this offers
+          // the one destination it can actually keep.
           primary={{ label: 'Go home', onPress: () => router.push('/') }}
-          secondary={{ label: 'Browse all products', onPress: () => router.push('/discover') }}
         />
       </FadeIn>
     </>

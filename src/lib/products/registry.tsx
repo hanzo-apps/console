@@ -2729,9 +2729,16 @@ export const catalog: CatalogEntry[] = [
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
-    // Single screen (link + copy, stat tiles, referrals list); the shared base
-    // sub-pages (status/logs/metrics/settings) resolve via the catch-all.
-    routes: [{ path: '', component: ReferralsModule }],
+    // Three surfaces (summary · history · earnings), so the `:tab` route is what makes
+    // the module's own tab strip land: it pushes `/referrals/<surface>`, and without
+    // this the two non-default tabs were "No such page" and `params.tab` could never
+    // arrive. Same shape as Experiments/Dashboards. The shared base sub-pages
+    // (status/logs/metrics/settings) still resolve via the catch-all, which takes
+    // precedence over `:tab` for exactly those four slugs.
+    routes: [
+      { path: '', component: ReferralsModule },
+      { path: ':tab', component: ReferralsModule },
+    ],
   },
   {
     // Global-admin operator board (hidden from every customer nav/palette).
