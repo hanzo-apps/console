@@ -53,7 +53,7 @@
  * NOT a JS media branch, so SSR and first paint match. The nav body (`SidebarNav`) is
  * shared by the sidebar, the flyout, and the drawer (DRY) — one definition, many mounts.
  */
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { memo, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button, Input, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
@@ -166,8 +166,11 @@ function ColorDot({ color, onPress, label }: { color: string; onPress: () => voi
   )
 }
 
-/** A fixed (non-catalog) sidebar link: Overview, Docs. */
-function FixedRow({
+/** A fixed (non-catalog) sidebar link: Overview, Docs. Memoized: the rail
+ *  re-renders on every navigation (usePathname), but a row only changes when its
+ *  own visible state does. The handler is stable in meaning for a given row, so
+ *  the comparator ignores its identity and re-renders on the visible props alone. */
+const FixedRow = memo(function FixedRow({
   icon: Icon,
   label,
   active,
@@ -197,12 +200,13 @@ function FixedRow({
       {collapsed ? undefined : label}
     </Button>
   )
-}
+}, (a, b) =>
+  a.icon === b.icon && a.label === b.label && a.active === b.active && a.external === b.external && a.collapsed === b.collapsed)
 
 /** A level-1 catalog row — colored product icon, opens the product; trailing is an
  *  expansion chevron (products with sub-pages) then a pin star (catalog rows) or a
- *  color/customize dot (pinned rows). */
-function NavRow({
+ *  color/customize dot (pinned rows). Memoized on its visible props — see FixedRow. */
+const NavRow = memo(function NavRow({
   entry,
   active,
   color,
@@ -296,7 +300,9 @@ function NavRow({
       ) : null}
     </XStack>
   )
-}
+}, (a, b) =>
+  a.entry === b.entry && a.active === b.active && a.color === b.color && a.collapsed === b.collapsed &&
+  a.pinned === b.pinned && a.expandable === b.expandable && a.expanded === b.expanded)
 
 /**
  * ONE level-2 row — a single page of the product the rail is currently showing.
@@ -310,8 +316,10 @@ function NavRow({
  * An unwired page is dimmed but honest — it opens a placeholder, never a dead link.
  * Both faces render through this one row: the full console's level 2 and the
  * product-shell face, whose nav IS its root module's pages.
+ *
+ * Memoized on its visible props — see FixedRow.
  */
-function SubRow({
+const SubRow = memo(function SubRow({
   id,
   sub,
   active,
@@ -343,7 +351,8 @@ function SubRow({
       {collapsed ? undefined : sub.label}
     </Button>
   )
-}
+}, (a, b) =>
+  a.id === b.id && a.sub === b.sub && a.active === b.active && a.collapsed === b.collapsed)
 
 /** A collapsible level-1 CATEGORY section — the ONE way the expanded sidebar groups
  *  products under a topic. EXPANDED by default; the header is FLUSH-LEFT (aligned
