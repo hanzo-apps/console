@@ -54,9 +54,16 @@ export function Provider({ children }: { children: ReactNode }) {
   // OrgAccentProvider lives INSIDE SessionProvider (it reads the session to resolve the
   // org's accent) and applies it at the document root — so every accent surface picks
   // up the org's brand color on load, DRY.
+  //
+  // IamProvider runs with autoInit OFF: it builds its OWN `IAM` instance, and its init
+  // effect resolves the session a second time — a second refresh POST against a
+  // one-time-use rotating token, racing the rotation SessionProvider already owns.
+  // SessionProvider is the single source of session truth (`AccountApi.session` → the
+  // single-flight `refreshSession`); this provider stays for the `useIam()` context its
+  // consumers read, and starts no session of its own.
   const tree = useMemo(
     () => (
-      <IamProvider config={iamConfig()}>
+      <IamProvider config={iamConfig()} autoInit={false}>
       <SessionProvider>
         <OrgAccentProvider />
         {/* Entitlements live inside the session (they read the signed-in account +
