@@ -9,6 +9,12 @@ import './design/index.css'
 // prefixed twins in globals.css below; these are the package's, and without this
 // import a DataTable's skeleton, row hover and tabular figures render unstyled.
 import '@hanzo/ui/styles/motion.css'
+// The glass material — the ONE translucent-ground-plus-backdrop-blur floating chrome
+// is made of across the estate. `~/components/ui/paper` names it (`.glass`); the blur,
+// the saturation and the 72% ground are declared only here, so the console cannot
+// drift a second copy of them. Menus, popovers and switchers have page UNDER them,
+// which is the whole rule for wearing it — an in-flow card keeps the surface ladder.
+import '@hanzo/ui/glass.css'
 import './globals.css'
 
 import type { Metadata, Viewport } from 'next'
