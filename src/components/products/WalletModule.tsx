@@ -112,7 +112,7 @@ export function WalletModule(_props: { params: Record<string, string> }) {
       setConn(c)
       void loadWalletHusd(c.address)
     } catch (e) {
-      setConnectErr(e instanceof Error ? e.message : 'Failed to connect wallet')
+      setConnectErr(e instanceof Error ? e.message : 'The wallet was not connected. Nothing was signed — try again, and check the wallet extension is unlocked.')
     } finally {
       setConnecting(false)
     }

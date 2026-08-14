@@ -30,7 +30,8 @@ export function SecureStep({ next, skip, back, isFirst }: StepProps) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  const fail = (e: unknown) => setErr(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
+  const fail = (e: unknown) =>
+    setErr(e instanceof ApiError ? e.message : 'Two-factor authentication was not changed — it is exactly as it was. Try again.')
 
   const start = async () => {
     setBusy(true)

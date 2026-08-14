@@ -109,7 +109,7 @@ export function NewTrainingPanel({
       onClose()
     } catch (e) {
       if (e instanceof ApiError && e.status === 402) setBilling(true)
-      setError(e instanceof Error ? e.message : 'Failed to start training job')
+      setError(e instanceof Error ? e.message : 'The training job was not started, so nothing is queued and nothing is billed. Try again.')
     } finally {
       setBusy(false)
     }

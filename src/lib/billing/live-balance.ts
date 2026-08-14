@@ -182,7 +182,7 @@ export function refreshBalance(opts: { force?: boolean; bypassBackoff?: boolean 
       if (code === 401 || code === 403) set({ phase: 'noauth', balance: null, error: undefined, updatedAt: Date.now() })
       // 404 = balance endpoint not routed here; 501 = COMMERCE_TOKEN unset — both honest "not available".
       else if (code === 404 || code === 501) set({ phase: 'unconfigured', balance: null, error: undefined, updatedAt: Date.now() })
-      else set({ phase: 'error', error: e instanceof Error ? e.message : 'Failed to load balance', updatedAt: Date.now() })
+      else set({ phase: 'error', error: e instanceof Error ? e.message : 'the balance service did not answer', updatedAt: Date.now() })
     } finally {
       // Schedule the next automatic attempt: healthy ⇒ POLL_MS, failing ⇒ backoff.
       nextAttemptAt = Date.now() + backoffDelay(failures)

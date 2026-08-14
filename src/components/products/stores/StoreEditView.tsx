@@ -26,7 +26,7 @@ export function StoreEditView({ name, onDone }: { name: string; onDone: () => vo
         }
       })
       .catch((e: unknown) => {
-        if (live) setError(e instanceof ApiError ? e.message : 'Failed to load store')
+        if (live) setError(e instanceof ApiError ? e.message : 'This store did not load. Go back and open it again.')
       })
       .finally(() => {
         if (live) setLoading(false)
@@ -66,7 +66,7 @@ export function StoreEditView({ name, onDone }: { name: string; onDone: () => vo
       await StoreApi.update(s.owner, name, s)
       if (exit) onDone()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to save store')
+      setError(e instanceof ApiError ? e.message : 'The store was not saved. Your edits are still here — try again.')
     } finally {
       setSaving(false)
     }

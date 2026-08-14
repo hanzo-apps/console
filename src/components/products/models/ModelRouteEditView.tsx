@@ -42,7 +42,7 @@ export function ModelRouteEditView({
         }
       })
       .catch((e: unknown) => {
-        if (live) setError(e instanceof ApiError ? e.message : 'Failed to load model route')
+        if (live) setError(e instanceof ApiError ? e.message : 'This route did not load. Go back and open it again.')
       })
       .finally(() => {
         if (live) setLoading(false)
@@ -90,7 +90,7 @@ export function ModelRouteEditView({
       }
       if (exit || isNew) onDone()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to save model route')
+      setError(e instanceof ApiError ? e.message : 'The route was not saved. Your edits are still here — try again.')
     } finally {
       setSaving(false)
     }

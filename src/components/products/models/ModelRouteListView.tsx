@@ -44,7 +44,7 @@ export function ModelRouteListView({
       setRows(rows ?? [])
       setError(null)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to load model routes')
+      setError(e instanceof ApiError ? e.message : 'The model routes could not be read. Reload the page to try again.')
     } finally {
       setLoading(false)
     }
@@ -60,7 +60,7 @@ export function ModelRouteListView({
       await ModelRouteApi.remove(r)
       setRows((rs) => rs.filter((x) => x.modelName !== r.modelName))
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to delete model route')
+      setError(e instanceof ApiError ? e.message : 'The route was not deleted. It is still in the list — try again.')
     }
   }
 
