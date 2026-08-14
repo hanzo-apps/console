@@ -221,7 +221,7 @@ export function AgentQuickstart({
     } catch (e) {
       // A failed run answers 502 with the RUN as its body, so this message is the
       // run's own reason — not a generic transport failure.
-      setRunError(e instanceof Error ? e.message : 'The run did not complete.')
+      setRunError(e instanceof Error ? e.message : 'The run stopped before it finished. The agent is saved — run it again from here.')
     } finally {
       setRunning(false)
     }

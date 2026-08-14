@@ -146,7 +146,7 @@ export function Terminal() {
         )
         if (!alive) return
         setSrc(terminalFor(config.apiUrl, m.id, pass.ticket, SESSION))
-        waiting = setTimeout(() => end('The terminal did not come up.'), READY_BY)
+        waiting = setTimeout(() => end('The terminal did not answer in time. The sandbox may still be starting — close this and open it again.'), READY_BY)
       } catch (err) {
         end(reason(err))
       }

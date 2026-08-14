@@ -201,20 +201,20 @@ export function DocTypeDetail({ client, doctype, name, project, onBack, onView }
           {editing ? (
             <>
               {!isNew ? (
-                <Button size="$2" icon={<X size={15} />} disabled={busy} onPress={() => { setDraft(record ? { ...record } : {}); setEditing(false); setSaveError(null) }}>Cancel</Button>
+                <Button size="$2" icon={<X size={15} />} disabled={busy} onPress={() => { setDraft(record ? { ...record } : {}); setEditing(false); setSaveError(null) }}>Discard changes</Button>
               ) : null}
               <PrimaryButton size="$2" icon={<Save size={15} />} disabled={busy} onPress={save}>
-                {busy ? 'Saving…' : isNew ? 'Create' : 'Save'}
+                {busy ? 'Saving…' : isNew ? 'Create record' : 'Save record'}
               </PrimaryButton>
             </>
           ) : (
             <>
               <Button size="$2" theme="red" icon={<Trash2 size={15} />} disabled={busy} onPress={() => setConfirmingDelete(true)}>Delete</Button>
               {canCancel ? (
-                <Button size="$2" icon={<Ban size={15} />} disabled={busy} onPress={() => run(() => client.records.cancel(doctype, String(record!.name)))}>Cancel doc</Button>
+                <Button size="$2" icon={<Ban size={15} />} disabled={busy} onPress={() => run(() => client.records.cancel(doctype, String(record!.name)))}>Cancel document</Button>
               ) : null}
               {canSubmit ? (
-                <Button size="$2" icon={<Send size={15} />} disabled={busy} onPress={() => run(() => client.records.submit(doctype, String(record!.name)))}>Submit</Button>
+                <Button size="$2" icon={<Send size={15} />} disabled={busy} onPress={() => run(() => client.records.submit(doctype, String(record!.name)))}>Submit document</Button>
               ) : null}
               {canPublish ? (
                 status === 'Published' ? (
@@ -233,7 +233,7 @@ export function DocTypeDetail({ client, doctype, name, project, onBack, onView }
         <Card borderWidth={1} borderColor="$red7" bg="$red2" p="$3" gap="$2" maxWidth={620}>
           <Text fontSize="$3" fontWeight="700">Delete “{title}”? This cannot be undone.</Text>
           <XStack gap="$2">
-            <Button size="$2" theme="red" disabled={busy} onPress={remove}>{busy ? 'Deleting…' : 'Confirm delete'}</Button>
+            <Button size="$2" theme="red" disabled={busy} onPress={remove}>{busy ? 'Deleting…' : 'Delete permanently'}</Button>
             <Button size="$2" disabled={busy} onPress={() => setConfirmingDelete(false)}>Cancel</Button>
           </XStack>
         </Card>

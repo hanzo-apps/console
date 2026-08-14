@@ -68,7 +68,7 @@ export function OrgOnboarding() {
         body: JSON.stringify(payload),
       })
     } catch {
-      setError('Network error — please try again.')
+      setError('Your organization was not created — the request never reached us. Check your connection and try again.')
       setBusy(false)
       return
     }
@@ -150,7 +150,7 @@ export function OrgOnboarding() {
               </Text>
             </YStack>
             <Button size="$3" chromeless onPress={() => signIn()}>
-              Continue
+              Sign in now
             </Button>
           </Card>
         </FadeIn>

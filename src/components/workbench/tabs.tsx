@@ -161,7 +161,7 @@ export function OverviewTab({ records, onGo }: { records: UsageRecord[]; onGo: (
       setNewKey(r.accessKey)
       setKey(await KeysApi.status())
     } catch (e) {
-      setKeyErr(e instanceof Error ? e.message : 'Could not create the key.')
+      setKeyErr(e instanceof Error ? e.message : 'No key was created, and any key you already had still works. Try again.')
     } finally {
       setCreating(false)
     }
@@ -509,7 +509,7 @@ export function WebhooksTab({ onGo }: { onGo: (path: string) => void }) {
       <Center>
         <Webhook size={22} color="$color9" />
         <Text fontSize="$3" fontWeight="600" color="$color12">
-          {available ? 'No webhook endpoints yet' : 'Webhooks are coming'}
+          {available ? 'No webhook endpoints yet' : 'Webhooks are not served here'}
         </Text>
         <Text fontSize="$2" color="$color10" style={{ textAlign: 'center', maxWidth: 460 }}>
           {available
