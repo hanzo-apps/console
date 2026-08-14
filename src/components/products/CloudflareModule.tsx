@@ -23,7 +23,7 @@
  *   - anything else → the shared `BackendStateCard`. Never placeholder data.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, Cloud, ExternalLink, Globe, Plus, Power, RefreshCw, Rocket, Trash2, Upload, Zap } from '@hanzogui/lucide-icons-2'
 

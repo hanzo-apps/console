@@ -11,7 +11,7 @@
  * independently.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack } from '@hanzo/gui'
 import { ExternalLink, RefreshCw } from '@hanzogui/lucide-icons-2'
 

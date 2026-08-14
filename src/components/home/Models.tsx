@@ -18,7 +18,7 @@
  * its hue table — ours are the mark, not a tile — so a bespoke palette here would
  * be off-brand by construction and would drift the moment a vendor hue changed.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight } from '@hanzogui/lucide-icons-2'
 

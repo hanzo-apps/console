@@ -19,7 +19,7 @@
 import { useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { AppWindow, Globe, Layers, Plus, RefreshCw, Rocket } from '@hanzogui/lucide-icons-2'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { DataTable, MetricCard, PageHeader, PrimaryButton, StatusTag, type Column } from '@hanzo/ui/product'
 import { SubNav } from '~/components/ui/SubNav'

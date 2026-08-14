@@ -9,7 +9,7 @@
  * A row opens the issue detail (`/sentry/issues/:id`).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, AlertTriangle, RefreshCw, TrendingUp, Users } from '@hanzogui/lucide-icons-2'
 

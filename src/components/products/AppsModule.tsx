@@ -28,7 +28,7 @@
  * BackendStateCard on 401/403/404/503 — never a fabricated row.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { AppWindow, Cpu, ExternalLink, Globe, HardDrive, Pencil, RefreshCw, Rocket, X } from '@hanzogui/lucide-icons-2'
 

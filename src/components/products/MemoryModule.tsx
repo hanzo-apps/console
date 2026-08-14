@@ -12,7 +12,7 @@
  * shared toast.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, Trash, Search, ArrowLeft, Save, RefreshCw } from '@hanzogui/lucide-icons-2'
 

@@ -8,7 +8,7 @@
  * the Accounts tab. Every number is real or an honest "—"; nothing is fabricated.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Boxes, RefreshCw, ArrowRight, Gauge, ExternalLink } from '@hanzogui/lucide-icons-2'
 

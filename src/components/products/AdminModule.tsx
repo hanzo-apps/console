@@ -9,7 +9,7 @@
  * access-required (401/403/unauthorized), error, and empty are all honest states.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, ExternalLink, Plus, Trash2, ShieldCheck, ShieldOff } from '@hanzogui/lucide-icons-2'
 

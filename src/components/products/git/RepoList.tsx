@@ -15,7 +15,7 @@
  * never a fabricated repo. This is the hub's front door to "all our code in one place".
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { FolderGit2, GitBranch, RefreshCw, Search } from '@hanzogui/lucide-icons-2'
 

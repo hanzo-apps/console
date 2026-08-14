@@ -24,7 +24,7 @@
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug, subpageHref } from '~/lib/products/match'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import type { ComponentType } from 'react'
 import {

@@ -7,7 +7,7 @@
  * every product (in-console module or external surface) gets a discover screen
  * with no per-product code.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import {
   ArrowLeft,

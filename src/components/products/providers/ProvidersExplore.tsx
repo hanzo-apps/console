@@ -13,7 +13,7 @@
  * loading/error/empty — never a fabricated provider.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Boxes,

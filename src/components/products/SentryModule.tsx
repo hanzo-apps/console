@@ -13,7 +13,7 @@
  * list (the shared project-filter source) is fetched ONCE here and threaded down.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, AlertTriangle, Boxes, Compass, Route, ScrollText, Users } from '@hanzogui/lucide-icons-2'
 

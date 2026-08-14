@@ -9,7 +9,7 @@
  * honest states), never fabricated spans.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, RefreshCw } from '@hanzogui/lucide-icons-2'
 

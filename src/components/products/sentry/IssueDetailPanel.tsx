@@ -8,7 +8,7 @@
  * (loading / shared `ErrorState` / honest empties) — never a fabricated frame.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, CheckCircle2, EyeOff, GitBranch, RefreshCw, Route } from '@hanzogui/lucide-icons-2'
 

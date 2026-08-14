@@ -7,7 +7,7 @@
  * managed by the platform administrator, not per organization, and points the way
  * back. Access is always enforced server-side; this is only the friendly UI gate.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import type { CatalogEntry, ProductSubpage } from '~/lib/products/registry'
 import { config } from '~/config'

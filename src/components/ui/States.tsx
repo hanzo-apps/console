@@ -11,7 +11,7 @@
  * (401), or "Add credits" (402 → `/billing/credits`). Per-call copy overrides keep
  * surface-specific guidance (e.g. the IAM admin API) without duplicating the structure.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { TriangleAlert, Lock, CreditCard } from '@hanzogui/lucide-icons-2'
 

@@ -11,7 +11,7 @@
  * Rendered by the catch-all when `resolveView` returns a `stub`, so every
  * declared and base sub-page resolves to something truthful.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import type { CatalogEntry, ProductSubpage } from '~/lib/products/registry'
 import { config } from '~/config'

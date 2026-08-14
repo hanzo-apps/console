@@ -24,7 +24,7 @@
  * anchor a Popover to).
  */
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Text, XStack, YStack } from '@hanzo/gui'
 import { BookOpen, Globe, Info, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 

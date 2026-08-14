@@ -28,7 +28,7 @@
  * never a fabricated project or issue.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Text, XStack, YStack } from '@hanzo/gui'
 import {
   ClipboardList,

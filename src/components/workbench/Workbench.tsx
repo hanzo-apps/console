@@ -27,7 +27,7 @@
  * id router live in the pure `./logic` (tested).
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Activity,

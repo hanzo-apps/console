@@ -23,7 +23,7 @@
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, Coins, Gauge, GitBranch, PiggyBank, Route, ShieldCheck, Sparkles, TrendingDown, Waypoints } from '@hanzogui/lucide-icons-2'
 

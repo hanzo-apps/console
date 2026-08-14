@@ -53,8 +53,19 @@
  * NOT a JS media branch, so SSR and first paint match. The nav body (`SidebarNav`) is
  * shared by the sidebar, the flyout, and the drawer (DRY) — one definition, many mounts.
  */
-import { memo, useMemo, useState, type ComponentType, type ReactNode } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+  type ComponentType,
+  type ReactNode,
+  type RefObject,
+} from 'react'
+import { usePathname } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Input, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
 import {
   BarChart3,
@@ -917,6 +928,27 @@ function ProductGuide() {
   return <ProductGuidePanel pathname={pathname} />
 }
 
+/** The content column, as something that can be put back to the top. */
+type Scroller = ComponentRef<typeof ScrollView>
+
+/**
+ * A new screen starts at the top.
+ *
+ * A document load always did this for free, and navigation is no longer a document
+ * load — the address moves on the history API and the content column keeps whatever
+ * offset the last screen was read at, so a product opened from halfway down the
+ * previous one opens halfway down. A LEAF for the same reason `BreadcrumbsBar` is:
+ * it is the only thing here that subscribes to the route, so the shell around it
+ * still does not re-render on a navigation.
+ */
+function TopOnArrival({ content }: { content: RefObject<Scroller | null> }) {
+  const pathname = usePathname() ?? ''
+  useEffect(() => {
+    content.current?.scrollTo({ y: 0, animated: false })
+  }, [pathname, content])
+  return null
+}
+
 export function Dashboard({ children }: { children: ReactNode }) {
   // NB: the shell does NOT subscribe to `usePathname()` — that is confined to the
   // leaves that actually depend on the route (`SidebarNav` for the active highlight,
@@ -935,6 +967,9 @@ export function Dashboard({ children }: { children: ReactNode }) {
   // Collapsed-rail hover flyout (desktop only): the full sidebar overlays the content
   // without pushing it, revealed while the pointer is over the rail/flyout.
   const [flyout, setFlyout] = useState(false)
+  // Held here because the shell owns the scroller; read only by `TopOnArrival`, so
+  // holding it costs the shell no route subscription.
+  const content = useRef<Scroller | null>(null)
 
   const collapsed = get<boolean>('sidebarCollapsed', false)
   const toggleCollapsed = () => {
@@ -1077,9 +1112,10 @@ export function Dashboard({ children }: { children: ReactNode }) {
         <BreadcrumbsBar />
 
         {/* Content — a centered, capped column so wide desktops read comfortably. */}
-        <ScrollView flex={1}>
+        <ScrollView flex={1} ref={content}>
           <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
             <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
+              <TopOnArrival content={content} />
               <ProductGuide />
               {children}
               <ConsoleFooter />

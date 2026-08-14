@@ -27,7 +27,8 @@
  * not a reason to withhold the fact that the provider exists.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Cable, Plug, RefreshCw, GitBranch } from '@hanzogui/lucide-icons-2'
 

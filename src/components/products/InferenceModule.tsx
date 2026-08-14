@@ -18,7 +18,7 @@
  * InferenceServices for endpoints, the commerce usage ledger for requests/tokens/spend)
  * or an honest "—" / empty state — never the mockup's placeholder figures.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { XStack, YStack } from '@hanzo/gui'
 import { Plus } from '@hanzogui/lucide-icons-2'
 

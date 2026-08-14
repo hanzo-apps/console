@@ -179,6 +179,7 @@ import { DatasetItemsModule, DatasetRunsModule, DatasetsModule } from '~/compone
 import { resourceRoutes } from '~/components/products/ResourceModule'
 import { overviewFor } from '~/components/products/overview/NativeOverview'
 import { CategoryOverview } from '~/components/products/overview/CategoryOverview'
+import { ProductInterstitial } from '~/components/products/ProductInterstitial'
 import {
   StoreProductsModule,
   StoreOrdersModule,
@@ -3844,12 +3845,29 @@ const categoryRouteModule: ProductModule = {
   routes: [{ path: ':slug', component: CategoryOverview }],
 }
 
-/** The in-console subset, in catalog order, plus the category-landing router. */
+/**
+ * `/discover/<id>` — what one product IS, before you open it. Registered here for the
+ * same reason the category landing is: this router is the ONLY one production has.
+ * The bundle serves a single index.html for every address, so a screen that lives
+ * only as a Next page file is reachable on a dev server and nowhere else — which is
+ * what "Learn more" on every category page had quietly become.
+ */
+export const DISCOVER_ROUTE_ID = 'discover'
+const discoverRouteModule: ProductModule = {
+  id: DISCOVER_ROUTE_ID,
+  label: 'Discover',
+  icon: Boxes,
+  description: 'What a product is',
+  routes: [{ path: ':id', component: ({ params }) => <ProductInterstitial id={params.id ?? ''} /> }],
+}
+
+/** The in-console subset, in catalog order, plus the two landing routers. */
 export const productModules: ProductModule[] = [
   ...catalog
     .filter((e): e is Extract<CatalogEntry, { kind: 'module' }> => e.kind === 'module')
     .map(({ id, label, icon, description, routes }) => ({ id, label, icon, description, routes })),
   categoryRouteModule,
+  discoverRouteModule,
 ]
 
 /** Look up any catalog entry by id. */

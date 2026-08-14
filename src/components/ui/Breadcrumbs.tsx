@@ -7,7 +7,8 @@
  * free), and trailing segments are the detail params. Links jump; the category
  * and the current leaf are plain text. Nothing renders on the home route.
  */
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Text, XStack } from '@hanzo/gui'
 import { ChevronRight } from '@hanzogui/lucide-icons-2'
 

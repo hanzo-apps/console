@@ -15,7 +15,7 @@
  * the badges/filter degrade away — never a fabricated "in use".
  */
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, Plus, Search, Star } from '@hanzogui/lucide-icons-2'
 

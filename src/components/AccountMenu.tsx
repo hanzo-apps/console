@@ -25,7 +25,7 @@
  * top-up button — so the copy in here was the same fact twice, the second time
  * behind a click.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Text, YStack } from '@hanzo/gui'
 import { BookOpen, LogOut, Receipt, Users, UserRound } from '@hanzogui/lucide-icons-2'
 import { useThemeSetting } from '@hanzogui/next-theme'

@@ -15,7 +15,7 @@
  * level-2 sub-nav (both push `/code/<tab>`), matching the other tabbed products.
  */
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Code2 } from '@hanzogui/lucide-icons-2'
 

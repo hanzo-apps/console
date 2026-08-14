@@ -16,7 +16,7 @@
  * so a customer only ever sees + edits their OWN content, and an un-set-up org
  * sees the "Set up Content" install CTA — never a fabricated page.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { FrameworkApi } from '~/lib/framework/client'
 import { useScope } from '~/lib/scope-context'

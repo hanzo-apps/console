@@ -27,7 +27,7 @@
  * declaration, and `productSubpageSlug` validates the URL against it. This module
  * only decides what each tab SHOWS.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { YStack } from '@hanzo/gui'
 
 import { productSubpageSlug } from '~/lib/products/match'

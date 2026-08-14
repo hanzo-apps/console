@@ -8,7 +8,7 @@
  * has access. Management (invite/role/remove) hands off to the one Team module.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Building2, RefreshCw, Settings2, Users } from '@hanzogui/lucide-icons-2'
 

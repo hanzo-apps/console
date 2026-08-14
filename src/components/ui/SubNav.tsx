@@ -21,7 +21,8 @@
  * Level is carried by the URL and nothing else, so a reload, a deep link, and Back
  * all resolve to the same tab (`activeSubpage`).
  */
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, XStack } from '@hanzo/gui'
 import {
   Activity,

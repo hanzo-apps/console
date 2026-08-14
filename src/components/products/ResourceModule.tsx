@@ -22,7 +22,7 @@
  * `resourceRoutes(opts)` returns the index + `:name` routes bound to ONE component
  * instance — registry entries declare a managed kind with a single call.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import type { ResourceKind } from '~/lib/api'
 import type { ProductRoute } from '~/lib/products/registry'

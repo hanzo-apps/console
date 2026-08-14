@@ -17,7 +17,7 @@
  * only ever sees + edits their OWN ERP data, and an un-set-up org sees the "Set up
  * ERP" install CTA — never a fabricated record and never the old cross-tenant desk.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { FrameworkApi } from '~/lib/framework/client'
 import { CollectionsBrowser } from '~/components/doctype/CollectionsBrowser'

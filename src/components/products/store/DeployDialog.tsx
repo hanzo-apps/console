@@ -13,7 +13,7 @@
  * (never a fabricated success). An app with no buildable repo never reaches this dialog.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUpRight, Check, Github, Rocket } from '@hanzogui/lucide-icons-2'
 

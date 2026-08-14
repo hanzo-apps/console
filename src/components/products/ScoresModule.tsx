@@ -8,7 +8,7 @@
  * never fabricated scores or charts. A score links to its trace.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack } from '@hanzo/gui'
 import { ChevronRight, RefreshCw } from '@hanzogui/lucide-icons-2'
 

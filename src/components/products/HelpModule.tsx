@@ -15,7 +15,7 @@
  * sees + edits ONLY its own tickets/agents, and an un-set-up org sees the "Set up Help
  * Center" install CTA — never a fabricated ticket and never the old shared-desk iframe.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { FrameworkApi } from '~/lib/framework/client'
 import { CollectionsBrowser } from '~/components/doctype/CollectionsBrowser'

@@ -13,7 +13,7 @@
  * `ApiKeysModule` wraps it with the page header for the standalone Dev route.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Copy, Check, KeyRound, RefreshCw, Trash2, TriangleAlert, Plus } from '@hanzogui/lucide-icons-2'
 

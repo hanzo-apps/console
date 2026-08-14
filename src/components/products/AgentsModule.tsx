@@ -20,7 +20,7 @@
  * Style props use the @hanzo/gui v5 shorthand set (bg/p/px/py/gap/rounded/items/…).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { useAnalytics } from '@hanzo/event/react'
 import { EVENTS } from '@hanzo/event'

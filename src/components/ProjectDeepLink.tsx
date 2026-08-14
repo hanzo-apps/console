@@ -9,7 +9,8 @@
  * `useSearchParams` needs a Suspense boundary (Next 15); this renders nothing.
  */
 import { Suspense, useEffect, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { useScope } from '~/lib/scope-context'
 import { PROJECT_PARAM } from '~/lib/products/cross-surface'

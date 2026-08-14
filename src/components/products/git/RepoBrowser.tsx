@@ -10,7 +10,8 @@
  * The header carries the agentic handoffs (Ask AI · Edit in hanzo.app · Chat).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, CircleDot, GitBranch, GitPullRequest, Play, Rocket } from '@hanzogui/lucide-icons-2'
 

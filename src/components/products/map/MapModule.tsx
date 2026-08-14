@@ -16,7 +16,7 @@
  */
 import { useMemo, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight, ExternalLink, Gauge, Network, RefreshCw } from '@hanzogui/lucide-icons-2'
 import { useThemeSetting } from '@hanzogui/next-theme'

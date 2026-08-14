@@ -7,7 +7,7 @@
  * empty state, a failed load the shared `ErrorState`, never fabricated log lines.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, Route } from '@hanzogui/lucide-icons-2'
 

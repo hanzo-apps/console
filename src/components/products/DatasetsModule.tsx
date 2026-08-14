@@ -13,7 +13,7 @@
  * add always work; nothing is fabricated.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, RefreshCw, Database, Trash2 } from '@hanzogui/lucide-icons-2'
 

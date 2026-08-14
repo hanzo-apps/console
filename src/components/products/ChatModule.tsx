@@ -9,7 +9,7 @@
  * (`ChatView`). One module, three composable views; nothing fabricated.
  */
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { ChatConversation } from './chat/ChatConversation'
 import { ChatListView } from './chat/ChatListView'

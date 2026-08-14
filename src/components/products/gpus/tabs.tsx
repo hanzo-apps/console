@@ -10,7 +10,7 @@
  * thing that was broken for customers), and the active tab is highlighted. `active`
  * is the current `params.tab` (`''` = Overview), resolved by the caller from the route.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, XStack } from '@hanzo/gui'
 
 import { useAccent } from '~/lib/theme/accent'

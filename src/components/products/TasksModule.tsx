@@ -19,7 +19,7 @@
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, CheckCircle2, XCircle, PauseCircle, Timer, Zap, RefreshCw, ChevronRight } from '@hanzogui/lucide-icons-2'
 

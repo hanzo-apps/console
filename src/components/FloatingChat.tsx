@@ -40,7 +40,8 @@
  * Mounted once in the dashboard layout, so a single instance serves all children.
  */
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Dialog, Text, VisuallyHidden, XStack, YStack, useMedia } from '@hanzo/gui'
 import { Mic, PanelRight, PanelRightClose, Sparkles, X } from '@hanzogui/lucide-icons-2'
 

@@ -13,7 +13,7 @@
  * next push — the empty state says so honestly rather than implying the repo is missing.
  */
 import { useCallback, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ScanSearch, Search, Sparkles, TriangleAlert } from '@hanzogui/lucide-icons-2'
 

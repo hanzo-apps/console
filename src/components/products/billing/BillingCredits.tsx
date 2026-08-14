@@ -21,7 +21,7 @@
  * to prevent a double-charge), success. Crypto (HUSD) stays a secondary option.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { CreditCard, ShieldCheck, Check, ArrowRight, Coins, FlaskConical } from '@hanzogui/lucide-icons-2'
 

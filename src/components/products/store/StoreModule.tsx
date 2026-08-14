@@ -9,7 +9,7 @@
  * OSS Author program — never fabricated data, never a dead link.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { HandCoins, RefreshCw, Store } from '@hanzogui/lucide-icons-2'
 

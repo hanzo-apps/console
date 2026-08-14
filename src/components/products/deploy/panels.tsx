@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, ExternalLink } from '@hanzogui/lucide-icons-2'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { GitopsApi, type Application } from '~/lib/api/gitops'
 import { BuildsApi, type Build } from '~/lib/api/builds'

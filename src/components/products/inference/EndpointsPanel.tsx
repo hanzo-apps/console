@@ -10,7 +10,7 @@
  * yet" first-run surface — never the mockup's placeholder rows.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { LayoutGrid, List as ListIcon, MoreVertical, Zap } from '@hanzogui/lucide-icons-2'
 

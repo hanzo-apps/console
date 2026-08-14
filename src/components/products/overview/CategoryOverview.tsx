@@ -14,7 +14,8 @@
  *
  * All style props use the v5 shorthand set (bg/p/px/py/gap/rounded/items/self/...).
  */
-import { notFound, useRouter } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import {
   Activity,

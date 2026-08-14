@@ -11,7 +11,8 @@
  * never a fake success.
  */
 import { Suspense, useCallback, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { CheckCircle2, ArrowRight, ShieldAlert, UserPlus } from '@hanzogui/lucide-icons-2'
 

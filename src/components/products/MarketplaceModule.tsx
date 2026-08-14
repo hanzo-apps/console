@@ -18,7 +18,7 @@
  * All style props use the v5 shorthand set (bg/p/px/py/gap/rounded/items/self/…).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, X, Play, ArrowRight, ShieldCheck, Store } from '@hanzogui/lucide-icons-2'
 

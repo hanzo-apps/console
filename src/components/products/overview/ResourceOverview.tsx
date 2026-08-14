@@ -23,7 +23,7 @@
  * PaaS/GPU/Machines modules use) — this ADDS a section to the home, it does not restyle.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight, Cpu, RefreshCw, Rocket, Server } from '@hanzogui/lucide-icons-2'
 

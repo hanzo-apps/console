@@ -16,7 +16,7 @@
  * for full specs/pricing/features. Honest loading/error/empty; nothing fabricated.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, ArrowLeft, Play, Settings2, Copy, Boxes, ChevronDown, ChevronRight } from '@hanzogui/lucide-icons-2'
 

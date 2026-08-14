@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Anchor, Text, XStack } from '@hanzo/gui'
 import { config } from '~/config'
 import { getBrand } from '~/lib/branding/brands'

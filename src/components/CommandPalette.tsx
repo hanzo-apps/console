@@ -40,7 +40,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { useThemeSetting } from '@hanzogui/next-theme'
 import {
   Anchor,

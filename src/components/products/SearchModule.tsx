@@ -19,7 +19,8 @@
  * Strictly @hanzo/gui v5 shorthands.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { BookOpen, ExternalLink, Globe, Search as SearchIcon } from '@hanzogui/lucide-icons-2'
 

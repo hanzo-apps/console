@@ -1,16 +1,22 @@
 'use client'
 
 /**
- * The ONE product-route renderer. Resolves a slug against the registry and renders
- * the module (or an honest sub-page stub / admin notice / interstitial), inside the
- * product error boundary. Used by BOTH the `app/(dashboard)/[...slug]` catch-all
- * (slug from the route params, on a real Next server) AND the dashboard home
- * (`app/(dashboard)/page.tsx`, slug from `usePathname()` — see the note there),
- * so the one-binary STATIC embed resolves deep links client-side from the live URL
- * even though cloud serves the single root `index.html` for every path. One
- * definition, both entry points — no duplicated routing.
+ * The ONE product-route renderer. Resolves the ADDRESS against the registry and
+ * renders the module (or an honest sub-page stub / admin notice / interstitial),
+ * inside the product error boundary. Mounted by the `app/(dashboard)/[...slug]`
+ * catch-all and by the dashboard home (`app/(dashboard)/page.tsx`), because the
+ * STATIC bundle serves one index.html for every path and the home is what the
+ * browser actually loaded for a deep link.
+ *
+ * It reads `usePathname()` rather than taking a slug, and that is load-bearing rather
+ * than tidy. Navigation carries the address on the history API (see `~/lib/router`),
+ * which changes the URL WITHOUT changing the Next route — so a route param is a
+ * snapshot of the address the document was loaded with, and would keep rendering the
+ * screen you came from. One reader of one source: the URL.
  */
-import { resolveView, isAdminRoute } from '~/lib/products/match'
+import { usePathname } from 'next/navigation'
+
+import { resolveView, isAdminRoute, slugOf } from '~/lib/products/match'
 import { findEntry } from '~/lib/products/registry'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { ProductSubpageStub } from '~/components/products/ProductSubpageStub'
@@ -20,8 +26,9 @@ import { AdminManagedNotice } from '~/components/products/AdminManagedNotice'
 import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
 import { NotFound } from '~/components/NotFound'
 
-export function ProductRoute({ slug }: { slug: string[] }) {
+export function ProductRoute() {
   const showAdmin = useIsSuperAdmin()
+  const slug = slugOf(usePathname() ?? '')
   const view = resolveView(slug)
 
   // Rendered, not Next's `notFound()`: the production console IS the static embed,

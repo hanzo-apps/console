@@ -18,7 +18,7 @@
  * SPA's index.html for every path and the resolution happens client-side) and by
  * `app/not-found.tsx` (Next's own boundary for a path no route file claims).
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { FileQuestion } from '@hanzogui/lucide-icons-2'
 
 import { EmptyState, FadeIn, PageHeader } from '@hanzo/ui/product'

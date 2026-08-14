@@ -29,7 +29,7 @@
  * their own org.
  */
 import { useCallback, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Text, YStack } from '@hanzo/gui'
 import { FolderGit2, Plus, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 

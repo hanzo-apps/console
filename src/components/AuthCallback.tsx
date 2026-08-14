@@ -17,7 +17,7 @@
  * can bounce the still-unauthenticated visitor to `/signin` (which would discard `?code`).
  */
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { useIam } from '@hanzo/iam/react'
 import { Button, Text, YStack } from '@hanzo/gui'
 

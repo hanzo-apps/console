@@ -11,7 +11,7 @@
  * Routing: `/providers` lists; `/providers/<name>` edits one. The module reads
  * the `name` route param to decide which view to show.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { ProviderListView } from './providers/ProviderListView'
 import { ProviderEditView } from './providers/ProviderEditView'

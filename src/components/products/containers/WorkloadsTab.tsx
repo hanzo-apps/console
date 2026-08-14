@@ -9,7 +9,7 @@
  * live on the Pods tab; this workload-level board shows what the inventory exposes.
  */
 import { useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronRight } from '@hanzogui/lucide-icons-2'
 

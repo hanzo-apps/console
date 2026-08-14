@@ -103,6 +103,18 @@ export const SLUG_ALIASES: Record<string, string> = {
   records: 'base',
 }
 
+/**
+ * The address, as the segments the registry matches against. `/` → `[]`.
+ *
+ * ONE reader, because the URL is the app's only source of truth about which screen
+ * it is on: production serves one index.html for every address, so a slug can never
+ * come from a route param without the two disagreeing the moment the address changes
+ * without a document load.
+ */
+export function slugOf(pathname: string): string[] {
+  return pathname.split('/').filter(Boolean)
+}
+
 /** Canonicalize the FIRST slug segment through `SLUG_ALIASES` (identity if none). */
 export function canonicalSlug(slug: string[]): string[] {
   const [head, ...rest] = slug

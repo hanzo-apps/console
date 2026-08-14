@@ -15,7 +15,8 @@
  * nothing is fabricated until then.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, Search, X, Download } from '@hanzogui/lucide-icons-2'
 

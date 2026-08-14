@@ -50,7 +50,7 @@ import {
   Trash2,
   Upload,
 } from '@hanzogui/lucide-icons-2'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { PlatformApi, type Cluster } from '~/lib/api'
 import { currentOrg } from '~/lib/org-scope'

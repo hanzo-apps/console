@@ -17,7 +17,7 @@
  * total). All org-scoped to `currentOrg()`. Tabs map to the registry `:tab` route.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { XStack } from '@hanzo/gui'
 import { KeyRound, Plus } from '@hanzogui/lucide-icons-2'
 

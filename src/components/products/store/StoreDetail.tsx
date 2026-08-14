@@ -16,7 +16,7 @@
  * than rendering an empty "services" table that implies nothing starts.
  */
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, ArrowUpRight, BookOpen, Boxes, Github, Globe, HandCoins, Rocket, Settings2 } from '@hanzogui/lucide-icons-2'
 

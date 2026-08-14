@@ -17,7 +17,7 @@
  * The balance comes from the per-tenant `/billing/*` server proxy, scoped to the
  * caller's OWN org — the exact credit the gateway debits.
  */
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronRight, ExternalLink, Wallet } from '@hanzogui/lucide-icons-2'
 

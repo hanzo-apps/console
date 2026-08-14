@@ -20,7 +20,7 @@ import { livingOverviewModule } from './overview/living/LivingOverviewModule'
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack } from '@hanzo/gui'
 import { BookOpen, Plus, RefreshCw, Terminal } from '@hanzogui/lucide-icons-2'
 

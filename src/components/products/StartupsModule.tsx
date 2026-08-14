@@ -18,7 +18,7 @@
  * stage mutations; every state is loading / BackendStateCard / empty.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Rocket, RefreshCw, Copy, Check, Gift, ArrowRight, Award } from '@hanzogui/lucide-icons-2'
 import { RecordsView } from '@hanzo/data'

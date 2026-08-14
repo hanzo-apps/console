@@ -19,7 +19,7 @@
  * component so `/signin` resolves without depending on a navigation.
  */
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { useIam } from '@hanzo/iam/react'
 import { Text, YStack } from '@hanzo/gui'
 

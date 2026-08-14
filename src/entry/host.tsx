@@ -10,7 +10,7 @@
  * in one place or answer in 106 call sites; this is the one place.
  */
 import type { ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 
 import { startReauth } from '~/lib/auth/iam'
 import { HostProvider } from '@hanzo/ui/product'

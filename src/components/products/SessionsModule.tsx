@@ -9,7 +9,7 @@
  * never fabricated sessions or traces.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, ChevronRight, RefreshCw } from '@hanzogui/lucide-icons-2'
 

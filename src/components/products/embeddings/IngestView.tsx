@@ -9,7 +9,7 @@
  * the collection, not a fabricated job log.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Card, Text, XStack, YStack } from '@hanzo/gui'
 import { FileStack, Github, Globe, Upload } from '@hanzogui/lucide-icons-2'
 

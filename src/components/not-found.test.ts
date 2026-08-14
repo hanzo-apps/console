@@ -31,9 +31,10 @@ describe('the home page owns the root and nothing else', () => {
   const src = read(HOME)
 
   it('hands EVERY non-root address to the one renderer', () => {
-    // The static embed serves this page's index.html for every path, so this hand-off
-    // IS routing in production.
-    expect(src).toMatch(/if \(segments\.length > 0\) return <ProductRoute slug=\{segments\} \/>/)
+    // The static bundle serves this page's index.html for every path, so this hand-off
+    // IS routing in production. The renderer reads the address itself — this page only
+    // decides whether the root's own board is what was asked for.
+    expect(src).toMatch(/if \(segments\.length > 0\) return <ProductRoute \/>/)
   })
 
   it('does not resolve routes itself — that is the renderer\'s single job', () => {

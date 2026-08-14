@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, YStack } from '@hanzo/gui'
 import { KeyRound } from '@hanzogui/lucide-icons-2'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { UsagePanel } from '@hanzo/usage/panel'
 import { ConnectedUsage } from '@hanzo/usage/connected'
 import type { CloudUsageOverview, ProviderUsage, UsageRange } from '@hanzo/usage'

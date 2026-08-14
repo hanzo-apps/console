@@ -10,7 +10,7 @@
  * full App Store — no fabricated data, honest states throughout.
  */
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight, BarChart3, Container, Rocket, Store, Zap } from '@hanzogui/lucide-icons-2'
 

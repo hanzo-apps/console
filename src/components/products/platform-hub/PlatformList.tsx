@@ -8,7 +8,7 @@
  * hanzo.chat on the ONE shared key. Honest by construction — real projects/sites only.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ExternalLink, Globe, MessageSquare, Pencil, Plus, Rocket } from '@hanzogui/lucide-icons-2'
 

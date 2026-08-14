@@ -1,20 +1,17 @@
 'use client'
 
-import { use } from 'react'
-
 import { ProductRoute } from '~/components/ProductRoute'
 
 /**
- * Catch-all product route. Resolves the module + route from the registry and
- * renders its component via the shared `ProductRoute` (the ONE renderer, also used
- * by the dashboard home for the static embed). Adding a product anywhere in the
- * registry makes its routes live here — no per-product page files.
+ * Catch-all product route. `ProductRoute` reads the live address and resolves the
+ * module from the registry, so adding a product anywhere in the registry makes its
+ * routes live here — no per-product page files, and no route param to fall out of
+ * step with the URL when navigation moves the address without a document load.
  *
- * `ProductRoute` applies the two honest gates (sub-page stub, admin "managed by
- * Hanzo" notice), the external-product interstitial, and the per-route error
- * boundary. See that component.
+ * `ProductRoute` applies the honest gates (sub-page stub, admin "managed by Hanzo"
+ * notice), the external-product interstitial, the no-such-page surface, and the
+ * per-route error boundary. See that component.
  */
-export default function ProductPage({ params }: { params: Promise<{ slug: string[] }> }) {
-  const { slug } = use(params)
-  return <ProductRoute slug={slug} />
+export default function ProductPage() {
+  return <ProductRoute />
 }

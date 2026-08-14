@@ -22,7 +22,7 @@
  * it is not a different product from having it.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, ChevronRight, Table, TriangleAlert } from '@hanzogui/lucide-icons-2'
 

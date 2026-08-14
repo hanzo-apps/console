@@ -20,12 +20,13 @@ import {
   subpageSlug,
   subpageHref,
   activeSubpage,
+  slugOf,
   type Matched,
   type ProductView,
 } from './match-core'
 
 export type { Matched, ProductView }
-export { productSubpages, subpageHref, activeSubpage }
+export { productSubpages, subpageHref, activeSubpage, slugOf }
 
 /**
  * The level-2 slug a `:tab` param selects within a product — validated against the

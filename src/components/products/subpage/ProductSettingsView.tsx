@@ -16,7 +16,7 @@
  *    Hanzo") — never faked into an editable field, and every value is real or "—".
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowRight, ExternalLink, Settings as SettingsIcon, SlidersHorizontal } from '@hanzogui/lucide-icons-2'
 

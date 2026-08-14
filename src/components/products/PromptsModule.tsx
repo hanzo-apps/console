@@ -22,7 +22,7 @@
  * and a true empty state — never placeholder prompts or fabricated metrics.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowLeft, BarChart3, Check, Download, Library, Plus, RefreshCw } from '@hanzogui/lucide-icons-2'
 

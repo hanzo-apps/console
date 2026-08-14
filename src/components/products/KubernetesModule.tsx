@@ -21,7 +21,7 @@
  * fabricated — GPU/CPU facts the control plane doesn't expose render an em-dash.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, Boxes, Cable, Check, ChevronRight, Copy, Cpu, HardDrive, Network, Plus, RefreshCw, Server, Trash2, Upload } from '@hanzogui/lucide-icons-2'
 

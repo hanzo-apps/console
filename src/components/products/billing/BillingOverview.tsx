@@ -13,7 +13,7 @@
  * The projection is a naive run-rate, labelled as such (never sold as a forecast).
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { CreditCard, TrendingUp, RefreshCw, Plus, ArrowRight, CalendarClock } from '@hanzogui/lucide-icons-2'
 

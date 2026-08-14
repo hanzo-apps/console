@@ -7,7 +7,7 @@
  * interaction shell; the caller passes the apps to show.
  */
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '~/lib/router'
 import { XStack } from '@hanzo/gui'
 
 import { type OssApp } from '~/lib/api/oss-apps'
