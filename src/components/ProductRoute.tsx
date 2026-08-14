@@ -16,9 +16,10 @@
  */
 import { usePathname } from 'next/navigation'
 
-import { resolveView, isAdminRoute, slugOf } from '~/lib/products/match'
+import { resolveView, admits, slugOf } from '~/lib/products/match'
 import { findEntry } from '~/lib/products/registry'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
+import { stageOf } from '~/lib/products/stage'
 import { ProductSubpageStub } from '~/components/products/ProductSubpageStub'
 import { ProductSubpageModule } from '~/components/products/subpage/ProductSubpageModule'
 import { ProductInterstitial } from '~/components/products/ProductInterstitial'
@@ -27,7 +28,7 @@ import { ProductErrorBoundary } from '~/components/errors/ProductErrorBoundary'
 import { NotFound } from '~/components/NotFound'
 
 export function ProductRoute() {
-  const showAdmin = useIsSuperAdmin()
+  const viewer = useViewer()
   const slug = slugOf(usePathname() ?? '')
   const view = resolveView(slug)
 
@@ -40,11 +41,17 @@ export function ProductRoute() {
 
   if (view.kind === 'external') return <ProductInterstitial id={view.entry.id} />
 
-  if (!showAdmin && isAdminRoute(slug)) {
+  // Hiding is a nav decision, so this is NOT where a beta or alpha product turns
+  // into a dead end: `admits` withholds only the `admin` stage — the one backed by
+  // org membership the server enforces too — and everything else resolves at its
+  // own address for anyone who has it.
+  if (!admits(slug, viewer)) {
     const entry = findEntry(slug[0])
     if (entry && entry.kind === 'module') {
       const seg = slug[1]
-      const subpage = seg ? (entry.subpages ?? []).find((s) => s.slug === seg && s.admin) : undefined
+      const subpage = seg
+        ? (entry.subpages ?? []).find((s) => s.slug === seg && stageOf(s) === 'admin')
+        : undefined
       return <AdminManagedNotice entry={entry} subpage={subpage} />
     }
   }

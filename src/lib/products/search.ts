@@ -6,6 +6,7 @@
  * its natural order, so the palette can show everything by default.
  */
 import { visibleCatalog, type CatalogEntry } from './registry'
+import { type Viewer, operator } from './stage'
 import { destinationsFor, type Destination } from './match-core'
 
 // The sidebar's per-entry filter predicate + the destination indexing live in the
@@ -48,12 +49,12 @@ function scoreEntry(q: string, e: CatalogEntry): number {
 
 /**
  * The catalog ranked for `query`. Empty query → the visible catalog in natural
- * order. Sourced from `visibleCatalog(true)` so brand scope AND billing-only shell
- * mode apply (admin entries are kept for callers to gate) — one scoping rule shared
- * with the sidebar/home, so ⌘K never offers a product the shell hides.
+ * order. Sourced from the OPERATOR's catalog so brand scope AND billing-only shell
+ * mode apply while every stage is kept for callers to narrow — one scoping rule
+ * shared with the sidebar/home, so ⌘K never offers a product the shell hides.
  */
 export function searchCatalog(query: string): CatalogEntry[] {
-  const scope = visibleCatalog(true)
+  const scope = visibleCatalog(operator)
   const q = query.trim().toLowerCase()
   if (!q) return scope
   return scope
@@ -84,17 +85,17 @@ function scoreDestination(q: string, d: Destination): number {
 /**
  * Rank products AND sub-pages for `query`. Empty query → products only (catalog
  * order), so the palette opens on the familiar product list; typing surfaces
- * deep sub-page jumps ("queues" → Compute › Tasks › Queues). `showAdmin` gates
- * admin-only surfaces so a customer can't jump to what they can't see.
+ * deep sub-page jumps ("queues" → Compute › Tasks › Queues). `viewer` narrows by
+ * stage so a person can't jump to a surface the nav hides from them.
  */
-export function searchDestinations(query: string, showAdmin = true, enabled?: string[] | null): Destination[] {
+export function searchDestinations(query: string, viewer: Viewer = operator, enabled?: string[] | null): Destination[] {
   const q = query.trim().toLowerCase()
   // Scope to the visible catalog (brand + billing-only shell + entitlements), then
   // gate admin — so ⌘K jumps match exactly what the nav shows (billing-only offers
   // only billing; a customer only what their org has enabled). A TYPED query is
   // DISCOVERY: the entitlement scope opens to the whole catalog — searching is
   // for finding what you do not have yet — while the admin gate keeps holding.
-  const all = destinationsFor(visibleCatalog(showAdmin, q ? null : enabled), showAdmin)
+  const all = destinationsFor(visibleCatalog(viewer, q ? null : enabled), viewer)
   if (!q) return all.filter((d) => d.kind === 'product')
   return all
     .map((d) => ({ d, s: scoreDestination(q, d) }))

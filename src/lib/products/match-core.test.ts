@@ -6,7 +6,7 @@ import {
   productSubpages,
   resolveProductView,
   subpageIsWired,
-  isAdminView,
+  stageAt,
   destinationsFor,
   canonicalSlug,
   SLUG_ALIASES,
@@ -17,6 +17,7 @@ import {
   activeSubpage,
 } from './match-core'
 import type { CatalogEntry, ProductModule } from './registry'
+import { type Viewer, operator, customer } from './stage'
 
 // Runtime stubs for the type-only icon/component fields (matching never renders).
 const C = (() => null) as unknown as ProductModule['routes'][number]['component']
@@ -131,7 +132,7 @@ const mod = (
 // Routing specific), a single-screen product (vpc), a product with a declared
 // specific that has NO route yet (tasks › queues), and an admin product.
 const models = mod('models', {
-  subpages: [{ slug: 'routing', label: 'Routing', admin: true }],
+  subpages: [{ slug: 'routing', label: 'Routing', stage: 'admin' }],
   routes: [
     { path: '', component: C },
     { path: ':tab', component: C },
@@ -145,7 +146,7 @@ const tasks = mod('tasks', {
     { path: ':ns/:wid', component: C },
   ],
 })
-const providers = mod('providers', { admin: true })
+const providers = mod('providers', { stage: 'admin' })
 // The ONE native Automations module — `/auto` and `/automation` alias to it (the
 // external auto.hanzo.ai engine + its `/v1/auto` proxy are retired).
 const automations = mod('automations', { label: 'Automations', category: 'AI' })
@@ -182,21 +183,21 @@ const CATALOG: CatalogEntry[] = [models, vpc, tasks, providers, automations, lux
 const MODULES = CATALOG.filter((e) => e.kind === 'module').map((e) => e as unknown as ProductModule)
 
 describe('productSubpages — Overview + specifics + uniform base set', () => {
-  const slugs = (e: CatalogEntry, showAdmin = true) => productSubpages(e, showAdmin).map((s) => s.slug)
+  const slugs = (e: CatalogEntry, v: Viewer = operator) => productSubpages(e, v).map((s) => s.slug)
 
   it('auto-adds Overview + the base set to a single-screen product', () => {
     expect(slugs(vpc)).toEqual(['', 'settings', 'logs', 'metrics', 'status'])
   })
   it('places a specific between Overview and the base set', () => {
     // models declares Routing (admin) — visible to an admin, before the base set.
-    expect(slugs(models, true)).toEqual(['', 'routing', 'settings', 'logs', 'metrics', 'status'])
+    expect(slugs(models, operator)).toEqual(['', 'routing', 'settings', 'logs', 'metrics', 'status'])
   })
   it('does NOT duplicate a base slug a product declares as a specific', () => {
     const withMetrics = mod('x', { subpages: [{ slug: 'metrics', label: 'Metrics' }] })
     expect(slugs(withMetrics)).toEqual(['', 'metrics', 'settings', 'logs', 'status'])
   })
   it('hides an admin-only specific from a customer', () => {
-    expect(slugs(models, false)).toEqual(['', 'settings', 'logs', 'metrics', 'status'])
+    expect(slugs(models, customer)).toEqual(['', 'settings', 'logs', 'metrics', 'status'])
   })
   it('drops a base slug that IS the product — Settings has no Settings child', () => {
     // The org-Settings product owns the `settings` concept; a base `settings`
@@ -245,7 +246,7 @@ describe('the ONE level-2 nav — one declaration, read by both the rail and the
     expect(subpageSlug(models, undefined)).toBe('')
   })
   it('refuses an admin-only tab for a customer, so the module cannot light it', () => {
-    expect(subpageSlug(models, 'routing', false)).toBe('')
+    expect(subpageSlug(models, 'routing', customer)).toBe('')
   })
   it('accepts a base sub-page (the shared Status/Logs/Metrics/Settings views)', () => {
     expect(subpageSlug(vpc, 'metrics')).toBe('metrics')
@@ -436,28 +437,32 @@ describe('subpageIsWired — base sub-pages are always wired (real per-product v
   })
 })
 
-describe('isAdminView — admin product OR admin sub-page (customer gating)', () => {
-  it('flags an admin product and an admin sub-page, not customer surfaces', () => {
-    expect(isAdminView(CATALOG, ['providers'])).toBe(true)
-    expect(isAdminView(CATALOG, ['models'])).toBe(false)
-    expect(isAdminView(CATALOG, ['models', 'routing'])).toBe(true)
-    expect(isAdminView(CATALOG, ['models', 'status'])).toBe(false)
+describe('stageAt — the stage an ADDRESS renders at (product, or its sub-page)', () => {
+  it('reads the product, and the sub-page when the address names one', () => {
+    expect(stageAt(CATALOG, ['providers'])).toBe('admin')
+    expect(stageAt(CATALOG, ['models'])).toBe('ga')
+    expect(stageAt(CATALOG, ['models', 'routing'])).toBe('admin')
+    expect(stageAt(CATALOG, ['models', 'status'])).toBe('ga')
+  })
+  it('is ga for an address naming no product — 404 is resolveProductView\'s answer', () => {
+    expect(stageAt(CATALOG, ['nope'])).toBe('ga')
+    expect(stageAt(CATALOG, [])).toBe('ga')
   })
 })
 
 describe('destinationsFor — ⌘K indexes products + specifics, admin-gated (ask 3)', () => {
   it('indexes products then declared specifics; a deep sub-page carries its path', () => {
-    const dests = destinationsFor(CATALOG, true)
+    const dests = destinationsFor(CATALOG, operator)
     expect(dests.some((d) => d.kind === 'product' && d.entry.id === 'models')).toBe(true)
     const q = dests.find((d) => d.kind === 'subpage' && d.entry.id === 'tasks' && d.subpage.slug === 'queues')
     expect(q).toBeTruthy()
     if (q && q.kind === 'subpage') expect(q.path).toBe('/tasks/queues')
   })
   it('gates the admin product AND the admin sub-page for a customer', () => {
-    const customer = destinationsFor(CATALOG, false)
-    expect(customer.some((d) => d.entry.id === 'providers')).toBe(false)
-    expect(customer.some((d) => d.kind === 'subpage' && d.subpage.slug === 'routing')).toBe(false)
-    const admin = destinationsFor(CATALOG, true)
+    const theirs = destinationsFor(CATALOG, customer)
+    expect(theirs.some((d) => d.entry.id === 'providers')).toBe(false)
+    expect(theirs.some((d) => d.kind === 'subpage' && d.subpage.slug === 'routing')).toBe(false)
+    const admin = destinationsFor(CATALOG, operator)
     expect(admin.some((d) => d.entry.id === 'providers')).toBe(true)
     expect(admin.some((d) => d.kind === 'subpage' && d.subpage.slug === 'routing')).toBe(true)
   })

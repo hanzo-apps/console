@@ -5,6 +5,7 @@
  * testable in a plain-node test without pulling the GUI component tree.
  */
 import type { CatalogEntry, ProductModule, ProductRoute, ProductSubpage } from './registry'
+import { type Stage, type Viewer, operator, listed, stageOf } from './stage'
 
 export type Matched = {
   module: ProductModule
@@ -164,13 +165,15 @@ export const baseSubpagesFor = (entry: CatalogEntry): ProductSubpage[] =>
  * child). A base slug the product already declares as a specific is not duplicated.
  * Non-module entries have none.
  *
- * `showAdmin` gates admin-only specifics (e.g. Models › Routing): a customer
- * never sees them in the sub-nav (default true keeps every existing caller
- * showing everything).
+ * `viewer` narrows the specifics by STAGE — the same axis and the same predicate
+ * the catalog uses, so an admin or pre-GA tab is absent from the sub-nav and ⌘K
+ * for exactly the people it is absent from the rail for. The default is the
+ * operator, which is what a module asking "which tabs do I have?" wants: that is
+ * not a nav decision, and the router already made the real one.
  */
-export function productSubpages(entry: CatalogEntry, showAdmin = true): ProductSubpage[] {
+export function productSubpages(entry: CatalogEntry, viewer: Viewer = operator): ProductSubpage[] {
   if (entry.kind !== 'module') return []
-  const specifics = (entry.subpages ?? []).filter((s) => s.slug !== '' && (showAdmin || !s.admin))
+  const specifics = (entry.subpages ?? []).filter((s) => s.slug !== '' && listed(stageOf(s), viewer))
   const seen = new Set(specifics.map((s) => s.slug))
   const out: ProductSubpage[] = [indexSubpage(entry), ...specifics]
   for (const b of baseSubpagesFor(entry)) if (!seen.has(b.slug)) out.push(b)
@@ -183,9 +186,9 @@ export function productSubpages(entry: CatalogEntry, showAdmin = true): ProductS
  * validator: the nav highlights and the module switches on the same answer, so a
  * hand-typed `/tasks/bogus` can never light a tab the module doesn't render.
  */
-export function subpageSlug(entry: CatalogEntry, seg: string | undefined, showAdmin = true): string {
+export function subpageSlug(entry: CatalogEntry, seg: string | undefined, viewer: Viewer = operator): string {
   if (!seg) return ''
-  return productSubpages(entry, showAdmin).some((s) => s.slug === seg) ? seg : ''
+  return productSubpages(entry, viewer).some((s) => s.slug === seg) ? seg : ''
 }
 
 /** The URL for a product's sub-page — `/id` for the index, `/id/slug` otherwise. */
@@ -203,18 +206,21 @@ export function activeSubpage(pathname: string, id: string): string {
 }
 
 /**
- * Whether a product URL targets an ADMIN-only view — the product itself is
- * admin-gated, or the trailing segment is an admin-only sub-page. The catch-all
- * uses this (with the client admin signal) to render an honest "managed by
- * Hanzo" notice for a customer instead of letting the module throw a 403.
+ * The stage an ADDRESS renders at: the sub-page's when the address names one,
+ * else the product's. The catch-all weighs this with `reachable` to render the
+ * honest "managed by Hanzo" notice instead of letting the module throw a 403.
+ *
+ * The deeper of the two wins, because a GA product can hold an operator-only tab
+ * (Models › Routing) and the tab is what the address asked for. An address that
+ * names no product at all is `ga` — 404 is `resolveProductView`'s answer, not a
+ * visibility decision.
  */
-export function isAdminView(catalog: CatalogEntry[], slug: string[]): boolean {
+export function stageAt(catalog: CatalogEntry[], slug: string[]): Stage {
   const entry = catalog.find((e) => e.id === slug[0])
-  if (!entry || entry.kind !== 'module') return false
-  if (entry.admin) return true
+  if (!entry || entry.kind !== 'module') return 'ga'
   const seg = slug[1]
-  if (!seg) return false
-  return Boolean((entry.subpages ?? []).find((s) => s.slug === seg)?.admin)
+  const sub = seg ? (entry.subpages ?? []).find((s) => s.slug === seg) : undefined
+  return sub ? stageOf(sub) : stageOf(entry)
 }
 
 // ── Command-palette destinations (⌘K jumps to any level) ─────────────────────
@@ -230,17 +236,17 @@ export type Destination =
 
 /**
  * Every ⌘K jump target — products (catalog order), then each product's declared
- * specific sub-pages. `showAdmin` gates admin products AND admin sub-pages so a
- * customer can't jump to a surface they can't see. Pure (takes the catalog), so
- * the indexing + gating is unit-testable without the GUI tree.
+ * specific sub-pages. Both levels are narrowed by the SAME stage predicate the
+ * rail uses, so the palette can never offer a jump to a surface the nav hides.
+ * Pure (takes the catalog), so the indexing is unit-testable without the GUI tree.
  */
-export function destinationsFor(catalog: CatalogEntry[], showAdmin: boolean): Destination[] {
-  const products = showAdmin ? catalog : catalog.filter((e) => !e.admin)
+export function destinationsFor(catalog: CatalogEntry[], viewer: Viewer): Destination[] {
+  const products = catalog.filter((e) => listed(stageOf(e), viewer))
   const out: Destination[] = products.map((entry) => ({ kind: 'product', entry }))
   for (const entry of products) {
     if (entry.kind !== 'module') continue
     for (const sp of entry.subpages ?? []) {
-      if (sp.slug === '' || (!showAdmin && sp.admin)) continue
+      if (sp.slug === '' || !listed(stageOf(sp), viewer)) continue
       out.push({ kind: 'subpage', entry, subpage: sp, path: `/${entry.id}/${sp.slug}` })
     }
   }

@@ -14,6 +14,7 @@ import config from '../../gui.config'
 import { SessionProvider } from '~/lib/auth/session'
 import { iamConfig } from '~/lib/auth/iam'
 import { EntitlementsProvider } from '~/lib/entitlements-context'
+import { ViewerProvider } from '~/lib/products/viewer'
 import { AnalyticsBridge, TelemetrySurface } from './Analytics'
 import { OrgAccentProvider } from './OrgAccentProvider'
 import { RichTextDisplay, RichTextInput } from './fields/RichTextField'
@@ -69,6 +70,9 @@ export function Provider({ children }: { children: ReactNode }) {
         {/* Entitlements live inside the session (they read the signed-in account +
             active org scope) so the sidebar/palette gate from ONE fetch. */}
         <EntitlementsProvider>
+        {/* Who is looking, as ONE value — admin membership + the org's pre-GA
+            opt-in, fetched once so every surface decides identically. */}
+        <ViewerProvider>
           {/* Telemetry lives INSIDE the session so `identify` binds the signed-in
               actor. `TelemetrySurface` is the ONE provider — pageviews, errors,
               interaction capture, consent — and it mounts @hanzo/event internally,
@@ -78,6 +82,7 @@ export function Provider({ children }: { children: ReactNode }) {
             <AnalyticsBridge />
             {children}
           </TelemetrySurface>
+        </ViewerProvider>
         </EntitlementsProvider>
       </SessionProvider>
       </IamProvider>

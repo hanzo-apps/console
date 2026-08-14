@@ -24,6 +24,7 @@ import { currentOrg } from '~/lib/org-scope'
 import { setOrgAccent } from '~/lib/theme/accent'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useBeta } from '~/lib/products/viewer'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
 import { FieldRow, FieldSwitch, FieldText, PageHeader } from '@hanzo/ui/product'
 import { Appearance } from '@hanzo/appearance'
@@ -147,6 +148,8 @@ function GeneralTab() {
         )}
       </Section>
 
+      <EarlyAccess />
+
       <Section title="Your account">
         <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
           <InfoRow label="Email" value={account?.email} />
@@ -159,6 +162,61 @@ function GeneralTab() {
         </Text>
       </Section>
     </YStack>
+  )
+}
+
+/**
+ * The org's pre-GA opt-in — the ONLY place in the console that mentions it.
+ *
+ * Deliberately unadvertised: nothing links here, no banner offers it, and a new
+ * account never meets it. A first experience made of half-finished products is
+ * worse than a small one, so someone who wants beta comes looking and everyone
+ * else never learns it exists.
+ *
+ * ORG-WIDE, not per-person. It rides `/v1/enablement`, which keys on the caller's
+ * validated org, so two members of one org can never see different products —
+ * which is what makes a bug report mean something.
+ *
+ * The row is absent, not disabled, when the platform is not offering pre-GA
+ * products or the viewer cannot set it. A switch that refuses is worse than no
+ * switch: it invites a question with no answer.
+ */
+function EarlyAccess() {
+  const { account } = useSession()
+  const isSuperAdmin = useIsSuperAdmin()
+  const { on, offered, set } = useBeta()
+  const [err, setErr] = useState<ApiError | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const canEdit = isSuperAdmin || !!account?.isAdmin
+  if (!offered || !canEdit) return null
+
+  const toggle = async (next: boolean) => {
+    setBusy(true)
+    setErr(null)
+    try {
+      await set(next)
+    } catch (e) {
+      setErr(asApiError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Section title="Early access">
+      <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
+        <FieldRow label="Beta products">
+          <XStack items="center" gap="$3">
+            <FieldSwitch checked={on} onChange={(v) => void toggle(v)} disabled={busy} />
+            <Text fontSize="$2" color="$color10">
+              Show products that are still in beta. Applies to everyone in this organization.
+            </Text>
+          </XStack>
+        </FieldRow>
+      </Card>
+      {err ? <ErrorState err={err} /> : null}
+    </Section>
   )
 }
 

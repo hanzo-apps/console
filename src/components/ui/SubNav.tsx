@@ -43,7 +43,7 @@ import type { ComponentType } from 'react'
 
 import { findEntry } from '~/lib/products/registry'
 import { productSubpages, subpageHref, activeSubpage, subpageWired } from '~/lib/products/match'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
 
 /** Default icon for a level-2 sub-page — the uniform base slugs get a real one,
  *  a product's own specific falls back to a quiet dot unless it declares one. */
@@ -81,11 +81,11 @@ export function SubNav({
 }) {
   const router = useRouter()
   const pathname = usePathname() ?? ''
-  const showAdmin = useIsSuperAdmin()
+  const viewer = useViewer()
 
   const entry = findEntry(id)
   if (!entry || entry.kind !== 'module') return null
-  const subs = productSubpages(entry, showAdmin)
+  const subs = productSubpages(entry, viewer)
   if (subs.length <= 1) return null
 
   const active = activeSubpage(pathname, id)

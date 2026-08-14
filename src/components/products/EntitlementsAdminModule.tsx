@@ -10,15 +10,17 @@
  * an org can never lose billing/settings/its own home). Access is super-admin only
  * (the catalog entry is `admin: true`) and enforced server-side too.
  *
- * The console renders every product for the org's brand (`visibleCatalog(false)` —
- * the full customer catalog), so a super admin sees the complete on/off picture,
- * not just what's currently enabled.
+ * The list is every product a CUSTOMER COULD EVER OPEN — the brand's catalog minus
+ * the admin-stage surfaces, which are membership and can never be granted. That is
+ * `reachable`, deliberately, not `listed`: a grant is about what an org may use, so
+ * a beta or alpha product belongs on this board even though no nav lists it. Asking
+ * the browsing question here would silently hide half the switches.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { ShieldCheck } from '@hanzogui/lucide-icons-2'
 
-import { visibleCatalog } from '~/lib/products/registry'
+import { visibleCatalog, customer, operator, reachable, stageOf } from '~/lib/products/registry'
 import { EntitlementsApi } from '~/lib/entitlements'
 import { currentOrg } from '~/lib/org-scope'
 import { useProductColors } from '~/lib/products/pins'
@@ -85,7 +87,10 @@ export function EntitlementsAdminModule() {
   }, [load])
 
   // Every product the org's brand offers a customer (full on/off picture).
-  const products = useMemo(() => visibleCatalog(false), [])
+  const products = useMemo(
+    () => visibleCatalog(operator).filter((e) => reachable(stageOf(e), customer)),
+    [],
+  )
   const rows = useMemo(
     () => (enabled ? entitlementRows(products, enabled) : []),
     [products, enabled],

@@ -20,7 +20,7 @@ import { Button, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, Plus, Search, Star } from '@hanzogui/lucide-icons-2'
 
 import { visibleCatalogByCategory, type CatalogEntry, type ProductIcon } from '~/lib/products/registry'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
 import { usePins, useProductColors } from '~/lib/products/pins'
 import { openProduct } from '~/lib/products/open'
 import { useDetailPane } from '~/components/DetailPane'
@@ -151,7 +151,7 @@ function FilterTabs({
 }
 
 export function AddProductPanel() {
-  const showAdmin = useIsSuperAdmin()
+  const viewer = useViewer()
   const { isPinned, toggle } = usePins()
   const { colorOf } = useProductColors()
   const router = useRouter()
@@ -189,7 +189,7 @@ export function AddProductPanel() {
 
   // Source = the FULL catalog the viewer may see (ungated → both pinned and unpinned
   // appear), grouped by category.
-  const groups = useMemo(() => visibleCatalogByCategory(showAdmin, null), [showAdmin])
+  const groups = useMemo(() => visibleCatalogByCategory(viewer, null), [viewer])
 
   // Literal, case-insensitive substring match over label/description/id — NOT a
   // compiled RegExp of user input.

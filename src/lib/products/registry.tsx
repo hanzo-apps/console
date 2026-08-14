@@ -113,6 +113,7 @@ import { Users,
 import { config, type BrandId, type ShellId } from '~/config'
 import { ALWAYS_ON_PRODUCTS, filterEntitled } from '~/lib/entitlements'
 import { type NavSection, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
+import { type Stage, type Viewer, listed, stageOf } from './stage'
 import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
@@ -342,13 +343,13 @@ export type ProductSubpage = {
   /** Optional icon (defaults per well-known base slug in `productSubpages`). */
   icon?: ProductIcon
   /**
-   * Admin-only (global / Hanzo-managed) sub-page — hidden from a customer's
-   * level-2 nav and the command palette, and rendered as an honest "managed by
-   * Hanzo" notice if reached directly. Access is enforced server-side too. Used
-   * for the shared-gateway config (e.g. Models › Routing) that customers read but
-   * do not administer.
+   * How finished this sub-page is — the SAME axis a product carries, weighed by
+   * the SAME predicate (`~/lib/products/stage`). Unset is `ga`. `admin` marks the
+   * shared-gateway config (e.g. Models › Routing) a customer reads but does not
+   * administer: hidden from their level-2 nav and ⌘K, and rendered as an honest
+   * "managed by Hanzo" notice if reached directly. Enforced server-side too.
    */
-  admin?: boolean
+  stage?: Stage
 }
 
 /**
@@ -426,8 +427,13 @@ type CatalogBase = {
   repo?: string
   /** Canonical docs deep link (docs.hanzo.ai/<slug>); falls back to the docs root. */
   docs?: string
-  /** Admin-gated surface (shown with a lock hint; access enforced server-side). */
-  admin?: boolean
+  /**
+   * How finished this product is — `ga` (the unset default) · `beta` · `alpha` ·
+   * `admin`. The ONE axis every surface decides visibility on; see
+   * `~/lib/products/stage` for what each admits. Classifying a product is this
+   * one word and nothing else.
+   */
+  stage?: Stage
   /**
    * Per-brand scope — the brands whose console shows this entry (`entryInBrandScope`).
    * OMIT for a brand-agnostic entry (the default: shown on every brand its category
@@ -537,6 +543,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud overview',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: OverviewDashboard }],
@@ -556,6 +563,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Connected accounts',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [
@@ -584,7 +592,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud console (org-wide)',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: OverlordDashboard }],
@@ -602,7 +610,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing overview',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: BusinessDashboard }],
@@ -622,7 +630,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing / FinOps',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FinanceDashboard }],
@@ -643,7 +651,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Catalog',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/commerce',
     kind: 'module',
     routes: [{ path: '', component: CatalogModule }],
@@ -663,7 +671,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing plans',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/commerce',
     kind: 'module',
     routes: [{ path: '', component: PlansCatalogModule }],
@@ -684,7 +692,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Feature flags / Access control',
     category: 'Security',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: FeatureGateModule }],
@@ -704,7 +712,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Monitoring (fleet)',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminO11yModule }],
@@ -724,7 +732,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI Experiments',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: ResearchModule }],
@@ -752,7 +760,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Compute Engine / Persistent Disk',
     category: 'Infrastructure',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -782,7 +790,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing (SaaS)',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: SaasModule }],
@@ -802,7 +810,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Billing budgets / Promotions',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: UsageCapsPromoModule }],
@@ -820,7 +828,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing accounts',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FleetCustomersModule }],
@@ -835,7 +843,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing revenue',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FleetRevenueModule }],
@@ -852,7 +860,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing credits',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FleetGrantsModule }],
@@ -869,7 +877,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Deploy (fleet)',
     category: 'Infrastructure',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: FleetProjectsModule }],
@@ -886,7 +894,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Analytics · SaaS',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: RetentionModule }],
@@ -902,15 +910,21 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Feature management',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminEnablementModule }],
   },
   {
-    // Customer BETA FEATURES — the self-service opt-in (NOT admin). Any signed-in
-    // user enables/disables the betas their org can access; scoped server-side to
-    // the caller's validated org (can't bypass off, can't touch global state).
+    // Customer BETA FEATURES — the per-ITEM self-service opt-in (NOT admin): which
+    // early-access models and features the org runs, scoped server-side to the
+    // caller's validated org (can't bypass off, can't touch global state).
+    //
+    // Itself `beta`, which is the honest stage for it: an org that has not asked for
+    // pre-GA products has no use for the surface that manages them, and one that HAS
+    // asked finds it listed the moment it flips the switch in Settings. The org-wide
+    // switch is the coarse question ("do we want pre-GA at all"); this is the fine
+    // one ("which of them"), so the coarse one gates it.
     id: 'beta-features',
     label: 'Beta features',
     icon: Activity,
@@ -918,6 +932,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Preview features',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: BetaFeaturesModule }],
@@ -937,7 +952,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Fleet analytics · bots',
     category: 'Apps',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: BotsModule }],
@@ -955,7 +970,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Fleet analytics · machines',
     category: 'Compute',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminMachinesModule }],
@@ -974,7 +989,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Fleet analytics · clusters',
     category: 'Compute',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminClustersModule }],
@@ -992,7 +1007,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Fleet analytics · functions',
     category: 'Compute',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AdminFunctionsModule }],
@@ -1026,7 +1041,7 @@ export const catalog: CatalogEntry[] = [
     subpages: [
       { slug: 'leaderboard', label: 'Leaderboard', icon: Trophy },
       { slug: 'blend', label: 'Blend', icon: Boxes },
-      { slug: 'routing', label: 'Routing', icon: Waypoints, admin: true },
+      { slug: 'routing', label: 'Routing', icon: Waypoints, stage: 'admin' },
     ],
   },
   {
@@ -1052,6 +1067,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI (model routing)',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [
@@ -1074,7 +1090,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Model, storage, and embedding providers and credentials.',
     category: 'AI',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [
@@ -1102,7 +1118,7 @@ export const catalog: CatalogEntry[] = [
     // equivalent (matching the sibling keeps the catalog metadata consistent).
     category: 'AI',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [{ path: '', component: ProviderAdminModule }],
@@ -1124,7 +1140,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing (provider credits)',
     category: 'AI',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: ProvidersBillingModule }],
@@ -1146,7 +1162,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Observe and operate the Zen-of-Hanzo Guide engine — the authored blueprint, the ~888-tactic corpus, and the live growth read (stage · signals · next-best moves).',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: GrowthModule }],
@@ -1170,7 +1186,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI (usage & cost)',
     category: 'AI',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: AiEconomicsModule }],
@@ -1192,7 +1208,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI (model routing)',
     category: 'AI',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [{ path: '', component: RoutingModule }],
@@ -1211,6 +1227,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Connected accounts',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [{ path: '', component: ConnectionsModule }],
@@ -1223,6 +1240,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Agent Builder',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/agent',
     docs: `${DOCS}/agents`,
     kind: 'module',
@@ -1255,6 +1273,7 @@ export const catalog: CatalogEntry[] = [
     description: 'See and drive every agent session from one swipeable board — pause, resume, stop, message.',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: MissionControlModule }],
@@ -1276,6 +1295,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Application Integration',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     brands: ['hanzo'],
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1297,6 +1317,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI Prediction',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // Inference OWNS its Status + Logs as rich, endpoint-oriented views (the `:tab`
@@ -1320,6 +1341,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI Training',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     // The module renders its Jobs/Datasets/Checkpoints/Models tabs as REAL
     // sub-routes (`/finetuning/:tab`); declare the `:tab` route so the tab bar
@@ -1350,6 +1372,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Vertex AI Vector Search',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/ai',
     docs: `${DOCS}/embeddings`,
     kind: 'module',
@@ -1377,6 +1400,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Your wiki, agent memory, and sources as one force-directed graph.',
     category: 'AI',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: KnowledgeModule }],
@@ -1391,6 +1415,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Evaluate model and agent outputs with scored runs.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
     routes: [
@@ -1415,6 +1440,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Every app, database, and domain in your org on one live canvas.',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     docs: `${DOCS}/console`,
     kind: 'module',
@@ -1428,6 +1454,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Compute Engine GPUs',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/operator',
     docs: `${DOCS}/gpus`,
     kind: 'module',
@@ -1455,6 +1482,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Compute machines and capacity across regions (your cluster nodes).',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     docs: `${DOCS}/machines`,
     kind: 'module',
     routes: [{ path: '', component: MachinesModule }],
@@ -1467,6 +1495,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Run',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     // The module renders its Workloads/Pods/Containers/Images/Namespaces/Events
     // tabs as REAL sub-routes (`/containers/:tab`); declare the `:tab` route so the
@@ -1491,6 +1520,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Event-driven serverless functions.',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/functions',
     docs: `${DOCS}/functions`,
     kind: 'module',
@@ -1515,6 +1545,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Compute at the edge, close to your users.',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/edge',
     docs: `${DOCS}/edge`,
     kind: 'module',
@@ -1530,6 +1561,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Deployed application services.',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [
       { path: '', component: ApplicationsModule },
@@ -1549,6 +1581,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'App Engine',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: PlatformAppsModule }],
@@ -1564,6 +1597,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Managed vector database — embeddings & semantic search.',
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/vector',
     docs: `${DOCS}/vector`,
     kind: 'module',
@@ -1576,6 +1610,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Managed SQL — databases, branches, replicas.',
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/sql',
     docs: `${DOCS}/sql`,
     kind: 'module',
@@ -1589,6 +1624,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Memorystore',
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/kv',
     docs: `${DOCS}/kv`,
     kind: 'module',
@@ -1607,6 +1643,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Storage',
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/s3',
     docs: `${DOCS}/storage`,
     kind: 'module',
@@ -1620,6 +1657,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Bigtable',
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/datastore',
     docs: `${DOCS}/datastore`,
     kind: 'module',
@@ -1636,6 +1674,7 @@ export const catalog: CatalogEntry[] = [
     description: "Your organization's realtime backend — content types, records, and auth.",
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/base',
     docs: `${DOCS}/base`,
     kind: 'module',
@@ -1658,6 +1697,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Firestore',
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/docdb',
     docs: `${DOCS}/docdb`,
     kind: 'module',
@@ -1673,6 +1713,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'API Gateway',
     category: 'Network',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/gateway',
     docs: `${DOCS}/gateway`,
     kind: 'module',
@@ -1690,6 +1731,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Blockchain node infrastructure — validators and peers across networks.',
     category: 'Network',
     status: 'enabled',
+    stage: 'beta',
     repo: 'luxfi/node',
     kind: 'module',
     routes: [{ path: '', component: NodesModule }],
@@ -1701,6 +1743,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Private networks, subnets, and peering.',
     category: 'Network',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: VpcModule }],
   },
@@ -1731,6 +1774,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Domains',
     category: 'Network',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: DomainsModule }],
@@ -1747,6 +1791,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Manage your connected Cloudflare Pages, Workers, and routes.',
     category: 'Network',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: CloudflareModule }],
@@ -1758,6 +1803,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Global content delivery and edge caching.',
     category: 'Network',
     status: 'enabled',
+    stage: 'alpha',
     docs: ext.cdn,
     kind: 'module',
     routes: overviewRoutes('cdn'),
@@ -1769,6 +1815,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Layer 4/7 load balancing across services.',
     category: 'Network',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: LoadBalancerModule }],
   },
@@ -1779,6 +1826,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Service-to-service routing, mTLS, and policy.',
     category: 'Network',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: ServiceMeshModule }],
   },
@@ -1791,7 +1839,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Organizations, users, and roles (RBAC) — Hanzo IAM.',
     category: 'Security',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/iam',
     docs: `${DOCS}/iam`,
     kind: 'module',
@@ -1811,6 +1859,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Fine-grained authorization policies and checks.',
     category: 'Security',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/authz',
     docs: `${DOCS}/authz`,
     kind: 'module',
@@ -1823,7 +1872,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Encryption keys and cryptographic operations — Hanzo KMS.',
     category: 'Security',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/kms',
     docs: `${DOCS}/kms`,
     kind: 'module',
@@ -1836,6 +1885,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Hardware-backed key protection.',
     category: 'Security',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/hsm',
     kind: 'module',
     routes: [{ path: '', component: HsmModule }],
@@ -1849,7 +1899,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Secret Manager',
     category: 'Security',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/kms',
     docs: `${DOCS}/kms`,
     kind: 'module',
@@ -1862,6 +1912,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Threshold signing & multi-party computation — Hanzo MPC.',
     category: 'Security',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/mpc',
     docs: `${DOCS}/mpc`,
     kind: 'module',
@@ -1874,7 +1925,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Audit log of identity and access events.',
     category: 'Security',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/iam',
     kind: 'module',
     routes: [{ path: '', component: AuditModule }],
@@ -1886,6 +1937,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Private service access: routers, identities, policies, and sessions.',
     category: 'Security',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/zt',
     docs: `${DOCS}/zero-trust`,
     kind: 'module',
@@ -1910,6 +1962,7 @@ export const catalog: CatalogEntry[] = [
     description: 'The hanzo command-line interface.',
     category: 'Dev',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/cli',
     docs: ext.cli,
     kind: 'module',
@@ -1922,6 +1975,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Python, TypeScript, Go, and Rust SDKs.',
     category: 'Dev',
     status: 'enabled',
+    stage: 'alpha',
     docs: ext.sdk,
     kind: 'module',
     routes: overviewRoutes('sdks'),
@@ -1933,6 +1987,7 @@ export const catalog: CatalogEntry[] = [
     description: 'The REST API reference for every service.',
     category: 'Dev',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/ai',
     docs: ext.api,
     // EXTERNAL, because `/api` is not ours to route. A module entry renders at
@@ -1964,6 +2019,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Deliver platform events to your endpoints — signed, retried, logged.',
     category: 'Dev',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -1984,6 +2040,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Connect Slack, GitHub, and more so Hanzo AI can work across your tools.',
     category: 'Settings',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/integrations`,
     kind: 'module',
@@ -2020,6 +2077,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Source Repositories',
     category: 'Dev',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     subpages: [
@@ -2040,6 +2098,7 @@ export const catalog: CatalogEntry[] = [
     description: 'The Hanzo AI development environment.',
     category: 'Dev',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/code',
     docs: ext.ide,
     kind: 'module',
@@ -2052,6 +2111,7 @@ export const catalog: CatalogEntry[] = [
     description: 'The Hanzo desktop app.',
     category: 'Dev',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/desktop',
     docs: ext.desktop,
     kind: 'module',
@@ -2073,6 +2133,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'App Hosting',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -2093,6 +2154,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Marketplace',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -2160,7 +2222,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Deploy',
     category: 'Infrastructure',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [
@@ -2176,6 +2238,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Resource Manager',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: ProjectsModule }],
@@ -2228,7 +2291,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Identity (org management)',
     category: 'Infrastructure',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [
@@ -2252,6 +2315,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Firebase Hosting',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/apps`,
     kind: 'module',
@@ -2269,6 +2333,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Promote builds across dev, staging, and prod.',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: EnvironmentsModule }],
   },
@@ -2279,6 +2344,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Build images and artifacts from source.',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: BuildsModule }],
   },
@@ -2290,6 +2356,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Artifact Registry',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/registry',
     docs: `${DOCS}/registry`,
     kind: 'module',
@@ -2302,6 +2369,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Versioned releases and rollbacks.',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: ReleasesModule }],
   },
@@ -2312,6 +2380,7 @@ export const catalog: CatalogEntry[] = [
     description: 'CI/CD pipelines from commit to deploy.',
     category: 'Infrastructure',
     status: 'enabled',
+    stage: 'beta',
     docs: `${DOCS}/pipelines`,
     kind: 'module',
     routes: [{ path: '', component: PipelinesModule }],
@@ -2327,6 +2396,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Provision and manage your Kubernetes clusters and node pools.',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/operator',
     kind: 'module',
     routes: [{ path: '', component: ClustersModule }],
@@ -2343,6 +2413,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Your unified compute fleet — clusters, GPUs, and connected machines.',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/operator',
     kind: 'module',
     routes: [
@@ -2359,6 +2430,7 @@ export const catalog: CatalogEntry[] = [
     description: "Your organization's total footprint — spend by category, LLM usage, and compute — in one place, with CSV export.",
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/usage`,
     kind: 'module',
@@ -2371,6 +2443,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Structured logs across all services.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/logs`,
     kind: 'module',
@@ -2387,6 +2460,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Grouped exceptions and crashes across your services.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/errors`,
     kind: 'module',
@@ -2412,6 +2486,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Error Reporting',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     shell: 'sentry',
     kind: 'module',
@@ -2432,6 +2507,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Live platform service health and infrastructure metrics.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/metrics`,
     kind: 'module',
@@ -2447,6 +2523,7 @@ export const catalog: CatalogEntry[] = [
     description: 'End-to-end LLM and agent traces.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/traces`,
     kind: 'module',
@@ -2462,6 +2539,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Per-service RED metrics and the live dependency graph.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
     routes: [{ path: '', component: ServiceMapModule }],
@@ -2479,6 +2557,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Requests, tokens, spend, and per-model usage for your org.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/ai',
     docs: `${DOCS}/billing`,
     kind: 'module',
@@ -2499,6 +2578,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Marketplace / pay-as-you-go',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/billing`,
     kind: 'module',
@@ -2517,6 +2597,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Per-org web, commerce, and LLM analytics over the unified warehouse.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/analytics',
     docs: `${DOCS}/analytics`,
     kind: 'module',
@@ -2541,6 +2622,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Google Tag Manager',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -2558,6 +2640,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Product analytics and observability dashboards.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/analytics',
     docs: `${DOCS}/dashboards`,
     kind: 'module',
@@ -2573,6 +2656,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Alerting rules and notification policies.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
     routes: [{ path: '', component: AlertsModule }],
@@ -2625,6 +2709,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Billing / FinOps',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/finance',
     kind: 'module',
     routes: [{ path: '', component: FinanceModule }],
@@ -2642,7 +2727,7 @@ export const catalog: CatalogEntry[] = [
     // (`/v1/o11y/vm/*`, clients/o11y/vmproxy.go), which 403s a non-super caller. So a
     // customer gets the graceful AdminManagedNotice (no proxy call, no console 403)
     // instead of an error card, and only a SuperAdmin renders StatusModule + the board.
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/operator',
     kind: 'module',
     routes: [{ path: '', component: StatusModule }],
@@ -2656,6 +2741,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Compare plans and pricing for every cloud service.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/billing',
     kind: 'module',
     routes: [{ path: '', component: PlansModule }],
@@ -2675,6 +2761,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Deploy and manage the Lux DEX market-maker and trader bots — live quote quality, order book, and controls.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'luxfi/maker',
     kind: 'module',
     routes: [
@@ -2695,6 +2782,7 @@ export const catalog: CatalogEntry[] = [
     description: 'The Lux DEX economy — TVL/depth, 24h volume, fees, per-market price and liquidity, and recent trades from the on-chain indexer.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'luxfi/graph',
     kind: 'module',
     routes: [{ path: '', component: MarketsModule }],
@@ -2706,6 +2794,7 @@ export const catalog: CatalogEntry[] = [
     description: 'On-chain settlement for compute and payouts.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/ledger',
     docs: `${DOCS}/blockchain`,
     kind: 'module',
@@ -2720,6 +2809,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Connect a wallet and top up cloud credit with HUSD.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/billing',
     kind: 'module',
     routes: [{ path: '', component: WalletModule }],
@@ -2731,6 +2821,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Share your referral link and earn cloud credit when organizations get started.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // Three surfaces (summary · history · earnings), so the `:tab` route is what makes
@@ -2752,7 +2843,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Fleet-wide referral program — invites, qualification, and credit granted.',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: ReferralsAdminModule }],
@@ -2764,6 +2855,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Partner with Hanzo — earn ongoing commission on the customers you refer.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // Apply form (not enrolled) / dashboard (code + link, stat tiles, payout history);
@@ -2778,7 +2870,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Partner-commission program — applications, accrual, and payouts.',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: AffiliatesAdminModule }],
@@ -2793,6 +2885,7 @@ export const catalog: CatalogEntry[] = [
     // not the category. Filing it under Web3 hid it from everyone it is meant for.
     category: 'Dev',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // Connect GitHub (not enrolled) / dashboard (repos + verify, deploys, payouts);
@@ -2807,7 +2900,7 @@ export const catalog: CatalogEntry[] = [
     description: 'OSS-author royalty program — verifications, deploys, accruals, payouts.',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: AuthorsAdminModule }],
@@ -2823,7 +2916,7 @@ export const catalog: CatalogEntry[] = [
     description: "Manage which products the active organization has enabled.",
     category: 'Settings',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: EntitlementsAdminModule }],
@@ -2836,7 +2929,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Platform reserve fund — revenue-share policy, backed growth-loop payouts, double-entry journal, Hanzo L1 anchor.',
     category: 'Observe',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: TreasuryAdminModule }],
@@ -2848,6 +2941,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Issue and manage tokens and balances.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/treasury',
     kind: 'module',
     routes: [{ path: '', component: TokensModule }],
@@ -2862,6 +2956,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Blockchain networks — chain, nodes, status, and RPC.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/bootnode',
     docs: `${DOCS}/networks`,
     kind: 'module',
@@ -2874,6 +2969,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Index and query on-chain data.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: IndexerModule }],
   },
@@ -2884,6 +2980,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Bring off-chain data on-chain.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: OraclesModule }],
   },
@@ -2894,6 +2991,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Verifiable attestations and proofs.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: AttestationsModule }],
   },
@@ -2916,7 +3014,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Live validators, node and pod memory, and Lux service health across the fleet — real telemetry.',
     category: 'Web3',
     status: 'enabled',
-    admin: true,
+    stage: 'admin',
     brands: ['lux'],
     repo: 'hanzoai/console',
     kind: 'module',
@@ -2936,6 +3034,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Lux Network block explorer — search transactions, addresses, and contracts.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
     href: 'https://explore.lux.network',
@@ -2947,6 +3046,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Trade digital assets on the Lux exchange.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
     href: 'https://lux.exchange',
@@ -2958,6 +3058,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Bridge assets across chains on the Lux Network.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
     href: 'https://bridge.lux.network',
@@ -2969,6 +3070,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Claim testnet tokens for building on Lux.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
     href: 'https://faucet.lux.network',
@@ -2980,6 +3082,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Multisig smart-contract wallet on Lux (Safe).',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
     href: 'https://safe.lux.finance',
@@ -2991,6 +3094,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Swap tokens on the Lux on-chain decentralized exchange.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
     href: 'https://dex.lux.network',
@@ -3002,6 +3106,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Manage your assets across the Lux C, P, and X chains.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
     href: 'https://wallet.lux.network',
@@ -3013,6 +3118,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Zoo Network block explorer — search transactions, addresses, and contracts.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['zoo'],
     kind: 'external',
     href: 'https://explore.zoo.network',
@@ -3024,6 +3130,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Trade digital assets on the Zoo exchange.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['zoo'],
     kind: 'external',
     href: 'https://zoo.exchange',
@@ -3035,6 +3142,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Bridge assets across chains on the Zoo Network.',
     category: 'Web3',
     status: 'enabled',
+    stage: 'alpha',
     brands: ['zoo'],
     kind: 'external',
     href: 'https://bridge.zoo.ngo',
@@ -3067,6 +3175,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Agent gateway — channels, skills, and an OpenAI-compatible API.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/bot',
     kind: 'module',
     // '' = the gateway status/deep-links; 'run' = launch a computer-using bot on a
@@ -3133,6 +3242,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Phone numbers, calls, and messages for your org — on whatever carrier this deployment runs.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // The index IS Numbers (`/tel`), because the backend makes a held number the
@@ -3161,6 +3271,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Incorporate your company — an 8-step formation wizard, from entity to equity genesis.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: CompanyModule }],
@@ -3205,6 +3316,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Campaigns across channels (email, social, ads) — your marketing surface, per org.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: MarketingModule }],
@@ -3221,6 +3333,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Ad campaigns across platforms (Meta, Google, TikTok, X) — your ads surface, per org.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: AdsModule }],
@@ -3241,6 +3354,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Queue and publish your content everywhere — schedule and post across networks (X, Instagram, LinkedIn, TikTok), per org.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: SocialModule }],
@@ -3255,6 +3369,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Startup Program applications — AI-screened pipeline board, per org.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [{ path: '', component: StartupsModule }],
@@ -3271,6 +3386,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Native CMS — pages, posts, articles, media, and navigation as DocTypes on the Hanzo Framework, per organization.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -3291,6 +3407,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Native ERP on the Hanzo Framework — items, sales, purchasing, accounting, and HR as DocTypes, per organization.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -3311,6 +3428,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Native support desk on the Hanzo Framework — tickets, agents, teams, and SLAs as DocTypes, per organization.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -3329,6 +3447,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Scan the current page for WCAG accessibility issues — axe-core, in your browser.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: AccessibilityModule }],
@@ -3341,6 +3460,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Marketplace',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     docs: `${DOCS}/marketplace`,
     kind: 'module',
@@ -3353,6 +3473,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Managed search — full-text & hybrid indexes.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/search',
     docs: `${DOCS}/search`,
     kind: 'module',
@@ -3372,6 +3493,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Programmable Search / Vertex AI Search',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/crawl`,
     kind: 'module',
@@ -3403,6 +3525,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Web crawl',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/crawl`,
     kind: 'module',
@@ -3424,6 +3547,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Build AI apps and pipelines visually.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/studio',
     docs: `${DOCS}/ai-studio`,
     kind: 'module',
@@ -3438,6 +3562,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Production-ready starter kits — fork a template and deploy.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/gallery',
     kind: 'module',
     routes: [{ path: '', component: TemplatesModule }],
@@ -3449,6 +3574,7 @@ export const catalog: CatalogEntry[] = [
     description: 'The unified cloud console — this app.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'alpha',
     repo: 'hanzoai/console',
     docs: `${DOCS}/console`,
     kind: 'module',
@@ -3479,6 +3605,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Purchases placed in your store — status, customer, and total.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
     kind: 'module',
@@ -3491,6 +3618,7 @@ export const catalog: CatalogEntry[] = [
     description: 'People who order from or have an account with your store.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
     kind: 'module',
@@ -3503,6 +3631,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Stock on hand per SKU across your catalog.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
     kind: 'module',
@@ -3515,6 +3644,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Discount codes and promotions customers apply at checkout.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
     kind: 'module',
@@ -3527,6 +3657,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Storefront configuration and how payments are processed.',
     category: 'Apps',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
     kind: 'module',
@@ -3554,6 +3685,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Organization and account settings — name, defaults, and branding.',
     category: 'Settings',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/iam',
     kind: 'module',
     routes: [
@@ -3576,6 +3708,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Reach support, sales, and the Hanzo community — the in-console assistant answers first.',
     category: 'Settings',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
     routes: [{ path: '', component: ContactModule }],
@@ -3605,6 +3738,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Curate evaluation datasets and items.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/datasets`,
     kind: 'module',
@@ -3625,6 +3759,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Dataset runs, comparisons, and experiment analytics.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/experiments`,
     kind: 'module',
@@ -3644,6 +3779,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Traces grouped into multi-turn sessions.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/sessions`,
     kind: 'module',
@@ -3677,6 +3813,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Score definitions — data types, ranges, and categories.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/score-configs`,
     kind: 'module',
@@ -3709,6 +3846,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Spans, generations, and events inside traces.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
     routes: [{ path: '', component: ObservationsModule }],
@@ -3721,6 +3859,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Per-user analytics — trace volume, tokens, and cost.',
     category: 'Observe',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
     routes: [{ path: '', component: UsersModule }],
@@ -3739,6 +3878,7 @@ export const catalog: CatalogEntry[] = [
     description: 'Your personal memory — searchable, editable, in one place.',
     category: 'Data',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/ai',
     docs: `${DOCS}/memory`,
     kind: 'module',
@@ -3759,6 +3899,7 @@ export const catalog: CatalogEntry[] = [
     gcp: 'Cloud Tasks',
     category: 'Compute',
     status: 'enabled',
+    stage: 'beta',
     repo: 'hanzoai/tasks',
     docs: `${DOCS}/tasks`,
     kind: 'module',
@@ -3883,8 +4024,9 @@ export const catalogByCategory = (): { category: NavSection; entries: CatalogEnt
     .map((category) => ({ category, entries: catalog.filter((e) => inBrand(e) && e.category === category) }))
     .filter((g) => g.entries.length > 0)
 
-/** An admin-only (global / Hanzo-managed) entry — hidden from a customer's nav. */
-export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
+// The stage axis + its two predicates live in ./stage (pure, unit-tested in
+// stage.test.ts). Re-exported here so a consumer of the registry has one import.
+export { type Stage, type Viewer, operator, customer, stageOf, listed, reachable } from './stage'
 
 /**
  * Per-brand category scope — the ONE knob that makes each brand's console show
@@ -3908,18 +4050,23 @@ export const inBrand = (e: CatalogEntry): boolean =>
   categoryInBrand(config.brand, e.category) && entryInBrandScope(config.brand, e.brands)
 
 /**
- * The catalog a given user may SEE. A global admin sees everything; a customer
- * (org owner / member) never sees the admin-only surfaces (cross-tenant IAM/KMS,
- * provider + routing config, cluster ops). Access is enforced server-side too —
- * this is the matching nav gate, so a customer never lands on a hostile 403.
- * Also scoped to the current BRAND (lux/zoo = web3/bootnode, hanzo = full).
+ * The catalog this viewer may SEE — the ONE list every browsing surface reads.
+ *
+ * Three scopes compose here and nowhere else, so the nav rail, ⌘K, All-products,
+ * the home map and the category pages cannot answer differently:
+ *   BRAND     — the console's own surfaces (lux/zoo = web3/bootnode, hanzo = full).
+ *   STAGE     — how finished a product is, weighed against the viewer (`listed`).
+ *   ENTITLED  — what the org's plan grants (money; `filterEntitled`, unchanged).
+ *
+ * Access is enforced server-side too — this is the matching nav decision, so a
+ * customer never lands on a hostile 403.
  */
 // Each product face's ROOT module id (billing/marketing/ads/social/sentry) is owned
 // by the ONE shell descriptor (`shellFor(shell).rootId`, lib/products/shell.ts) — the
 // former `BILLING_CENTER_ID`/`MARKETING_ID`/`ADS_ID`/`SOCIAL_ID` per-mode consts were
 // collapsed into it (a name is a value in one namespace, no parallel id constants).
 
-export const visibleCatalog = (showAdmin: boolean, enabled?: string[] | null): CatalogEntry[] => {
+export const visibleCatalog = (viewer: Viewer, enabled?: string[] | null): CatalogEntry[] => {
   // Product-shell face (billing / marketing / ads / social / sentry host, or an
   // override): the SAME console image, scoped to ONE product FACE — its root module
   // surfaced alone. Bypass the brand-category + entitlement scope so the face shows on
@@ -3935,22 +4082,24 @@ export const visibleCatalog = (showAdmin: boolean, enabled?: string[] | null): C
   // belong to their face, not the general nav (e.g. the sentry panels are the o11y
   // surfaces' Sentry twin, shown only on sentry.<brand>). marketing/ads/social carry
   // NO `e.shell` (normal Apps products), so they ALSO show in the full console.
-  const byAdmin = (showAdmin ? catalog : catalog.filter((e) => !isAdminEntry(e)))
+  const byStage = catalog
+    .filter((e) => listed(stageOf(e), viewer))
     .filter((e) => !e.shell)
     .filter(inBrand)
-  // ENTITLEMENT GATE (customer only): out-of-box an org sees ONLY the products it has
-  // enabled/paid for (always-on essentials + its `enabled` set). A super admin
-  // (`showAdmin`) bypasses; an ungated set (`enabled` null/undefined — the endpoint
-  // hasn't landed) shows everything (no regression). ONE predicate, `filterEntitled`.
-  return filterEntitled(byAdmin, enabled, showAdmin)
+  // ENTITLEMENT (customer only): what the org's PLAN grants — always-on essentials
+  // plus its `enabled` set. A different question from stage and a live one (the
+  // `/v1/orgs/{org}/entitlements` backend answers), so it composes here rather than
+  // collapsing into the stage predicate. An operator bypasses; a `null` set is
+  // ungated. ONE predicate, `filterEntitled`, unchanged.
+  return filterEntitled(byStage, enabled, viewer.admin)
 }
 
-/** `catalogByCategory` scoped to what the user may see (admin surfaces + entitlements gated). */
+/** `catalogByCategory` narrowed to what this viewer may see. */
 export const visibleCatalogByCategory = (
-  showAdmin: boolean,
+  viewer: Viewer,
   enabled?: string[] | null,
 ): { category: NavSection; entries: CatalogEntry[] }[] => {
-  const visible = visibleCatalog(showAdmin, enabled)
+  const visible = visibleCatalog(viewer, enabled)
   // In a product-shell face the root module IS the whole catalog — surface it as a
   // single group regardless of the brand's category order (its category may be
   // outside the brand's normal set). ONE branch for EVERY face.

@@ -21,6 +21,7 @@ import {
 
 import { config } from '~/config'
 import { findEntry } from '~/lib/products/registry'
+import { stageOf } from '~/lib/products/stage'
 import { openProduct } from '~/lib/products/open'
 import { OSS_PROGRAM, githubUrl, DOCS_URL } from '~/lib/oss-program'
 import { PageHeader } from '@hanzo/ui/product'
@@ -103,7 +104,7 @@ export function ProductInterstitial({ id }: { id: string }) {
             <Text fontSize="$2" color="$color10">
               {entry.category}
               {entry.gcp ? ` · ${entry.gcp}` : ''}
-              {entry.admin ? ' · admin' : ''}
+              {stageOf(entry) === 'admin' ? ' · admin' : ''}
             </Text>
           </YStack>
           <Button
@@ -114,7 +115,7 @@ export function ProductInterstitial({ id }: { id: string }) {
             Open
           </Button>
         </XStack>
-        {entry.admin ? (
+        {stageOf(entry) === 'admin' ? (
           <XStack gap="$2" items="center">
             <Lock size={13} opacity={0.6} />
             <Text fontSize="$2" color="$color10">

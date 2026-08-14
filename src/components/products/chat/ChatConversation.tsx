@@ -30,7 +30,7 @@ import { hanzoAssistantSystemPrompt, assistantState, ASSISTANT_DOCS_STORE } from
 import { Voice, useVoice } from '@hanzo/voice'
 
 import { HANZO_SPEECH } from '~/lib/voice'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
 import { config } from '~/config'
 import { Markdown } from './markdown'
 import { splitThinking } from './thinking'
@@ -199,10 +199,10 @@ export function ChatConversation({
   const abortRef = useRef<AbortController | null>(null)
 
   // The ONE grounded assistant prompt (product catalog + curated overview), scoped
-  // so a global admin sees admin surfaces and a customer never does. Built once per
-  // admin state — the same prompt backs the floating bubble and the full Chat page.
-  const showAdmin = useIsSuperAdmin()
-  const system = useMemo(() => hanzoAssistantSystemPrompt({ showAdmin }), [showAdmin])
+  // by the SAME viewer the nav decides on — so the assistant never names a page the
+  // person cannot open. One prompt backs the floating bubble and the full Chat page.
+  const viewer = useViewer()
+  const system = useMemo(() => hanzoAssistantSystemPrompt({ viewer }), [viewer])
 
   // Default to the trial-safe house default once the catalog loads: prefer the
   // NON-PREMIUM `DEFAULT_MODEL` (the same default the Models page pills and the

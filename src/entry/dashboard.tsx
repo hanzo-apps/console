@@ -118,7 +118,8 @@ import {
   type CategoryOpen,
 } from '~/lib/products/nav'
 import { usePreferences } from '~/lib/products/preferences'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
+import { listed, stageOf } from '~/lib/products/stage'
 import { useEntitlements } from '~/lib/entitlements-context'
 import { AddProductPanel } from '~/components/AddProductPanel'
 import { SidebarWallet } from '~/components/SidebarWallet'
@@ -258,7 +259,7 @@ const NavRow = memo(function NavRow({
       />
     )
   }
-  const hint = entry.admin ? (
+  const hint = stageOf(entry) === 'admin' ? (
     <Lock size={12} opacity={0.45} />
   ) : entry.kind === 'external' ? (
     <ExternalLink size={12} opacity={0.45} />
@@ -475,7 +476,7 @@ function SidebarNav({
   const { view, isPinned, toggle, pinnedIds } = usePins()
   const { colorOf } = useProductColors()
   const detail = useDetailPane()
-  const showAdmin = useIsSuperAdmin()
+  const viewer = useViewer()
   // Entitlement scope: currently ungated in prod (the endpoint 404s → `enabled` is
   // null → the full catalog shows), matching "every product is always available".
   const { enabled } = useEntitlements()
@@ -511,7 +512,7 @@ function SidebarNav({
       onNavigate()
       return
     }
-    if (productSubpages(entry, showAdmin).length > 1) {
+    if (productSubpages(entry, viewer).length > 1) {
       router.push(`/${entry.id}`) // the rail becomes its pages
     } else {
       go(`/${entry.id}`) // leaf — navigate + close
@@ -566,11 +567,11 @@ function SidebarNav({
           ...g,
           entries: g.entries.filter((e) => {
             const found = findEntry(e.id)
-            return Boolean(found) && (showAdmin || !found!.admin)
+            return Boolean(found) && listed(stageOf(found!), viewer)
           }),
         }))
         .filter((g) => g.entries.length > 0),
-    [view, showAdmin],
+    [view, viewer],
   )
 
   // Within-scope ordering is CONTINUOUS ALPHABETICAL with the SELECTED product pinned
@@ -584,10 +585,10 @@ function SidebarNav({
   // either way, so nothing on the rail is ever a surface the viewer cannot open.
   const groups = useMemo(
     () =>
-      visibleCatalogByCategory(showAdmin, catalogInRail ? null : enabled)
+      visibleCatalogByCategory(viewer, catalogInRail ? null : enabled)
         .map((g) => ({ category: g.category, entries: orderEntries(g.entries, activeId) }))
         .filter((g) => g.entries.length > 0),
-    [showAdmin, catalogInRail, enabled, activeId],
+    [viewer, catalogInRail, enabled, activeId],
   )
 
   // ── Level 2 — the product the route is inside ─────────────────────────────
@@ -597,7 +598,7 @@ function SidebarNav({
   // A product with no pages of its own is a LEAF: there is no second level to show,
   // so the rail stays on the catalog with that row lit. Same rule `open` navigates by.
   const here =
-    level && (showAdmin || !level.admin) && productSubpages(level, showAdmin).length > 1 ? level : undefined
+    level && listed(stageOf(level), viewer) && productSubpages(level, viewer).length > 1 ? level : undefined
   const siblings =
     here && catalogInRail
       ? (groups.find((g) => g.category === here.category)?.entries ?? []).filter((e) => e.id !== here.id)
@@ -610,7 +611,7 @@ function SidebarNav({
     const root = findEntry(rootId)
     const subs: ProductSubpage[] =
       root && root.kind === 'module'
-        ? [{ slug: '', label: shell.indexLabel }, ...(root.subpages ?? []).filter((s) => showAdmin || !s.admin)]
+        ? [{ slug: '', label: shell.indexLabel }, ...(root.subpages ?? []).filter((s) => listed(stageOf(s), viewer))]
         : []
     const activeSlug = root ? activeSubpage(pathname, root.id) : ''
     return (
@@ -665,7 +666,7 @@ function SidebarNav({
     const seen = new Set<string>()
     for (const id of [...pinnedIds, ...(activeId ? [activeId] : [])]) {
       const e = findEntry(id)
-      if (e && !seen.has(id) && (showAdmin || !e.admin)) {
+      if (e && !seen.has(id) && listed(stageOf(e), viewer)) {
         seen.add(id)
         railIds.push(id)
       }
@@ -769,7 +770,7 @@ function SidebarNav({
                     {here.label}
                   </Text>
                 </XStack>
-                {productSubpages(here, showAdmin).map((sp) => (
+                {productSubpages(here, viewer).map((sp) => (
                   <SubRow
                     key={sp.slug || 'overview'}
                     id={here.id}

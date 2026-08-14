@@ -46,7 +46,8 @@ import {
   type ProductIcon,
 } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
+import { stageOf } from '~/lib/products/stage'
 import { useEntitlements } from '~/lib/entitlements-context'
 import { useProductColors } from '~/lib/products/pins'
 import { categoryColorHex } from '~/lib/products/colors'
@@ -108,7 +109,7 @@ function ProductCard({
           </YStack>
         </XStack>
         <XStack gap="$1.5" items="center">
-          {entry.admin ? <Lock size={13} opacity={0.45} /> : null}
+          {stageOf(entry) === 'admin' ? <Lock size={13} opacity={0.45} /> : null}
         </XStack>
       </XStack>
 
@@ -144,14 +145,14 @@ function ProductCard({
 /** The category landing page, resolved from `/category/<slug>`. */
 export function CategoryOverview({ params }: { params: Record<string, string> }) {
   const router = useRouter()
-  const showAdmin = useIsSuperAdmin()
+  const viewer = useViewer()
   const { enabled } = useEntitlements()
   const { colorOf } = useProductColors()
   const push = (path: string) => router.push(path)
 
   const category = categoryFromSlug(params.slug ?? '')
   const group = category
-    ? visibleCatalogByCategory(showAdmin, enabled).find((g) => g.category === category)
+    ? visibleCatalogByCategory(viewer, enabled).find((g) => g.category === category)
     : undefined
 
   // Unknown slug, or a category with nothing visible for this brand/role: honest 404.
@@ -168,7 +169,7 @@ export function CategoryOverview({ params }: { params: Record<string, string> })
   // Category pager — step prev/next through the visible categories in their FIXED
   // order (the ONE `categoryOrder`, brand/admin-scoped), wrapping around so you can
   // cycle the whole cloud axis without returning to the home grid.
-  const orderedCats = visibleCatalogByCategory(showAdmin, enabled).map((g) => g.category)
+  const orderedCats = visibleCatalogByCategory(viewer, enabled).map((g) => g.category)
   const idx = orderedCats.indexOf(category)
   const prevCat = orderedCats.length > 1 ? orderedCats[(idx - 1 + orderedCats.length) % orderedCats.length] : null
   const nextCat = orderedCats.length > 1 ? orderedCats[(idx + 1) % orderedCats.length] : null

@@ -11,7 +11,7 @@
  * Each fact here has already been a bug shape in this console:
  *  - a `deploy` SLUG_ALIAS makes the front door unreachable, because
  *    `canonicalSlug` rewrites the head before any lookup happens;
- *  - `admin: true` on a customer surface hides it from every customer;
+ *  - a `stage: 'admin'` on a customer surface hides it from every customer;
  *  - two entries labelled "Deploy" put identically-named rows in one nav section,
  *    one of them the admin ESTATE map;
  *  - a sub-page with no `:tab` route renders an honest stub, and nothing fails.
@@ -21,8 +21,17 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { SLUG_ALIASES } from '~/lib/products/match-core'
+import type { Stage } from '~/lib/products/stage'
 
 const SRC = readFileSync(join(__dirname, '..', '..', '..', 'lib', 'products', 'registry.tsx'), 'utf8')
+
+/** The stage an entry's source declares, read the way `stageOf` reads the value:
+ *  unset is `ga`. This is the DATA half — the predicate over it is proved with
+ *  fixtures in stage.test.ts. */
+function stageIn(src: string): Stage {
+  const m = src.match(/^\s*stage: '(ga|beta|alpha|admin)',\s*$/m)
+  return (m?.[1] as Stage) ?? 'ga'
+}
 
 /** One catalog entry's source text: from its `id:` to the next entry's. */
 function entrySrc(id: string): string {
@@ -41,8 +50,8 @@ describe('the Deploy product', () => {
     expect(src).toMatch(/^\s*kind: 'module',\s*$/m)
   })
 
-  it('is NOT admin-gated — a customer ships their own code', () => {
-    expect(/^\s*admin:\s*true,\s*$/m.test(src)).toBe(false)
+  it('is GA — a customer ships their own code', () => {
+    expect(stageIn(src)).toBe('ga')
   })
 
   it('declares the index and the :tab route its sub-pages need', () => {
@@ -81,6 +90,6 @@ describe('the estate fleet map stays admin-only, under its own name', () => {
   })
 
   it('is still admin-gated — it shows every org, not just yours', () => {
-    expect(/^\s*admin:\s*true,\s*$/m.test(src)).toBe(true)
+    expect(stageIn(src)).toBe('admin')
   })
 })

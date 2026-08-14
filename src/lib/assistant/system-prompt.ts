@@ -11,6 +11,7 @@
  */
 import { config } from '~/config'
 import { visibleCatalogByCategory, CATEGORY_SUMMARY } from '~/lib/products/registry'
+import { type Viewer, customer } from '~/lib/products/stage'
 import {
   ASSISTANT_DOCS_STORE,
   buildAssistantPrompt,
@@ -22,15 +23,15 @@ import {
 export { ASSISTANT_DOCS_STORE } from './prompt-content'
 
 export type AssistantPromptOptions = {
-  /** Include admin-only / global surfaces (a global admin). Defaults to false so a
-   *  customer's assistant never references a locked page — mirrors the nav gate. */
-  showAdmin?: boolean
+  /** Who is asking. Defaults to a plain customer, so the assistant never names a
+   *  page the person cannot open — the SAME predicate the nav decides on. */
+  viewer?: Viewer
 }
 
-/** The live catalog, scoped to what this user (brand + admin) may see, projected
- *  onto the pure builder's minimal `PromptGroup[]` shape. */
-function promptGroupsFor(showAdmin: boolean): PromptGroup[] {
-  return visibleCatalogByCategory(showAdmin).map(({ category, entries }) => ({
+/** The live catalog, scoped to what this viewer may see, projected onto the pure
+ *  builder's minimal `PromptGroup[]` shape. */
+function promptGroupsFor(viewer: Viewer): PromptGroup[] {
+  return visibleCatalogByCategory(viewer).map(({ category, entries }) => ({
     category,
     summary: CATEGORY_SUMMARY[category],
     entries: entries.map((e) => ({
@@ -47,12 +48,12 @@ function promptGroupsFor(showAdmin: boolean): PromptGroup[] {
  *  + the honest-behavior contract. Used by the chat surfaces (floating bubble + full
  *  Chat page). */
 export function hanzoAssistantSystemPrompt(opts: AssistantPromptOptions = {}): string {
-  return buildAssistantPrompt(config.brandName, promptGroupsFor(opts.showAdmin ?? false))
+  return buildAssistantPrompt(config.brandName, promptGroupsFor(opts.viewer ?? customer))
 }
 
 /** The ⌘K "Ask AI" variant — the same expert prompt plus the nav contract, so the
  *  command bar both JUMPS to a product on a clear intent and answers knowledgeably
  *  otherwise. Replaces the old nav-only prompt (one catalog, one source of truth). */
 export function commandBarSystemPrompt(opts: AssistantPromptOptions = {}): string {
-  return buildCommandBarPrompt(config.brandName, promptGroupsFor(opts.showAdmin ?? false))
+  return buildCommandBarPrompt(config.brandName, promptGroupsFor(opts.viewer ?? customer))
 }

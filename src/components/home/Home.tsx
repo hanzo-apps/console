@@ -36,7 +36,7 @@ import { UsageSummaryApi, type UsageSummary } from '~/lib/api/usage-summary'
 import { useCloudBalance, spendableCents } from '~/lib/billing/live-balance'
 import { useTimedOut } from '~/lib/use-timed-out'
 import { visibleCatalog } from '~/lib/products/registry'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
 import { greet } from '~/components/home/greeting'
 
 type Async<T> = { phase: 'loading' } | { phase: 'error'; error: BackendState } | { phase: 'ready'; data: T }
@@ -105,7 +105,7 @@ const EXPLORE = ['playground', 'agents', 'functions', 'embeddings', 'gpus', 'pla
 export function Home() {
   const { account } = useSession()
   const router = useRouter()
-  const showAdmin = useIsSuperAdmin()
+  const viewer = useViewer()
   const [today, setToday] = useState<Date | null>(null)
 
   // Read the date after mount: the server and the browser can sit in different
@@ -152,7 +152,7 @@ export function Home() {
     if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener')
   }
   const docs = (slug?: string) => open(slug ? `${config.docsUrl}/docs/${slug}` : config.docsUrl)
-  const catalog = visibleCatalog(showAdmin)
+  const catalog = visibleCatalog(viewer)
   const explore = EXPLORE.map((id) => catalog.find((e) => e.id === id)).filter(
     (e): e is NonNullable<typeof e> => Boolean(e),
   )

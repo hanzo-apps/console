@@ -81,7 +81,8 @@ import { ProductIcon } from '~/components/ui/ProductIcon'
 import { openProduct } from '~/lib/products/open'
 import { currentOrg, switchOrg } from '~/lib/org-scope'
 import { useSession } from '~/lib/auth/session'
-import { useIsSuperAdmin } from '~/lib/auth/admin'
+import { useViewer } from '~/lib/products/viewer'
+import { stageOf } from '~/lib/products/stage'
 import { BackendStateCard, asColor, type BackendState } from '@hanzo/ui/product'
 
 const titleCase = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -235,7 +236,7 @@ function CatalogRow({
           {entry.gcp ? ` · ${entry.gcp}` : ''}
         </Text>
       </YStack>
-      {entry.admin ? <Lock size={13} opacity={0.45} /> : null}
+      {stageOf(entry) === 'admin' ? <Lock size={13} opacity={0.45} /> : null}
       {onPin ? <PinToggle label={entry.label} pinned={pinned === true} active={active} onPress={onPin} /> : null}
       <ArrowRight size={13} opacity={active ? 0.8 : 0.3} />
     </XStack>
@@ -365,7 +366,10 @@ function PaletteDialog({
 }) {
   const router = useRouter()
   const { signOut } = useSession()
-  const showAdmin = useIsSuperAdmin()
+  // ONE viewer decides what the palette can offer AND whether the cross-tenant org
+  // list is worth asking for — the same value the rail and the router read.
+  const viewer = useViewer()
+  const showAdmin = viewer.admin
   const { colorOf } = useProductColors()
   const pins = usePins()
   const { current, resolvedTheme, set: setTheme } = useThemeSetting()
@@ -441,10 +445,10 @@ function PaletteDialog({
   // a search, so the ranked branch is left strictly alone.
   const destResults = useMemo(() => {
     if (mode !== 'catalog') return []
-    const found = searchDestinations(query, showAdmin, null)
+    const found = searchDestinations(query, viewer, null)
     if (sub) return found.slice(0, 50)
     return pinnedFirst(found, (d) => (d.kind === 'product' ? d.entry.id : ''), pins.pinnedIds)
-  }, [mode, query, sub, showAdmin, pins.pinnedIds])
+  }, [mode, query, sub, viewer, pins.pinnedIds])
 
   const matchedActions = useMemo(
     () => (mode === 'catalog' && sub ? actions.filter((a) => actionMatches(a, sub.toLowerCase())) : []),
@@ -528,7 +532,7 @@ function PaletteDialog({
       if (mode === 'ai') {
         // Same grounded expert prompt as the chat, plus the nav contract: a clear
         // "open X" jumps to the product; anything else gets a real, accurate answer.
-        const ans = (await AiApi.chat({ question: sub, system: commandBarSystemPrompt({ showAdmin }) })).trim()
+        const ans = (await AiApi.chat({ question: sub, system: commandBarSystemPrompt({ viewer }) })).trim()
         const m = ans.match(/^NAV\s+([a-z0-9-]+)/i)
         const entry = m ? findEntry(m[1]) : undefined
         if (entry) setRun({ status: 'nav', entry })
@@ -538,14 +542,14 @@ function PaletteDialog({
         const ans = await AiApi.ragChat({
           question: sub,
           store: 'docs',
-          system: hanzoAssistantSystemPrompt({ showAdmin }),
+          system: hanzoAssistantSystemPrompt({ viewer }),
         })
         setRun({ status: 'text', text: ans })
       }
     } catch (e) {
       setRun({ status: 'error', state: assistantState(e) })
     }
-  }, [mode, sub, showAdmin])
+  }, [mode, sub, viewer])
 
   // Keyboard while open: ↑/↓ select, ↵ activate/ask, Esc close.
   useEffect(() => {
