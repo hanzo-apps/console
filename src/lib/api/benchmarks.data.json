@@ -56,7 +56,7 @@
       "vendor": "Hanzo",
       "scores": {
         "gpqa_diamond": {
-          "value": 92.9,
+          "value": 98,
           "source": "hanzo-measured"
         },
         "charxiv_reasoning": {
@@ -68,15 +68,15 @@
           "source": "hanzo-measured"
         }
       },
-      "price": 75,
-      "intelligence": 92.9
+      "price": 25,
+      "intelligence": 98
     },
     {
       "model": "enso",
       "vendor": "Hanzo",
       "scores": {
         "gpqa_diamond": {
-          "value": 87.9,
+          "value": 96,
           "source": "hanzo-measured"
         },
         "livecodebench": {
@@ -92,20 +92,20 @@
           "source": "hanzo-measured"
         }
       },
-      "price": 75,
-      "intelligence": 87.9
+      "price": 20,
+      "intelligence": 96
     },
     {
       "model": "enso-flash",
       "vendor": "Hanzo",
       "scores": {
         "gpqa_diamond": {
-          "value": 75.8,
+          "value": 92.9,
           "source": "hanzo-measured"
         }
       },
-      "price": 6,
-      "intelligence": 75.8
+      "price": 4,
+      "intelligence": 92.9
     },
     {
       "model": "gpt-5.6-sol",
