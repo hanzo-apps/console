@@ -27,6 +27,7 @@
     "@hanzo/finance-ui": "~0.1.1",
     "@hanzo/gui": "^8.0.0",
     "@hanzo/iam": "^0.21.6",
+    "@hanzo/products": "^0.2.5",
     "@hanzo/logo": "^1.0.14",
     "@hanzo/ui": "^8.0.76",
     "@hanzo/usage": "^0.1.6",

@@ -11,7 +11,7 @@ import {
   ALL_NODE_NETWORKS,
   BRAND_NODE_NETWORKS,
   nodeNetworksForBrand,
-  type ProductCategory,
+  type NavSection,
   type NodeNetworkId,
 } from './brand-scope'
 import type { BrandId } from '~/config'
@@ -21,8 +21,11 @@ import type { BrandId } from '~/config'
 // passed in) + dependency-free, so this proves the filter without hostname
 // mocking and without loading the (React-heavy) registry.
 
-const WEB3: ProductCategory[] = ['Web3', 'Network', 'Security', 'Dev', 'Settings']
-const AI_ONLY: ProductCategory[] = ['AI', 'Compute', 'Data', 'Observe', 'Apps', 'Platform']
+// READ off the scope rather than restated. A test that carries its own copy of
+// the list it is checking can only ever agree with itself, which is how the
+// estate ran four taxonomies that disagreed while every suite stayed green.
+const WEB3: NavSection[] = BRAND_CATEGORIES.lux ?? []
+const AI_ONLY: NavSection[] = categoryOrder.filter((c) => !WEB3.includes(c))
 
 describe('per-brand catalog scope', () => {
   it('hanzo sees every category (full AI cloud)', () => {

@@ -42,7 +42,7 @@ import {
   categorySlug,
   CATEGORY_SUMMARY,
   type CatalogEntry,
-  type ProductCategory,
+  type NavSection,
   type ProductIcon,
 } from '~/lib/products/registry'
 import { openProduct } from '~/lib/products/open'
@@ -53,14 +53,14 @@ import { categoryColorHex } from '~/lib/products/colors'
 import { FadeIn, PageHeader, asColor } from '@hanzo/ui/product'
 
 /** A representative icon per category (presentational — kept out of the taxonomy layer). */
-const CATEGORY_ICON: Record<ProductCategory, ProductIcon> = {
+const CATEGORY_ICON: Record<NavSection, ProductIcon> = {
   AI: Sparkles,
   Compute: Cpu,
   Data: Database,
   Network: Network,
   Security: Shield,
   Observe: Activity,
-  Platform: Rocket,
+  Infrastructure: Rocket,
   Dev: Code2,
   Web3: Blocks,
   Apps: Store,
@@ -74,7 +74,7 @@ const CATEGORY_ICON: Record<ProductCategory, ProductIcon> = {
  * Model Catalog and Providers (its two entry points); other categories rely on the
  * grid below.
  */
-const CATEGORY_FEATURED: Partial<Record<ProductCategory, string[]>> = {
+const CATEGORY_FEATURED: Partial<Record<NavSection, string[]>> = {
   AI: ['models', 'providers'],
 }
 

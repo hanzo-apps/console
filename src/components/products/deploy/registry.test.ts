@@ -35,9 +35,9 @@ function entrySrc(id: string): string {
 describe('the Deploy product', () => {
   const src = entrySrc('deploy')
 
-  it('is a Platform module labelled Deploy', () => {
+  it('is an Infrastructure module labelled Deploy', () => {
     expect(src).toMatch(/^\s*label: 'Deploy',\s*$/m)
-    expect(src).toMatch(/^\s*category: 'Platform',\s*$/m)
+    expect(src).toMatch(/^\s*category: 'Infrastructure',\s*$/m)
     expect(src).toMatch(/^\s*kind: 'module',\s*$/m)
   })
 

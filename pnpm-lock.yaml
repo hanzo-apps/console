@@ -41,6 +41,9 @@ importers:
       '@hanzo/logo':
         specifier: ^1.0.14
         version: 1.0.14(react@19.2.7)
+      '@hanzo/products':
+        specifier: ^0.2.5
+        version: 0.2.5(@hanzogui/lucide-icons-2@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@hanzo/ui':
         specifier: ^8.0.76
         version: 8.0.76(a9ac5608ba7a86bfd0fb749142d59bb5)
@@ -855,8 +858,8 @@ packages:
       react:
         optional: true
 
-  '@hanzo/products@0.2.0':
-    resolution: {integrity: sha512-SGVBJvJOyN5a7DXacwlRpLOoDjNXGx5ucWMkRAp/ZUP7DOqm9lZlypGG+uXvLmURIUr3SQ152jVgSugm0vXIjw==}
+  '@hanzo/products@0.2.5':
+    resolution: {integrity: sha512-JZ/XU64LgWZmjO9N/yGQIeX6nmQar1JD0nuQ5TAC7iALutL59mlow3fjNiBkwYtKcGnbiT+61hHwRmFuUUxRBA==}
     peerDependencies:
       '@hanzogui/lucide-icons-2': '>=7'
       react: '>=18'
@@ -5008,7 +5011,12 @@ snapshots:
     optionalDependencies:
       react: 19.2.7
 
-  '@hanzo/products@0.2.0(@hanzogui/lucide-icons-2@8.1.0(react-dom@19.2.7(react@19.2.7))(react-native-svg@15.15.5(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@hanzo/products@0.2.5(@hanzogui/lucide-icons-2@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+    optionalDependencies:
+      '@hanzogui/lucide-icons-2': 8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react: 19.2.7
+
+  '@hanzo/products@0.2.5(@hanzogui/lucide-icons-2@8.1.0(react-dom@19.2.7(react@19.2.7))(react-native-svg@15.15.5(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     optionalDependencies:
       '@hanzogui/lucide-icons-2': 8.1.0(react-dom@19.2.7(react@19.2.7))(react-native-svg@15.15.5(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7)
       react: 19.2.7
@@ -5020,7 +5028,7 @@ snapshots:
       '@hanzo/design': 0.5.1
       '@hanzo/gui': 8.0.0(react-dom@19.2.7(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7)
       '@hanzo/logo': 1.0.14(react@19.2.7)
-      '@hanzo/products': 0.2.0(@hanzogui/lucide-icons-2@8.1.0(react-dom@19.2.7(react@19.2.7))(react-native-svg@15.15.5(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7))(react@19.2.7)
+      '@hanzo/products': 0.2.5(@hanzogui/lucide-icons-2@8.1.0(react-dom@19.2.7(react@19.2.7))(react-native-svg@15.15.5(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@hanzogui/config': 8.0.0(react-dom@19.2.7(react@19.2.7))(react-native-reanimated@4.5.3(react-native-worklets@0.10.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7)(supports-color@8.1.1))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7)
       '@hanzogui/lucide-icons-2': 8.1.0(react-dom@19.2.7(react@19.2.7))(react-native-svg@15.15.5(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7)
       '@hanzogui/telemetry': 8.1.0(react@19.2.7)

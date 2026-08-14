@@ -3,7 +3,9 @@ import { join } from 'node:path'
 
 import { describe, it, expect } from 'vitest'
 
-import { categoryOrder, PUBLIC_CATEGORIES, CATEGORY_SUMMARY } from './brand-scope'
+import { CATEGORY_ORDER } from '@hanzo/products'
+
+import { categoryOrder, SETTINGS, CATEGORY_SUMMARY } from './brand-scope'
 
 /**
  * The taxonomy is TEN categories, and a fold never loses a product.
@@ -42,9 +44,15 @@ describe('the product taxonomy', () => {
   const src = readFileSync(REGISTRY, 'utf8')
   const counts = categoryCounts(src)
 
-  it('is exactly ten categories a customer browses, plus Settings', () => {
-    expect(PUBLIC_CATEGORIES).toHaveLength(10)
-    expect(categoryOrder).toEqual([...PUBLIC_CATEGORIES, 'Settings'])
+  it('is the catalog\'s categories, plus Settings', () => {
+    // Which categories a customer browses is hanzoai/commerce's answer, carried
+    // in by @hanzo/products. The console adds exactly one section of its own —
+    // account administration — and it is the last.
+    expect(categoryOrder).toEqual([...CATEGORY_ORDER, SETTINGS])
+  })
+
+  it('keeps account administration out of the product taxonomy', () => {
+    expect(CATEGORY_ORDER).not.toContain(SETTINGS as never)
   })
 
   it('gives every category one line of its own', () => {

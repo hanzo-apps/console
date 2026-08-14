@@ -8,84 +8,70 @@
 // **web3 / bootnode admin** consoles — Web3 (on-chain), Network (nodes/peering),
 // Security (keys/HSM/authz), Dev (keys/CLI), Settings (org) — NOT the AI-cloud
 // surfaces. `null` = every category.
+import {
+  CATEGORY_ORDER,
+  CATEGORY_SUMMARY as PRODUCT_SUMMARY,
+  BRAND_CATEGORIES as PRODUCT_SCOPE,
+  type ProductCategory,
+} from '@hanzo/products'
 import type { BrandId } from '~/config'
 
-// TEN categories a customer browses, and they are not this file's invention —
-// they are the ten the rest of the estate already names, in its order:
-//
-//   AI  Compute  Data  Network  Security / Dev  Platform  Observe  Web3  Apps
-//
-// `@hanzogui/shell` renders exactly these as the Products mega-menu (two rows of
-// five), `api.hanzo.ai/v1/commerce/catalog?brand=hanzo` groups the brand catalog
-// under exactly these ten ids, and this registry's own header has claimed "the
-// ten canonical Open AI Cloud categories" all along. It had drifted to fourteen
-// by growing a category per product FAMILY rather than per surface a customer
-// uses, so three families moved to the surface that already owns them:
-//
-//   Training -> AI       one entry (Fine-tuning). Tuning a model is done TO a
-//                        model, in the surface where models live.
-//   Commerce -> Apps     Products, Orders, Customers, Inventory, Promotions.
-//                        A storefront is an application you run, and it lands
-//                        beside the CRM, the ERP, the CMS and the Help Center.
-//   Billing  -> Observe  Spend is the other axis of usage: seven of these eight
-//                        are the fleet's own revenue/margin boards, and the
-//                        eighth is Usage itself. The catalog files billing under
-//                        observe for the same reason. A customer's own invoices
-//                        are the billing FACE (billing.hanzo.ai), not a tile.
-//
-// A move never drops a product: every entry keeps a category in this list, and
-// taxonomy.test.ts asserts both halves against the shipped registry. Settings is
-// account administration rather than a product, so it is here but not browsed.
-export type ProductCategory =
-  | 'AI'
-  | 'Compute'
-  | 'Data'
-  | 'Network'
-  | 'Security'
-  | 'Dev'
-  | 'Platform'
-  | 'Observe'
-  | 'Web3'
-  | 'Apps'
-  | 'Settings'
+// Which product categories exist is NOT this file's answer. hanzoai/commerce owns
+// it, serves it at `api.hanzo.ai/v1/commerce/catalog`, and @hanzo/products
+// generates its typed copy from that API — so the list arrives here already
+// agreed with the catalog, the marketing site and the docs, and a rename lands
+// once rather than in four places. This file had its own copy for a while; the
+// copy in @hanzo/products meanwhile lost `Dev` and grew a `Commerce` the catalog
+// has never held a product under, and nothing failed, because each copy's tests
+// asserted that copy.
+export type { ProductCategory }
 
-/** The ten, in the estate's order (two rows of five), with Settings last. */
-export const categoryOrder: ProductCategory[] = [
-  'AI',
-  'Compute',
-  'Data',
-  'Network',
-  'Security',
-  'Dev',
-  'Platform',
-  'Observe',
-  'Web3',
-  'Apps',
-  'Settings',
-]
+/**
+ * Account administration — members, organization, profile.
+ *
+ * It sits in the console's nav next to the product sections and it is NOT one:
+ * nothing under it is a product, it is not in the catalog, and it has no
+ * `/products/settings` page. Keeping it inside `ProductCategory` is what made
+ * that union a mixture of two ideas, and the mixture is how `Training`,
+ * `Billing` and `Commerce` were once shelved beside real categories.
+ *
+ * So the two ideas are named separately. `ProductCategory` is the catalog's
+ * taxonomy; `NavSection` is what this console draws, which is that taxonomy plus
+ * this one administrative section.
+ */
+export const SETTINGS = 'Settings' as const
 
-/** The ten a customer browses. Settings administers the account, so it is not one. */
-export const PUBLIC_CATEGORIES: ProductCategory[] = categoryOrder.filter((c) => c !== 'Settings')
+/** A section of the console's nav: a product category, or account administration. */
+export type NavSection = ProductCategory | typeof SETTINGS
 
-export const BRAND_CATEGORIES: Record<BrandId, ProductCategory[] | null> = {
+/** Every nav section in display order — the catalog's categories, Settings last. */
+export const categoryOrder: NavSection[] = [...CATEGORY_ORDER, SETTINGS]
+
+/** Settings scoped onto a brand's product categories — every console admits it. */
+const withSettings = (cats: readonly ProductCategory[]): NavSection[] => [...cats, SETTINGS]
+
+export const BRAND_CATEGORIES: Record<BrandId, NavSection[] | null> = {
   hanzo: null,
-  lux: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
-  zoo: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
-  pars: ['Web3', 'Network', 'Security', 'Dev', 'Settings'],
+  // The sovereign-chain consoles show the catalog's own lux/zoo/pars scope —
+  // `GET /v1/commerce/catalog?brand=lux` is the request these consoles make, so
+  // its answer is the scope rather than a second list that can disagree with it.
+  lux: withSettings(PRODUCT_SCOPE.lux ?? CATEGORY_ORDER),
+  zoo: withSettings(PRODUCT_SCOPE.zoo ?? CATEGORY_ORDER),
+  pars: withSettings(PRODUCT_SCOPE.pars ?? CATEGORY_ORDER),
   // General Hanzo-cloud customers (not sovereign-chain brands) → the FULL AI-cloud
   // catalog, exactly like `hanzo`. `null` = every category.
   '7stars': null,
   yotoda: null,
 }
 
-/** Categories a given brand's console surfaces, in display order (all for hanzo). */
-export const categoriesForBrand = (brand: BrandId): ProductCategory[] => {
+/** Sections a given brand's console surfaces, in display order (all for hanzo). */
+export const categoriesForBrand = (brand: BrandId): NavSection[] => {
   const allowed = BRAND_CATEGORIES[brand]
   return allowed === null ? categoryOrder : categoryOrder.filter((c) => allowed.includes(c))
 }
 
-/** True when a category belongs to a given brand's console. */
-export const categoryInBrand = (brand: BrandId, category: ProductCategory): boolean => {
+/** True when a section belongs to a given brand's console. */
+export const categoryInBrand = (brand: BrandId, category: NavSection): boolean => {
   const allowed = BRAND_CATEGORIES[brand]
   return allowed === null || allowed.includes(category)
 }
@@ -113,30 +99,26 @@ export const entryInBrandScope = (brand: BrandId, brands?: readonly BrandId[]): 
 // one-line copy live here (pure, dependency-free), while the products shown on
 // the page are always derived live from the catalog (never fabricated).
 
-/** URL slug for a category — lowercased and stable (e.g. 'AI' → 'ai', 'Web3' → 'web3'). */
-export const categorySlug = (category: ProductCategory): string => category.toLowerCase()
+/** URL slug for a section — lowercased and stable (e.g. 'AI' → 'ai', 'Web3' → 'web3'). */
+export const categorySlug = (category: NavSection): string => category.toLowerCase()
 
-/** The category a URL slug names, or null when it matches none. */
-export const categoryFromSlug = (slug: string): ProductCategory | null =>
+/** The section a URL slug names, or null when it matches none. */
+export const categoryFromSlug = (slug: string): NavSection | null =>
   categoryOrder.find((c) => categorySlug(c) === slug.toLowerCase()) ?? null
 
 /**
- * One honest line describing each category — the header copy for its landing
- * page. It describes what the category IS (the class of products it groups); the
- * product list on the page is always the live catalog, so nothing here is data.
+ * One honest line describing each section — the header copy for its landing page.
+ * It describes what the section IS (the class of products it groups); the product
+ * list on the page is always the live catalog, so nothing here is data.
+ *
+ * The product categories' lines come from @hanzo/products, which is where the
+ * marketing site and the docs read the same copy from — a category described one
+ * way in the console and another on the site is the same drift in prose. Only
+ * Settings is written here, because only Settings is this console's own.
  */
-export const CATEGORY_SUMMARY: Record<ProductCategory, string> = {
-  AI: 'Models, providers, inference, agents, embeddings, prompts, fine-tuning, and the playground — everything you build and ship with AI.',
-  Compute: 'Kubernetes, containers, functions, GPUs, machines, and tasks — the infrastructure your workloads run on.',
-  Data: 'Vector, SQL, key-value, object, document, and memory stores — managed data for your apps.',
-  Network: 'Gateway, DNS, CDN, load balancing, VPC, and service mesh — connect, route, and expose your services.',
-  Security: 'IAM, authorization, KMS, HSM, secrets, MPC, and audit — identity and secrets for your organization.',
-  Dev: 'API, SDKs, CLI, IDE, desktop, and keys — the developer tools to build against the cloud.',
-  Platform: 'Projects, environments, builds, registry, releases, and pipelines — ship and run your applications.',
-  Observe: 'Traces, metrics, logs, dashboards, alerts, evals, usage and spend — what your models, workloads and money are doing.',
-  Web3: 'Networks, tokens, wallets, oracles, indexer, and settlement — the on-chain surface.',
-  Apps: 'Chat, bot, search, studio, marketplace, CRM, ERP, and your storefront — applications you run on the cloud.',
-  Settings: 'Members, organization, and profile — administer your account.',
+export const CATEGORY_SUMMARY: Record<NavSection, string> = {
+  ...PRODUCT_SUMMARY,
+  [SETTINGS]: 'Members, organization, and profile — administer your account.',
 }
 
 // ── Nodes surface — which chain networks each brand reports on ────────────────

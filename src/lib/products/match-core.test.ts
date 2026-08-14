@@ -170,7 +170,7 @@ const nonModule = mod('bogus', { kind: 'other', routes: undefined } as never)
 // Present so the alias table's "every target is a real id" invariant is provable and
 // a direct alias URL resolves to the real module (never a 404). `models` already exists.
 const o11y = mod('o11y', { label: 'Traces', category: 'Observe' })
-const appPlatform = mod('app-platform', { label: 'App Platform', category: 'Platform' })
+const appPlatform = mod('app-platform', { label: 'App Platform', category: 'Infrastructure' })
 const plans = mod('plans', { label: 'Plans', category: 'Settings' })
 const wallet = mod('wallet', { label: 'Wallet', category: 'Web3' })
 const finetuning = mod('finetuning', { label: 'Fine-tuning', category: 'AI' })

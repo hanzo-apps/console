@@ -26,6 +26,9 @@
  */
 
 /** One selectable color. `hex` is a design neutral-ladder value; reads on dark AND light. */
+import { CATEGORY_COLORS as PRODUCT_COLORS } from '@hanzo/products'
+import { SETTINGS, type NavSection } from './brand-scope'
+
 export type Swatch = { key: string; label: string; hex: string }
 
 /**
@@ -93,22 +96,18 @@ export const swatchHex = (key: string | undefined | null): string => {
 }
 
 /**
- * One accent per CATEGORY — the family every product in it inherits by default,
- * so sidebar, tiles and the level-2 header read as one scheme. Keys MUST be real
- * swatch keys; a category not listed falls back to a stable hash.
+ * One accent per SECTION — the family every product in it inherits by default,
+ * so sidebar, tiles and the level-2 header read as one scheme.
+ *
+ * The product categories' accents come from @hanzo/products, so a category is
+ * the same colour in the console, on the site and in the docs. Typing it
+ * `Record<NavSection, _>` rather than `Record<string, _>` is what makes a new
+ * category a compile error here: as a string map, one arrived without an accent
+ * and silently took a hashed colour that matched nothing else it appeared beside.
  */
-export const CATEGORY_COLORS: Record<string, string> = {
-  AI: 'violet',
-  Compute: 'blue',
-  Data: 'cyan',
-  Network: 'sky',
-  Security: 'red',
-  Observe: 'green',
-  Platform: 'teal',
-  Dev: 'indigo',
-  Web3: 'amber',
-  Apps: 'pink',
-  Settings: 'slate',
+export const CATEGORY_COLORS: Record<NavSection, string> = {
+  ...PRODUCT_COLORS,
+  [SETTINGS]: 'slate',
 }
 
 /** Small, well-distributed string hash (FNV-1a, 32-bit). Deterministic + pure. */
@@ -127,10 +126,18 @@ function hash32(s: string): number {
 export const hashColorKey = (id: string): string => COLOR_SWATCHES[hash32(id) % COLOR_SWATCHES.length].key
 
 /**
+ * The accent a section name maps to, or undefined when it names no section.
+ * Narrows the lookup in ONE place: CATEGORY_COLORS is keyed by NavSection, and
+ * every caller here holds a loose string off a catalog row.
+ */
+const accent = (category?: string | null): string | undefined =>
+  typeof category === 'string' ? CATEGORY_COLORS[category as NavSection] : undefined
+
+/**
  * One accent per category. A user's per-product override still wins.
  */
 export const categoryColorKey = (category?: string | null): string =>
-  (typeof category === 'string' && CATEGORY_COLORS[category]) || hashColorKey(category ?? 'category')
+  accent(category) || hashColorKey(category ?? 'category')
 
 /** The hex for a category's accent. */
 export const categoryColorHex = (category?: string | null): string => swatchHex(categoryColorKey(category))
@@ -142,7 +149,7 @@ export const categoryColorHex = (category?: string | null): string => swatchHex(
  * instead of collapsing it into one grey.
  */
 export const defaultColorKey = (id: string, category?: string | null): string =>
-  (typeof category === 'string' && CATEGORY_COLORS[category]) || hashColorKey(id)
+  accent(category) || hashColorKey(id)
 
 /**
  * The EFFECTIVE swatch key for a product, honoring the user's override first.

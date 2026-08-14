@@ -112,7 +112,7 @@ import { Users,
 
 import { config, type BrandId, type ShellId } from '~/config'
 import { ALWAYS_ON_PRODUCTS, filterEntitled } from '~/lib/entitlements'
-import { type ProductCategory, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
+import { type NavSection, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
@@ -373,11 +373,14 @@ export type ProductSubpage = {
  *   - `Dev` and `Web3` are retained (they hold real developer + on-chain
  *     products); the axis above lists the primary groups, not an exclusive set.
  */
-// ProductCategory + categoryOrder + the pure per-brand scope live in
-// ./brand-scope (dependency-free, unit-tested in registry-brand.test.ts).
+// The taxonomy + categoryOrder + the pure per-brand scope live in ./brand-scope
+// (dependency-free, unit-tested in registry-brand.test.ts). ProductCategory is
+// the catalog's own, carried in from @hanzo/products; NavSection is it plus
+// Settings, which is what this console draws.
 // Re-exported here so existing importers of the registry are unchanged.
-export type { ProductCategory } from './brand-scope'
+export type { ProductCategory, NavSection } from './brand-scope'
 export {
+  SETTINGS,
   categoryOrder,
   BRAND_CATEGORIES,
   categoriesForBrand,
@@ -415,8 +418,8 @@ type CatalogBase = {
   description: string
   /** The Google Cloud product this is the open equivalent of, shown as a subtitle. */
   gcp?: string
-  /** Category grouping. */
-  category: ProductCategory
+  /** Which nav section it sits in — a catalog category, or Settings. */
+  category: NavSection
   /** Enablement state — always 'enabled'; every listed entry is live. */
   status: ProductStatus
   /** Source repo for the product, e.g. 'hanzoai/vector'. Only set where it exists. */
@@ -747,7 +750,7 @@ export const catalog: CatalogEntry[] = [
     icon: Server,
     description: 'DigitalOcean fleet — droplets, block-storage volumes (with fill % and near-full warnings), DOKS clusters and load balancers, with monthly cost and what is safely reclaimable.',
     gcp: 'Compute Engine / Persistent Disk',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     admin: true,
     repo: 'hanzoai/cloud',
@@ -864,7 +867,7 @@ export const catalog: CatalogEntry[] = [
     icon: FolderGit2,
     description: 'Every org’s deployed apps across all clusters — health, cluster, and live URL. Read-only.',
     gcp: 'Cloud Deploy (fleet)',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     admin: true,
     repo: 'hanzoai/console',
@@ -2062,13 +2065,13 @@ export const catalog: CatalogEntry[] = [
     // The project HUB: create an IAM-native project → deploy a static build (drag-drop
     // zip/tar.gz → /v1/platform/sites) → manage deployments, domains, config → and
     // deep-link the SAME project to hanzo.app (edit) + hanzo.chat (chat) on one shared
-    // key. The Platform-category flagship; `projects` stays the thin scope picker.
+    // key. The Infrastructure-category flagship; `projects` stays the thin scope picker.
     id: 'platform',
     label: 'Platform',
     icon: Layers,
     description: 'Create, deploy, and ship your projects — drop a build, bind a domain, and edit or chat about the same project across hanzo.app and hanzo.chat.',
     gcp: 'App Hosting',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2088,7 +2091,7 @@ export const catalog: CatalogEntry[] = [
     icon: Boxes,
     description: 'Deploy 1000+ open-source apps — Postgres, n8n, Grafana, and more — to your cloud in one click.',
     gcp: 'Cloud Marketplace',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2119,7 +2122,7 @@ export const catalog: CatalogEntry[] = [
     description:
       'Ship an app or a static site — pick a repo, bind a host, set env, deploy. Then watch CD reconcile it, CI build it, and storage serve it.',
     gcp: 'Cloud Deploy',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2155,7 +2158,7 @@ export const catalog: CatalogEntry[] = [
     icon: GitBranch,
     description: 'The fleet deploy map — every operator App CR as a live node with reconciled health, sync, resource topology, CI builds, logs, and one-click rollback. The Hanzo operator reconciles.',
     gcp: 'Cloud Deploy',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     admin: true,
     repo: 'hanzoai/console',
@@ -2171,7 +2174,7 @@ export const catalog: CatalogEntry[] = [
     icon: FolderGit2,
     description: 'Projects organize resources under your org — the scope for o11y, API keys, datasets, and deploys.',
     gcp: 'Resource Manager',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -2192,7 +2195,7 @@ export const catalog: CatalogEntry[] = [
     icon: ClipboardList,
     description: 'Every issue across every team and GitHub repo — one board, keyboard-first, agent-actionable.',
     gcp: 'Cloud Issue Tracker',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2223,7 +2226,7 @@ export const catalog: CatalogEntry[] = [
     icon: Building2,
     description: 'White-label tenants + resold sub-orgs — brand, domain, IAM scope, packages, and billing.',
     gcp: 'Cloud Identity (org management)',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     admin: true,
     repo: 'hanzoai/console',
@@ -2247,7 +2250,7 @@ export const catalog: CatalogEntry[] = [
     icon: AppWindow,
     description: 'The sites you build and publish in hanzo.app — live URL, deploy history, and one-click editing.',
     gcp: 'Firebase Hosting',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/apps`,
@@ -2264,7 +2267,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Environments',
     icon: Layers,
     description: 'Promote builds across dev, staging, and prod.',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: EnvironmentsModule }],
@@ -2274,7 +2277,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Builds',
     icon: Hammer,
     description: 'Build images and artifacts from source.',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: BuildsModule }],
@@ -2285,7 +2288,7 @@ export const catalog: CatalogEntry[] = [
     icon: Package,
     description: 'Container images and artifacts — ghcr.io/hanzoai.',
     gcp: 'Artifact Registry',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     repo: 'hanzoai/registry',
     docs: `${DOCS}/registry`,
@@ -2297,7 +2300,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Releases',
     icon: Rocket,
     description: 'Versioned releases and rollbacks.',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     kind: 'module',
     routes: [{ path: '', component: ReleasesModule }],
@@ -2307,7 +2310,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Pipelines',
     icon: GitBranch,
     description: 'CI/CD pipelines from commit to deploy.',
-    category: 'Platform',
+    category: 'Infrastructure',
     status: 'enabled',
     docs: `${DOCS}/pipelines`,
     kind: 'module',
@@ -3875,7 +3878,7 @@ export const findEntry = (id: string): CatalogEntry | undefined =>
   catalog.find((e) => e.id === id)
 
 /** The catalog grouped by category, in display order, skipping empty groups. */
-export const catalogByCategory = (): { category: ProductCategory; entries: CatalogEntry[] }[] =>
+export const catalogByCategory = (): { category: NavSection; entries: CatalogEntry[] }[] =>
   brandCategoryOrder()
     .map((category) => ({ category, entries: catalog.filter((e) => inBrand(e) && e.category === category) }))
     .filter((g) => g.entries.length > 0)
@@ -3897,7 +3900,7 @@ export const isAdminEntry = (e: CatalogEntry): boolean => e.admin === true
 // CURRENT brand (resolved from the request host).
 
 /** Categories the CURRENT brand's console surfaces (all, for hanzo). */
-export const brandCategoryOrder = (): ProductCategory[] => categoriesForBrand(config.brand)
+export const brandCategoryOrder = (): NavSection[] => categoriesForBrand(config.brand)
 
 /** True when an entry belongs to the CURRENT brand's console — its category is in
  *  the brand's scope AND the entry's own per-brand scope (if any) admits the brand. */
@@ -3946,7 +3949,7 @@ export const visibleCatalog = (showAdmin: boolean, enabled?: string[] | null): C
 export const visibleCatalogByCategory = (
   showAdmin: boolean,
   enabled?: string[] | null,
-): { category: ProductCategory; entries: CatalogEntry[] }[] => {
+): { category: NavSection; entries: CatalogEntry[] }[] => {
   const visible = visibleCatalog(showAdmin, enabled)
   // In a product-shell face the root module IS the whole catalog — surface it as a
   // single group regardless of the brand's category order (its category may be

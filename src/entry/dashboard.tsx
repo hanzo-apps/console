@@ -98,7 +98,7 @@ import {
   findEntry,
   categorySlug,
   type CatalogEntry,
-  type ProductCategory,
+  type NavSection,
   type ProductSubpage,
 } from '~/lib/products/registry'
 import { productSubpages, subpageWired, activeSubpage } from '~/lib/products/match'
@@ -379,7 +379,7 @@ function CategorySection({
   onToggle,
   children,
 }: {
-  category: ProductCategory
+  category: NavSection
   count: number
   open: boolean
   onToggle: () => void
