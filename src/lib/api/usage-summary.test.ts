@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { UsageSummaryApi, normalizeSummary } from './usage-summary'
+import { UsageSummaryApi, categoryLabel, normalizeSummary } from './usage-summary'
 
 const ORIGIN = 'https://console.hanzo.ai'
 
@@ -76,5 +76,39 @@ describe('UsageSummaryApi.summary — same-origin /v1/usage/summary', () => {
     expect(cap.url).toContain('range=30d')
     expect(cap.url).toContain('start=2026-07-01')
     expect(cap.url).toContain('end=2026-07-03')
+  })
+})
+
+/**
+ * The breakdown came back as 327 rows of `Act_281fc47082a8f1e4649ca8607e567740`, each
+ * one line of spend, rendered verbatim — a bill nobody can read. The response carries
+ * no name for them (the row is `{category, cents, count}` and nothing else), so the
+ * only honest move is to shorten the id, never to invent a word for it.
+ */
+describe('categoryLabel — shorten an opaque id, never rename it', () => {
+  it('shortens a commerce id to its tag plus a recognizable head', () => {
+    expect(categoryLabel('Act_281fc47082a8f1e4649ca8607e567740')).toBe('Act_281fc470…')
+    expect(categoryLabel('use_a3c131f74e2b1d9c0f8e6a5b4c3d2e1f')).toBe('use_a3c131f7…')
+  })
+
+  it('keeps distinct ids distinct (the head is long enough to tell them apart)', () => {
+    const a = categoryLabel('Act_281fc47082a8f1e4649ca8607e567740')
+    const b = categoryLabel('Act_281fc47182a8f1e4649ca8607e567740')
+    expect(a).not.toBe(b)
+  })
+
+  // If billing ever sends a real word, it must survive untouched — this only ever
+  // shortens what was unreadable to begin with.
+  it('passes a human category through unchanged', () => {
+    for (const name of ['GPU', 'LLM', 'Storage', 'Egress', 'Compute time']) {
+      expect(categoryLabel(name)).toBe(name)
+    }
+  })
+
+  it('leaves anything that is not a tag_hex id alone', () => {
+    expect(categoryLabel('')).toBe('')
+    expect(categoryLabel('Act_short')).toBe('Act_short')
+    expect(categoryLabel('no-underscore-here')).toBe('no-underscore-here')
+    expect(categoryLabel('Act_281FC47082A8F1E4649CA8607E567740')).toBe('Act_281FC47082A8F1E4649CA8607E567740')
   })
 })

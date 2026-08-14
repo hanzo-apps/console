@@ -36,6 +36,28 @@ const arrayOf = (v: unknown): Record<string, unknown>[] =>
 
 /** One spend-by-category bucket (cents + how many ledger lines rolled up). */
 export type CategorySpend = { category: string; cents: number; count: number }
+
+/** An opaque commerce id: a short type tag, then a long hex body. */
+const OPAQUE_ID = /^([A-Za-z]{2,12})_([0-9a-f]{16,})$/
+
+/**
+ * How a category reads on the page.
+ *
+ * `byCategory[].category` arrives as an opaque commerce id
+ * (`Act_281fc47082a8f1e4649ca8607e567740`), and the row carries NOTHING else to name
+ * it — no `name`, no `label`, no description anywhere in the response. So there is no
+ * display name to resolve, and inventing one from the tag would be a guess presented
+ * as a fact. What is left is to make the id SCANNABLE rather than 32 characters of
+ * hex: keep the tag, keep enough body to stay unique to the eye, and let the page say
+ * outright that these come unnamed.
+ *
+ * Anything that is not an opaque id — a real word, if the API ever sends one — passes
+ * through untouched, so this only ever shortens what was unreadable to begin with.
+ */
+export function categoryLabel(category: string): string {
+  const m = OPAQUE_ID.exec(category)
+  return m ? `${m[1]}_${m[2].slice(0, 8)}…` : category
+}
 /** One consumption time bucket (usage cents). */
 export type SpendPoint = { t: string; cents: number }
 

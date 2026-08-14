@@ -331,7 +331,24 @@ const financeOverview: LivingOverviewConfig = {
   load: async () => fromFinance(await FinanceApi.finance()),
 }
 
-/** The AI-usage living overview for a product scoped to the org's model spend. */
+/**
+ * The AI-usage living overview for a product scoped to the org's inference.
+ *
+ * It reads the WAREHOUSE aggregate (`CloudUsageApi` → `/v1/ai/usages/cloud`), which
+ * is the source that measures tokens. It used to read the commerce ledger
+ * (`UsageApi` → `/v1/billing/usage`), whose records are `{amount, createdAt, decimal,
+ * metadata, transactionId}` — the charged cost of record, carrying no token counts at
+ * all. So the "Tokens" tile on this board could only ever say 0, and did, for a window
+ * the warehouse measured in the millions. That is not a rollup this console can fix:
+ * the number is absent from the source. Reading the source that HAS it is the fix, and
+ * it is the same call the sibling AI Metrics product and the platform overview above
+ * already make — one way to read usage, not three.
+ *
+ * `fromCloudUsage` maps both shapes (the ledger additionally computed `byStatus`, which
+ * this board never rendered), so only the loader changes. The commerce ledger remains
+ * the source for SPEND wherever spend is the question — billing is commerce, and this
+ * board is about inference.
+ */
 const aiUsageOverview = (id: string, title: string, subtitle: string): LivingOverviewConfig => ({
   id,
   title,
@@ -352,7 +369,11 @@ const aiUsageOverview = (id: string, title: string, subtitle: string): LivingOve
   ],
   load: async ({ range, allOrgs }) =>
     fromCloudUsage(
-      await UsageApi.overview({ range: usageRange(range), activityType: 'all', activityLimit: 40, topModels: 6, allOrgs }),
+      await CloudUsageApi.overview(usageRange(range), {
+        org: allOrgs ? 'all' : undefined,
+        topModels: 6,
+        activityLimit: 40,
+      }),
     ),
 })
 

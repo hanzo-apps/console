@@ -22,7 +22,7 @@ import { MetricCard, LegendDot } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
 import { RangeTabs } from '~/components/products/billing/RangeTabs'
 import type { RangeKey } from '~/lib/api/aimetrics'
-import { UsageSummaryApi, type UsageSummary, type CategorySpend } from '~/lib/api/usage-summary'
+import { UsageSummaryApi, categoryLabel, type UsageSummary, type CategorySpend } from '~/lib/api/usage-summary'
 import { VisorApi, type VisorMachine } from '~/lib/api/visor'
 import { exportCSV } from '~/lib/csv'
 import { toneColor, toneVar } from '~/components/ui/tone'
@@ -94,18 +94,28 @@ export function UsageModule(_props: { params: Record<string, string> }) {
   const totalByCategory = useMemo(() => (spend?.byCategory ?? []).reduce((a, c) => a + c.cents, 0), [spend])
   const categorySlices: Slice[] = useMemo(() => {
     const cats = spend?.byCategory ?? []
-    const top = cats.slice(0, 7).map((c, i): Slice => ({ label: c.category, value: c.cents, color: RAMP[i % RAMP.length] }))
+    const top = cats.slice(0, 7).map((c, i): Slice => ({ label: categoryLabel(c.category), value: c.cents, color: RAMP[i % RAMP.length] }))
     const rest = cats.slice(7)
     if (rest.length) top.push({ label: `Other (${rest.length})`, value: rest.reduce((a, c) => a + c.cents, 0), color: OTHER })
     return top
   }, [spend])
+
+  // True when the breakdown came back as opaque commerce ids rather than named
+  // categories — worth saying out loud, because a bill of 300-odd hashes otherwise
+  // looks like the console failed to resolve names it never received.
+  const unnamedCategories = useMemo(
+    () => (spend?.byCategory ?? []).some((c) => categoryLabel(c.category) !== c.category),
+    [spend],
+  )
 
   const machineCount = machines?.length ?? null
   const gpuCount = machines ? machines.filter((m) => (m.gpu ?? '').trim() !== '').length : null
   const runningCount = machines ? machines.filter(isRunning).length : null
 
   const categoryColumns: Column<CategorySpend>[] = [
-    { key: 'category', header: 'Category', render: (c) => <Text fontSize="$3" fontWeight="600" color="$color12">{c.category}</Text> },
+    // The id is shortened for reading, never renamed — the full value stays on the row
+    // (and in the CSV export below), which is what makes it a receipt.
+    { key: 'category', header: 'Category', render: (c) => <Text fontSize="$3" fontWeight="600" color="$color12" className="hz-mono">{categoryLabel(c.category)}</Text> },
     { key: 'count', header: 'Lines', width: 110, align: 'right', mono: true, render: (c) => <Text fontSize="$3" color="$color11">{c.count.toLocaleString()}</Text> },
     {
       key: 'cents', header: 'Cost', width: 140, align: 'right', mono: true,
@@ -207,6 +217,12 @@ export function UsageModule(_props: { params: Record<string, string> }) {
                 Export CSV
               </Button>
             </XStack>
+            {unnamedCategories ? (
+              <Text fontSize="$2" color="$color10">
+                Billing returns these lines by id, with no display name — the ids are shortened here for
+                reading and exported in full. Per-model spend is named under AI Metrics.
+              </Text>
+            ) : null}
             <DataTable
               columns={categoryColumns}
               rows={spend?.byCategory ?? []}
