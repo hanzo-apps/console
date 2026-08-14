@@ -46,7 +46,11 @@ function AcceptFlow() {
 
   useEffect(() => {
     if (!token) {
-      setInfo({ phase: 'error', message: 'This invitation link is missing its token.' })
+      setInfo({
+        phase: 'error',
+        message:
+          'This link is incomplete — the part that identifies your invitation is missing. It was probably cut short somewhere between the sender and here. Ask whoever invited you to send the whole link again.',
+      })
       return
     }
     let live = true
@@ -55,7 +59,12 @@ function AcceptFlow() {
       try {
         res = await fetch(`/console/accept?t=${encodeURIComponent(token)}`, { credentials: 'include' })
       } catch {
-        if (live) setInfo({ phase: 'error', message: 'Network error — please try again.' })
+        if (live)
+          setInfo({
+            phase: 'error',
+            message:
+              'Your invitation could not be read — the request never reached us. Check your connection and reload the page. The link is still good.',
+          })
         return
       }
       const j = (await res.json().catch(() => null)) as
@@ -63,7 +72,12 @@ function AcceptFlow() {
         | null
       if (!live) return
       if (!res.ok || !j?.org) {
-        setInfo({ phase: 'error', message: j?.error || 'This invitation link is invalid or has expired.' })
+        setInfo({
+          phase: 'error',
+          message:
+            j?.error ||
+            'This invitation has expired, or it was withdrawn. Ask whoever invited you to send a new one — invitations are issued per person, so an old link cannot be revived.',
+        })
         return
       }
       if (j.accepted) {
@@ -94,13 +108,16 @@ function AcceptFlow() {
         body: JSON.stringify({ t: token, password, displayName: name.trim() || undefined }),
       })
     } catch {
-      setErr('Network error — please try again.')
+      setErr('Your password was not sent — the request never left this device. Check your connection and try again.')
       setBusy(false)
       return
     }
     const j = (await res.json().catch(() => null)) as { ok?: boolean; org?: string; error?: string } | null
     if (!res.ok || !j?.ok) {
-      setErr(j?.error || `Could not activate your account (HTTP ${res.status}).`)
+      setErr(
+        j?.error ||
+          `Your account was not activated — the server refused the request (HTTP ${res.status}). Your password was not saved. Try once more, and if it keeps failing ask whoever invited you to reissue the invitation.`,
+      )
       setBusy(false)
       return
     }

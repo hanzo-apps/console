@@ -109,7 +109,7 @@ function WaitlistPanel({ status, onRefresh }: { status: WaitlistStatus | null; o
   const refCode = status?.refCode ?? ''
   const link = shareLink(refCode)
   const tweet = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    `I'm on the ${branding.name} waitlist — join me and jump the line:`,
+    `I'm on the ${branding.name} waitlist — join with my link and we both move up:`,
   )}&url=${encodeURIComponent(link)}`
   const linkedin = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`
 
@@ -144,7 +144,7 @@ function WaitlistPanel({ status, onRefresh }: { status: WaitlistStatus | null; o
                 </Text>
               </YStack>
               <Button size="$3" icon={<RefreshCw size={15} />} onPress={onRefresh}>
-                Refresh
+                Refresh position
               </Button>
             </XStack>
           </Card>
@@ -152,8 +152,8 @@ function WaitlistPanel({ status, onRefresh }: { status: WaitlistStatus | null; o
 
         <MoveUpCard
           icon={<Terminal size={22} />}
-          title="Jump the line — run a node"
-          desc="Boot a cloud fragment. Your hanzod node contributes compute to hanzo.network and earns you instant access."
+          title="Run a node, skip the wait"
+          desc="A hanzod node contributes compute to hanzo.network. Run one and you get access without waiting for your turn."
         >
           <CopyField value={NODE_CMD} label="Copy the node install command" />
           <Anchor href={NODE_URL} target="_blank" rel="noreferrer" fontSize="$2" color="$color11">

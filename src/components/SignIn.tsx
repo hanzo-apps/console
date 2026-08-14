@@ -4,7 +4,7 @@
  * Sign-in experience — the ONE way the console presents sign-in, wherever the user
  * lands on it.
  *
- * @hanzo/iam ONLY: a single "Log in with <brand>" button that starts the IAM redirect +
+ * @hanzo/iam ONLY: a single "Sign in with <brand>" button that starts the IAM redirect +
  * PKCE flow (`useIam().login()`). The button names the ACTIVE brand — the same
  * `config.brandName` the heading above it already reads, resolved from the host — so a
  * Lux or Zoo console never says "Hanzo". IAM owns every credential step — password,
@@ -46,10 +46,10 @@ export function SignIn() {
         <Text fontSize="$8" fontWeight="700" color="$color12">
           {config.brandName}
         </Text>
-        <Text color="$color11">Sign in to your account</Text>
+        <Text color="$color11">Sign in to manage your organization — models, keys, deploys, and billing.</Text>
       </YStack>
       <PrimaryButton size="$5" onPress={() => void login()}>
-        Log in with {config.brandName}
+        Sign in with {config.brandName}
       </PrimaryButton>
     </YStack>
   )

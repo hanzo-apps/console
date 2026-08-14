@@ -16,7 +16,7 @@ import type { StepProps } from '~/components/onboarding/types'
 import { PrimaryButton } from '@hanzo/ui/product'
 
 const TILES: { icon: typeof MessageSquare; title: string; description: string; to: string }[] = [
-  { icon: MessageSquare, title: 'Start a chat', description: 'Talk to the latest Zen model right now.', to: '/chat' },
+  { icon: MessageSquare, title: 'Start a chat', description: 'Ask a Zen model a question and read what comes back.', to: '/chat' },
   { icon: Sparkles, title: 'Open the Playground', description: 'Compare models, prompts, and parameters.', to: '/playground' },
   { icon: KeyRound, title: 'Create an API key', description: 'Call the gateway from your own code.', to: '/api-keys' },
   { icon: Rocket, title: 'Deploy a project', description: 'Ship an app on the Hanzo platform.', to: '/applications' },
@@ -25,16 +25,17 @@ const TILES: { icon: typeof MessageSquare; title: string; description: string; t
 export function LaunchStep({ finish, back, isFirst }: StepProps) {
   const analytics = useAnalytics()
   return (
-    <StepShell title="You're ready" subtitle={`Welcome to ${config.brandName}. Pick a first move — you can find everything else in the sidebar.`}>
+    <StepShell title="You're ready" subtitle={`Welcome to ${config.brandName}. Pick somewhere to start — everything else is in the sidebar.`}>
       <Card p="$4" gap="$2" borderWidth={1} borderColor="$green7" bg="$green2">
         <XStack gap="$2" items="center">
           <PartyPopper size={20} color="var(--green11)" />
           <Text fontSize="$5" fontWeight="700" color="$green11">
-            Your organization is set up
+            Your organization is ready
           </Text>
         </XStack>
         <Text fontSize="$3" color="$color11">
-          Two-factor, consent, organization, credits, and AI access are all configured.
+          Setup is done. Anything you skipped — two-factor, credits, AI access — is waiting in Settings, and you
+          can come back to it whenever you want.
         </Text>
       </Card>
 

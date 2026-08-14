@@ -37,8 +37,8 @@ export function NotFound({ slug = [] }: { slug?: string[] }) {
           title={address}
           description="This console has no page at that address. If you followed a link inside the console, the link is wrong — that is worth reporting; if you typed or bookmarked it, check the spelling."
           bullets={[
-            'Nothing was loaded and nothing was invented — an address that resolves to no product says so.',
-            'Every product is reachable from the sidebar, or from search (⌘K).',
+            'Nothing loaded here, and nothing was guessed at — no product answers to this address.',
+            'Search (⌘K) reaches every product you can open, pinned to the sidebar or not.',
           ]}
           // "Browse all products" used to push `/discover`, which is not an address:
           // the product directory is a PANEL the shell opens (AddProductPanel), and
@@ -46,7 +46,7 @@ export function NotFound({ slug = [] }: { slug?: string[] }) {
           // that exists to explain a dead link ended on one. The directory is reachable
           // from the sidebar and ⌘K — as the bullets above already say — so this offers
           // the one destination it can actually keep.
-          primary={{ label: 'Go home', onPress: () => router.push('/') }}
+          primary={{ label: 'Go to Overview', onPress: () => router.push('/') }}
         />
       </FadeIn>
     </>

@@ -79,9 +79,13 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
       setHasCard(true)
       invalidateBalance()
       const spend = spendableCents(bal)
-      toast.success('Trial credits unlocked', spend ? `Balance: ${usd(spend)}` : undefined)
+      toast.success('Trial credits granted', spend ? `Balance: ${usd(spend)}` : undefined)
     } catch (e) {
-      setErr(e instanceof ApiError || e instanceof Error ? e.message : 'Could not add the card. Please try again.')
+      setErr(
+        e instanceof ApiError || e instanceof Error
+          ? e.message
+          : 'The card was not added and nothing was charged. Check the number and expiry and try again, or skip this step and add a card later in Billing.',
+      )
     } finally {
       if (mounted.current) setAdding(false)
     }
@@ -93,7 +97,7 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
   return (
     <StepShell
       title="Free trial credits"
-      subtitle="Add a card to unlock free trial credits. No charge now — it just keeps your account ready when the trial ends."
+      subtitle="Add a card and your trial credits are granted straight away. Nothing is charged today — the card is there so your account keeps working once the trial runs out."
       actions={
         <StepActions
           onBack={isFirst ? undefined : back}
@@ -115,7 +119,7 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
           <XStack gap="$2" items="center">
             <Gift size={20} color="var(--green11)" />
             <Text fontSize="$5" fontWeight="700" color="$green11">
-              Trial credits unlocked
+              Trial credits granted
             </Text>
           </XStack>
           <Text fontSize="$6" fontWeight="800" color="$color12">
@@ -139,7 +143,7 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
             </Text>
           </XStack>
           <Text fontSize="$3" color="$color11">
-            You can start using {''}Hanzo now and add a card later from Billing to unlock trial credits.
+            You can start now without one. Add a card later from Billing and the trial credits are granted then.
           </Text>
         </Card>
       ) : (
@@ -153,7 +157,7 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
                 Add a payment card
               </Text>
               <Text fontSize="$2" color="$color11">
-                Card details are entered and encrypted by our payment provider — never stored by the console.
+                Your card details go straight into the payment provider's own form. The console never sees the number and never stores it.
               </Text>
             </YStack>
           </XStack>
@@ -193,7 +197,7 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
           <XStack gap="$2" items="center">
             <Lock size={13} color="var(--color10)" />
             <Text fontSize="$1" color="$color10">
-              No charge today. Adding a card unlocks your free trial credits.
+              No charge today. Adding the card is what grants the trial credits.
             </Text>
           </XStack>
 
@@ -204,7 +208,7 @@ export function CreditsStep({ next, skip, back, isFirst }: StepProps) {
               icon={adding ? <Spinner size="small" color="$color1" /> : <Gift size={16} />}
               onPress={() => void addCard()}
             >
-              {adding ? 'Adding…' : 'Add card & unlock credits'}
+              {adding ? 'Adding…' : 'Add card & get credits'}
             </PrimaryButton>
           </XStack>
         </Card>

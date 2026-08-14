@@ -56,12 +56,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ maxWidth: 440, width: '100%', border: '1px solid #262626', borderRadius: 12, padding: 24, backgroundColor: '#0a0a0a' }}>
             <h1 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700 }}>
-              {chunk ? 'Updating to the latest version' : 'Something went wrong'}
+              {chunk ? 'Updating to the latest version' : 'The console stopped'}
             </h1>
             <p style={{ margin: '0 0 20px', fontSize: 14, lineHeight: 1.5, color: '#a3a3a3' }}>
               {chunk
                 ? 'A newer version of the console just shipped. Reloading to load the latest…'
-                : 'The console hit an unexpected error. Reload to recover, or return home.'}
+                : 'Something threw an error and the page could not finish drawing. Reloading usually clears it. Anything you had typed on this page is gone; nothing that was already saved is affected.'}
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               {!chunk ? (

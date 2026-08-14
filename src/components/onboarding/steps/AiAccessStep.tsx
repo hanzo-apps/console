@@ -72,9 +72,13 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
       await AiAccountsApi.saveSettings({ routingEnabled: true })
       setRouting(true)
       record('router')
-      toast.success('Hanzo router enabled', 'Optimal model per request')
+      toast.success('Routing is on', 'Hanzo picks the model for every request from now on')
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : 'Could not enable smart routing.')
+      setErr(
+        e instanceof ApiError
+          ? e.message
+          : 'Routing was not turned on — the setting did not save. Try again, or skip this and turn it on later in AI Accounts.',
+      )
     } finally {
       setRoutingBusy(false)
     }
@@ -90,7 +94,7 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
       setConnections(list.filter((x) => x.connected))
       setApiKey('')
       record('byo')
-      toast.success(`${providerLabel(provider)} connected`, 'Key stored securely')
+      toast.success(`${providerLabel(provider)} connected`, 'The key is sealed in KMS on the server')
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : 'Could not connect. Check the key and try again.')
     } finally {
@@ -135,8 +139,8 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
     >
       <ChoiceCard
         icon={<Wand2 size={20} />}
-        title="Let Hanzo power it"
-        description="Our native router picks the optimal model for every request — up to 90% cheaper — billed to your credits."
+        title="Let Hanzo pick the model"
+        description="The router reads each request and sends it to a model that can answer it, billed to your credits. You never name a model yourself."
         badge="Recommended"
         selected={routing}
       >
@@ -155,7 +159,7 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
               icon={routingBusy ? <Spinner size="small" color="$color1" /> : <Wand2 size={15} />}
               onPress={() => void enableRouter()}
             >
-              Use Hanzo (smart routing)
+              Turn on routing
             </PrimaryButton>
           )}
         </XStack>
@@ -164,7 +168,7 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
       <ChoiceCard
         icon={<KeyRound size={20} />}
         title="Bring your own API keys"
-        description="Use your OpenAI, Anthropic, or Google keys. Stored encrypted in our secret store — never in plaintext."
+        description="Use your OpenAI, Anthropic, or Google keys. The key is sealed in Hanzo KMS on the server — never held in plaintext, never kept in your browser."
         selected={connections.length > 0}
         badge={connections.length > 0 ? 'Connected' : undefined}
         onPress={() => setByoOpen((v) => !v)}
@@ -245,8 +249,8 @@ export function AiAccessStep({ state, patch, next, skip, back, isFirst }: StepPr
               </Text>
             ) : (
               <Text fontSize="$2" color="$color10">
-                You’ll be redirected to {providerLabel(oauthProvider)} to authorize, then returned here. The
-                connection is sealed securely — no key is stored in your browser.
+                You’ll be sent to {providerLabel(oauthProvider)} to authorize, then returned here. The token that
+                comes back is sealed in Hanzo KMS on the server; nothing is stored in your browser.
               </Text>
             )}
           </YStack>

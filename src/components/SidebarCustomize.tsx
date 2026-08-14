@@ -103,7 +103,7 @@ function NewGroup({ onAdd }: { onAdd: (name: string) => void }) {
         />
       </XStack>
       <Button size="$3" icon={<Plus size={16} />} onPress={add} disabled={!name.trim()}>
-        Add
+        Add group
       </Button>
     </XStack>
   )
@@ -122,7 +122,13 @@ export function ProductCustomize({ id }: { id: string }) {
     DEFAULT_GROUP
   const groups = manageView.map((g) => g.name)
 
-  if (!entry) return <Text color="$color10">Unknown product.</Text>
+  if (!entry)
+    return (
+      <Text color="$color10">
+        No product is installed under the id “{id}”. It may have been renamed, or it may not be part of this
+        deployment. Open All products to find it under its current name.
+      </Text>
+    )
 
   return (
     <YStack gap="$5">
@@ -134,7 +140,7 @@ export function ProductCustomize({ id }: { id: string }) {
           </Text>
           <Button size="$1" chromeless onPress={() => resetColor(id)}>
             <Text fontSize="$1" color="$color10">
-              Reset
+              Reset color
             </Text>
           </Button>
         </XStack>
@@ -296,13 +302,19 @@ function ManageGroup({
           </Text>
         )}
         {named ? (
-          <Button size="$1" chromeless icon={<X size={14} />} onPress={() => onRemove(group.name)} aria-label={`Remove ${group.label}`} />
+          <Button
+            size="$1"
+            chromeless
+            icon={<X size={14} />}
+            onPress={() => onRemove(group.name)}
+            aria-label={`Remove the ${group.label} group — its pins move back to ${DEFAULT_GROUP_LABEL}, none are unpinned`}
+          />
         ) : null}
       </XStack>
 
       {group.entries.length === 0 ? (
         <Text px="$2" py="$2" fontSize="$2" color="$color10">
-          Empty — move a pin here.
+          No pins in this group. Use the dots on any pinned row above to move one here.
         </Text>
       ) : (
         <Reorder

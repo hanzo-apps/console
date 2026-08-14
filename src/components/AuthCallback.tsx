@@ -58,7 +58,8 @@ export function AuthCallback() {
         setVerdict(
           classifyCallback(typeof window === 'undefined' ? '' : window.location.search) ?? {
             kind: 'failed',
-            message: 'Sign-in failed.',
+            message:
+              'Sign-in did not complete. The code that comes back from sign-in works once and expires quickly, so this usually means the page was reloaded or opened twice. Start again from the sign-in page.',
           },
         )
       })

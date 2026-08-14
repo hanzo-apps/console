@@ -85,7 +85,7 @@ function AddNetworkForm({
           Cancel
         </Button>
         <Button size="$2" icon={<Plus size={14} />} onPress={submit}>
-          Add
+          Add network
         </Button>
       </XStack>
     </YStack>
@@ -206,7 +206,7 @@ function NetworkRow({
           chromeless
           icon={<Trash size={13} />}
           onPress={onRemove}
-          aria-label={`Remove ${net.label}`}
+          aria-label={`Remove the ${net.label} network — its endpoints are only saved in this browser, so you would enter them again`}
         />
       ) : null}
     </XStack>
