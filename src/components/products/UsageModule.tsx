@@ -145,7 +145,7 @@ export function UsageModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Usage"
-        subtitle="Your organization's total footprint — spend by category, LLM usage, and compute — over a selectable range. One authoritative source; honest zeros where a source isn't connected."
+        subtitle="Your organization's spend by category, LLM usage, and compute over the range you pick. Each source says whether it is connected; a zero from one that isn't means no data, not no spend."
         actions={
           <XStack gap="$2" items="center">
             <RangeTabs value={range} onChange={setRange} />
@@ -204,7 +204,7 @@ export function UsageModule(_props: { params: Record<string, string> }) {
                   </YStack>
                 </YStack>
               ) : (
-                <Text fontSize="$3" color="$color10">{spend?.available ? 'No categorized spend yet.' : 'Billing not connected.'}</Text>
+                <Text fontSize="$3" color="$color10">{spend?.available ? 'No categorized spend yet. Spend splits by category here once a metered product is used.' : 'Billing is not connected for this deployment. Open Billing for your account, balance, and invoices.'}</Text>
               )}
             </Panel>
           </XStack>

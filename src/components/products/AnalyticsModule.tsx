@@ -184,7 +184,7 @@ function LensCard({ title, available, reason, metrics }: { title: string; availa
       ) : (
         <Text fontSize="$2" color="$color10">
           {reason}. Install the tracking snippet or connect commerce to start collecting {title.toLowerCase()} events for
-          this organization — this shows real data only, nothing is fabricated.
+          this organization.
         </Text>
       )}
     </Card>

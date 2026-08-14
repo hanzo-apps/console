@@ -429,7 +429,7 @@ function AdminMachines(_props: { params: Record<string, string> }) {
         <MutedPanel
           icon={<Shield size={20} />}
           title="No machine-policy surface yet"
-          body="Placement, autoscaling, and maintenance policies are set on the node pool at the cluster level. A per-machine policy API is not exposed here, so nothing is fabricated."
+          body="Placement, autoscaling, and maintenance policies belong to the node pool, so you set them on the cluster. There is no per-machine policy API."
         />
       ) : null}
       {tab === 'Settings' ? renderSettings() : null}
@@ -724,7 +724,7 @@ function AdminMachines(_props: { params: Record<string, string> }) {
         </YStack>
         {!configured ? (
           <Text fontSize="$2" color="$color11">
-            The cluster inventory could not be read from the cloud backend on this deployment yet. Once it responds, this page populates from your clusters — no placeholder data is shown.
+            The cluster inventory could not be read on this deployment. Machines are the nodes in your cluster pools, so this page fills in once that read succeeds.
           </Text>
         ) : null}
         <XStack>

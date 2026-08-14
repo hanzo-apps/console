@@ -471,7 +471,7 @@ export function TenantDetail({
         {packages.length === 0 ? (
           <Text fontSize="$2" color="$color10">
             No packages in the catalog yet. The catalog is data served by the platform (`/v1/packages`); seed the
-            package table from platform-seed/packages.json to populate it. Nothing is fabricated here.
+            package table from platform-seed/packages.json to populate it.
           </Text>
         ) : (
           <Text fontSize="$2" color="$color10">

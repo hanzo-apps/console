@@ -231,7 +231,7 @@ export function RepoBrowser({ name }: { name: string }) {
         <ComingSoonTab
           icon={<GitPullRequest size={22} color="$color10" />}
           title="Pull requests are coming"
-          description="Review and merge changes right here. Pull requests light up once the backend is enabled — for now, push branches and open PRs from your local git."
+          description="Review and merge changes right here. Pull requests arrive once the backend is enabled — for now, push branches and open PRs from your local git."
         />
       ) : (
         <ComingSoonTab

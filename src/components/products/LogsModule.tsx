@@ -298,9 +298,9 @@ function NoApplicationLogs({ range }: { range: string }) {
         </Text>
       </XStack>
       <Text fontSize="$3" color="$color11">
-        The o11y log runtime answered, but no OpenTelemetry logs were ingested for your organization in
-        this window. This is a real empty result, not placeholder data — lines appear here as your
-        services ship OTLP logs to o11y. Try a wider range, or view your request activity (always real).
+        The o11y log runtime answered and had nothing for your organization in this window — the window is
+        empty, not broken. Lines appear here as your services ship OTLP logs to o11y. Try a wider range, or
+        view your request activity.
       </Text>
       <XStack gap="$2" flexWrap="wrap">
         <Button size="$2" theme="light" icon={<BarChart3 size={15} />} onPress={() => go('/ai-metrics')}>

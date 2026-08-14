@@ -278,7 +278,7 @@ function ComputeBoard({ kind }: { kind: ComputeKind }) {
           description={ui.emptyDescription}
           bullets={[
             'Source: the unified Hanzo Datastore via GET /v1/admin/compute — one cross-tenant read, never a per-tenant fan-out.',
-            'Rows arrive once the compute-events emitter is wired (visor / commerce meter) — no data is fabricated until then.',
+            'Rows arrive once the compute-events emitter is wired (visor / commerce meter).',
           ]}
         />
       ) : (

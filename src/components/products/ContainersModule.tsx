@@ -157,7 +157,7 @@ export function ContainersModule({ params }: { params: Record<string, string> })
               <WorkloadsTab apps={scopedApps} />
             )
           ) : tab === 'pods' ? (
-            <PaasResourceTab path="pods" arrayKeys={['pods']} columns={PODS_COLUMNS} empty="No pods reported for this deployment." hint="The platform pods endpoint lights up here once served." />
+            <PaasResourceTab path="pods" arrayKeys={['pods']} columns={PODS_COLUMNS} empty="No pods reported for this deployment." hint="Pods appear here once the platform serves that endpoint." />
           ) : tab === 'containers' ? (
             <PaasResourceTab path="containers" arrayKeys={['containers']} columns={CONTAINERS_COLUMNS} empty="No containers reported." />
           ) : tab === 'images' ? (

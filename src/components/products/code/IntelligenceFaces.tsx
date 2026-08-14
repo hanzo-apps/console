@@ -41,7 +41,7 @@ function NotConnected({ what }: { what: string }) {
         Code intelligence isn’t connected here yet
       </Text>
       <Text fontSize="$2" color="$color10" text="center" maxW={480}>
-        The {what} route isn’t mounted on this deployment. It lights up automatically once it’s live — nothing is fabricated.
+        The {what} route isn’t mounted on this deployment. This view fills in once it is.
       </Text>
     </YStack>
   )

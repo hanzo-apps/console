@@ -35,7 +35,7 @@ export function ProductSubpageStub({
   const router = useRouter()
   const blurb =
     BASE_BLURB[subpage.slug] ??
-    `${subpage.label} for ${entry.label} reads from its backend and renders here; on this deployment that source is not wired, so nothing is shown rather than fabricated.`
+    `${subpage.label} for ${entry.label} reads from its backend. That source is not wired on this deployment.`
   const docs = entry.docs ?? config.docsUrl
 
   return (
@@ -47,7 +47,6 @@ export function ProductSubpageStub({
           title={`${subpage.label} · not wired on this deployment`}
           description={blurb}
           bullets={[
-            'Nothing is fabricated — this page stays empty until the real backend is connected.',
             `${subpage.label} shows up here the moment ${entry.label} exposes it.`,
           ]}
           primary={{ label: `Open ${entry.label}`, onPress: () => router.push(`/${entry.id}`) }}

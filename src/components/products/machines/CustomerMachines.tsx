@@ -293,7 +293,7 @@ export function CustomerMachines() {
           icon={Server}
           title="Launch your first machine"
           description="Dedicated compute machines run your workloads across regions. Launch one and it appears here — with real capacity, region, and cost. Managed on Hanzo Cloud."
-          bullets={['Tap a size in the live catalog below to launch it.', 'CPU machines launch on your Hanzo credit balance — no card required; nothing is fabricated.']}
+          bullets={['Tap a size in the live catalog below to launch it.', 'CPU machines launch on your Hanzo credit balance. No card required.']}
           primary={{ label: 'Launch a machine', onPress: () => openLaunch() }}
           secondary={{ label: 'Compute docs', href: `${config.docsUrl}/docs/machines` }}
         />

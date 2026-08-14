@@ -224,7 +224,7 @@ function ResourceCard<T>({
           <Spinner size="small" color="$color10" />
         </XStack>
       ) : state.error ? (
-        <Muted>Not reporting right now — nothing is fabricated.</Muted>
+        <Muted>This source did not answer, so nothing is listed. That is not the same as having none.</Muted>
       ) : count === 0 ? (
         <Muted>{empty}</Muted>
       ) : (
@@ -268,7 +268,7 @@ export function ResourceOverview() {
             Resources
           </Text>
           <Text fontSize="$3" color="$color11">
-            Your apps, GPUs, and nodes across Hanzo Cloud and your own fleet — at a glance.
+            Your apps, GPUs, and nodes across Hanzo Cloud and your own fleet.
           </Text>
         </YStack>
         <Button size="$2" chromeless icon={<RefreshCw size={15} />} onPress={reload} aria-label="Refresh resources" />

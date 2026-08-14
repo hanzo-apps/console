@@ -53,11 +53,11 @@ const TITLES: Record<PlatformErrorKind, string> = {
 
 const BODIES: Record<PlatformErrorKind, string> = {
   'not-configured':
-    'This console is wired to platform.hanzo.ai, but the server-side service token (PAAS_SERVICE_TOKEN, from KMS) is not set on this deployment yet. Once it is, real data appears here. No placeholder data is shown.',
+    'This console is wired to platform.hanzo.ai, but the server-side service token (PAAS_SERVICE_TOKEN, from KMS) is not set on this deployment yet. Set it and this page fills in.',
   forbidden:
     'Your workloads run on managed Hanzo Cloud — no cluster to operate. The full control-plane fleet view (clusters, nodes, raw workloads) is an admin surface; deploy and scale through Functions, Agents, and the platform.',
   unavailable:
-    'The platform backend on this deployment does not serve this endpoint (it ships as a separate service). This view reads live data wherever the endpoint is served; nothing is fabricated here.',
+    'The platform backend on this deployment does not serve this endpoint — it ships as a separate service. This view reads live data wherever that service runs.',
   // Empty → the card shows the backend's own sentence, which names the cure.
   payment: '',
   error: '',

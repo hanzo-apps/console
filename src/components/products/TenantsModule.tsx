@@ -263,9 +263,8 @@ function TenantsBoard() {
           {layout === 'tree' && inferred ? (
             <Card p="$3" borderWidth={1} borderColor="$borderColor" borderStyle="dashed">
               <Text fontSize="$2" color="$color10">
-                The reseller tree is INFERRED from shared owner emails — the platform has no `parentOrgId` column yet.
-                A real parent link (a `parentOrgId` on the organization, or `metadata.parentOrg`) is the
-                foundation-phase follow-up; this view uses it the moment it exists and never fabricates a hierarchy.
+                This tree is inferred from shared owner emails. The platform has no `parentOrgId` column yet, so a
+                branch here is a guess rather than a declared parent.
               </Text>
             </Card>
           ) : null}
@@ -447,10 +446,9 @@ function PackageCatalog() {
           <PlatformStateCard error={error} onRetry={() => void load()} />
           <Card p="$3" borderWidth={1} borderColor="$borderColor" borderStyle="dashed">
             <Text fontSize="$2" color="$color10">
-              The package catalog is DATA — the platform serves it at `/v1/packages`, seeded from
-              `platform-seed/packages.json`. Adding a package is a platform DB row, never a console code edit. This
-              view lights up with the real catalog once the platform serves the `package` table (the eight presets
-              are seeded and ready). Nothing is fabricated here in the meantime.
+              The package catalog is data. The platform serves it at `/v1/packages`, seeded from
+              `platform-seed/packages.json`, so adding a package is a database row rather than a console change. The
+              catalog appears here once the platform serves the `package` table.
             </Text>
           </Card>
         </>

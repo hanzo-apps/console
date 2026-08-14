@@ -58,7 +58,7 @@ export function LandingMetrics({ config }: { config: ProductLandingConfig }) {
   }, [controlled, load, tick])
 
   if (!metrics) {
-    if (failed) return <MetricsNote text="Live metrics aren’t connected for your organization yet — nothing is fabricated." />
+    if (failed) return <MetricsNote text="Live metrics aren’t connected for your organization yet." />
     if (!controlled && load) return <MetricsSkeleton />
     return null
   }

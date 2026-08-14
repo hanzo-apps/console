@@ -189,7 +189,7 @@ export function AdminO11yModule() {
                 <Kpi icon={<Coins size={15} />} label="Generation cost" value={d ? `$${d.llm.costUsd.toFixed(4)}` : '—'} caption="fleet-wide" />
               </XStack>
               <Text fontSize="$2" color="$color10">
-                Detailed generation traces populate here as generation ingestion grows — no figures are fabricated.
+                Detailed generation traces populate here as generation ingestion grows.
               </Text>
             </Card>
           </XStack>

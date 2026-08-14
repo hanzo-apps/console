@@ -78,7 +78,7 @@ export function LuxNetworkModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Lux Network"
-        subtitle="Live validator, node, and service health across the Lux fleet — real telemetry, nothing fabricated."
+        subtitle="Validator, node, and service health across the Lux fleet."
         actions={
           <Button icon={<RefreshCw size={16} />} onPress={load}>
             Refresh
@@ -404,7 +404,7 @@ function LuxError({ status, message, onRetry }: { status: number; message: strin
         : 'Could not reach the telemetry store'
   const body =
     status === 501
-      ? 'This console reads Lux telemetry from the telemetry store, but its URL is not set on this deployment yet. Once it is, live validator and infrastructure metrics appear here — no fabricated data is shown.'
+      ? 'This console reads Lux telemetry from the telemetry store, but its URL is not set on this deployment yet. Set it and validator and infrastructure metrics appear here.'
       : status === 401 || status === 403
         ? 'The Lux Network board is a platform surface, restricted to SuperAdmins — members of the reserved admin org.'
         : message

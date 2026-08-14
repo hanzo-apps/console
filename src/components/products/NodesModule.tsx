@@ -230,7 +230,7 @@ export function NodesModule(_props: { params: Record<string, string> }) {
             <EmptyState
               icon={nodesIcon}
               title="No networks reporting"
-              description="None of the networks configured for this brand answered their luxd RPC. This view lights up automatically once a network is reachable — no placeholder nodes are shown."
+              description="None of the networks configured for this brand answered their luxd RPC. Nodes appear here once one of them is reachable."
             />
           ) : (
             <>

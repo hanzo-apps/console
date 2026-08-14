@@ -98,15 +98,15 @@ export function MarketsModule(_props: { params: Record<string, string> }) {
           <Card borderWidth={1} borderColor="$borderColor" p="$3" gap="$2">
             <Text fontSize="$3" fontWeight="700">Indexer not reporting</Text>
             <Text fontSize="$2" color="$color10">
-              The DEX indexer did not answer{snap?.error ? ` — ${snap.error}` : ''}. The markets table lights up automatically
-              once the indexer is reachable — no placeholder markets are shown.
+              The DEX indexer did not answer{snap?.error ? ` — ${snap.error}` : ''}. The markets table fills in
+              once the indexer is reachable.
             </Text>
           </Card>
         ) : noMarkets && marketsIcon ? (
           <EmptyState
             icon={marketsIcon}
             title="No markets indexed yet"
-            description="The DEX indexer is reachable but reports no markets on this network yet. Deploy a market maker (Trading) to seed the L*/LUX books, or wait for the indexer to catch up — no placeholder rows are shown."
+            description="The DEX indexer is reachable and reports no markets on this network yet. Deploy a market maker in Trading to seed the L*/LUX books, or wait for the indexer to catch up."
           />
         ) : (
           <DataTable fields={MARKET_FIELDS} records={rows} loading={loading} empty="No markets on this network." />
