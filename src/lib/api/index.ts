@@ -128,7 +128,7 @@ export {
   type VideoResponse,
 } from './playground'
 export { AiApi, type AiChatInput } from './ai'
-export { KeysApi, type KeyStatus } from './keys'
+export { KeysApi, partitionKeys, type KeyStatus, type PublishableKey } from './keys'
 export {
   PromptsApi,
   normalizePrompt,

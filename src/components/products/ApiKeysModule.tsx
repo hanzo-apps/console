@@ -20,7 +20,7 @@ import { Copy, Check, KeyRound, RefreshCw, Trash2, TriangleAlert, Plus } from '@
 import { useAnalytics } from '@hanzo/event/react'
 import { EVENTS } from '@hanzo/event'
 
-import { ApiError, KeysApi, type KeyStatus } from '~/lib/api'
+import { ApiError, KeysApi, type KeyStatus, type PublishableKey } from '~/lib/api'
 import { useSession } from '~/lib/auth/session'
 import { config } from '~/config'
 import { ErrorState } from '~/components/ui/States'
@@ -115,6 +115,53 @@ function FirstCall({ onAddCredits }: { onAddCredits: () => void }) {
   )
 }
 
+/**
+ * The account's publishable keys, listed in full.
+ *
+ * They were fetched all along and shown nowhere: the page asked only whether an
+ * `sk-` existed, so an account holding three `pk-` keys was told it had none. The
+ * two are not merged here — they are opposites. `sk-` resolves to the USER and is
+ * session-equivalent, so it is revealed once and then masked to its prefix; `pk-`
+ * resolves only to the ORG and mints no principal, so it is safe in a page's source
+ * and there is nothing to hide by truncating it.
+ */
+function PublishableKeys({ keys }: { keys: PublishableKey[] }) {
+  if (keys.length === 0) return null
+  return (
+    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
+      <XStack gap="$2" items="center">
+        <KeyRound size={16} />
+        <Text fontSize="$4" fontWeight="700">
+          Publishable keys
+        </Text>
+        <Text fontSize="$2" color="$color10">
+          {keys.length}
+        </Text>
+      </XStack>
+      <Text fontSize="$3" color="$color11">
+        Org-scoped and safe to ship in client code — a publishable key names a write
+        scope and authenticates nobody, so it never stands in for the{' '}
+        <Text fontSize="$2" style={{ fontFamily: 'monospace' }}>sk-</Text> key above.
+      </Text>
+      <YStack gap="$2">
+        {keys.map((k) => (
+          <XStack key={k.key || k.prefix} gap="$2" items="center" minW={0}>
+            <Text fontSize="$2" color="$color12" numberOfLines={1} style={{ fontFamily: 'monospace', flex: 1 }}>
+              {k.key || `${k.prefix}…`}
+            </Text>
+            {k.createdAt ? (
+              <Text fontSize="$1" color="$color10" numberOfLines={1}>
+                {new Date(k.createdAt).toLocaleDateString()}
+              </Text>
+            ) : null}
+            {k.key ? <CopyButton value={k.key} label="Copy" /> : null}
+          </XStack>
+        ))}
+      </YStack>
+    </Card>
+  )
+}
+
 /** The credential surface — embeddable (no page header). */
 export function ApiKeysView() {
   const { account, loading: sessionLoading } = useSession()
@@ -150,7 +197,13 @@ export function ApiKeysView() {
       try {
         const { accessKey } = await KeysApi.create()
         setNewKey(accessKey)
-        setStatus({ hasKey: true, keyPrefix: accessKey.slice(0, 11), createdAt: new Date().toISOString() })
+        // Minting the secret says nothing about the publishable keys — keep them.
+        setStatus((s) => ({
+          hasKey: true,
+          keyPrefix: accessKey.slice(0, 11),
+          createdAt: new Date().toISOString(),
+          publishable: s?.publishable ?? [],
+        }))
         if (mode === 'create') analytics.capture(EVENTS.API_KEY_CREATED)
       } catch (e) {
         setError(e instanceof ApiError ? e.message : 'Failed to create the API key')
@@ -168,7 +221,8 @@ export function ApiKeysView() {
     try {
       await KeysApi.revoke()
       setNewKey('')
-      setStatus({ hasKey: false, keyPrefix: '' })
+      // Revoking the secret leaves the publishable keys standing — they are separate grants.
+      setStatus((s) => ({ hasKey: false, keyPrefix: '', publishable: s?.publishable ?? [] }))
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to revoke the API key')
     } finally {
@@ -273,6 +327,8 @@ export function ApiKeysView() {
           </>
         )}
       </Card>
+
+      <PublishableKeys keys={status?.publishable ?? []} />
 
       {hasKey || newKey ? <FirstCall onAddCredits={() => router.push('/billing/credits')} /> : null}
 

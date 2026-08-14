@@ -16,16 +16,40 @@
  * cookie where the console is served by cloud itself. The old code hand-rolled a
  * bare `fetch` with `Accept` and nothing else, so it presented no identity at all.
  *
- * The secret is returned ONLY by `create()` (show once). `status()` reports
- * existence + the public prefix, never secret material.
+ * The secret is returned ONLY by `create()` (show once). `status()` reports its
+ * existence + public prefix, never secret material — and, separately, the account's
+ * publishable keys in full, which is safe precisely because they authenticate nobody.
  */
 import { originV1Url, restDelete, restGet, restPost } from './client'
 
+/**
+ * A PUBLISHABLE (`pk-`) key, listed in full.
+ *
+ * It resolves to the ORG and mints no principal, so it authenticates nobody and is
+ * safe in a page's source — which is why cloud returns its whole value and this
+ * console shows it. That is the opposite of the secret below, and the two must stay
+ * visibly different: one is shown, the other is revealed once and then masked.
+ */
+export type PublishableKey = {
+  /** The full `pk-…` value. */
+  key: string
+  /** Leading identifier (`pk-live-…`) — cloud's when it sends one, else derived. */
+  prefix: string
+  createdAt?: string
+}
+
 export type KeyStatus = {
+  /**
+   * A SECRET (`sk-`) key exists. Deliberately narrow: `sk-` resolves to the USER and
+   * is session-equivalent, so the onboarding step and the dev dock both mean THIS
+   * key. Holding publishable keys must never satisfy it.
+   */
   hasKey: boolean
   keyPrefix: string
   /** When the key row last changed in IAM (mint/rotate), ISO; '' when unknown. */
   createdAt?: string
+  /** Every publishable key on the account — a separate holding, never folded in above. */
+  publishable: PublishableKey[]
 }
 
 /** One key as cloud lists it. `key` is present for a publishable key only. */
@@ -39,27 +63,54 @@ type ApiKey = {
 /**
  * The SECRET key — the `sk-` credential this page manages. Cloud reads an omitted
  * `type` as this one, so neither write sends a body; the read has to pick it out
- * of the list, which also carries the publishable `pk-` key.
+ * of the list, which also carries the publishable `pk-` keys.
  */
 const SECRET = 'secret'
 
 const keysUrl = (): string => originV1Url('keys')
 
-/** The secret key's row, or undefined when the caller holds none. */
-const secretOf = (keys: unknown): ApiKey | undefined =>
-  (Array.isArray(keys) ? (keys as ApiKey[]) : []).find(
-    (k) => (k?.type ?? SECRET) === SECRET,
-  )
+/** The rows cloud listed, whether it answered `{keys:[…]}` or a bare array. */
+const rowsOf = (out: unknown): ApiKey[] => {
+  if (Array.isArray(out)) return out as ApiKey[]
+  const keys = (out as { keys?: unknown } | null)?.keys
+  return Array.isArray(keys) ? (keys as ApiKey[]) : []
+}
+
+/**
+ * Split the listing into the two shapes that exist.
+ *
+ * The read used to `find` the secret and drop the rest on the floor, so an account
+ * holding three publishable keys and no secret was shown the "create your first key"
+ * empty state — a true statement about `sk-` presented as the whole truth about the
+ * account. Both holdings are reported now, still separately.
+ */
+export function partitionKeys(out: unknown): { secret?: ApiKey; publishable: PublishableKey[] } {
+  const rows = rowsOf(out)
+  return {
+    secret: rows.find((k) => (k?.type ?? SECRET) === SECRET),
+    publishable: rows
+      .filter((k) => (k?.type ?? SECRET) !== SECRET)
+      .map((k) => ({
+        key: k.key ?? '',
+        // Cloud sends an 11-char prefix; derive the same span when it does not, so a
+        // row always names itself even if only the full value came back.
+        prefix: k.prefix || (k.key ?? '').slice(0, 11),
+        createdAt: k.createdAt,
+      }))
+      .filter((k) => k.key !== '' || k.prefix !== ''),
+  }
+}
 
 export const KeysApi = {
-  /** Whether the account has a key, plus its public prefix (no secret). */
+  /** Whether the account has a secret key (plus its public prefix), and its publishable keys. */
   status: async (): Promise<KeyStatus> => {
-    const out = await restGet<{ keys?: ApiKey[] }>(keysUrl())
-    const row = secretOf(out?.keys)
+    const out = await restGet<unknown>(keysUrl())
+    const { secret, publishable } = partitionKeys(out)
     return {
-      hasKey: Boolean(row),
-      keyPrefix: row?.prefix ?? '',
-      createdAt: row?.createdAt ?? '',
+      hasKey: Boolean(secret),
+      keyPrefix: secret?.prefix ?? '',
+      createdAt: secret?.createdAt ?? '',
+      publishable,
     }
   },
   /** Mint (or rotate) the key; returns the full `sk-` key ONCE. */
