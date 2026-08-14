@@ -185,7 +185,7 @@ export function SubscriptionsModule(_props: { params: Record<string, string> }) 
                 }}
                 aria-label={`Cancel ${r.plan}`}
               >
-                {busy ? 'Working…' : 'Cancel'}
+                {busy ? 'Working…' : 'Cancel subscription'}
               </Button>
             )}
           </XStack>

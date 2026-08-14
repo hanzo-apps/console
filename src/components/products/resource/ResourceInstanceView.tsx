@@ -61,13 +61,17 @@ export function ResourceInstanceView({ kind, productLabel, connectionHint, name,
   }, [load])
 
   const onDelete = async () => {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete "${name}"? This cannot be undone.`)) return
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`Delete the ${spec.instanceNoun} "${name}"? This removes it and everything in it, permanently.`)
+    )
+      return
     try {
       await ProvisioningApi.remove(kind, name)
       toast.success(`Deleted ${name}`)
       onBack()
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : `Failed to delete "${name}"`
+      const msg = e instanceof ApiError ? e.message : `Nothing was removed — the ${spec.instanceNoun} is still there. Try again.`
       toast.error(`Could not delete ${name}`, msg)
     }
   }

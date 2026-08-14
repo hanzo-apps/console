@@ -148,7 +148,7 @@ export function ResourceListView({ kind, productLabel, connectionHint, onOpen }:
       setShowCreate(false)
       await load()
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : `Failed to create ${productLabel}`
+      const msg = e instanceof ApiError ? e.message : `The ${spec.instanceNoun} was not created. Check the name and try again.`
       setCreateErr(msg)
       toast.error(`Could not create ${productLabel}`, msg)
     } finally {
@@ -157,13 +157,17 @@ export function ResourceListView({ kind, productLabel, connectionHint, onOpen }:
   }
 
   const onDelete = async (r: Resource) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete "${r.name}"? This cannot be undone.`)) return
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`Delete the ${spec.instanceNoun} "${r.name}"? This removes it and everything in it, permanently.`)
+    )
+      return
     try {
       await ProvisioningApi.remove(kind, r.name)
       setRows((rs) => rs.filter((x) => x.name !== r.name))
       toast.success(`Deleted ${r.name}`)
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : `Failed to delete "${r.name}"`
+      const msg = e instanceof ApiError ? e.message : `Nothing was removed — the ${spec.instanceNoun} is still there. Try again.`
       toast.error(`Could not delete ${r.name}`, msg)
     }
   }

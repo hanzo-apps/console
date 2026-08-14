@@ -151,8 +151,8 @@ function SecretReveal({ title, url, secret, onDismiss }: { title: string; url: s
           {title}
         </Text>
         <XStack flex={1} />
-        <Button size="$2" chromeless onPress={onDismiss} aria-label="Dismiss secret">
-          Done
+        <Button size="$2" chromeless onPress={onDismiss} aria-label="Hide the signing secret — it cannot be shown again">
+          Hide secret
         </Button>
       </XStack>
       <Text fontSize="$2" color="$color11">

@@ -199,8 +199,8 @@ function MediaCard({
           <Text fontSize="$1" color="$color10" numberOfLines={1}>{String(doc.mime ?? 'file')}</Text>
           {confirming ? (
             <XStack gap="$1">
-              <Button size="$1" theme="red" disabled={disabled} onPress={() => { setConfirming(false); void onDelete() }}>Delete</Button>
-              <Button size="$1" disabled={disabled} onPress={() => setConfirming(false)}>No</Button>
+              <Button size="$1" theme="red" disabled={disabled} onPress={() => { setConfirming(false); void onDelete() }}>Delete file</Button>
+              <Button size="$1" disabled={disabled} onPress={() => setConfirming(false)}>Keep</Button>
             </XStack>
           ) : (
             <Button size="$1" circular chromeless icon={<Trash2 size={13} />} disabled={disabled} onPress={() => setConfirming(true)} />

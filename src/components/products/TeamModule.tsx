@@ -223,7 +223,7 @@ function InviteDialog({
               )}
               <XStack gap="$2" justify="flex-end">
                 <Button onPress={() => reset()}>Invite another</Button>
-                <PrimaryButton onPress={() => onOpenChange(false)}>Done</PrimaryButton>
+                <PrimaryButton onPress={() => onOpenChange(false)}>Close</PrimaryButton>
               </XStack>
             </>
           ) : (
@@ -298,7 +298,8 @@ function RemoveDialog({
           </VisuallyHidden>
           <Text fontSize="$6" fontWeight="800">Remove member?</Text>
           <Text fontSize="$3" color="$color11">
-            {member?.email || member?.name} will lose access to this organization. This can't be undone here.
+            {member?.email || member?.name} loses access to this organization straight away. To give it back you would
+            have to invite them again.
           </Text>
           <XStack gap="$2" justify="flex-end">
             <Button chromeless onPress={() => onOpenChange(false)} disabled={busy}>Cancel</Button>

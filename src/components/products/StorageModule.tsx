@@ -129,7 +129,11 @@ function BucketList({ onOpen }: { onOpen: (bucket: string) => void }) {
 
   const remove = useCallback(
     async (name: string) => {
-      if (typeof window !== 'undefined' && !window.confirm(`Delete bucket "${name}"? It must be empty.`)) return
+      if (
+        typeof window !== 'undefined' &&
+        !window.confirm(`Delete bucket "${name}"? It has to be empty first, and once it is gone it cannot be brought back.`)
+      )
+        return
       try {
         await StorageApi.deleteBucket(name)
         toast.success('Bucket deleted', name)
@@ -180,7 +184,7 @@ function BucketList({ onOpen }: { onOpen: (bucket: string) => void }) {
     <YStack gap="$4">
       <PageHeader
         title="S3"
-        subtitle="S3-compatible buckets and objects, scoped to your organization."
+        subtitle="Buckets and objects over the S3 API, scoped to your organization."
         actions={
           <PrimaryButton icon={<Plus size={15} />} onPress={() => setCreating(true)}>
             New bucket
@@ -198,7 +202,7 @@ function BucketList({ onOpen }: { onOpen: (bucket: string) => void }) {
         <EmptyState
           icon={HardDrive}
           title="Create your first bucket"
-          description="Store and serve files with an S3-compatible API. Buckets are private to your organization."
+          description="Store and serve files over the S3 API. A bucket is private to your organization until you say otherwise."
           bullets={[
             'Upload and download objects right here in the console.',
             'Use the same bucket as an S3 endpoint from your app with your access key.',
@@ -299,7 +303,7 @@ function ObjectBrowser({ bucket, onBack }: { bucket: string; onBack: () => void 
         if (p?.url && typeof window !== 'undefined') window.open(p.url, '_blank', 'noopener')
         else toast.error('Download unavailable', 'The storage backend has no public endpoint configured.')
       } catch (e) {
-        toast.error('Could not download', e instanceof Error ? e.message : String(e))
+        toast.error('Could not download the object', e instanceof Error ? e.message : String(e))
       }
     },
     [bucket, prefix, toast],
@@ -308,13 +312,17 @@ function ObjectBrowser({ bucket, onBack }: { bucket: string; onBack: () => void 
   const remove = useCallback(
     async (obj: S3Object) => {
       const full = joinKey(prefix, obj.key)
-      if (typeof window !== 'undefined' && !window.confirm(`Delete "${full}"?`)) return
+      if (
+        typeof window !== 'undefined' &&
+        !window.confirm(`Delete the object "${full}"? It is removed from bucket "${bucket}" and cannot be recovered.`)
+      )
+        return
       try {
         await StorageApi.deleteObject(bucket, full)
-        toast.success('Deleted', full)
+        toast.success('Object deleted', full)
         await reload()
       } catch (e) {
-        toast.error('Could not delete', e instanceof Error ? e.message : String(e))
+        toast.error('Could not delete the object', e instanceof Error ? e.message : String(e))
       }
     },
     [bucket, prefix, reload, toast],
