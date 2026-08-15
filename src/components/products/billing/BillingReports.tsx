@@ -37,8 +37,8 @@ import {
 } from './logic'
 import { RangeTabs } from './RangeTabs'
 import { BackendStateCard, DataTable, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 const DIM_LABEL: Record<SpendDimension, string> = { model: 'Model', provider: 'Provider', product: 'Product', agent: 'Agent' }
 
 type Async<T> =

@@ -16,8 +16,8 @@ import { AdminGrantsApi, type AdminGrant, type GrantSource } from '~/lib/api/adm
 import { MetricCard } from '~/components/ui/Metric'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const shortDate = (s: string): string => (s ? (s.split('T')[0] ?? s) : '—')
 
 const INPUT_BASE: CSSProperties = {

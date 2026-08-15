@@ -14,8 +14,8 @@ import { RefreshCw, Download } from '@hanzogui/lucide-icons-2'
 import { BillingApi, type Invoice } from '~/lib/api/billing'
 import { billingProxyV1Url } from '~/lib/api/client'
 import { BackendStateCard, DataTable, PageHeader, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 
 /**
  * The same-origin proxy URL for an invoice's PDF (`/v1/billing/invoices/:id/pdf`).

@@ -18,6 +18,7 @@ import { DataTable, type FieldDefinition } from '@hanzo/data'
 
 import { ApiError } from '~/lib/api/client'
 import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
 /** A priced availability quote as /v1/domain/search|availability returns it. */
 interface Quote {
@@ -41,8 +42,6 @@ interface OwnedDomain {
   [k: string]: unknown
 }
 
-const usd = (cents: number) =>
-  typeof cents === 'number' && cents > 0 ? `$${(cents / 100).toFixed(2)}` : '—'
 
 const OWNED_FIELDS: FieldDefinition[] = [
   { name: 'domain', label: 'Domain', type: 'text', width: 240 },

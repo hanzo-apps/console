@@ -19,8 +19,8 @@ import { UtilBar } from '~/components/ui/Metric'
 import { Loader } from '~/components/ui/Loader'
 import { providerColor } from '~/lib/products/ai-accounts'
 import { BackendStateCard, EmptyState, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 const pctText = (n?: number): string => (typeof n === 'number' ? `${Math.round(n)}%` : '—')
 const compact = (n: number): string => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n)
 

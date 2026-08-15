@@ -386,8 +386,7 @@ export const fmtDuration = (ms?: number | null): string => {
 }
 
 /** USD from cents (`$1.23`); em dash for missing. */
-export const fmtUsd = (cents?: number | null): string =>
-  cents === undefined || cents === null ? EM : `$${(cents / 100).toFixed(2)}`
+export { usd as fmtUsd } from '~/lib/money'
 
 /** Absolute locale date-time; em dash for missing/invalid. */
 export const fmtAbs = (iso?: string | null): string => {

@@ -47,8 +47,8 @@ import {
 } from './tenants/model'
 import { TenantDetail } from './tenants/TenantDetail'
 import { BackendStateCard, DataTable, EmptyState, FieldText, PageHeader, StatusTag, classifyRead, type BackendState, type Column } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents?: number): string => (typeof cents === 'number' ? `$${(cents / 100).toFixed(2)}` : '—')
 
 type Tab = 'tenants' | 'packages'
 type Layout = 'flat' | 'tree'

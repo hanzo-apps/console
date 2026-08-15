@@ -27,12 +27,8 @@ import { VisorApi, type VisorMachine } from '~/lib/api/visor'
 import { exportCSV } from '~/lib/csv'
 import { toneColor, toneVar } from '~/components/ui/tone'
 import { BackendStateCard, DataTable, PageHeader, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
+import { usdShort as usd } from '~/lib/money'
 
-const usd = (cents: number): string => {
-  const d = cents / 100
-  if (Math.abs(d) >= 10000) return `$${(d / 1000).toFixed(1)}K`
-  return `$${d.toFixed(2)}`
-}
 const compact = (n: number): string => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`

@@ -32,6 +32,7 @@ import { asApiError, ErrorState, isForbidden, SuperAdminRequired } from '~/compo
 import { ApiError } from '~/lib/api'
 import { toneColor } from '~/components/ui/tone'
 import { DataTable, EmptyState, FieldText, PageHeader, PrimaryButton, type Column } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
 type Async<T> =
   | { phase: 'loading' }
@@ -41,10 +42,6 @@ type Async<T> =
 // ── money / time formatting (honest, never NaN) ──────────────────────────────
 
 /** USD cents → "$10.00" (em-dash for a non-finite value). */
-const usd = (cents: number | null | undefined): string => {
-  if (cents == null || !Number.isFinite(cents)) return '—'
-  return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
 
 /** Signed USD cents → "+$10.00" / "-$10.00" (for a journal posting leg). */
 const signedUsd = (cents: number): string => (cents < 0 ? `-${usd(-cents)}` : `+${usd(cents)}`)

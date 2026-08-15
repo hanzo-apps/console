@@ -19,7 +19,7 @@ export const headroomTone = (remainingPct: number): string => {
   return toneVar('critical')
 }
 
-export const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
+export { usd } from '~/lib/money'
 export const pctText = (n?: number): string => (typeof n === 'number' && Number.isFinite(n) ? `${Math.round(n)}%` : '—')
 export const compact = (n: number): string =>
   new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n)

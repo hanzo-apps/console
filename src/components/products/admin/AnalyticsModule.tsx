@@ -24,12 +24,12 @@ import { LineChart, BarChart, type ChartPoint } from '~/components/ui/Charts'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { toneVar } from '~/components/ui/tone'
 import { PageHeader } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
 type Range = '7d' | '30d' | '90d' | 'all'
 const RANGES: { key: Range; label: string }[] = [
   { key: '7d', label: '7D' }, { key: '30d', label: '30D' }, { key: '90d', label: '90D' }, { key: 'all', label: 'All' },
 ]
-const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const pts = (s: { t: string; value: number }[]): ChartPoint[] => s.map((p) => ({ label: p.t, value: p.value }))
 
 /** An honest "computed[x] is false" panel — never a fabricated chart. */

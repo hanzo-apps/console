@@ -23,8 +23,8 @@ import { useToast } from '~/components/ui/Toast'
 import { StepShell, StepActions } from '~/components/onboarding/parts'
 import type { StepProps } from '~/components/onboarding/types'
 import { PrimaryButton } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (c: number): string => `$${(c / 100).toFixed(2)}`
 
 type Phase = 'loading' | 'ready' | 'unconfigured' | 'error'
 

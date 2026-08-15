@@ -18,8 +18,8 @@ import { LineChart } from '~/components/ui/Charts'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired } from '~/components/ui/States'
 import { toneVar } from '~/components/ui/tone'
 import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents: number): string => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export function RevenueModule() {
   const [data, setData] = useState<RevenueData | null>(null)
