@@ -103,7 +103,11 @@ export function ContextSwitcher() {
                 one page, so reaching a tenant nobody is a member of means SEARCHING
                 it, not scrolling. A regular user has one org and no field. */}
             {isSuperAdmin ? (
-              <YStack px="$1" pb="$1">
+              {/* $2 to match MenuRow and MenuLabel. At $1 the field was inset
+                  half as far as every row under it, so the menu had two left
+                  edges and the search looked like it belonged to a different
+                  panel. */}
+              <YStack px="$2" pb="$1">
                 {/* A search landmark names the control for assistive tech — the shared
                     SearchInput has no accessible-name prop of its own. */}
                 <div role="search" aria-label="Find an organization">
