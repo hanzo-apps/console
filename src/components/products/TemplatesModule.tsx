@@ -21,7 +21,7 @@
  *   - "Fork / deploy" (ship as-is): `TemplatesApi.fork` → cloud
  *     `POST /v1/projects/fork` seeds a REAL org-scoped Project (framework mapped,
  *     repo = gallery source); the forked card then offers a one-click "Deploy"
- *     (`POST /v1/projects/{slug}/deploy` {source:'git'}) → building on CI →
+ *     (`POST /v1/projects/{slug}/deployments`) → building on CI →
  *     "Check status" → "Open site" (liveUrl). Each phase shows exactly ONE next
  *     step, so "how to deploy" is never ambiguous.
  *

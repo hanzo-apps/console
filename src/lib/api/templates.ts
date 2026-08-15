@@ -211,16 +211,23 @@ export const TemplatesApi = {
     }),
 
   /**
-   * Deploy a forked project live (`POST /v1/projects/{slug}/deploy`). A forked
-   * template carries a linked repo (the gallery source), so we use the GIT deploy
-   * mode (`{source:'git'}`, Content-Type JSON): projectsvc records a build (202
-   * `queued`) and CI ships dist/ to S3, then flips the project `live` with a
-   * `liveUrl`. Returns the initial deploy status; poll `status()` for `live`.
+   * Open a deployment for a forked project (`POST /v1/projects/{slug}/deployments`)
+   * — the collection is where a deployment is created. Cloud answers 202 `queued`
+   * and CI ships the build to S3 under the write grant on that answer, then flips
+   * the project `live` with a `liveUrl`. Returns the initial status; poll
+   * `status()` for `live`.
+   *
+   * The body is empty because a deployment start needs a DESTINATION, not a
+   * source: cloud derives the prefix from the project. This used to be
+   * `{source:'git'}` on `.../deploy`, where `source` was a Content-Type
+   * discriminator picking between two operations at one address. That address is
+   * the archive upload alone now and reads any body as bytes, so the JSON was
+   * sniffed as a tar and refused.
    */
   deploy: (slug: string): Promise<DeployResult> =>
-    restPost<unknown>(originV1Url(`projects/${encodeURIComponent(slug)}/deploy`), {
-      source: 'git',
-    }).then(normalizeDeployResult),
+    restPost<unknown>(originV1Url(`projects/${encodeURIComponent(slug)}/deployments`), {}).then(
+      normalizeDeployResult,
+    ),
 
   /** One project's current state (`GET /v1/projects/{slug}`) — polls draft→building→live. */
   status: (slug: string): Promise<ForkedProject | null> =>
