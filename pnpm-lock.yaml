@@ -45,8 +45,8 @@ importers:
         specifier: ^0.2.5
         version: 0.2.5(@hanzogui/lucide-icons-2@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@hanzo/ui':
-        specifier: ^8.0.90
-        version: 8.0.90(a9ac5608ba7a86bfd0fb749142d59bb5)
+        specifier: ^8.0.91
+        version: 8.0.91(a9ac5608ba7a86bfd0fb749142d59bb5)
       '@hanzo/usage':
         specifier: ^0.1.6
         version: 0.1.6(@hanzo/gui@8.0.0(react-dom@19.2.7(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(@hanzogui/lucide-icons-2@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
@@ -864,8 +864,8 @@ packages:
       react:
         optional: true
 
-  '@hanzo/ui@8.0.90':
-    resolution: {integrity: sha512-RBbgVZFNCKCRwuq7XIH48iHOqPtAZ/cMjqh4oYYNYkNXh3XGtQHp+XuvZmNIIkEN68iryETQ7HOB2QqTy1olVQ==}
+  '@hanzo/ui@8.0.91':
+    resolution: {integrity: sha512-9YVbmPxqz/ZGJhDB/TxLdHiFg7Vx3T30n4QbrtjfuN15yWCZw+KcrkX0YnoUqoPFgEq91hG0l0c6QXL+aUdoAQ==}
     peerDependencies:
       '@hanzo/canvas': '>=0.1.0'
       '@hanzo/cd': '>=0.1.0'
@@ -5011,7 +5011,7 @@ snapshots:
       '@hanzogui/lucide-icons-2': 8.1.0(react-dom@19.2.7(react@19.2.7))(react-native-svg@15.15.5(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7)
       react: 19.2.7
 
-  '@hanzo/ui@8.0.90(a9ac5608ba7a86bfd0fb749142d59bb5)':
+  '@hanzo/ui@8.0.91(a9ac5608ba7a86bfd0fb749142d59bb5)':
     dependencies:
       '@hanzo/appearance': 0.1.4(react@19.2.7)
       '@hanzo/data': 1.2.2(@hanzo/gui@8.0.0(react-dom@19.2.7(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react@19.2.7))(react@19.2.7)
