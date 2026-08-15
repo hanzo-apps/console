@@ -28,10 +28,10 @@ import {
   type CloudUsages,
 } from './logic'
 import { BackendStateCard, EmptyState, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
 const fmtInt = (n: number) => Math.round(n).toLocaleString()
 const fmtMs = (n: number) => `${Math.round(n)} ms`
-const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`
 const fmtBytes = (n: number): string => {
   if (n < 1024) return `${Math.round(n)} B`
   const u = ['KB', 'MB', 'GB', 'TB']

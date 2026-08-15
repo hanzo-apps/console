@@ -37,6 +37,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
 import { ApiError, WalletApi, type CloudBalance } from '~/lib/api/wallet'
+import { usd } from '~/lib/money'
 
 /** Lifecycle of the shared balance value. Mirrors the honest UI states. */
 export type BalancePhase = 'idle' | 'loading' | 'ready' | 'noauth' | 'unconfigured' | 'error'
@@ -140,7 +141,6 @@ export function balanceSplitLabel(b: CloudBalance | null): string | null {
   const t = trialCents(b)
   const p = prepaidCents(b)
   if (t === null && p === null) return null
-  const usd = (c: number): string => `$${(c / 100).toFixed(2)}`
   return `${usd(t ?? 0)} trial + ${usd(p ?? 0)} credits`
 }
 

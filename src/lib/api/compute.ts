@@ -445,7 +445,7 @@ export const fmtPct = (n?: number | null): string => (n == null ? '—' : `${Mat
 export const fmtTemp = (n?: number | null): string => (n == null ? '—' : `${Math.round(n)}°C`)
 export const fmtPower = (n?: number | null): string => (n == null ? '—' : `${Math.round(n)} W`)
 export const fmtInt = (n?: number | null): string => (n == null ? '—' : Math.round(n).toLocaleString())
-export const usd = (cents?: number | null): string => (cents == null ? '—' : `$${(cents / 100).toFixed(2)}`)
+export { usd } from '~/lib/money'
 
 /** Seconds → compact uptime (`3d 4h`, `5h 12m`, `8m`), or `—`. PURE. */
 export function fmtUptime(seconds?: number | null): string {

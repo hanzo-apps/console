@@ -24,8 +24,8 @@ import { ChevronRight, ExternalLink, Wallet } from '@hanzogui/lucide-icons-2'
 import { config } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { useCloudBalance, spendableCents, balanceSplitLabel } from '~/lib/billing/live-balance'
+import { usd as fmtUsd } from '~/lib/money'
 
-const fmtUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 
 export function SidebarWallet({ collapsed }: { collapsed: boolean }) {
   const { account } = useSession()

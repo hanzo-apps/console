@@ -32,8 +32,8 @@ const unknown = (sub: string): Reading => ({ value: null, sub })
 // have to count digits in, $149,760.70 is one you recognise. toFixed gives two
 // decimals and no separators; the request count beside it already groups, so
 // without this the same tile renders one figure grouped and the other not.
-export const usd = (cents: number): string =>
-  `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+import { usd } from '~/lib/money'
+export { usd }
 
 /** Token counts abbreviated the way /usage abbreviates the same figure. */
 export const compact = (n: number): string => {

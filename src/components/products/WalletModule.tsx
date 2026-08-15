@@ -32,8 +32,8 @@ import { WalletApi } from '~/lib/api/wallet'
 import { useCloudBalance, invalidateBalance, spendableCents, balanceSplitLabel } from '~/lib/billing/live-balance'
 import * as evm from '~/lib/wallet/hanzo-evm'
 import { PageHeader } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 const userIdOf = (a: Account | null): string | undefined => a?.email ?? a?.name ?? undefined
 
 type Loadable<T> =

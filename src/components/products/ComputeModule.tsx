@@ -33,6 +33,7 @@ import { AdminComputeApi, type ComputeFleets, type ComputeKind, type Rollup, typ
 import { MetricCard } from '~/components/ui/Metric'
 import { ErrorState, asApiError, isForbidden, SuperAdminRequired, type HonestCopy } from '~/components/ui/States'
 import { EmptyState, PageHeader } from '@hanzo/ui/product'
+import { usd as fmtUsd } from '~/lib/money'
 
 type Range = '24h' | '7d' | '30d'
 const RANGES: { key: Range; label: string }[] = [
@@ -106,8 +107,6 @@ const copyFor = (kind: ComputeKind): HonestCopy => ({
 })
 
 const fmtInt = (n: number): string => n.toLocaleString()
-const fmtUsd = (cents: number): string =>
-  `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const fmtWhen = (ts: string): string => {
   if (!ts) return '—'
   const d = new Date(ts)

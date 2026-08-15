@@ -24,8 +24,8 @@ import { BarChart } from '~/components/ui/Charts'
 import { monthToDate, dailySpend, groupSpend, tileView, TILE_LOAD_TIMEOUT_MS } from './logic'
 import { RangeTabs } from './RangeTabs'
 import { BackendStateCard, PageHeader, classifyBackend, type BackendState } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 const MONTH = new Date().toLocaleDateString(undefined, { month: 'long' })
 /** Honest fallback when a usage load outlives its budget (a hung request, not a thrown error). */
 const TIMEOUT_STATE: BackendState = {

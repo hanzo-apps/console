@@ -23,8 +23,8 @@ import { CalendarClock, Check, ExternalLink, RefreshCw, RotateCcw, XCircle } fro
 import { config } from '~/config'
 import { BillingApi, type Subscription } from '~/lib/api/billing'
 import { BackendStateCard, DataTable, PageHeader, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
-const usd = (cents?: number): string => (cents != null ? `$${(cents / 100).toFixed(2)}` : '—')
 
 const fmtDate = (s?: string): string => {
   if (!s) return '—'

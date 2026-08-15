@@ -25,6 +25,7 @@ import { packageAppId, packageHost, SERVICE_LABELS, type Package } from './packa
 import { ActionNotice, classifyAction, NotConnectedPanel, type ActionOutcome } from './state'
 import type { Tenant } from './model'
 import { FieldRow, FieldSelect, FieldText, StatusTag } from '@hanzo/ui/product'
+import { usd } from '~/lib/money'
 
 /** Section wrapper — a titled card with an icon. */
 function Section({ icon: Icon, title, children }: { icon: typeof Server; title: string; children: React.ReactNode }) {
@@ -47,7 +48,6 @@ const clampCount = (v: string): number => {
   return Math.min(n, 100)
 }
 
-const usd = (cents?: number): string => (typeof cents === 'number' ? `$${(cents / 100).toFixed(2)}` : '—')
 
 export function TenantDetail({
   tenant,

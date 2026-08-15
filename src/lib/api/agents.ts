@@ -464,8 +464,7 @@ export const fmtDuration = (ms?: number | null): string => {
 }
 
 /** USD from cents (`$1.23`); em dash for missing. */
-export const fmtUsd = (cents?: number | null): string =>
-  cents === undefined || cents === null ? EM : `$${(cents / 100).toFixed(2)}`
+export { usd as fmtUsd } from '~/lib/money'
 
 /** Bytes as `1.2 GB` / `340 MB`; em dash for missing. */
 export const fmtBytes = (b?: number | null): string => {
