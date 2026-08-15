@@ -22,7 +22,7 @@ import { XStack } from '@hanzo/gui'
 
 import { asColor, type IconLike } from '@hanzo/ui/product'
 import { tileRadius } from './color'
-import { contrastText } from '~/lib/theme/accent'
+import { contrastText } from '@hanzo/ui/product'
 
 export function ProductIcon({
   icon: Icon,

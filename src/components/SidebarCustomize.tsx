@@ -22,7 +22,7 @@ import { COLOR_SWATCHES } from '~/lib/products/colors'
 import { DEFAULT_GROUP, DEFAULT_GROUP_LABEL, type PinGroupView } from '~/lib/products/pins-core'
 import { usePins, useProductColors } from '~/lib/products/pins'
 import { findEntry } from '~/lib/products/registry'
-import { contrastText } from '~/lib/theme/accent'
+import { contrastText } from '@hanzo/ui/product'
 import { Reorder, asColor } from '@hanzo/ui/product'
 
 /** A round color swatch button; ringed + checked when selected. */
