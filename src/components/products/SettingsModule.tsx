@@ -273,11 +273,17 @@ function ColorSwatch({ hex }: { hex: string }) {
 /**
  * The editable org-branding form. Loads the FULL org record and round-trips it on
  * save (spread + override) so no field IAM stores is dropped. Save is honest:
- * saving → saved / error; a non-admin sees the fields read-only with a gated
- * notice (the authoritative check is the server proxy, which 403s a non-admin —
- * surfaced here as the same honest access message). Never a fake success.
+ * saving → saved / error. Never a fake success.
+ *
+ * Editing your own org's branding is org self-service, so the question is only
+ * ever "is this caller an admin OF THIS ORG" — never the platform SuperAdmin
+ * predicate. The browser cannot answer it: hanzo.id does not emit an org-scoped
+ * `isAdmin` claim (it is absent from the IdP's own `claims_supported`), so a
+ * client-side check reads `undefined` for EVERY caller and collapses to
+ * SuperAdmin-only — which locked an org's own owner out of their own branding.
+ * IAM is the authority and says so with a 403; until it does, the form edits.
  */
-function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: boolean; onSaved: () => void }) {
+function BrandingForm({ org, onSaved }: { org: Organization; onSaved: () => void }) {
   const [displayName, setDisplayName] = useState(org.displayName ?? '')
   const [websiteUrl, setWebsiteUrl] = useState(org.websiteUrl ?? '')
   const [logo, setLogo] = useState(org.logo ?? '')
@@ -286,6 +292,9 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
   const [colorPrimary, setColorPrimary] = useState(org.themeData?.colorPrimary ?? '')
   const [themeEnabled, setThemeEnabled] = useState(!!org.themeData?.isEnabled)
   const [save, setSave] = useState<SaveState>({ phase: 'idle' })
+  // Set only when IAM has actually refused this caller. A guess belongs nowhere
+  // near an authorization decision, so nothing sets this but a 403.
+  const [denied, setDenied] = useState(false)
 
   // Any edit clears a prior saved/error banner so status always reflects the pending change.
   const onEdit = (fn: () => void) => {
@@ -324,11 +333,16 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
       setSave({ phase: 'saved' })
       onSaved()
     } catch (e) {
-      setSave({ phase: 'error', err: asApiError(e) })
+      const err = asApiError(e)
+      // 403 is IAM answering the question the token could not: this caller is
+      // not an admin of this org. Take it as the answer and stop offering a
+      // control that cannot work.
+      if (err.status === 403) setDenied(true)
+      setSave({ phase: 'error', err })
     }
   }
 
-  const ro = !canEdit
+  const ro = denied
   return (
     <YStack gap="$3">
       <Text fontSize="$3" color="$color10">
@@ -404,22 +418,26 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
           </XStack>
         </FieldRow>
 
-        <XStack items="center" gap="$3" pt="$1">
-          <Button
-            size="$3"
-            theme="light"
-            disabled={ro || !dirty || save.phase === 'saving'}
-            icon={save.phase === 'saving' ? <Spinner size="small" /> : save.phase === 'saved' ? <Check size={15} /> : undefined}
-            onPress={onSave}
-          >
-            {save.phase === 'saving' ? 'Saving…' : 'Save changes'}
-          </Button>
-          {save.phase === 'saved' ? (
-            <Text fontSize="$2" color="$green10">Saved.</Text>
-          ) : dirty && !ro ? (
-            <Text fontSize="$2" color="$color10">Unsaved changes</Text>
-          ) : null}
-        </XStack>
+        {/* A control that cannot work is worse than no control: once IAM has
+            refused, the values stay readable and the Save goes away. */}
+        {ro ? null : (
+          <XStack items="center" gap="$3" pt="$1">
+            <Button
+              size="$3"
+              theme="light"
+              disabled={!dirty || save.phase === 'saving'}
+              icon={save.phase === 'saving' ? <Spinner size="small" /> : save.phase === 'saved' ? <Check size={15} /> : undefined}
+              onPress={onSave}
+            >
+              {save.phase === 'saving' ? 'Saving…' : 'Save changes'}
+            </Button>
+            {save.phase === 'saved' ? (
+              <Text fontSize="$2" color="$green10">Saved.</Text>
+            ) : dirty ? (
+              <Text fontSize="$2" color="$color10">Unsaved changes</Text>
+            ) : null}
+          </XStack>
+        )}
       </Card>
       {save.phase === 'error' ? <ErrorState err={save.err} copy={BRANDING_COPY} /> : null}
     </YStack>
@@ -427,12 +445,9 @@ function BrandingForm({ org, canEdit, onSaved }: { org: Organization; canEdit: b
 }
 
 function BrandingTab() {
-  const { account } = useSession()
-  const isSuperAdmin = useIsSuperAdmin()
   const org = currentOrg()
   const fetchOrg = useCallback(() => TeamApi.organization(org), [org])
   const { state, reload } = useAsync<Organization>(fetchOrg)
-  const canEdit = isSuperAdmin || !!account?.isAdmin
 
   return (
     <YStack gap="$5">
@@ -442,7 +457,7 @@ function BrandingTab() {
         ) : state.phase === 'loading' ? (
           <XStack p="$6" justify="center"><Spinner size="large" color="$color11" /></XStack>
         ) : (
-          <BrandingForm org={state.data} canEdit={canEdit} onSaved={reload} />
+          <BrandingForm org={state.data} onSaved={reload} />
         )}
       </Section>
 
