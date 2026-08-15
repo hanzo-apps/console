@@ -250,7 +250,7 @@ describe('isLive', () => {
   })
 })
 
-describe('TemplatesApi.deploy / status — projectsvc deploy (same-origin, no prefix)', () => {
+describe('TemplatesApi.deploy / status — projectsvc deployments (same-origin, no prefix)', () => {
   const ORIGIN = 'https://console.hanzo.ai'
   let calls: { url: string; method?: string; body?: unknown }[]
 
@@ -274,20 +274,24 @@ describe('TemplatesApi.deploy / status — projectsvc deploy (same-origin, no pr
       )
     })
 
-  it('deploy POSTs {source:git} to <origin>/v1/projects/{slug}/deploy (never /cloud-prefixed)', async () => {
+  // The COLLECTION, not `.../deploy`. That address is the archive upload alone
+  // and reads any body as bytes, so the JSON this used to send there was sniffed
+  // as a tar and refused — and `{source:'git'}` was the Content-Type
+  // discriminator that split removed, so the body is empty now.
+  it('deploy POSTs to <origin>/v1/projects/{slug}/deployments (never /cloud-prefixed)', async () => {
     stub(202, { status: 'queued' })
     const r = await TemplatesApi.deploy('brainwave')
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/projects/brainwave/deploy`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/projects/brainwave/deployments`)
     expect(calls[0].url).not.toContain('/cloud/')
     expect(calls[0].method).toBe('POST')
-    expect(calls[0].body).toEqual({ source: 'git' })
+    expect(calls[0].body).toEqual({})
     expect(r).toMatchObject({ status: 'queued' })
   })
 
   it('deploy percent-encodes the slug', async () => {
     stub(202, { status: 'queued' })
     await TemplatesApi.deploy('a/b')
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/projects/a%2Fb/deploy`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/projects/a%2Fb/deployments`)
   })
 
   it('status GETs <origin>/v1/projects/{slug} and normalizes to a ForkedProject', async () => {
