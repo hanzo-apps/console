@@ -18,7 +18,9 @@
  */
 import { Text, XStack, useTheme } from '@hanzo/gui'
 
-import { normalizeBrand, brandForModel, BRANDS, providerInitials, usesHouseMark } from './brand'
+import { BRAND_MARKS } from '@hanzo/brand'
+
+import { normalizeBrand, brandForModel, BRANDS, providerInitials, usesHouseMark, type BrandKey } from './brand'
 import { BRAND_MARK, type BrandMark } from './brand-marks'
 import { tileRadius } from './color'
 import { Monogram } from '~/components/ui/Monogram'
@@ -39,6 +41,42 @@ function BrandGlyph({ mark, size, color }: { mark: BrandMark; size: number; colo
       aria-hidden="true"
       style={{ color, display: 'block' }}
       dangerouslySetInnerHTML={{ __html: mark.body }}
+    />
+  )
+}
+
+/**
+ * A family whose canonical mark carries its OWN fills, keyed to the house mark
+ * `@hanzo/brand` publishes for it. That package flags such a mark `colored` and
+ * states the contract plainly: it must NOT be recolored by `currentColor`. So it
+ * renders untinted on a dark ground — the inverse of the block-H's knockout on a
+ * light one, which is what makes the two read as one system rather than two.
+ *
+ * Zen is built by Zoo Labs and wears Zoo's mark; drawing our own flat green
+ * square for it was a stand-in for a mark we already publish.
+ */
+const COLOR_MARK: Partial<Record<Exclude<BrandKey, 'hanzo' | 'enso'>, keyof typeof BRAND_MARKS>> = {
+  zen: 'zoo',
+}
+
+/**
+ * A canonical house mark, rendered with its own fills. No `color` is set at all
+ * — setting one is exactly what the `colored` flag forbids.
+ *
+ * The body carries fixed `clipPath` ids, so many instances on one page share the
+ * first definition. They are identical by construction (one published mark), so
+ * the collision resolves to the same geometry it would have drawn anyway.
+ */
+function ColorMark({ name, size }: { name: keyof typeof BRAND_MARKS; size: number }) {
+  const m = BRAND_MARKS[name]
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={m.viewBox}
+      aria-hidden="true"
+      style={{ display: 'block' }}
+      dangerouslySetInnerHTML={{ __html: m.content }}
     />
   )
 }
@@ -183,6 +221,16 @@ export function ProviderLogo({
   // In `mono`, the SAME mark renders in the theme foreground on a neutral tile.
   if (brand) {
     const { bg, label } = BRANDS[brand]
+    // A colour mark cannot be a monochrome one, so `mono` still falls through to
+    // the curated single-colour glyph below.
+    const colorMark = COLOR_MARK[brand]
+    if (colorMark && !mono) {
+      return (
+        <Tile size={size} bg={bg}>
+          <ColorMark name={colorMark} size={Math.round(size * 0.74)} />
+        </Tile>
+      )
+    }
     const mark = BRAND_MARK[brand]
     const tileBg = mono ? monoTileBg : bg
     const fg = mono ? monoFg : '#ffffff'

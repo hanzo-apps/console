@@ -68,7 +68,11 @@ export function brandForModel(idOrName: string, provider: string): BrandKey | nu
  *  own (hanzo/enso) render the block-H instead and take no hue. Zen's hue is Zoo's
  *  primary green (@zooai/logo `getColorSVG`), so the tile agrees with the mark. */
 export const BRANDS: Record<Exclude<BrandKey, 'hanzo' | 'enso'>, { bg: string; label: string }> = {
-  zen:       { bg: '#00A652', label: 'Z' },
+  // Zen's ground is DARK because its mark carries its own colour (see
+  // `COLOR_MARK` in ProviderLogo): the house block-H is a knockout on a light
+  // tile, and Zen is the inverse — Zoo's colour mark on a dark one. A green
+  // ground here was a hand-picked stand-in for a mark we already publish.
+  zen:       { bg: '#0A0A0B', label: 'Z' },
   openai:    { bg: '#000000', label: 'AI' },
   qwen:      { bg: '#615CED', label: 'Q' },
   deepseek:  { bg: '#4D6BFE', label: 'DS' },
