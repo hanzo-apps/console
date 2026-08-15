@@ -141,8 +141,8 @@ test('one floating control carries chat + voice; the topbar carries neither; sid
   const fab = page.getByTestId('assistant-fab')
   await expect(fab.locator('[aria-label="Ask Hanzo"]')).toBeVisible()
   await expect(fab.locator('[aria-label="Talk to Hanzo"]')).toBeVisible()
-  await expect(page.locator('.hz-topbar [aria-label="Ask Hanzo"]')).toHaveCount(0)
-  await expect(page.locator('.hz-topbar [aria-label="Talk to Hanzo"]')).toHaveCount(0)
+  await expect(page.locator('header[data-hanzo-shell] [aria-label="Ask Hanzo"]')).toHaveCount(0)
+  await expect(page.locator('header[data-hanzo-shell] [aria-label="Talk to Hanzo"]')).toHaveCount(0)
 
   // 3. The top-left SidebarBrand renders the org logo / BrandMark (an <img> or <svg>).
   const brand = page.locator('[aria-label*="right-click for brand menu"]').first()

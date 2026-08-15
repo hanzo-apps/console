@@ -630,16 +630,12 @@ body {
   outline: none;
 }
 
-/* 3. Touch tap targets ≥44px (WCAG 2.5.5 / Apple HIG). On a COARSE pointer
-      (phone/tablet) every top-bar control meets the 44×44 minimum; the desktop
-      mouse density is deliberately left unchanged. Scoped to the top bar so table
-      row-actions and inline chips are untouched. */
-@media (pointer: coarse) {
-  .hz-topbar button {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
+/* 3. Touch tap targets ≥44px (WCAG 2.5.5 / Apple HIG) are no longer stated here.
+      The top bar IS `@hanzogui/shell`'s `OrgHeader` now, and that package's own
+      stylesheet already grows every control under a `[data-hanzo-shell]` root to
+      44px on a coarse pointer — measured on a touch device: the rail's hamburger
+      is 46x44. Restating it would be a second rule for one contract, and the
+      copy that drifts is the one nobody measures. */
 
 /* 4. ONE typeface per screen. The shared `@hanzogui/shell` chrome (HanzoHeader and
       its Meet-Hanzo / Products menus, HanzoFooter, HanzoAppHeader, …) sets its own

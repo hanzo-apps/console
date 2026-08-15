@@ -71,7 +71,7 @@ test('the assistant opens from the bottom-right, and the header carries no AI co
   // The topbar itself holds no assistant control any more — it used to carry two
   // (a brand-H "Chat with Hanzo" and a "Talk to Hanzo" mic) beside the search box.
   const inTopbar = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('.hz-topbar [aria-label]')).map((n) => n.getAttribute('aria-label') ?? ''),
+    Array.from(document.querySelectorAll('header[data-hanzo-shell] [aria-label]')).map((n) => n.getAttribute('aria-label') ?? ''),
   )
   expect(inTopbar).not.toHaveLength(0) // the topbar was found at all
   expect(inTopbar.filter((l) => /Hanzo/i.test(l))).toHaveLength(0)

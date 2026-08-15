@@ -136,7 +136,7 @@ import { SidebarBrand } from '~/components/SidebarBrand'
 import { AccountMenu } from '~/components/AccountMenu'
 import { BrandMark } from '~/components/ui/BrandLogo'
 import { shellFor, isProductShell } from '~/lib/products/shell'
-import { HanzoAppLauncher } from '@hanzogui/shell'
+import { HanzoAppLauncher, OrgHeader } from '@hanzogui/shell'
 import { ScopeSwitcher } from '~/components/ScopeSwitcher'
 import { ContextSwitcher } from '~/components/ContextSwitcher'
 import { useFloatingChat, DockedChatPanel } from '~/components/FloatingChat'
@@ -997,6 +997,9 @@ export function Dashboard({ children }: { children: ReactNode }) {
   // the width beside the content. Opening it belongs to the assistant's own floating
   // control (`AssistantFab`), not to this topbar.
   const { column } = useFloatingChat()
+  // The shell's bar draws a search FIELD; what it opens is this app's own one
+  // palette — the same one the rail's box and ⌘K open.
+  const palette = useCommandPalette()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   // Collapsed-rail hover flyout (desktop only): the full sidebar overlays the content
@@ -1073,76 +1076,76 @@ export function Dashboard({ children }: { children: ReactNode }) {
       <NavDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
 
       <YStack flex={1} minW={0}>
-        <XStack
-          className="hz-topbar"
-          height={56}
-          px="$3"
-          items="center"
-          gap="$2"
-          $md={{ px: '$4', gap: '$3' }}
-          $xl={{ px: '$6' }}
-          borderBottomWidth={1}
-          borderColor="$borderColor"
-        >
-          {/* Collapse the sidebar to an icon rail — the ONE collapse control (desktop). */}
-          <Button
-            size="$3"
-            chromeless
-            display="none"
-            $lg={{ display: 'flex' }}
-            icon={<PanelLeft size={ICON} />}
-            onPress={toggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'}
-          />
+        {/* The ONE signed-in bar, from @hanzogui/shell — the same package and the
+            same theme hanzo.ai's chrome is drawn from. The height, the glass
+            recipe, the hairline, the mark, the launcher and the search field all
+            live there, so the two surfaces cannot drift by being edited apart.
+            This app hand-rolled all of it and had, measured: no ground at all
+            against the reference's rgba(9,9,11,0.72) over a 20px blur, a hard
+            hairline where the reference draws none, and 56px against 60.
 
-          {/* Hamburger — opens the LEFT nav drawer. Shown only below lg; ≥44×44 touch
-              target (WCAG 2.5.5). Hidden at lg+, so no desktop impact. */}
-          <Button
-            size="$3"
-            chromeless
-            $lg={{ display: 'none' }}
-            minW={44}
-            minH={44}
-            icon={<Menu size={ICON} />}
-            onPress={() => setDrawerOpen(true)}
-            aria-label="Open navigation"
-          />
-
-          {/* The search box IS the app switcher: it calls the same
-              `useCommandPalette().open` the old "Apps" button called, and says so
-              ("Search or jump to… ⌘K"). Two triggers for one palette, side by
-              side, read as two different destinations — so there is now one. */}
-          <CommandSearchBox />
-
-          {/* The assistant is NOT here. Chat and voice live together in the one
-              floating control bottom-right (`AssistantFab` in `FloatingChat`), where
-              the assistant itself appears — so the topbar carries navigation and
-              account chrome only, and the user's OWN brand leads it (top-left). */}
-
-          {/* Spacer — pushes the right-side controls to the edge at lg+. Below lg the
-              search box fills the row (two flex:1 siblings would halve it). */}
-          <XStack display="none" $lg={{ display: 'flex' }} flex={1} />
-
-          {/* Full topbar controls — shown only at lg+. The bar carries navigation
-              only: status and docs. Theme lives in the account menu, alerts at
-              /alerts, and the network picker and app launcher in the account drawer
-              — production is the default environment, so the environment is chrome
-              you open, not chrome you wear. */}
-          <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
-            <SystemStatusBadge />
-            <Button size="$2" chromeless icon={<CircleHelp size={16} />} onPress={openDocs} aria-label="Documentation" />
-          </XStack>
-
-          {/* Account drawer trigger — every viewport. The drawer is where the
-              occasional controls live (environment, notifications, account). */}
-          <Button
-            size="$3"
-            chromeless
-            icon={<SlidersHorizontal size={18} />}
-            onPress={() => setMenuOpen(true)}
-            aria-label="Account and settings"
-          />
-        </XStack>
+            `headerLeft` is what makes adopting it possible rather than a
+            regression: the shell composes it BEFORE the mark, so the rail keeps
+            its own two controls — the collapse toggle, and below lg the
+            hamburger that is the ONLY way to the nav drawer. Without that slot
+            the phone would have had no navigation at all. */}
+        <OrgHeader
+          currentApp="Console"
+          headerLeft={
+            <>
+              {/* Collapse the sidebar to an icon rail — the ONE collapse control (desktop). */}
+              <Button
+                size="$3"
+                chromeless
+                display="none"
+                $lg={{ display: 'flex' }}
+                icon={<PanelLeft size={ICON} />}
+                onPress={toggleCollapsed}
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'}
+              />
+              {/* Hamburger — opens the LEFT nav drawer. Shown only below lg. The
+                  shell's own stylesheet grows every control here to 44px on a
+                  coarse pointer, so the target is no longer stated twice. */}
+              <Button
+                size="$3"
+                chromeless
+                $lg={{ display: 'none' }}
+                icon={<Menu size={ICON} />}
+                onPress={() => setDrawerOpen(true)}
+                aria-label="Open navigation"
+              />
+            </>
+          }
+          /* The shell draws the field and this app owns only what it opens — the
+             same palette the rail's box and ⌘K open. One palette, one field. */
+          search={{ placeholder: 'Search or jump to…', onClick: palette.open }}
+          /* The assistant is NOT here. Chat and voice live together in the one
+             floating control bottom-right (`AssistantFab` in `FloatingChat`). */
+          headerRight={
+            <XStack display="none" $lg={{ display: 'flex' }} items="center" gap="$2">
+              <SystemStatusBadge />
+              <Button size="$2" chromeless icon={<CircleHelp size={16} />} onPress={openDocs} aria-label="Documentation" />
+            </XStack>
+          }
+          /* This console owns its own identity chrome — the org/project switcher
+             leads the rail and the account control sits at its foot — so the
+             shell's built-in dropdown would be a second answer to a question
+             already answered. What sits here is the drawer holding the
+             occasional controls (environment, notifications, account). */
+          account={
+            <Button
+              size="$3"
+              chromeless
+              icon={<SlidersHorizontal size={18} />}
+              onPress={() => setMenuOpen(true)}
+              aria-label="Account and settings"
+            />
+          }
+          /* A control that clears every cookie and cache is not one this app has
+             ever carried, and a shared bar is the wrong place to introduce it. */
+          hideHardRefresh
+          onSettingsClick={() => push('/settings')}
+        />
 
         <BreadcrumbsBar />
 

@@ -225,7 +225,7 @@ test.describe('console polish — authenticated shell', () => {
       await page.locator('button[aria-label="Open navigation"]').waitFor({ state: 'visible', timeout: 15_000 })
       const small = await page.evaluate(() => {
         const bad: { label: string; w: number; h: number }[] = []
-        document.querySelectorAll('.hz-topbar button').forEach((el) => {
+        document.querySelectorAll('header[data-hanzo-shell] button').forEach((el) => {
           const r = el.getBoundingClientRect()
           if (r.width > 0 && (r.width < 44 || r.height < 44)) {
             bad.push({ label: el.getAttribute('aria-label') || '(icon)', w: Math.round(r.width), h: Math.round(r.height) })
