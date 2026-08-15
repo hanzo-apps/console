@@ -130,25 +130,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
+    if (typeof window === 'undefined') return
+    // Decide where we are going BEFORE anything can change, end the session
+    // here, then leave. Leaving is the last act, and it is the only navigation.
+    const issuer = iamSignOutUrl(window.location.origin, '/signin')
     await AccountApi.signout()
     iamSignOut()
-    applyAccount(null)
-    // Redirect DETERMINISTICALLY, and through the ISSUER. A hard navigation is
-    // still the single source of truth for "signed out -> /signin" — it clears
-    // all in-memory state (org scope, caches, balances) exactly as the sign-IN
-    // path does — but it has to go via RP-initiated logout, which returns here
-    // through post_logout_redirect_uri.
-    //
-    // Assigning '/signin' directly is what made sign-out not stick: the two
-    // calls above end the session HERE, and the `iam_session_id` cookie at the
-    // issuer survives, so /signin's silent SSO immediately mints a code from it
-    // and puts the user back in the console they just left. Measured: same
-    // probe, `status: ok` with a code before this change, "please sign in
-    // first" after.
-    if (typeof window !== 'undefined') {
-      window.location.assign(iamSignOutUrl(window.location.origin, '/signin'))
-    }
-  }, [applyAccount])
+    // Publishing a null account here is what made sign-out do nothing at all.
+    // The entry gate authorizes the moment the account goes null, and that hop
+    // is also a `location` assignment — it lands after this one and supersedes
+    // it, so the browser never reaches the issuer. The IdP session therefore
+    // survived, silent SSO minted a fresh code with no prompt, and the user was
+    // returned to the console they had just left. Measured on prod: after
+    // "Sign out" the referrer was `/auth/callback?code=…` and the access token
+    // came back with a new `iat`. There is no state worth publishing on the way
+    // out — the document is being replaced.
+    window.location.assign(issuer)
+  }, [])
 
   // Auth truth as ONE value: it changes when the account or the load state does, and
   // not merely because this provider re-rendered. It sits above the entire console,
