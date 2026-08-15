@@ -59,8 +59,19 @@ describe('the one org switch', () => {
    */
   it('has exactly these call sites, and no other', () => {
     const root = join(import.meta.dirname, '../..')
+    // REACHING it, not calling it. The switcher is `@hanzo/ui/product`'s now and
+    // takes the whole active-org contract as ONE value, so the console binds
+    // `switchOrg` into that value and the call happens inside the shared
+    // component. A scan for `switchOrg(` would watch the wrong thing twice over:
+    // it would report the one control that still owns the switch as having let
+    // go of it, and it would not see a second component that imported the same
+    // function and handed it away. Importing it is what reaching it means; the
+    // prose that names it in a comment reaches nothing.
+    const reaches = (src: string) =>
+      /import \{[^}]*\bswitchOrg\b[^}]*\} from '~\/lib\/org-scope'/.test(src) ||
+      /export function switchOrg\b/.test(src)
     const callers = sources(root)
-      .filter((p) => /switchOrg\s*\(/.test(readFileSync(p, 'utf8')))
+      .filter((p) => reaches(readFileSync(p, 'utf8')))
       .map((p) => p.slice(root.length + 1))
       .sort()
     expect(callers).toEqual([
