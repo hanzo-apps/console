@@ -122,6 +122,11 @@ export function ContextSwitcher() {
       // scrolling. A regular user has one org and no field.
       search={isSuperAdmin}
       heading="Organization"
+      // The rail's anchor, not one control among several: the tenant's mark is
+      // the first thing read on this screen and the rail carries no wordmark of
+      // its own. `lead` steps the mark and the label up the ramp the default
+      // already stands on, inside the component that owns the markup.
+      lead
       sub={scope.project}
       aria={`Organization and project — ${contextLabel(orgLabel(named), scope.project)}`}
       testId="switcher-context"

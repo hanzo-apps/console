@@ -13,6 +13,7 @@ import { test, expect, type Route, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { primeSession } from './_session'
+import { TYPE } from './_gate'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 const SHOTS = join(process.cwd(), 'e2e-shots')
@@ -157,20 +158,47 @@ test('the org switcher shows the org NAME even when the org has a logo', async (
   await ctx.close()
 })
 
-test('the two ends of the rail are peers — same box, same mark, same type', async ({ browser }) => {
+/**
+ * The two ends of the rail were peers in every dimension, and the head is now
+ * deliberately the heavier of the two.
+ *
+ * That is a decision, not drift. The rail carries no wordmark of its own, so the
+ * tenant's mark is the first thing read on the screen, and a control that anchors
+ * a surface is not the same object as one that sits at its foot. `@hanzo/ui`'s
+ * `OrgSwitcher` says both — `lead` steps the row 44→56, the mark 30→36 and the
+ * label `$4`→`$6` at 700 — and it lives in the component that owns the markup
+ * precisely so a host never reaches in through `className` descendant selectors
+ * to get it.
+ *
+ * So the equality this test used to assert is replaced by the two claims that
+ * survive it: they still share a LEFT EDGE and a chevron (they are the same kind
+ * of control, opened the same way), and the head is measurably larger — on the
+ * SAME type ramp, which is what makes it a step rather than a second scale.
+ */
+test('the head anchors the rail, the foot is its peer in kind — one ramp, one edge', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const page = await ctx.newPage()
   await open(page, '/')
 
+  // Each control renders twice — desktop rail and mobile drawer — and only one of
+  // them is on screen at this viewport. `.first()` is DOM order, not visibility, so
+  // it can measure the copy nobody can see; `:visible` measures the one that painted.
   const measure = (id: string) =>
-    page.getByTestId(id).first().evaluate((el) => {
-      const s = getComputedStyle(el)
+    page.locator(`[data-testid="${id}"]:visible`).first().evaluate((el) => {
       const mark = el.querySelector('img, [class*="OrgMark"], span, div')
+      // The NAME, not the trigger. The button's own `font-size` is the inherited
+      // control size and is identical on both ends, so reading it compared nothing —
+      // the type that carries the lockup is on the label, and the label is the
+      // widest text leaf (the monogram glyph is the other one).
+      const label = [...el.querySelectorAll('*')]
+        .filter((e) => e.children.length === 0 && (e.textContent ?? '').trim().length > 0)
+        .sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width)[0]
+      const ls = label ? getComputedStyle(label) : getComputedStyle(el)
       return {
         height: el.getBoundingClientRect().height,
         x: el.getBoundingClientRect().x,
-        font: s.fontSize,
-        weight: s.fontWeight,
+        font: ls.fontSize,
+        weight: ls.fontWeight,
         // The chevron: both must carry one, or one reads as a caption.
         svgs: el.querySelectorAll('svg').length,
         markH: mark ? Math.round(mark.getBoundingClientRect().height) : 0,
@@ -180,11 +208,20 @@ test('the two ends of the rail are peers — same box, same mark, same type', as
   const org = await measure('switcher-context')
   const account = await measure('nav-user')
 
-  expect(account.height, 'same height').toBe(org.height)
+  // Same kind of control: one edge, one affordance.
   expect(account.x, 'same left edge').toBe(org.x)
-  expect(account.font, 'same type size').toBe(org.font)
-  expect(account.weight, 'same type weight').toBe(org.weight)
   expect(account.svgs > 0 && org.svgs > 0, 'both carry a chevron').toBe(true)
+
+  // The head anchors: measurably larger in the row and in the mark.
+  expect(org.height, 'the head is the taller control').toBeGreaterThan(account.height)
+  expect(org.markH, 'the head carries the larger mark').toBeGreaterThan(account.markH)
+
+  // …and it steps up the SHARED ramp rather than introducing a second scale.
+  // An off-ramp size here would be a local type decision, which is the thing the
+  // design gate exists to refuse.
+  expect(TYPE.has(Math.round(parseFloat(org.font))), `head type ${org.font} is on the ramp`).toBe(true)
+  expect(TYPE.has(Math.round(parseFloat(account.font))), `foot type ${account.font} is on the ramp`).toBe(true)
+  expect(parseFloat(org.font), 'the head reads larger than the foot').toBeGreaterThan(parseFloat(account.font))
 
   // The account is at the FOOT, the org at the HEAD — peers, not a stack.
   const orgY = (await page.getByTestId('switcher-context').first().boundingBox())!.y
