@@ -1,0 +1,14 @@
+{
+  "overview#dark": 2,
+  "overlord#dark": 2,
+  "business#dark": 2,
+  "finance#dark": 2,
+  "fleet-customers#dark": 2,
+  "fleet-revenue#dark": 2,
+  "overview#light": 32,
+  "overlord#light": 12,
+  "business#light": 12,
+  "finance#light": 12,
+  "fleet-customers#light": 12,
+  "fleet-revenue#light": 12
+}
