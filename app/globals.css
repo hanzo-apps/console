@@ -91,8 +91,13 @@ samp {
    order. DRY: every surface, border and text color in the app reads from these
    tokens, so this one block sets the whole product.
 
-   Design intent (dark): a TRUE-BLACK #000 canvas (matches hanzo.ai marketing +
-   hanzo.chat OLED) with a Linear/Vercel-caliber surface-depth ladder above it —
+   Design intent (dark): a TRUE-BLACK #000 canvas — the console is a dense admin
+   surface and gains a rung of depth by dropping the whole ladder one step, so
+   @hanzo/design's own --background (#0a0a0a) becomes --color2, the next surface up.
+   Measured on the siblings, since this is where that gets re-ratified: hanzo.chat
+   paints the body #000 too (keeping the token at design's value), while hanzo.ai
+   paints #0a0a0a. Only chat shares the canvas; the marketing site does not.
+   Above it a Linear/Vercel-caliber surface-depth ladder —
    resting panels #050505, the next surface #0a0a0a, interactive/elevated #171717 →
    #1f1f1f — so cards read with real depth, never flat voids. Above the surface
    ladder the CALM neutral scale (color5–12) gives premium, low-glare off-white text
@@ -513,6 +518,12 @@ html:root.t_light {
 :root .hz-paper.hz-paper { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-3); }
 :root .hz-paper-4.hz-paper-4 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-4); }
 :root .hz-paper-5.hz-paper-5 { box-shadow: var(--hz-ring), var(--hz-paper-highlight), var(--hz-elevation-5); }
+
+/* The chat composer's own radius. @hanzo/design names a token for this one element
+   (tokens/radius.css: "the chat composer, exactly 28px") and the console already
+   loads it; consuming it here is what keeps the two in step. Doubled selector for
+   the reason given above. */
+:root .hz-composer.hz-composer { border-radius: var(--radius-composer); }
 
 /* Overlay entrance — a fast, physical scale-fade from the origin (menus, palette,
    dialog, support sheet). 180ms ease-out enter; the overlay's own unmount handles

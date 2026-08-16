@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { ACRONYMS, audit, open } from './_gate'
+import { audit, open } from './_gate'
 
 /**
  * The scorecard — the design gate, over EVERY route, in BOTH themes.
@@ -89,7 +89,6 @@ test.describe('scorecard', () => {
   for (const theme of THEMES) {
     test(`every route holds the design gate — ${theme}`, async ({ page }, info) => {
       const rows: Row[] = []
-      const acronyms = Array.from(ACRONYMS)
 
       for (const route of ROUTES) {
         try {
@@ -108,7 +107,7 @@ test.describe('scorecard', () => {
           }, theme)
           await page.waitForTimeout(150)
 
-          const a = await audit(page, acronyms)
+          const a = await audit(page)
           const v: Violations = {
             caps: a.capsComputed.length + a.capsTyped.length,
             type: a.offType.length,

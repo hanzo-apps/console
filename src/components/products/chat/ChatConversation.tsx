@@ -497,10 +497,10 @@ export function ChatConversation({
       <YStack className={compact ? undefined : 'hz-chat-dock'} bg="$background" pt="$2" gap="$2">
       {/* Composer — one rounded, elevated input with code-insert + send. */}
       <YStack
+        className="hz-composer"
         bg="$color2"
         borderWidth={1}
         borderColor="$borderColor"
-        rounded="$7"
         px="$3"
         py="$2.5"
         gap="$2"

@@ -47,7 +47,7 @@ import { test, expect } from '@playwright/test'
 
 // The gate itself is in `./_gate` — one definition, so `scorecard.spec.ts` can
 // run these same rules over every route without a second copy of them.
-import { ACRONYMS, TYPE, RADIUS, SPACE, Z, audit, open, type Audit } from './_gate'
+import { audit, open, type Audit } from './_gate'
 
 const dedupe = <T,>(xs: T[]): T[] => Array.from(new Set(xs.map((x) => JSON.stringify(x)))).map((s) => JSON.parse(s) as T)
 
@@ -62,7 +62,7 @@ const STATES: [name: string, path: string][] = [
 for (const [name, path] of STATES) {
   test(`${name} — no caps, one scale, one ladder`, async ({ page }) => {
     await open(page, path)
-    const a = await audit(page, [...ACRONYMS])
+    const a = await audit(page)
 
     // THE HARD RULE. No exceptions, no text-transform, no typed caps.
     expect(dedupe(a.capsComputed), 'text-transform: uppercase').toEqual([])
@@ -115,7 +115,7 @@ test('the command palette paints, is on screen, and shouts at nobody', async ({ 
   expect(box!.y).toBeGreaterThanOrEqual(0)
   expect(box!.x + box!.w).toBeLessThanOrEqual(box!.vw + 1)
 
-  const a = await audit(page, [...ACRONYMS])
+  const a = await audit(page)
   expect(dedupe(a.capsComputed)).toEqual([])
   expect(dedupe(a.capsTyped)).toEqual([])
   expect(dedupe(a.offZ), 'the palette must sit on the ladder').toEqual([])
@@ -149,7 +149,7 @@ test('the rail is keyboard-reachable and a collapsed section is out of the tab o
 test('nothing scrolls sideways on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await open(page, '/')
-  const a = await audit(page, [...ACRONYMS])
+  const a = await audit(page)
   expect(a.hScroll).toBe(false)
   expect(dedupe(a.capsComputed)).toEqual([])
   expect(dedupe(a.capsTyped)).toEqual([])

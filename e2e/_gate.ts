@@ -30,8 +30,11 @@ export const ACRONYMS = new Set([
 
 /** The ONE type scale (gui.config.ts FONT_SIZE + app/design/typography.css). */
 export const TYPE = new Set([11, 13, 14, 15, 17, 21, 26, 32, 40, 48])
-/** The ONE radius scale: control · input/row · panel · pill. */
-export const RADIUS = new Set([0, 6, 8, 12, 9999, 100000])
+/** The ONE radius scale: control · input/row · panel · composer · pill.
+ *  28 is `--radius-composer`, which @hanzo/design names for one element (its own
+ *  tokens/radius.css: "the chat composer, exactly 28px"). It is on the scale
+ *  because the design system put it there, not because a screen wanted it. */
+export const RADIUS = new Set([0, 6, 8, 12, 28, 9999, 100000])
 /** The ONE spacing ramp (gui.config.ts STEP). */
 export const SPACE = new Set([0, 1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208])
 /** The ladder in app/design/z.css — the only stacking values that may paint. */
@@ -49,18 +52,28 @@ export type Audit = {
   bodyBg: string
 }
 
-/** Runs entirely in the page: reads what PAINTED, never what the source says. */
-export async function audit(page: Page, acronyms: string[]): Promise<Audit> {
-  return page.evaluate((acr) => {
-    const ACR = new Set(acr)
+/**
+ * Runs entirely in the page: reads what PAINTED, never what the source says.
+ *
+ * A `page.evaluate` body cannot close over module scope, so the scales travel as
+ * its ARGUMENT. They used to be re-typed inside it instead — which meant the file
+ * that exists so a rule has one definition held two copies of every scale, and
+ * widening one was a two-place edit nothing checked.
+ */
+export async function audit(page: Page): Promise<Audit> {
+  const scales = {
+    acronyms: [...ACRONYMS], type: [...TYPE], radius: [...RADIUS], space: [...SPACE], z: [...Z],
+  }
+  return page.evaluate((s) => {
+    const ACR = new Set(s.acronyms)
     const out: Audit = {
       capsComputed: [], capsTyped: [], offType: [], offRadius: [], offSpace: [],
       offZ: [], lowContrast: [], hScroll: false, bodyBg: '',
     }
-    const TYPE = new Set([11, 13, 14, 15, 17, 21, 26, 32, 40, 48])
-    const RADIUS = new Set([0, 6, 8, 12, 9999, 100000])
-    const SPACE = new Set([0, 1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208])
-    const Z = new Set([10, 200, 300, 400, 500, 600, 700, 800])
+    const TYPE = new Set(s.type)
+    const RADIUS = new Set(s.radius)
+    const SPACE = new Set(s.space)
+    const Z = new Set(s.z)
 
     const cls = (el: Element) => (typeof el.className === 'string' ? el.className.slice(0, 90) : el.tagName)
     const px = (v: string) => Math.round(parseFloat(v) || 0)
@@ -143,7 +156,7 @@ export async function audit(page: Page, acronyms: string[]): Promise<Audit> {
     out.hScroll = document.documentElement.scrollWidth > document.documentElement.clientWidth
     out.bodyBg = getComputedStyle(document.body).backgroundColor
     return out
-  }, acronyms)
+  }, scales)
 }
 
 /** Land on a dashboard route with a primed session and let the SPA settle. */
