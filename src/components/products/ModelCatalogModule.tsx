@@ -241,6 +241,13 @@ function ModelRow({ m, brand, onOpen }: { m: CatalogEntry; brand: string; onOpen
             </Text>
           ) : null}
         </XStack>
+        {/* Absent, not stated. A description is a Zen-family enrichment, not a field
+            the catalog fills in generally: measured on the live catalog, 397 of 432
+            models publish none, and all 35 that do are ours. So a row saying "no
+            description" would be the RULE rather than the exception — 397 identical
+            lines of placeholder, which is noise, not honesty. Silence is the honest
+            rendering of a field that is normally empty; the em-dash below is the
+            honest rendering of a measurement that is normally present. */}
         {m.description ? (
           <Text fontSize="$1" color="$color10" numberOfLines={1}>
             {m.description}
