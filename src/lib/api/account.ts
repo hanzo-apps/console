@@ -172,12 +172,20 @@ export const AccountApi = {
   /** The current signed-in account, or null. */
   current: async (): Promise<Account | null> => (await AccountApi.session()).account,
 
-  /** Sign out: clear the IAM tokens (client) and best-effort the casibase session. */
+  /**
+   * Sign out: clear the IAM tokens (client) and drop the server session.
+   *
+   * `/v1/ai/signout` is where cloud registers it, and the only address it
+   * answers on — that server deleted its path-rewriting filters, so a resource
+   * lives at exactly one URL and a near-miss is a 404, not an alias. The
+   * session it ends is real: `cloud_session_id` is the handle `GetSessionUser`
+   * reads, so a call that never lands leaves the row behind.
+   */
   signout: async (): Promise<void> => {
     forgetAvatar()
     iamSignOut()
     try {
-      await post('signout')
+      await post('ai/signout')
     } catch {
       /* best-effort */
     }
