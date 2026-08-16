@@ -55,7 +55,11 @@ type Row = Violations & { route: string; theme: string; total: number }
 const ROUTES: string[] = (() => {
   const all = JSON.parse(fs.readFileSync(path.join('e2e', 'route-ids.json'), 'utf8')) as string[]
   const limit = Number(process.env.SCORECARD_ROUTES || 0)
-  return limit > 0 ? all.slice(0, limit) : all
+  const pages = limit > 0 ? all.slice(0, limit) : all
+  // The gallery leads, so a component is audited on its own terms rather than
+  // only wherever some page happens to render it — and it is FIRST, so a short
+  // iterating sweep still covers the components.
+  return ['gallery', ...pages]
 })()
 
 const zero = (): Violations => ({ caps: 0, type: 0, radius: 0, space: 0, z: 0, contrast: 0, hScroll: 0 })
@@ -90,14 +94,17 @@ test.describe('scorecard', () => {
       for (const route of ROUTES) {
         try {
           await open(page, `/${route}`)
-          // The theme is the document's, not a preference we have to click
-          // through — `t_dark`/`t_light` is what gui stamps and what every
-          // token answers to, so setting it directly is setting the real thing.
+          // The theme lives on <html>, which is where app/layout.tsx stamps it
+          // and where every token answers. Setting it on <body> instead retunes
+          // the BACKGROUND while `html.t_dark` keeps the text tokens dark — near
+          // white on near white at ratio 1.03, on every surface, in a probe that
+          // then reports the product as failing contrast. It was the probe.
           await page.evaluate((t) => {
-            const b = document.body
-            b.classList.remove('t_dark', 't_light')
-            b.classList.add(t === 'dark' ? 't_dark' : 't_light')
-            document.documentElement.dataset.theme = t
+            const h = document.documentElement
+            h.classList.remove('t_dark', 't_light')
+            h.classList.add(t === 'dark' ? 't_dark' : 't_light')
+            h.style.colorScheme = t
+            h.dataset.theme = t
           }, theme)
           await page.waitForTimeout(150)
 
