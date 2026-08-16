@@ -17,7 +17,7 @@
     "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@hanzo/appearance": "^0.1.5",
+    "@hanzo/appearance": "^0.1.6",
     "@hanzo/brand": "^1.4.6",
     "@hanzo/canvas": "^0.2.2",
     "@hanzo/dash": "^0.3.0",

@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@hanzo/appearance':
-        specifier: ^0.1.5
-        version: 0.1.5(react@19.2.8)
+        specifier: ^0.1.6
+        version: 0.1.6(react@19.2.8)
       '@hanzo/brand':
         specifier: ^1.4.6
         version: 1.4.6(react@19.2.8)
@@ -754,8 +754,8 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@hanzo/appearance@0.1.5':
-    resolution: {integrity: sha512-Sy4qujKRB2cMCOAGOkVdjgKVWg2Q1HTEC7wl5UjDgAVgn6wVpQOQtTJtMepOQRtfjpZENmga0kOSEBGhRbxy1Q==}
+  '@hanzo/appearance@0.1.6':
+    resolution: {integrity: sha512-JXsH0SHO5F+gd7grLxstGcFCt5M4n1JoGU/JWotaf+eFaSW+TeUHHDSdTRc9tR5Eo/EG79riaKuht6yyPXKETw==}
     peerDependencies:
       react: '>=19'
 
@@ -793,12 +793,12 @@ packages:
       '@hanzo/gui': '>=7.2.2'
       react: '>=19'
 
-  '@hanzo/design@0.5.8':
-    resolution: {integrity: sha512-wPs0NcJR+bZDwsdNfHuUGqkTYj5H/p9jgkkm5fIgYgPXml9GrZrpfIO7ntcmXO/QI6ln58+W3cVqCX4Wz9HQ2Q==}
+  '@hanzo/design@0.5.11':
+    resolution: {integrity: sha512-fBoZox9w/2/gDaNZ+bQiuJAFIfkWFJUy/ROdvJIhi1QXp9Z10tPuECiYQTuCfkOebSULBYDS769VaZFGgjpXyg==}
     hasBin: true
 
-  '@hanzo/design@0.5.9':
-    resolution: {integrity: sha512-Qi3hTsWyJ2VnJlG78blfhCCvpRwTYpo1048r6mKV/SjJWxgaHzWrMFcR+TIVCQvl/XI4heEGgsYvCKhgMdmKFw==}
+  '@hanzo/design@0.5.8':
+    resolution: {integrity: sha512-wPs0NcJR+bZDwsdNfHuUGqkTYj5H/p9jgkkm5fIgYgPXml9GrZrpfIO7ntcmXO/QI6ln58+W3cVqCX4Wz9HQ2Q==}
     hasBin: true
 
   '@hanzo/event@0.3.28':
@@ -4935,9 +4935,9 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@hanzo/appearance@0.1.5(react@19.2.8)':
+  '@hanzo/appearance@0.1.6(react@19.2.8)':
     dependencies:
-      '@hanzo/design': 0.5.9
+      '@hanzo/design': 0.5.11
       react: 19.2.8
 
   '@hanzo/brand@1.4.6(react@19.2.8)':
@@ -4969,9 +4969,9 @@ snapshots:
       - react-dom
       - react-native-svg
 
-  '@hanzo/design@0.5.8': {}
+  '@hanzo/design@0.5.11': {}
 
-  '@hanzo/design@0.5.9': {}
+  '@hanzo/design@0.5.8': {}
 
   '@hanzo/event@0.3.28(react@19.2.8)':
     dependencies:
@@ -5084,7 +5084,7 @@ snapshots:
 
   '@hanzo/ui@8.0.98(861d28b084f61add5393a879672290a7)':
     dependencies:
-      '@hanzo/appearance': 0.1.5(react@19.2.8)
+      '@hanzo/appearance': 0.1.6(react@19.2.8)
       '@hanzo/brand': 1.4.6(react@19.2.8)
       '@hanzo/data': 1.2.4(@hanzo/gui@8.1.1(react-dom@19.2.8(react@19.2.8))(react-native@0.83.10(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-native-svg@15.15.5(react-native@0.83.10(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8))(react@19.2.8)
       '@hanzo/design': 0.5.8
