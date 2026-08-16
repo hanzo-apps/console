@@ -963,7 +963,16 @@ function ProductGuide() {
   return <ProductGuidePanel pathname={pathname} />
 }
 
-/** The content column, as something that can be put back to the top. */
+/**
+ * The content column, as something that can be put back to the top.
+ *
+ * This is why `react-native` is held at 0.83 rather than 0.87: 0.87 makes
+ * ScrollView a function component carrying a `Context` static, so this helper
+ * resolves to the function type, which has no `scrollTo`. Naming the capability
+ * structurally instead (`{ scrollTo(…) }`) does not work either — a `ref` is
+ * checked strictly, so gui's `Ref<ScrollView>` refuses a structural stand-in.
+ * The substrate has to move first.
+ */
 type Scroller = ComponentRef<typeof ScrollView>
 
 /**
