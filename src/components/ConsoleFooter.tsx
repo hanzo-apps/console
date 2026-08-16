@@ -62,7 +62,12 @@ export function ConsoleFooter() {
       <XStack items="center" gap="$5" flexWrap="wrap" style={SHRINK}>
         {/* Developers */}
         <XStack items="center" gap="$3" flexWrap="wrap" style={SHRINK}>
-          <Text fontSize="$1" color="$color9" letterSpacing={0.4}>
+          {/*
+            $color9 lands at 4.49:1 on the light canvas — under the 4.5 floor, so a
+            cluster label was the one unreadable thing on the strip. It stays quieter
+            than the links it labels by SIZE and tracking, never by a colour that fails.
+          */}
+          <Text fontSize="$1" color="$color10" letterSpacing={0.4}>
             Developers
           </Text>
           {devLinks.map((l) => (

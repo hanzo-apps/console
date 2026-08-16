@@ -6,9 +6,9 @@
   "finance#dark": 2,
   "fleet-customers#dark": 2,
   "gallery#light": 0,
-  "overview#light": 3,
-  "overlord#light": 3,
-  "business#light": 3,
-  "finance#light": 3,
-  "fleet-customers#light": 3
+  "overview#light": 2,
+  "overlord#light": 2,
+  "business#light": 2,
+  "finance#light": 2,
+  "fleet-customers#light": 2
 }

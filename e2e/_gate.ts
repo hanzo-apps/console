@@ -37,7 +37,7 @@ export const SPACE = new Set([0, 1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 4
 /** The ladder in app/design/z.css — the only stacking values that may paint. */
 export const Z = new Set([10, 200, 300, 400, 500, 600, 700, 800])
 
-type Audit = {
+export type Audit = {
   capsComputed: string[]
   capsTyped: string[]
   offType: { size: number; text: string }[]
