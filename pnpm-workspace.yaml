@@ -8,3 +8,9 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@hanzo/*'
   - '@hanzogui/*'
+
+# One version of a package, or the app ships two copies of it. React Native's
+# colour normalizer arrives at two versions through two RN lineages; it is a
+# pure function table, so the newer one serves both.
+overrides:
+  '@react-native/normalize-colors': 0.83.2

@@ -85,13 +85,21 @@ describe('console telemetry wire', () => {
     expect(headers.Authorization).toBeUndefined()
   })
 
-  it('resolves the hanzo-console Sentry DSN from `product` alone', () => {
-    // The reason @hanzo/event was bumped to ^0.3.4: the DSN registry landed in
-    // 0.3.x, so declaring the product is what lights up sentry.hanzo.ai. A regression
-    // here means the console's errors silently stop reaching the dashboard.
-    const t = consoleTelemetry()
+  it('resolves the hanzo-console Sentry DSN from the product AND a credential', () => {
+    // A DSN embeds the ingest key — `https://<key>@api.hanzo.ai/v1/sentry/<project>`
+    // — so it cannot be synthesized from a product name. @hanzo/event 0.3.8 tried,
+    // and produced a keyless URL the door refuses; since 0.3.12 it needs the key,
+    // which is why this asserts both halves. One credential, not two.
+    const t = createTelemetry({ product: 'console', ingestKey: 'pk-test', getToken: () => null })
     expect(t.client.errorPlaneEnabled).toBe(true)
     expect(t.client.errorIngestUrl).toContain('api.hanzo.ai/v1/sentry/')
+  })
+
+  it('is INERT with no credential, rather than posting to a door that refuses it', () => {
+    // Fail-safe, and the operational consequence worth stating: the console's
+    // errors reach the dashboard only where the build carries a publishable key
+    // (or an explicit DSN). Unset, nothing is sent — never a silent 401 loop.
+    expect(consoleTelemetry().client.errorPlaneEnabled).toBe(false)
   })
 
   it('identify binds a person id on the one stream', () => {

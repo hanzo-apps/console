@@ -1,84 +1,18 @@
 'use client'
 
 /**
- * Brand loader — the resolved brand's mark.
+ * The brand loader — the resolved brand's mark, breathing.
  *
- * console2 is brand-aware (`config.brand` ∈ hanzo | lux | zoo | pars, from the
- * hostname), so the mark follows the brand: each brand's OWN published,
- * self-contained animated SVG — the logo IS that brand's "AI" you can play with
- * (it animates in on load, flourishes on hover, squashes on press; pure CSS, no
- * JS). The brand's own STATIC mark renders during SSR / first paint (no hydration
- * mismatch), then upgrades to its interactive animated mark on mount.
- *
- * The static branch used to hardcode Hanzo's block-H labelled "Hanzo". Because
- * ANIMATED only covers hanzo/lux/zoo, a pars host never left that branch — it
- * showed the Hanzo mark permanently, not just on first paint. Both halves now
- * come from the `@hanzo/brand` registry, which carries a mark per brand.
+ * The mark itself is `BrandMark` from @hanzo/ui, which resolves geometry from
+ * the fleet registry. This file used to carry its own second copy of that
+ * resolution, next to the one in BrandLogo: same registry, same fields, two
+ * implementations, and only this one knew about motion.
  */
-import { useEffect, useState } from 'react'
+import { Text, YStack } from '@hanzo/gui'
 
-import { Text, YStack, useTheme } from '@hanzo/gui'
-import { getAnimatedSVG as hanzoAnimated } from '@hanzo/logo'
-import { getAnimatedSVG as luxAnimated } from '@luxfi/logo'
-import { getAnimatedSVG as zooAnimated } from '@zooai/logo'
+import { BrandMark } from './BrandLogo'
 
-import { config } from '~/config'
-import { getBrand } from '~/lib/branding/brands'
-
-/** Brand → its published animated mark (load → hover → press, pure CSS, no JS). */
-const ANIMATED: Partial<Record<string, () => string>> = {
-  hanzo: hanzoAnimated,
-  lux: luxAnimated,
-  zoo: zooAnimated,
-}
-
-/**
- * The resolved brand's mark, sized in px. Renders the static block-H on the
- * server / first paint; upgrades to the brand's interactive animated SVG on mount.
- */
-export function BrandMark({ size = 48 }: { size?: number }) {
-  const theme = useTheme()
-  const fill = theme.color12?.get() ?? 'var(--color12)'
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-
-  const animate = mounted ? ANIMATED[config.brand] : undefined
-  if (!animate) {
-    // The brand's OWN static mark from the shared registry — not Hanzo's. This
-    // branch renders on SSR / first paint for every brand, and PERMANENTLY for
-    // any brand with no animated package: ANIMATED covers hanzo/lux/zoo, so a
-    // pars host fell through to a hardcoded Hanzo H labelled "Hanzo" forever,
-    // which is the white-label invariant broken outright. `@hanzo/brand` already
-    // carries a mark per brand (PARS_MARK included) and BrandLogo's BrandMark
-    // reads exactly these fields — this is the same one source, not a copy.
-    const brand = getBrand()
-    return (
-      <svg
-        width={size}
-        height={size}
-        viewBox={brand.logoViewBox}
-        style={{ fill }}
-        role="img"
-        aria-label={brand.brandName}
-        // logoContent is a build-time-trusted registry constant, never user input.
-        dangerouslySetInnerHTML={{ __html: brand.logoContent }}
-      />
-    )
-  }
-  // Size the self-contained animated SVG to the box (it has a viewBox, no w/h).
-  const svg = animate().replace('<svg ', '<svg width="100%" height="100%" ')
-  return (
-    <div
-      style={{ width: size, height: size, display: 'inline-flex', cursor: 'pointer' }}
-      role="img"
-      aria-label={config.brandName}
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-  )
-}
-
-/** Back-compat alias — the mark is now brand-aware + animated. */
-export const HanzoMark = BrandMark
+export { BrandMark }
 
 /** Full-screen centered brand loader with an optional label. */
 export function Loader({ label, size = 48 }: { label?: string; size?: number }) {
@@ -89,7 +23,7 @@ export function Loader({ label, size = 48 }: { label?: string; size?: number }) 
           of that name for the whole document — so any Loader on screen stopped the
           `.hz-rail-dot` live indicator from scaling. */}
       <div className="hz-breathe">
-        <BrandMark size={size} />
+        <BrandMark size={size} animated={false} />
       </div>
       {label ? (
         <Text fontSize="$3" color="$color11">

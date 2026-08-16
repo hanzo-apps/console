@@ -16,37 +16,44 @@
  * the org's name, which always resolves, so the mark is never empty.
  */
 import { useEffect, useState } from 'react'
-import type { Org } from '@hanzo/ui/product'
+import { BrandMark as Mark, type Org } from '@hanzo/ui/product'
+import { getAnimatedSVG as hanzoMotion } from '@hanzo/logo'
+import { getAnimatedSVG as luxMotion } from '@luxfi/logo'
+import { getAnimatedSVG as zooMotion } from '@zooai/logo'
 
-import { config } from '~/config'
+import { config, type BrandId } from '~/config'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { IamAdminApi, TeamApi } from '~/lib/api'
-import { getBrand } from '~/lib/branding/brands'
 
 /** Per-org identity cache for the session (present = resolved, logo may be ''). */
 const orgCache = new Map<string, Org>()
 
-/** The host-derived brand mark — inline, build-time-trusted SVG (currentColor).
- *  White-label by hostname: a lux/zoo/pars host renders ITS mark, never Hanzo's.
- *  Exported so surfaces that need JUST the brand H (sidebar fallback, support
- *  bubble) share the one definition. */
-export function BrandMark({ size }: { size: number }) {
-  const brand = getBrand()
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={brand.logoViewBox}
-      role="img"
-      aria-label={brand.brandName}
-      fill="currentColor"
-      style={{ display: 'block', flexShrink: 0 }}
-      // logoContent is a hardcoded constant in src/lib/branding/brands.ts — never
-      // user input — so inlining it as SVG markup is safe.
-      dangerouslySetInnerHTML={{ __html: brand.logoContent }}
-    />
-  )
+/** Each brand's own published animated mark (load → hover → press, pure CSS).
+ *  Motion ships per brand, so it is the APP that holds these — a design system
+ *  carrying all of them would put every brand's bytes in every brand's page. */
+const MOTION: Partial<Record<BrandId, () => string>> = {
+  hanzo: hanzoMotion,
+  lux: luxMotion,
+  zoo: zooMotion,
+}
+
+/**
+ * This surface's brand mark — geometry from @hanzo/ui, motion from the brand's
+ * own package. White-label by host: a lux/zoo/pars console renders ITS mark.
+ *
+ * It used to resolve the registry itself, in two files. @hanzo/ui 8.0.98 does
+ * that resolution for every brand, so what is left here is the binding: which
+ * brand this console is, and which motion packages it carries.
+ *
+ * The static mark renders on the server and on first paint (no hydration
+ * mismatch), then upgrades to the animated one on mount.
+ */
+export function BrandMark({ size, animated = true }: { size: number; animated?: boolean }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  const motion = animated && mounted ? MOTION[config.brand] : undefined
+  return <Mark brand={config.brand} size={size} wordmark={false} animated={motion ?? false} />
 }
 
 /** The current org name the console is scoped to (org > owner > brand default). */

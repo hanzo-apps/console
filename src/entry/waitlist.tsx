@@ -18,7 +18,7 @@ import { Anchor, Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
 import { ArrowUp, Check, Copy, RefreshCw, Share2, Terminal, Users } from '@hanzogui/lucide-icons-2'
 
 import { branding } from '~/config'
-import { HanzoMark, Loader } from '~/components/ui/Loader'
+import { BrandMark, Loader } from '~/components/ui/Loader'
 import { useSession } from '~/lib/auth/session'
 import { type WaitlistStatus } from '~/lib/auth/waitlist'
 import { PrimaryButton } from '@hanzo/ui/product'
@@ -117,7 +117,7 @@ function WaitlistPanel({ status, onRefresh }: { status: WaitlistStatus | null; o
     <YStack flex={1} minH="100vh" items="center" justify="center" p="$4">
       <YStack width={560} maxW="100%" gap="$4">
         <YStack items="center" gap="$3">
-          <HanzoMark size={40} />
+          <BrandMark size={40} />
           <YStack items="center" gap="$1">
             <Text fontSize="$8" fontWeight="800" color="$color12">
               You're on the list

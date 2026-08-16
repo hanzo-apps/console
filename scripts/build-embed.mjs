@@ -76,31 +76,6 @@ function move(from, to) {
   renameSync(from, to)
 }
 
-/**
- * Every in-console route, read off the product registry by TEXT.
- *
- * It cannot be imported: registry.tsx pulls 158 module components, and
- * generateStaticParams is server-only — importing it would drag the entire client
- * tree into the prerender graph. The shape it reads is two fields deep and stable:
- * a module states `id`, `kind: 'module'` and its `subpages[].slug`.
- *
- * An external product opens a tab and owns no route here, so it is skipped.
- */
-function registryRoutes(root) {
-  const file = join(root, 'src/lib/products/registry.tsx')
-  if (!existsSync(file)) return []
-  const src = readFileSync(file, 'utf8')
-  const starts = [...src.matchAll(/^    id: '([a-z0-9-]+)'/gm)].map((m) => [m.index, m[1]])
-  const out = []
-  starts.forEach(([pos, id], i) => {
-    const block = src.slice(pos, i + 1 < starts.length ? starts[i + 1][0] : src.length)
-    if (!block.includes("kind: 'module'")) return
-    out.push([id])
-    for (const m of block.matchAll(/slug: '([a-z0-9-]+)'/g)) out.push([id, m[1]])
-  })
-  return out
-}
-
 /** The dynamic segment of a page dir: `[id]` → "id", `[...slug]` → "slug", or "". */
 function dynamicSegment(file) {
   const m = basename(dirname(file)).match(/^\[(?:\.\.\.)?([^\]]+)\]$/)
@@ -126,19 +101,20 @@ function isDynamicPage(file) {
  *     bundle, so client-side navigation hydrates the true page; direct deep links
  *     hit the embedding host's SPA fallback (cloud/webui.go serveIndex → index.html)
  *     which re-resolves the route client-side.
- *   - `generateStaticParams` returns EVERY route the registry states, because the
- *     generated set IS what the client router treats as known. With one placeholder
- *     and `dynamicParams = false`, /profile was not a known param, so clicking it
- *     hard-navigated: the browser reloaded, the host served the home shell, and the
- *     console rendered home before resolving the module — the whole app twice.
- *     A segment with no registry behind it (discover/[id]) keeps the placeholder.
+ *   - `generateStaticParams` returns ONE placeholder. It used to return every route
+ *     the registry states, because the generated set was what decided whether a
+ *     client navigation stayed client-side — an unknown param hard-navigated, and
+ *     the app rendered twice. `src/lib/router.ts` moved that decision: navigation
+ *     is `history.pushState`, which never asks Next whether a route exists, so the
+ *     enumeration stopped being load-bearing while still costing what it always did.
+ *     It cost the release: ~373KB of identical shell per route, 289 HTML files and
+ *     82MB, against a 16 MiB ceiling on the one request that uploads a release. So
+ *     the export could not publish at all — the ONE thing it exists to do.
  *   - `dynamicParams = false`: no on-demand params (there is no server); everything
  *     else is the SPA fallback. The real body lives beside this as `_body.tsx`.
  */
-function wrapperSource(seg, catchAll, routes) {
-  const params = catchAll && routes.length
-    ? routes.map((r) => `{ ${seg}: ${JSON.stringify(r)} }`).join(', ')
-    : `{ ${seg}: ${catchAll ? `['index']` : `'index'`} }`
+function wrapperSource(seg, catchAll) {
+  const params = `{ ${seg}: ${catchAll ? `['index']` : `'index'`} }`
   return `// AUTO-GENERATED for \`output: 'export'\` by scripts/build-embed.mjs — do not commit.
 // The real (client) page body is ./_body.tsx (still bundled → client nav hydrates it);
 // this server wrapper only satisfies the static-export contract. See the script.
@@ -205,7 +181,7 @@ try {
     mkdirSync(dirname(pristine), { recursive: true })
     copyFileSync(page, pristine) // pristine original for restore
     renameSync(page, body) // client body → non-route sibling
-    writeFileSync(page, wrapperSource(dynamicSegment(page), isCatchAll(page), registryRoutes(root)), 'utf8')
+    writeFileSync(page, wrapperSource(dynamicSegment(page), isCatchAll(page)), 'utf8')
     wrappedPages.push({ page, body })
   }
 
@@ -219,9 +195,13 @@ try {
     }; building static export…`,
   )
 
-  // The project pins Next 15 (webpack is its default builder; the custom `webpack()`
-  // config in next.config.mjs applies). No Turbopack flag is passed.
-  execFileSync('npx', ['next', 'build'], {
+  // Next 16 defaults to Turbopack, so the bundler is NAMED rather than inherited.
+  // Turbopack does not build this app yet, for one measured reason: react-native-svg
+  // imports `TurboModuleRegistry` from `react-native`, which react-native-web does
+  // not export, and the alias that makes RN mean RNW on the web is what surfaces it.
+  // That is an interop gap in the dependency, not a config mistake — so webpack is
+  // the bundler until it closes, and saying so beats discovering it in CI.
+  execFileSync('npx', ['next', 'build', '--webpack'], {
     cwd: root,
     stdio: 'inherit',
     // CONSOLE_EMBED gates the server-side build transforms; NEXT_PUBLIC_CONSOLE_EMBED
