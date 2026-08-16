@@ -201,8 +201,8 @@ function GeneralTab() {
             <InfoRow label="Website" value={state.data.websiteUrl} />
             <InfoRow label="Created" value={fmtDate(state.data.createdTime)} />
             <Text fontSize="$2" color="$color10">
-              These are held by Hanzo IAM. Change the name, logo and accent under Branding; renaming the
-              organization itself is done in the IAM console.
+              These are held by {idHost}. Change the name, logo and accent under Branding; renaming the
+              organization itself is done in the identity console.
             </Text>
           </>
         )}
