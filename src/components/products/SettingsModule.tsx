@@ -40,6 +40,7 @@ import {
 import { ApiError, TeamApi, type Organization } from '~/lib/api'
 import { config } from '~/config'
 import { currentOrg } from '~/lib/org-scope'
+import { orgLabel } from '~/lib/account/org-state'
 import { setOrgAccent } from '@hanzo/ui/product'
 import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
@@ -578,9 +579,13 @@ function BrandingTab() {
  * on their device, so it needs no save button and no permission check.
  */
 function AppearanceTab() {
-  // `Appearance` carries its own groups (Text size · Density · Accent), so a
-  // legend here would box a box and repeat the tab's own name back at the reader.
-  return <Appearance />
+  // `Appearance` carries its own groups (Text size · Scale · Density · Accent),
+  // so a legend here would box a box and repeat the tab's own name back at the
+  // reader. What this passes is the org in scope, which is the one thing the
+  // panel cannot know: it turns on the "applies to" choice, so someone who works
+  // across several orgs can read larger here without changing every other one.
+  const org = currentOrg()
+  return <Appearance org={org} orgName={orgLabel({ name: org })} />
 }
 
 export function SettingsModule({ params }: { params: Record<string, string> }) {
