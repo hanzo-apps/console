@@ -194,6 +194,10 @@ const EMBED = process.env.CONSOLE_EMBED === '1'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // AGENTS.md is a symlink to the tracked LLM.md, and Next appends its own rules
+  // block to it on every dev/build run. Several sessions share this tree; a build
+  // step that dirties a tracked file gets swept into someone else's commit.
+  agentRules: false,
   // Deterministic per-commit build id (see src/config/build-id.mjs): pins ONE id
   // across every replica of a release so a rolling deploy never serves one build's
   // HTML against another build's /_next/static/<BUILD_ID>/ path — the chunk-404 the

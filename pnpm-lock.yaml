@@ -832,14 +832,6 @@ packages:
       react-dom:
         optional: true
 
-  '@hanzo/logo@1.0.14':
-    resolution: {integrity: sha512-1n4Tv7065OqL3EJyKVnLZze8oh1w7eVdUFM6+/OyNdEpM0DheJHhkMMJhj8d64zNeEjbo7kiw3x6qVjIaCh25g==}
-    peerDependencies:
-      react: '>=16.8.0'
-    peerDependenciesMeta:
-      react:
-        optional: true
-
   '@hanzo/logo@1.0.19':
     resolution: {integrity: sha512-VOfTKMJtWkazlZnqiSpLnOwOJcj2TYlmoLD+T3w/7dTCWRsHThngu+GBvsOdJ0UeuOHb8dC4ky7FfSixHQ0wBg==}
     peerDependencies:
@@ -4946,7 +4938,7 @@ snapshots:
 
   '@hanzo/brand@1.4.6(react@19.2.8)':
     dependencies:
-      '@hanzo/logo': 1.0.14(react@19.2.8)
+      '@hanzo/logo': 1.0.19(react@19.2.8)
     optionalDependencies:
       react: 19.2.8
 
@@ -5068,10 +5060,6 @@ snapshots:
     optionalDependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-
-  '@hanzo/logo@1.0.14(react@19.2.8)':
-    optionalDependencies:
-      react: 19.2.8
 
   '@hanzo/logo@1.0.19(react@19.2.8)':
     optionalDependencies:
