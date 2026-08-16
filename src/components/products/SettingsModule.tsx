@@ -1,22 +1,41 @@
 'use client'
 
 /**
- * Settings — organization configuration.
+ * Settings — a panel of groups, one per subject a person comes here for:
+ * organization · account · security · billing · developer.
+ *
+ * Only the organization is this console's to hold. Identity belongs to the
+ * brand's ID host, billing to commerce, keys to their own product — so a group
+ * shows the values it can read and carries the way to the one place that owns
+ * them. Nothing here is a second editor for something that already has one.
+ *
+ * Every group is a `Fieldset` and every value a `FieldRow`, both from
+ * @hanzo/ui/product: the surface, its radius, fill and legend are decided once,
+ * in the package that draws them, so this file contributes layout and data and
+ * no measurements of its own.
  *
  * The General tab reads the REAL signed-in account (`get-account`) and the active
  * organization (`get-organization` via the org-scoped `/org/iam` proxy, so an ORG
  * admin — not only a global admin — sees it). Branding shows the REAL per-host
- * runtime config the app resolved. Member management lives in Team and personal
- * account settings in Profile (one home each — this never duplicates them);
- * identity mutations are owned by IAM and deep-link there. Every read has honest
- * loading / 404 / access states; nothing is fabricated.
+ * runtime config the app resolved. Every read has honest loading / 404 / access
+ * states; nothing is fabricated.
  */
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
-import { Check, ExternalLink, Lock, Users } from '@hanzogui/lucide-icons-2'
+import {
+  ArrowUpRight,
+  Building2,
+  Check,
+  CreditCard,
+  ExternalLink,
+  IdCard,
+  KeySquare,
+  Lock,
+  ShieldCheck,
+} from '@hanzogui/lucide-icons-2'
 
 import { ApiError, TeamApi, type Organization } from '~/lib/api'
 import { config } from '~/config'
@@ -26,7 +45,7 @@ import { useSession } from '~/lib/auth/session'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { useBeta } from '~/lib/products/viewer'
 import { ErrorState, asApiError, type HonestCopy } from '~/components/ui/States'
-import { FieldRow, FieldSwitch, FieldText, PageHeader } from '@hanzo/ui/product'
+import { FieldRow, FieldSwitch, FieldText, Fieldset, PageHeader } from '@hanzo/ui/product'
 import { Appearance } from '@hanzo/appearance'
 
 /**
@@ -97,16 +116,39 @@ function useAsync<T>(fn: () => Promise<T>): { state: Async<T>; reload: () => voi
   return { state, reload }
 }
 
-function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+/**
+ * Where a section's subject is actually owned — inside this console (`Go`) or on
+ * the identity host (`Out`).
+ *
+ * Settings is an index, not a second implementation. Members, billing, keys and
+ * identity each have exactly one home, and a section that shows their values
+ * carries the way to that home rather than a duplicate editor for it.
+ */
+function Go({ label, to }: { label: string; to: string }) {
+  const router = useRouter()
   return (
-    <YStack gap="$2">
-      <XStack items="center" justify="space-between">
-        <Text fontSize="$5" fontWeight="700">{title}</Text>
-        {action}
-      </XStack>
-      {children}
-    </YStack>
+    <Button size="$2" chromeless iconAfter={<ArrowUpRight size={15} />} onPress={() => router.push(to)}>
+      {label}
+    </Button>
   )
+}
+
+function Out({ label, href }: { label: string; href: string }) {
+  return (
+    <Button
+      size="$2"
+      chromeless
+      iconAfter={<ExternalLink size={15} />}
+      onPress={() => { if (typeof window !== 'undefined') window.open(href, '_blank', 'noopener') }}
+    >
+      {label}
+    </Button>
+  )
+}
+
+/** The state a section is in before its read lands, sized so the panel does not jump. */
+function Loading() {
+  return <XStack p="$5" justify="center"><Spinner size="large" color="$color11" /></XStack>
 }
 
 function ManageInIam() {
@@ -121,46 +163,99 @@ function ManageInIam() {
   )
 }
 
+/**
+ * The settings panel — one column of groups, each naming what it holds and where
+ * that thing is owned.
+ *
+ * The five subjects a person comes here for are the organization, their account,
+ * their security, what they are billed, and their API credential. Only the first
+ * is this console's to hold: identity belongs to the brand's ID host, billing to
+ * commerce, keys to their own product. So each group shows the values it can read
+ * and hands off, and the panel stays an index of one system rather than five
+ * half-copies of it.
+ */
 function GeneralTab() {
-  const router = useRouter()
   const { account } = useSession()
   const org = currentOrg()
   const fetchOrg = useCallback(() => TeamApi.organization(org), [org])
   const { state, reload } = useAsync<Organization>(fetchOrg)
+  const idHost = config.iamUrl.replace(/^https?:\/\//, '')
+  const accountUrl = `${config.iamUrl}/account`
 
   return (
-    <YStack gap="$5">
-      <Section
+    <YStack gap="$4" maxW={720}>
+      <Fieldset
+        icon={<Building2 size={15} />}
         title="Organization"
-        action={<Button size="$2" icon={<Users size={15} />} onPress={() => router.push('/team')}>Manage members</Button>}
+        description={`How this organization is identified across ${config.brandName}.`}
+        action={<Go label="Members" to="/team" />}
       >
         {state.phase === 'error' ? (
           <ErrorState err={state.err} onRetry={reload} copy={IAM_COPY} />
         ) : state.phase === 'loading' ? (
-          <XStack p="$6" justify="center"><Spinner size="large" color="$color11" /></XStack>
+          <Loading />
         ) : (
-          <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
+          <>
             <InfoRow label="Name" value={state.data.displayName || state.data.name} />
             <InfoRow label="Slug" value={state.data.name} />
             <InfoRow label="Website" value={state.data.websiteUrl} />
             <InfoRow label="Created" value={fmtDate(state.data.createdTime)} />
-          </Card>
+            <Text fontSize="$2" color="$color10">
+              These are held by Hanzo IAM. Change the name, logo and accent under Branding; renaming the
+              organization itself is done in the IAM console.
+            </Text>
+          </>
         )}
-      </Section>
+      </Fieldset>
 
       <EarlyAccess />
 
-      <Section title="Your account">
-        <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
-          <InfoRow label="Email" value={account?.email} />
-          <InfoRow label="Display name" value={account?.displayName} />
-          <InfoRow label="Username" value={account?.name} />
-        </Card>
-        <Text fontSize="$2" color="$color10">
-          Manage your identity, password, and 2FA in Profile → Security. Renaming the organization is
-          managed in the IAM console.
+      <Fieldset
+        icon={<IdCard size={15} />}
+        title="Account"
+        description={`Your identity, shared by every ${config.brandName} product you sign in to.`}
+        action={<Out label={idHost} href={accountUrl} />}
+      >
+        <InfoRow label="Email" value={account?.email} />
+        <InfoRow label="Display name" value={account?.displayName} />
+        <InfoRow label="Username" value={account?.name} />
+      </Fieldset>
+
+      <Fieldset
+        icon={<ShieldCheck size={15} />}
+        title="Security"
+        description={`Password, two-factor, passkeys and connected accounts are held by ${idHost} and changed there.`}
+        action={<Out label="Manage security" href={accountUrl} />}
+      >
+        <Text fontSize="$2" color="$color11">
+          Nothing here reads or stores a credential. One sign-in covers every product on this account, so
+          it is changed once, in one place, and applies everywhere.
         </Text>
-      </Section>
+      </Fieldset>
+
+      <Fieldset
+        icon={<CreditCard size={15} />}
+        title="Billing"
+        description="Balance, spend, budgets, invoices, subscriptions and payment methods."
+        action={<Go label="Billing center" to="/billing" />}
+      >
+        <Text fontSize="$2" color="$color11">
+          Billing is charged to the organization above, not to a person, so it follows whichever
+          organization the console is scoped to.
+        </Text>
+      </Fieldset>
+
+      <Fieldset
+        icon={<KeySquare size={15} />}
+        title="Developer"
+        description="The cloud API credential this account uses from the SDKs, the CLI and the gateway."
+        action={<Go label="API keys" to="/api-keys" />}
+      >
+        <Text fontSize="$2" color="$color11">
+          A key is shown once, when it is minted. Rotating replaces it immediately, so anything still
+          holding the old one stops working the moment you rotate.
+        </Text>
+      </Fieldset>
     </YStack>
   )
 }
@@ -204,19 +299,15 @@ function EarlyAccess() {
   }
 
   return (
-    <Section title="Early access">
-      <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
-        <FieldRow label="Beta products">
-          <XStack items="center" gap="$3">
-            <FieldSwitch checked={on} onChange={(v) => void toggle(v)} disabled={busy} />
-            <Text fontSize="$2" color="$color10">
-              Show products that are still in beta. Applies to everyone in this organization.
-            </Text>
-          </XStack>
-        </FieldRow>
-      </Card>
+    <Fieldset title="Early access" description="Applies to everyone in this organization.">
+      <FieldRow label="Beta products">
+        <XStack items="center" gap="$3">
+          <FieldSwitch checked={on} onChange={(v) => void toggle(v)} disabled={busy} />
+          <Text fontSize="$2" color="$color10">Show products that are still in beta.</Text>
+        </XStack>
+      </FieldRow>
       {err ? <ErrorState err={err} /> : null}
-    </Section>
+    </Fieldset>
   )
 }
 
@@ -344,13 +435,12 @@ function BrandingForm({ org, onSaved }: { org: Organization; onSaved: () => void
 
   const ro = denied
   return (
-    <YStack gap="$3">
-      <Text fontSize="$3" color="$color10">
-        Your organization's identity across the console — display name, logo, and accent color. Saved to
-        Hanzo IAM and applied wherever this org is shown.
-      </Text>
+    <YStack gap="$3" maxW={720}>
       {ro ? <GatedNotice /> : null}
-      <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
+      <Fieldset
+        title="Organization branding"
+        description="Your organization's identity across the console — display name, logo and accent colour. Saved to Hanzo IAM and applied wherever this org is shown."
+      >
         <FieldRow label="Display name">
           <FieldText value={displayName} onChange={(v) => onEdit(() => setDisplayName(v))} disabled={ro} placeholder={org.name} />
         </FieldRow>
@@ -438,7 +528,7 @@ function BrandingForm({ org, onSaved }: { org: Organization; onSaved: () => void
             ) : null}
           </XStack>
         )}
-      </Card>
+      </Fieldset>
       {save.phase === 'error' ? <ErrorState err={save.err} copy={BRANDING_COPY} /> : null}
     </YStack>
   )
@@ -450,33 +540,28 @@ function BrandingTab() {
   const { state, reload } = useAsync<Organization>(fetchOrg)
 
   return (
-    <YStack gap="$5">
-      <Section title="Organization branding">
-        {state.phase === 'error' ? (
-          <ErrorState err={state.err} onRetry={reload} copy={IAM_COPY} />
-        ) : state.phase === 'loading' ? (
-          <XStack p="$6" justify="center"><Spinner size="large" color="$color11" /></XStack>
-        ) : (
-          <BrandingForm org={state.data} onSaved={reload} />
-        )}
-      </Section>
+    <YStack gap="$4" maxW={720}>
+      {state.phase === 'error' ? (
+        <ErrorState err={state.err} onRetry={reload} copy={IAM_COPY} />
+      ) : state.phase === 'loading' ? (
+        <Loading />
+      ) : (
+        <BrandingForm org={state.data} onSaved={reload} />
+      )}
 
-      <Section title="Runtime (resolved per host)">
-        <Text fontSize="$3" color="$color10">
-          The runtime branding resolved for this host. One console image serves every brand; these values
-          come from the request hostname and are not editable here.
-        </Text>
-        <Card p="$4" gap="$3.5" borderWidth={1} borderColor="$borderColor" maxWidth={720}>
-          <InfoRow label="Brand" value={config.brand} />
-          <InfoRow label="Name" value={config.brandName} />
-          <InfoRow label="IAM issuer" value={config.iamUrl} />
-          <InfoRow label="IAM organization" value={config.iamOrgName} />
-          <InfoRow label="IAM application" value={config.iamAppName} />
-          <InfoRow label="Cloud API" value={config.cloudUrl} />
-          <InfoRow label="Platform" value={config.platformUrl} />
-          <InfoRow label="Billing" value={config.billingUrl} />
-        </Card>
-      </Section>
+      <Fieldset
+        title="Runtime (resolved per host)"
+        description="One console image serves every brand; these come from the request hostname and are read-only."
+      >
+        <InfoRow label="Brand" value={config.brand} />
+        <InfoRow label="Name" value={config.brandName} />
+        <InfoRow label="IAM issuer" value={config.iamUrl} />
+        <InfoRow label="IAM organization" value={config.iamOrgName} />
+        <InfoRow label="IAM application" value={config.iamAppName} />
+        <InfoRow label="Cloud API" value={config.cloudUrl} />
+        <InfoRow label="Platform" value={config.platformUrl} />
+        <InfoRow label="Billing" value={config.billingUrl} />
+      </Fieldset>
     </YStack>
   )
 }
@@ -493,13 +578,9 @@ function BrandingTab() {
  * on their device, so it needs no save button and no permission check.
  */
 function AppearanceTab() {
-  return (
-    <YStack gap="$4">
-      <Section title="Appearance">
-        <Appearance />
-      </Section>
-    </YStack>
-  )
+  // `Appearance` carries its own groups (Text size · Density · Accent), so a
+  // legend here would box a box and repeat the tab's own name back at the reader.
+  return <Appearance />
 }
 
 export function SettingsModule({ params }: { params: Record<string, string> }) {
