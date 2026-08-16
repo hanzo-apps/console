@@ -18,6 +18,12 @@ let calls: FetchCall[]
 
 beforeEach(() => {
   calls = []
+  // createAnalytics returns THE client for a (host, product) stream, held on the page
+  // under a well-known symbol — that is what stops a second analytics client doubling
+  // the pageview. It also means the client outlives a test, carrying the previous
+  // one's token, ingest key and seen-paths into the next. Each test wants its own
+  // page, so clear the slot; the event package's own suite resets it the same way.
+  delete (globalThis as unknown as Record<symbol, unknown>)[Symbol.for('hanzo.event.clients')]
   const store = new Map<string, string>()
   const listeners = () => {}
   const win = {
