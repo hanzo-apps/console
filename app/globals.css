@@ -165,6 +165,18 @@ html:root.t_light {
   --borderColor: hsl(0 0% 90%);
   --borderColorHover: hsl(0 0% 82%);
 
+  /* The focus ring's colour, light. Two rules paint a focus indicator on this
+     page and they read different tokens: the rule below reads --color9, while
+     @hanzo/ui's gui theme compiles `outlineColor: var(--ring)` into an atomic
+     class at :root:root:root:root — !important, so it decides every control gui
+     renders, which is most of them. --ring is declared by @hanzo/design under
+     `:root` (dark) and `.light`; this app's light class is `t_light`, so the
+     light scope never matched and --ring stayed the dark rgb(255 255 255/.40).
+     Measured on the built export: 124 of 133 controls ringed white on the
+     rgb(252,252,252) ground at 1.01:1 — painted, and invisible. Same value
+     @hanzo/design gives it, so the two themes agree. */
+  --ring: rgb(0 0 0 / .5);
+
   /* Elevation ladder — light theme: soft NEUTRAL-grey Material shadows (pure black
      alpha, zero hue) on the off-white base — the calm parallel of the dark ladder. */
   --hz-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
