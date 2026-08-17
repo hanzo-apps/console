@@ -49,18 +49,29 @@ function fmtWhen(v: string): string {
 function ProviderCard({
   p,
   busy,
+  focused,
   onConnect,
   onDisconnect,
   onManageRepos,
 }: {
   p: Provider
   busy: boolean
+  /** True when /integrations/<id> named this card: ring it and bring it into view. */
+  focused?: boolean
   onConnect: (p: Provider) => void
   onDisconnect: (p: Provider) => void
   onManageRepos?: (p: Provider) => void
 }) {
   return (
-    <Card width={300} p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" bg="$color1" data-testid={`provider-${p.id}`}>
+    <Card
+      width={300}
+      p="$4"
+      gap="$3"
+      borderWidth={focused ? 2 : 1}
+      borderColor={focused ? '$color12' : '$borderColor'}
+      bg="$color1"
+      data-testid={`provider-${p.id}`}
+    >
       <XStack items="center" gap="$3">
         <ProviderLogo provider={p.id} size={36} />
         <YStack flex={1} minW={0}>
@@ -131,12 +142,40 @@ function ProviderCard({
   )
 }
 
-export function OrgIntegrationsModule(_props: { params: Record<string, string> }) {
+export function OrgIntegrationsModule({ params }: { params: Record<string, string> }) {
+  /**
+   * `/integrations/<provider>` deep-links one connector.
+   *
+   * It is a LINK worth sending someone — "go connect Cloudflare" is a sentence
+   * with a URL — and until the route existed it answered the console's own
+   * not-found page, which reads as the product being missing rather than the
+   * address being wrong.
+   *
+   * The param does not route anywhere else: this page IS the list, so it scrolls
+   * that card into view and rings it. A separate per-provider page would be a
+   * second place to render the same card, and the thing a deep link is for is
+   * arriving at the card you were sent to, not a different layout of it.
+   */
+  const focus = (params.provider ?? '').toLowerCase()
+
   const router = useRouter()
   const search = useSearchParams() ?? new URLSearchParams()
   const toast = useToast()
 
   const [providers, setProviders] = useState<Provider[]>([])
+
+  // Bring the named card into view once the list has rendered. It queries the
+  // `data-testid` the card already carries rather than threading a ref through
+  // it: @hanzo/gui's Card takes a GuiElement ref, not an HTMLDivElement, and a
+  // second identity for a node that already has one is the kind of thing that
+  // silently stops matching. `block: 'center'` so the card a link points at is
+  // not left tucked under the console header — arriving at a card you cannot see
+  // is the same as not arriving.
+  useEffect(() => {
+    if (!focus) return
+    const el = document.querySelector(`[data-testid="provider-${focus}"]`)
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [focus, providers.length])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<BackendState | null>(null)
   /** The provider id currently mid connect/disconnect (per-card busy spinner). */
@@ -289,6 +328,7 @@ export function OrgIntegrationsModule(_props: { params: Record<string, string> }
         {providers.map((p) => (
           <ProviderCard
             key={p.id}
+            focused={focus === p.id}
             p={p}
             busy={busyId === p.id}
             onConnect={onConnect}

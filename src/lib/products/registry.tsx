@@ -2044,7 +2044,14 @@ export const catalog: CatalogEntry[] = [
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/integrations`,
     kind: 'module',
-    routes: [{ path: '', component: OrgIntegrationsModule }],
+    // `:provider` deep-links one connector — /integrations/cloudflare is a link
+    // worth sending someone, and it 404'd because the product mounted only its
+    // index. Same component: the page IS the list, and the param decides which
+    // card it opens on rather than routing somewhere else.
+    routes: [
+      { path: '', component: OrgIntegrationsModule },
+      { path: ':provider', component: OrgIntegrationsModule },
+    ],
   },
   {
     // Native console playground — REAL model run over the OpenAI-compatible
