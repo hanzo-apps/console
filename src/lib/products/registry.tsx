@@ -2477,10 +2477,10 @@ export const catalog: CatalogEntry[] = [
     ],
   },
   {
-    // Hanzo Sentry — the full Sentry-parity error/log/trace product FACE, served at
+    // Hanzo Sentinel — the full Sentry-parity error/log/trace product FACE, served at
     // sentry.<brand> as a host-branded shell of THIS console (config.shell). It is
     // the Sentry PRODUCT in Hanzo's identity + @hanzo/gui design system (never the
-    // upstream Sentry look), over the `/v1/sentry` contract. `shell: 'sentry'` scopes
+    // upstream Sentry look), over the `/v1/sentinel` contract. `shell: 'sentry'` scopes
     // it to that face — HIDDEN from the full console nav (the console already has the
     // o11y `errors`/`logs`/`o11y`(traces) surfaces), shown ONLY inside sentry.<brand>.
     // ONE module, panels routed by `:tab` (+ a `:tab/:id` detail): '' = Issues,

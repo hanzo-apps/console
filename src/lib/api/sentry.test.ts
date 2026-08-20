@@ -21,10 +21,10 @@ import {
 
 describe('projects', () => {
   it('maps a project + dsn, tolerating snake_case', () => {
-    const p = normalizeProject({ id: 'web', name: 'Web', platform: 'javascript', dsn: 'https://k@api.hanzo.ai/v1/sentry/web', last_event: '2026-07-10T00:00:00Z' })
+    const p = normalizeProject({ id: 'web', name: 'Web', platform: 'javascript', dsn: 'https://k@api.hanzo.ai/v1/event/web', last_event: '2026-07-10T00:00:00Z' })
     expect(p.id).toBe('web')
     expect(p.name).toBe('Web')
-    expect(p.dsn).toContain('/v1/sentry/web')
+    expect(p.dsn).toContain('/v1/event/web')
     expect(p.lastEvent).toBe('2026-07-10T00:00:00Z')
     expect(p.status).toBe('active')
   })
@@ -35,7 +35,7 @@ describe('projects', () => {
     expect(list[0].name).toBe('api')
   })
   it('normalizeDsn reads a bare string or {dsn}', () => {
-    expect(normalizeDsn('https://x@h/v1/sentry/p')).toBe('https://x@h/v1/sentry/p')
+    expect(normalizeDsn('https://x@h/v1/sentinel/p')).toBe('https://x@h/v1/sentinel/p')
     expect(normalizeDsn({ data: { dsn: 'd1' } })).toBe('d1')
     expect(normalizeDsn(null)).toBe('')
   })

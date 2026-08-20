@@ -1,14 +1,14 @@
 'use client'
 
 /**
- * Hanzo Sentry — the error/log/trace product face, one module routed by `:tab`
+ * Hanzo Sentinel — the error/log/trace product face, one module routed by `:tab`
  * (+ a `:tab/:id` detail) under `/sentry`. It is the Sentry PRODUCT wearing Hanzo's
  * identity + @hanzo/gui design system (no upstream Sentry look): the sentry.<brand>
  * shell (config.shell) surfaces these panels in the sidebar via ONE brand — this
  * module composes them and stays self-contained (its own tab strip) so it also
  * works when reached at `/sentry` on any host.
  *
- * Panels are thin views over the real `/v1/sentry` contract (`SentryApi`), each with
+ * Panels are thin views over the real `/v1/sentinel` contract (`SentryApi`), each with
  * honest loading / empty / `ErrorState` states — never fabricated data. The projects
  * list (the shared project-filter source) is fetched ONCE here and threaded down.
  */
@@ -105,7 +105,7 @@ export function SentryModule({ params }: { params: Record<string, string> }) {
       {panel}
 
       <Text fontSize="$1" color="$color10" self="center">
-        Hanzo Sentry · {config.brandName} · errors, logs and traces on /v1/sentry
+        Hanzo Sentinel · {config.brandName} · errors, logs and traces on /v1/sentinel
       </Text>
     </YStack>
   )

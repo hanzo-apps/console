@@ -24,7 +24,7 @@
  *    the visitor's own org on every brand host; the key exists so a SIGNED-OUT view
  *    is admitted at all. Token first, key second — see the note below.
  *  - `dsn` (`NEXT_PUBLIC_HANZO_EVENT_DSN`) — the error plane's own credential,
- *    shaped `https://<key>@api.hanzo.ai/v1/sentry/<project>`. Publishable by design
+ *    shaped `https://<key>@api.hanzo.ai/v1/event/<project>`. Publishable by design
  *    (it ships in the client bundle). Unset → errors are captured and dropped.
  *  - auto error capture is ON by default (window.onerror + unhandledrejection),
  *    making this the app-wide error path (subsumes @sentry). React render errors —

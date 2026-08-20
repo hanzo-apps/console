@@ -92,13 +92,13 @@ describe('console telemetry wire', () => {
   })
 
   it('resolves the hanzo-console Sentry DSN from the product AND a credential', () => {
-    // A DSN embeds the ingest key — `https://<key>@api.hanzo.ai/v1/sentry/<project>`
+    // A DSN embeds the ingest key — `https://<key>@api.hanzo.ai/v1/event/<project>`
     // — so it cannot be synthesized from a product name. @hanzo/event 0.3.8 tried,
     // and produced a keyless URL the door refuses; since 0.3.12 it needs the key,
     // which is why this asserts both halves. One credential, not two.
     const t = createTelemetry({ product: 'console', ingestKey: 'pk-test', getToken: () => null })
     expect(t.client.errorPlaneEnabled).toBe(true)
-    expect(t.client.errorIngestUrl).toContain('api.hanzo.ai/v1/sentry/')
+    expect(t.client.errorIngestUrl).toContain('api.hanzo.ai/v1/event/')
   })
 
   it('is INERT with no credential, rather than posting to a door that refuses it', () => {

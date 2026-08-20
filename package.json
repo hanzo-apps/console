@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/console",
-  "version": "8.5.87",
+  "version": "8.5.88",
   "packageManager": "pnpm@11.17.0",
   "private": true,
   "license": "MIT OR Apache-2.0",
@@ -23,7 +23,7 @@
     "@hanzo/dash": "^0.3.0",
     "@hanzo/data": "^1.2.4",
     "@hanzo/design": "^0.5.13",
-    "@hanzo/event": "^0.3.28",
+    "@hanzo/event": "^0.3.29",
     "@hanzo/finance-ui": "~0.1.1",
     "@hanzo/gui": "^8.1.1",
     "@hanzo/iam": "^0.21.13",

@@ -1,7 +1,7 @@
-// Pure presentation logic for the Hanzo Sentry panels — summaries, formatters,
+// Pure presentation logic for the Hanzo Sentinel panels — summaries, formatters,
 // the Discover builder catalogs, and the project SDK snippet. NO React / gui / I/O
 // imports (types are erased), so every helper unit-tests in a plain-node suite
-// (logic.test.ts) and the panels stay thin views over real `/v1/sentry` data.
+// (logic.test.ts) and the panels stay thin views over real `/v1/sentinel` data.
 import type { SentryIssue, StatPoint, Period } from '~/lib/api/sentry'
 import type { Slice, ChartPoint } from '~/components/ui/Charts'
 import { toneVar, type Tone } from '~/components/ui/tone'
@@ -162,9 +162,9 @@ export const emptyFilter = (): { field: string; op: string; value: string } => (
 // ── Project DSN + SDK snippet ─────────────────────────────────────────────────
 
 /**
- * The ingest endpoint a Sentry-compatible SDK derives from a Hanzo Sentry DSN.
- * The DSN is the CLEAN path `https://<key>@api.hanzo.ai/v1/sentry/<project>` (NO
- * `/api/` segment), so the SDK POSTs envelopes to `<host>/v1/sentry/<project>/envelope/`.
+ * The ingest endpoint a Sentry-compatible SDK derives from a Hanzo Sentinel DSN.
+ * The DSN is the CLEAN path `https://<key>@api.hanzo.ai/v1/event/<project>` (NO
+ * `/api/` segment), so the SDK POSTs envelopes to `<host>/v1/event/<project>/envelope/`.
  * Returns '' for an unparseable DSN (never a fabricated URL).
  */
 export function ingestUrl(dsn: string): string {
@@ -172,17 +172,17 @@ export function ingestUrl(dsn: string): string {
   const at = dsn.indexOf('@')
   if (at < 0) return ''
   const scheme = dsn.startsWith('https://') ? 'https://' : dsn.startsWith('http://') ? 'http://' : 'https://'
-  const rest = dsn.slice(at + 1) // host/v1/sentry/<project>
+  const rest = dsn.slice(at + 1) // host/v1/event/<project>
   return `${scheme}${rest.replace(/\/+$/, '')}/envelope/`
 }
 
 /**
- * The copy-paste SDK init for a project. Hanzo Sentry is Sentry-wire-compatible, so
+ * The copy-paste SDK init for a project. Hanzo Sentinel is Sentry-wire-compatible, so
  * any Sentry SDK points at the Hanzo DSN — no fabricated package. Honest: an absent
  * DSN yields a placeholder the user replaces after creating/rotating a key.
  */
 export function sdkSnippet(dsn: string): string {
-  const d = dsn || 'https://<key>@api.hanzo.ai/v1/sentry/<project>'
+  const d = dsn || 'https://<key>@api.hanzo.ai/v1/event/<project>'
   return [
     "import * as Sentry from '@sentry/browser'",
     '',

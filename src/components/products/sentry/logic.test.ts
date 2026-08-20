@@ -102,16 +102,16 @@ describe('statsToPoints', () => {
 
 describe('project DSN + SDK snippet', () => {
   it('derives the CLEAN ingest endpoint (no /api/ segment)', () => {
-    expect(ingestUrl('https://abc123@api.hanzo.ai/v1/sentry/web')).toBe('https://api.hanzo.ai/v1/sentry/web/envelope/')
+    expect(ingestUrl('https://abc123@api.hanzo.ai/v1/event/web')).toBe('https://api.hanzo.ai/v1/event/web/envelope/')
     expect(ingestUrl('')).toBe('')
     expect(ingestUrl('garbage-no-at')).toBe('')
   })
   it('ingest URL never contains /api/', () => {
-    expect(ingestUrl('https://k@api.hanzo.ai/v1/sentry/proj')).not.toContain('/api/')
+    expect(ingestUrl('https://k@api.hanzo.ai/v1/event/proj')).not.toContain('/api/')
   })
   it('sdkSnippet embeds the DSN and falls back to a replaceable placeholder', () => {
-    expect(sdkSnippet('https://k@api.hanzo.ai/v1/sentry/web')).toContain("dsn: 'https://k@api.hanzo.ai/v1/sentry/web'")
-    expect(sdkSnippet('')).toContain('<key>@api.hanzo.ai/v1/sentry/<project>')
+    expect(sdkSnippet('https://k@api.hanzo.ai/v1/event/web')).toContain("dsn: 'https://k@api.hanzo.ai/v1/event/web'")
+    expect(sdkSnippet('')).toContain('<key>@api.hanzo.ai/v1/event/<project>')
   })
 })
 

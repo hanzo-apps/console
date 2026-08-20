@@ -30,8 +30,8 @@ importers:
         specifier: ^0.5.13
         version: 0.5.13
       '@hanzo/event':
-        specifier: ^0.3.28
-        version: 0.3.28(react@19.2.8)
+        specifier: ^0.3.29
+        version: 0.3.29(react@19.2.8)
       '@hanzo/finance-ui':
         specifier: ~0.1.1
         version: 0.1.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -797,8 +797,8 @@ packages:
     resolution: {integrity: sha512-Aqm5Fau6C3pmw1ybgTfjoE9ypSxVsGNwGE62BaftfoiqkD28I++P93mhObIZKUwmw5/kk2dfu6HWaCg+iwASxw==}
     hasBin: true
 
-  '@hanzo/event@0.3.28':
-    resolution: {integrity: sha512-a4fNAO5RhHHOZeZDdhcApqS06tfXhfOPRfHs26HKkB0V1ben9au5MOMOMpEcorRGsT9eveMUrysfCBtcRTdl6Q==}
+  '@hanzo/event@0.3.29':
+    resolution: {integrity: sha512-SZETq6zUyXF7VVqoDT3+nxLYlvGY8onIBLEsra6VFJas+tE0MbsZBWWXjq/TrFyWpe63dGqmS6ZoD6nnUkljlQ==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -4967,7 +4967,7 @@ snapshots:
 
   '@hanzo/design@0.5.13': {}
 
-  '@hanzo/event@0.3.28(react@19.2.8)':
+  '@hanzo/event@0.3.29(react@19.2.8)':
     dependencies:
       '@hanzo/events': 0.2.1
     optionalDependencies:
@@ -5067,7 +5067,7 @@ snapshots:
 
   '@hanzo/observe@0.1.7(react@19.2.8)':
     dependencies:
-      '@hanzo/event': 0.3.28(react@19.2.8)
+      '@hanzo/event': 0.3.29(react@19.2.8)
     optionalDependencies:
       react: 19.2.8
 
@@ -6070,7 +6070,7 @@ snapshots:
 
   '@hanzogui/telemetry@8.1.1(react@19.2.8)':
     dependencies:
-      '@hanzo/event': 0.3.28(react@19.2.8)
+      '@hanzo/event': 0.3.29(react@19.2.8)
       '@hanzo/observe': 0.1.7(react@19.2.8)
       react: 19.2.8
 

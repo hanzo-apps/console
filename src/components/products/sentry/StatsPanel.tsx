@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Monitor — event-rate + error-rate timeseries over `/v1/sentry/stats`, per
+ * Monitor — event-rate + error-rate timeseries over `/v1/sentinel/stats`, per
  * project. Two real series (events received, errors) charted over the window with
  * KPI totals and a derived error rate. Every point is the backend's own count —
  * empty is an honest empty chart, a failed load the shared `ErrorState`.

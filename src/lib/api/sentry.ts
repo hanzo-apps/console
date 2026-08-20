@@ -1,17 +1,17 @@
 /**
- * Hanzo Sentry — the full error/log/trace dashboard client, over the `/v1/sentry`
+ * Hanzo Sentinel — the full error/log/trace dashboard client, over the `/v1/sentinel`
  * contract (native-Go cloud surface, built in parallel to this exact shape).
  *
  * Transport: the version-less same-origin `/v1` BFF every Observe tab uses
- * (`originV1Url` → `<origin>/v1/sentry/<resource>`) — the browser sends only its
+ * (`originV1Url` → `<origin>/v1/sentinel/<resource>`) — the browser sends only its
  * first-party session cookie; the console's `app/v1/[...path]` catch-all mints a
  * short-lived IAM bearer and forwards it (org from the Bearer owner), and the
- * go:embed console reaches cloud's `/v1/sentry/*` directly on the same cookie. The
+ * go:embed console reaches cloud's `/v1/sentinel/*` directly on the same cookie. The
  * `sentry` head is allow-listed in `proxy-allow.ts`, so a cookie-only / cross-tenant
  * call is refused server-side. Org scope is ALWAYS server-enforced — never a client
  * param — so no reader takes an org.
  *
- * `/v1/sentry` speaks plain REST (raw JSON + real HTTP status), NOT the casibase
+ * `/v1/sentinel` speaks plain REST (raw JSON + real HTTP status), NOT the casibase
  * `{status,msg,data}` envelope — so we use `restGet`/`restPost`/`restPut`, which
  * throw a typed `ApiError` carrying that status (503 not-initialized, 404 unrouted,
  * 401/403 access). Every reader returns a defensively-parsed view-model (garbage /
@@ -489,7 +489,7 @@ export function normalizeStats(body: unknown): StatPoint[] {
 
 // ── Transport ─────────────────────────────────────────────────────────────────
 
-const u = (path: string): string => originV1Url(`sentry/${path.replace(/^\/+/, '')}`)
+const u = (path: string): string => originV1Url(`sentinel/${path.replace(/^\/+/, '')}`)
 
 /** Build a `?k=v` query string from a params map, dropping empty values. */
 function qs(params: Record<string, string | number | undefined | null>): string {
@@ -511,7 +511,7 @@ export type LogsQuery = { project?: string; query?: string; level?: string; peri
 export type TracesQuery = { project?: string; query?: string; period?: Period }
 export type StatsQuery = { project?: string; field?: string; period?: Period }
 
-/** The `/v1/sentry` client — every read org-scoped SERVER-SIDE (no org param). */
+/** The `/v1/sentinel` client — every read org-scoped SERVER-SIDE (no org param). */
 export const SentryApi = {
   // ── Projects ──
   projects: async (): Promise<SentryProject[]> => normalizeProjects(await restGet<unknown>(u('projects'))),

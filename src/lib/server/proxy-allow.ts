@@ -14,6 +14,13 @@
  * plus the serverless / prompt / agent surfaces.
  */
 export const CLOUD_HEADS: readonly string[] = [
+  // The API describing itself (/v1/commands) — every operation cloud answers, each
+  // reduced to the name it is addressed by, its method, path and prose. Cloud composes
+  // it from each subsystem's own projection of its router, so nothing in it is written
+  // twice, and it grants nothing: every route it names stays individually gated, which
+  // is why cloud serves it unauthenticated. The per-product brief reads a product's
+  // operations from here, through the one same-origin form every other read uses.
+  'commands',
   // The per-user sk- credential. It lives on cloud's OWN head: /v1/iam/* routes to
   // IAM, which answers a request meant for cloud with its own 401.
   'keys',
@@ -300,14 +307,14 @@ export const CLOUD_HEADS: readonly string[] = [
   // principal gate refuses any bearer-less call, so it routes through the /v1 bearer BFF
   // like the rest. The single `o11y` head admits every o11y sub-path.
   'o11y',
-  // Hanzo Sentry (cloud clients/sentry): the full error/log/trace product surface at
-  // the canonical `/v1/sentry/<resource>` — projects (+ DSN/key rotate), issues (list/
+  // Hanzo Sentinel (cloud clients/sentry): the full error/log/trace product surface at
+  // the canonical `/v1/sentinel/<resource>` — projects (+ DSN/key rotate), issues (list/
   // get/update/events), discover, events, logs, traces (+ detail), stats. The Sentry
   // face (sentry.<brand>) reads it over the same-origin `/v1` bearer BFF; the handler
   // scopes every read to the SANITIZED caller org (X-Org-Id from the Bearer owner) and
   // 403s a cookie-only / cross-tenant call, so it routes through /v1 exactly like o11y.
   // The single `sentry` head admits every sentry sub-path.
-  'sentry',
+  'sentinel',
   // Web Search (cloud clients/websearch, order 141): /v1/websearch/{search,scrape}.
   // Self-hosted SearXNG meta-search + Crawl4AI scrape. The `search` proxy has no
   // principal gate (its optional X-API-Key admits a missing key), so a signed-in
