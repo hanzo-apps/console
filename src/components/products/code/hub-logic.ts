@@ -9,15 +9,20 @@
  * filter + org grouping, the in-hub deep-link builders (repo → browser, span/citation →
  * file), and the assistant-seed prompt composition (repo/file context for "Ask AI").
  */
-import type { Repo } from '~/lib/api/git'
+import type { Mirror, Repo } from '~/lib/api/git'
 
 /** The hub's URL root. Every in-hub navigation is built from this ONE base (DRY). */
 export const CODE_BASE = '/code'
 
-/** The three hub faces (level-2 tabs). `repos` is the default landing (the front door). */
-export type HubTab = 'repos' | 'search' | 'ask'
-export const HUB_TABS: HubTab[] = ['repos', 'search', 'ask']
-export const HUB_TAB_LABEL: Record<HubTab, string> = { repos: 'Repositories', search: 'Search', ask: 'Ask' }
+/** The four hub faces (level-2 tabs). `repos` is the default landing (the front door). */
+export type HubTab = 'repos' | 'publishing' | 'search' | 'ask'
+export const HUB_TABS: HubTab[] = ['repos', 'publishing', 'search', 'ask']
+export const HUB_TAB_LABEL: Record<HubTab, string> = {
+  repos: 'Repositories',
+  publishing: 'Publishing',
+  search: 'Search',
+  ask: 'Ask',
+}
 
 /** Fold a loose tab string to a valid hub tab (unknown / '' → the default `repos`). PURE. */
 export function canonicalTab(raw?: string): HubTab {
@@ -63,6 +68,68 @@ export function groupReposByOrg(repos: Repo[]): RepoGroup[] {
   return [...byOrg.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([org, rs]) => ({ org, repos: rs }))
+}
+
+// ── Publishing: where a repo's code reaches (the Publishing face) ────────────
+
+/**
+ * One repo and the downstream remotes its advanced refs are pushed to.
+ *
+ * `targets` is deliberately `Mirror[] | 'unknown'`, not `Mirror[]`. An empty array and
+ * a failed read are OPPOSITE facts — "this repo publishes nowhere" is a finding, "we
+ * could not ask" is an absence of one — and collapsing them would report a broken read
+ * as a broken repo, which is the exact confusion this face exists to end.
+ */
+export type Publication = { repo: Repo; targets: Mirror[] | 'unknown' }
+
+/** What a repo's publication amounts to. `nowhere` is the state worth surfacing. */
+export type Reach = 'published' | 'nowhere' | 'unknown'
+
+/** The reach of one publication. PURE. */
+export function reachOf(p: Publication): Reach {
+  if (p.targets === 'unknown') return 'unknown'
+  return p.targets.length > 0 ? 'published' : 'nowhere'
+}
+
+/** Reach order for the list: the repos that publish NOWHERE are what you came to see. */
+const REACH_RANK: Record<Reach, number> = { nowhere: 0, unknown: 1, published: 2 }
+
+/**
+ * Order publications so the silent repos sort first, then the unreadable ones, then the
+ * healthy ones; within a reach, by name. A page that buries the one finding under two
+ * hundred fine rows has not reported it. PURE.
+ */
+export function byReach(ps: Publication[]): Publication[] {
+  return [...ps].sort(
+    (a, b) =>
+      REACH_RANK[reachOf(a)] - REACH_RANK[reachOf(b)] || a.repo.name.localeCompare(b.repo.name),
+  )
+}
+
+/** How many repos sit in each reach — the one-line summary above the table. PURE. */
+export function tally(ps: Publication[]): Record<Reach, number> & { total: number } {
+  const t = { published: 0, nowhere: 0, unknown: 0, total: ps.length }
+  for (const p of ps) t[reachOf(p)]++
+  return t
+}
+
+/**
+ * The distinct hosts a repo publishes to, in first-seen order — the cell text. A target
+ * whose host is empty degrades to its url rather than vanishing, so a row never claims
+ * fewer destinations than it has. PURE.
+ */
+export function hostsOf(p: Publication): string[] {
+  if (p.targets === 'unknown') return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const m of p.targets) {
+    const h = m.host || m.url
+    if (h && !seen.has(h)) {
+      seen.add(h)
+      out.push(h)
+    }
+  }
+  return out
 }
 
 // ── In-hub deep links (pure, injection-safe) ─────────────────────────────────

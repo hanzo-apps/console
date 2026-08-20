@@ -2089,6 +2089,7 @@ export const catalog: CatalogEntry[] = [
     kind: 'module',
     subpages: [
       { slug: 'repos', label: 'Repositories', icon: FolderGit2 },
+      { slug: 'publishing', label: 'Publishing', icon: Upload },
       { slug: 'search', label: 'Search', icon: Search },
       { slug: 'ask', label: 'Ask', icon: Sparkles },
     ],

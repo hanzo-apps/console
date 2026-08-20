@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { Repo } from '~/lib/api/git'
+import type { Mirror, Repo } from '~/lib/api/git'
 import {
   canonicalTab,
   filterRepos,
@@ -9,7 +9,12 @@ import {
   boundedCode,
   askRepoPrompt,
   askFilePrompt,
+  byReach,
+  hostsOf,
+  reachOf,
+  tally,
   HUB_TABS,
+  type Publication,
 } from './hub-logic'
 
 const repo = (over: Partial<Repo>): Repo => ({
@@ -74,6 +79,64 @@ describe('groupReposByOrg', () => {
   it('buckets an empty org under a dash, never dropping a row', () => {
     const groups = groupReposByOrg([repo({ name: 'x', org: '' })])
     expect(groups).toEqual([{ org: '—', repos: [expect.objectContaining({ name: 'x' })] }])
+  })
+})
+
+describe('publishing', () => {
+  const mirror = (over: Partial<Mirror>): Mirror => ({
+    id: 'mir_1',
+    repo: 'cloud',
+    host: 'github.com',
+    url: 'https://github.com/hanzoai/cloud.git',
+    createdAt: '2026-01-01T00:00:00Z',
+    ...over,
+  })
+  const pub = (name: string, targets: Publication['targets']): Publication => ({
+    repo: repo({ name }),
+    targets,
+  })
+
+  it('separates publishing nowhere from a read that failed', () => {
+    expect(reachOf(pub('a', []))).toBe('nowhere')
+    expect(reachOf(pub('a', 'unknown'))).toBe('unknown')
+    expect(reachOf(pub('a', [mirror({})]))).toBe('published')
+  })
+
+  it('sorts the silent repos first, then unknown, then published; by name within', () => {
+    const ordered = byReach([
+      pub('zeta', [mirror({})]),
+      pub('beta', []),
+      pub('gamma', 'unknown'),
+      pub('alpha', []),
+      pub('acme', [mirror({})]),
+    ])
+    expect(ordered.map((p) => p.repo.name)).toEqual(['alpha', 'beta', 'gamma', 'acme', 'zeta'])
+  })
+
+  it('tallies each reach and the total', () => {
+    expect(tally([pub('a', []), pub('b', [mirror({})]), pub('c', 'unknown'), pub('d', [])])).toEqual({
+      published: 1,
+      nowhere: 2,
+      unknown: 1,
+      total: 4,
+    })
+  })
+
+  it('lists distinct hosts in first-seen order, and nothing for an unknown read', () => {
+    const p = pub('a', [
+      mirror({ id: '1', host: 'github.com' }),
+      mirror({ id: '2', host: 'gitlab.com' }),
+      mirror({ id: '3', host: 'github.com' }),
+    ])
+    expect(hostsOf(p)).toEqual(['github.com', 'gitlab.com'])
+    expect(hostsOf(pub('a', 'unknown'))).toEqual([])
+    expect(hostsOf(pub('a', []))).toEqual([])
+  })
+
+  it('falls back to the url when a target carries no host, so no destination vanishes', () => {
+    expect(hostsOf(pub('a', [mirror({ host: '', url: 'https://example.test/x.git' })]))).toEqual([
+      'https://example.test/x.git',
+    ])
   })
 })
 

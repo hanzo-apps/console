@@ -16,6 +16,7 @@ import type { ServiceMetric } from '@hanzo/canvas/pure'
 
 import { O11yMetricsApi, type ServiceMetrics } from '~/lib/api/o11y-metrics'
 import type { PlatformApp } from '~/lib/api/platform-apps'
+import { mapLimit } from '~/lib/map-limit'
 
 /** Compact number for the card value (1234 → "1.2K") — the console's standard idiom. */
 const compact = (n: number): string =>
@@ -40,17 +41,6 @@ export function cardMetric(r: ServiceMetrics): ServiceMetric | undefined {
   return { label: 'req', points: r.requests.map((p) => p.v), value: compact(r.summary.requests) }
 }
 
-/** Run `fn` over `items` with at most `limit` in flight (a tiny concurrency gate). */
-async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
-  let i = 0
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (i < items.length) {
-      const idx = i++
-      await fn(items[idx])
-    }
-  })
-  await Promise.all(workers)
-}
 
 /**
  * Fetch the card Requests metric for each app, keyed by `app.id`. Concurrency-capped;

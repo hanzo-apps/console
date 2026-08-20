@@ -5,6 +5,8 @@ import {
   normalizeBlob,
   normalizeCommit,
   normalizeCommits,
+  normalizeMirror,
+  normalizeMirrors,
   normalizeReadme,
   normalizeRef,
   normalizeRefList,
@@ -200,6 +202,47 @@ describe('readme', () => {
     expect(normalizeReadme({ content: 'x' })?.path).toBe('README.md')
     expect(normalizeReadme({})).toBeNull()
     expect(normalizeReadme(null)).toBeNull()
+  })
+})
+
+describe('mirrors', () => {
+  it('maps the cloud mirrorTargetView', () => {
+    expect(
+      normalizeMirror({
+        id: 'mir_2d90',
+        repo: 'widgets',
+        host: 'github.com',
+        url: 'https://github.com/acme/widgets.git',
+        createdAt: '2026-07-01T10:00:00Z',
+      }),
+    ).toEqual({
+      id: 'mir_2d90',
+      repo: 'widgets',
+      host: 'github.com',
+      url: 'https://github.com/acme/widgets.git',
+      createdAt: '2026-07-01T10:00:00Z',
+    })
+  })
+
+  it('derives host from the url when the backend omits it', () => {
+    expect(normalizeMirror({ url: 'https://GitLab.com/acme/x.git' })?.host).toBe('gitlab.com')
+  })
+
+  it('drops a target with no url — the url IS the target', () => {
+    expect(normalizeMirror({ id: 'mir_1', host: 'github.com' })).toBeNull()
+  })
+
+  it('normalizeMirrors reads data/mirrors/items, garbage → []', () => {
+    const one = [{ url: 'https://github.com/a/b.git' }]
+    expect(normalizeMirrors({ data: one })).toHaveLength(1)
+    expect(normalizeMirrors({ mirrors: one })).toHaveLength(1)
+    expect(normalizeMirrors({ items: one })).toHaveLength(1)
+    expect(normalizeMirrors(null)).toEqual([])
+    expect(normalizeMirrors({ data: [{ nope: 1 }] })).toEqual([])
+  })
+
+  it('an empty list is a real answer (publishes nowhere), not a failure', () => {
+    expect(normalizeMirrors({ data: [] })).toEqual([])
   })
 })
 

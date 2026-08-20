@@ -129,6 +129,13 @@ export type Commit = {
 /** The rendered README at the repo root (markdown source + its encoding). */
 export type Readme = { path: string; content: string; encoding: 'utf8' | 'base64' }
 
+/**
+ * One downstream remote a repo's advanced refs are force-pushed to — the cloud
+ * `mirrorTargetView`. A repo with NO targets is published nowhere; that absence is
+ * the state worth seeing, so it is a value ([] means nowhere) and never a null.
+ */
+export type Mirror = { id: string; repo: string; host: string; url: string; createdAt: string }
+
 // ── Normalizers (pure — unit-tested) ─────────────────────────────────────────
 
 /** Normalize one repo (drops rows with no name — the org-unique handle is mandatory). */
@@ -251,6 +258,39 @@ export function normalizeReadme(payload: unknown): Readme | null {
   return { path: path ?? 'README.md', content: content ?? '', encoding: enc === 'base64' ? 'base64' : 'utf8' }
 }
 
+/**
+ * Normalize one mirror target (drops a target with no url — the url IS the target).
+ * `host` falls back to the url's own hostname, so a row is never labelled by a field
+ * the backend happens not to send.
+ */
+export function normalizeMirror(raw: unknown): Mirror | null {
+  const r = asRecord(raw)
+  const url = str(r.url) ?? str(r.remote) ?? str(r.target)
+  if (!url) return null
+  let host = str(r.host)
+  if (!host) {
+    try {
+      host = new URL(url).hostname.toLowerCase()
+    } catch {
+      host = undefined
+    }
+  }
+  return {
+    id: str(r.id) ?? url,
+    repo: str(r.repo) ?? '',
+    host: host ?? '',
+    url,
+    createdAt: str(r.createdAt) ?? str(r.created_at) ?? '',
+  }
+}
+
+/** Normalize the list payload → `Mirror[]` (reads the array from any common envelope key). */
+export function normalizeMirrors(payload: unknown): Mirror[] {
+  return arrayUnder(payload, ['data', 'mirrors', 'items', 'rows', 'results'])
+    .map(normalizeMirror)
+    .filter((m): m is Mirror => m !== null)
+}
+
 // ── Derived helpers (pure — unit-tested) ─────────────────────────────────────
 
 const EM = '—'
@@ -314,4 +354,12 @@ export const GitApi = {
   /** The root README (`GET /v1/git/repos/:name/readme?ref`); null when absent. */
   readme: (name: string, ref?: string): Promise<Readme | null> =>
     restGet<unknown>(withQuery(gitUrl(`repos/${encodeURIComponent(name)}/readme`), { ref })).then(normalizeReadme),
+
+  /**
+   * Where a repo publishes (`GET /v1/git/repos/:name/mirrors`). An empty array is a
+   * real answer — the repo publishes nowhere — so callers must distinguish it from a
+   * failed read, which throws.
+   */
+  mirrors: (name: string): Promise<Mirror[]> =>
+    restGet<unknown>(gitUrl(`repos/${encodeURIComponent(name)}/mirrors`)).then(normalizeMirrors),
 }

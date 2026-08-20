@@ -20,6 +20,7 @@ import { Input, Text, XStack, YStack } from '@hanzo/gui'
 import { Code2 } from '@hanzogui/lucide-icons-2'
 
 import { RepoList } from '../git/RepoList'
+import { PublishList } from './PublishList'
 import { SearchFace, AskFace } from './IntelligenceFaces'
 import { CODE_BASE, HUB_TABS, HUB_TAB_LABEL, type HubTab } from './hub-logic'
 import { PageHeader } from '@hanzo/ui/product'
@@ -82,7 +83,15 @@ export function CodeHub({ tab }: { tab: HubTab }) {
 
       <HubTabs active={tab} onSelect={(t) => router.push(`${CODE_BASE}/${t}`)} />
 
-      {tab === 'repos' ? <RepoList /> : tab === 'search' ? <SearchFace scope={scope} /> : <AskFace scope={scope} />}
+      {tab === 'repos' ? (
+        <RepoList />
+      ) : tab === 'publishing' ? (
+        <PublishList />
+      ) : tab === 'search' ? (
+        <SearchFace scope={scope} />
+      ) : (
+        <AskFace scope={scope} />
+      )}
     </YStack>
   )
 }

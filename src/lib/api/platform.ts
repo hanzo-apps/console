@@ -157,6 +157,45 @@ export type PlatformApp = {
   drift?: { severity?: string; flags?: AppDriftFlag[] }
 }
 
+/** Severity order for drift, worst first. Anything unrecognised sorts last. */
+const DRIFT_RANK: Record<string, number> = { red: 0, critical: 0, error: 0, high: 0, yellow: 1, warn: 1, medium: 1 }
+const rankOf = (sev?: string): number => DRIFT_RANK[(sev ?? '').toLowerCase()] ?? 2
+
+/**
+ * The distinct drift flags on an app, worst first — the WHY behind the severity word.
+ *
+ * The inventory reports both a severity and the flags that produced it (`stale`,
+ * `un-rolled`, `floating-declared`, `no-release`, …). A board that prints only the
+ * severity says an app is drifting without saying from what, which is the same as not
+ * reporting it: "yellow" sends you to kubectl, and the reason was already in the
+ * payload. Deduplicated by kind so a repeated flag does not pad the line. PURE.
+ */
+export function driftReasons(app: PlatformApp): AppDriftFlag[] {
+  const flags = app.drift?.flags ?? []
+  const seen = new Set<string>()
+  const out: AppDriftFlag[] = []
+  for (const f of flags) {
+    const kind = (f?.kind ?? '').trim()
+    if (!kind || seen.has(kind)) continue
+    seen.add(kind)
+    out.push(f)
+  }
+  return out.sort((a, b) => rankOf(a.severity) - rankOf(b.severity))
+}
+
+/**
+ * A one-line drift label: the flag kinds worst-first, comma-joined. Empty when the app
+ * is not drifting, so a caller renders the same em dash it always did. When the
+ * inventory gives a severity but no flags, the severity itself IS the label — never an
+ * empty badge that hides a real finding. PURE.
+ */
+export function driftLabel(app: PlatformApp): string {
+  const kinds = driftReasons(app).map((f) => f.kind)
+  if (kinds.length) return kinds.join(', ')
+  const sev = (app.drift?.severity ?? '').trim()
+  return sev && sev.toLowerCase() !== 'none' ? sev : ''
+}
+
 /** Optional filters for the apps inventory (mirrors the platform's query params). */
 export type AppsQuery = {
   org?: string
