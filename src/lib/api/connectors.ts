@@ -72,22 +72,53 @@ export type Connection = {
   connectedAt: string
 }
 
+/**
+ * HOW a connector is connected — the one thing that genuinely differs between
+ * the two halves of the catalog.
+ *
+ * `oauth` sends the browser to the provider and comes back with a code.
+ * `credential` cannot: WhatsApp, a carrier SMS account and SMTP hand you a
+ * token (or a host and a password) in a dashboard, with no consent screen and
+ * nothing to come back from. Cloud PUBLISHES this rather than leaving a client
+ * to keep its own list of which providers are which.
+ */
+export type ConnectorKind = 'oauth' | 'credential'
+
+/** One input a credential connector asks for. The form is rendered from the
+ *  catalog, so adding a connector never edits this UI. */
+export type ConnectorField = {
+  name: string
+  label: string
+  /** Sealed into KMS and never read back. Rendered as a password input. */
+  secret: boolean
+  required: boolean
+}
+
 /** One connectable provider card. */
 export type Provider = {
   id: string
   name: string
   description: string
   category: string
-  /** App creds are configured on this deployment — the Connect button is live. */
+  /** App creds are configured on this deployment — the Connect button is live.
+   *  Always true for a credential connector: it is configured by the org that
+   *  pastes its own account, so there is no deployment credential to be missing. */
   available: boolean
   /** This org has an active connection. */
   connected: boolean
   /** The active connection details (null when not connected). */
   connection: Connection | null
+  /** Which connect leg this provider takes. Defaults to `oauth` so a cloud that
+   *  has not published the field yet keeps its current meaning. */
+  kind: ConnectorKind
+  /** The form a credential connector needs; empty for oauth. */
+  fields: ConnectorField[]
 }
 
-/** The connect response — the provider authorize URL to top-level navigate to. */
-export type ConnectResult = { authorizeUrl: string }
+/** The connect response. An oauth connect answers with the provider authorize
+ *  URL to top-level navigate to; a credential connect has already finished by
+ *  the time it replies, and says so. */
+export type ConnectResult = { authorizeUrl: string; connected?: boolean; account?: string }
 
 // ── Normalizers (pure; honest defaults, never throw) ─────────────────────────
 
@@ -115,7 +146,29 @@ export function normalizeProvider(raw: unknown): Provider {
     available: bool(r.available),
     connected: bool(r.connected) || connection != null,
     connection,
+    // Anything that is not the credential kind reads as oauth, which is the
+    // safe default: an oauth connect navigates and an unexpected value would
+    // otherwise render a form with no fields in it.
+    kind: str(r.kind) === 'credential' ? 'credential' : 'oauth',
+    fields: normalizeFields(r.fields),
   }
+}
+
+/** Field rows, tolerant of a missing/garbage list — a connector whose form
+ *  cannot be read renders as having none rather than throwing the page away. */
+export function normalizeFields(raw: unknown): ConnectorField[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((f) => {
+      const r = asRecord(f)
+      return {
+        name: str(r.name),
+        label: str(r.label) || str(r.name),
+        secret: bool(r.secret),
+        required: bool(r.required),
+      }
+    })
+    .filter((f) => f.name)
 }
 
 export function normalizeProviders(payload: unknown): Provider[] {
@@ -130,7 +183,11 @@ export function normalizeProviders(payload: unknown): Provider[] {
  */
 export function normalizeConnectResult(raw: unknown): ConnectResult {
   const r = asRecord(raw)
-  return { authorizeUrl: str(r.authorizeUrl) || str(r.authorize_url) || str(r.url) }
+  return {
+    authorizeUrl: str(r.authorizeUrl) || str(r.authorize_url) || str(r.url),
+    connected: bool(r.connected),
+    account: str(r.account),
+  }
 }
 
 // ── Network methods (thin — one per documented route) ────────────────────────
@@ -144,9 +201,14 @@ export const ConnectorsApi = {
   get: (id: string): Promise<Provider> =>
     restGet<unknown>(originV1Url(`${BASE}/${enc(id)}`)).then(normalizeProvider),
 
-  /** Begin the org-authed OAuth flow → the provider authorize URL to navigate to. */
-  connect: (id: string): Promise<ConnectResult> =>
-    restPost<unknown>(originV1Url(`${BASE}/${enc(id)}/connect`)).then(normalizeConnectResult),
+  /**
+   * Connect. ONE method for both kinds, because it is one route: an oauth
+   * connector answers with the authorize URL to navigate to, and a credential
+   * connector takes the pasted `values` and answers {connected:true} — it has
+   * already verified and sealed them by the time it replies.
+   */
+  connect: (id: string, values?: Record<string, string>): Promise<ConnectResult> =>
+    restPost<unknown>(originV1Url(`${BASE}/${enc(id)}/connect`), values).then(normalizeConnectResult),
 
   /** Revoke + clear this org's connection (POST /disconnect, per the contract). */
   disconnect: (id: string): Promise<void> =>

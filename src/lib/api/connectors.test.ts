@@ -83,7 +83,9 @@ describe('Integrations normalizers — contract Provider shape, defensive', () =
 })
 
 describe('ConnectorsApi — hits the same-origin /v1/connectors contract (rewritten to the /v1 BFF)', () => {
-  const fetched: { url: string; method: string }[] = []
+  // The BODY is recorded too: a credential connect is defined by what it sends,
+  // so a spy that only saw the URL would pass whether or not the fields went up.
+  const fetched: { url: string; method: string; body?: unknown }[] = []
 
   beforeEach(() => {
     fetched.length = 0
@@ -91,7 +93,11 @@ describe('ConnectorsApi — hits the same-origin /v1/connectors contract (rewrit
       location: { origin: ORIGIN, hostname: 'console.hanzo.ai' },
     }
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
-      fetched.push({ url, method: init?.method ?? 'GET' })
+      fetched.push({
+        url,
+        method: init?.method ?? 'GET',
+        body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+      })
       const body = url.endsWith('/connect')
         ? { authorizeUrl: 'https://slack.com/oauth/v2/authorize?x=1' }
         : url.endsWith('/disconnect')
@@ -119,6 +125,18 @@ describe('ConnectorsApi — hits the same-origin /v1/connectors contract (rewrit
     const p = await ConnectorsApi.get('slack')
     expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/connectors/slack`, method: 'GET' })
     expect(p.id).toBe('slack')
+  })
+
+  // ONE route serves both kinds: an oauth connect POSTs nothing and gets a URL
+  // back, a credential connect POSTs the pasted fields and is already done.
+  it('POSTs credential values on the same one connect route', async () => {
+    const values = { phone_number_id: '123', access_token: 'tok' }
+    await ConnectorsApi.connect('whatsapp', values)
+    expect(fetched[0]).toMatchObject({
+      url: `${ORIGIN}/v1/connectors/whatsapp/connect`,
+      method: 'POST',
+      body: values,
+    })
   })
 
   it('connects with POST and returns the authorizeUrl', async () => {
@@ -198,5 +216,49 @@ describe('GitHubApi — hits the same-origin /v1/connectors/github contract', ()
   it('imports all via POST with the {all:true} body', async () => {
     await GitHubApi.importRepos({ all: true })
     expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/connectors/github/repos/import`, method: 'POST', body: { all: true } })
+  })
+})
+
+describe('the two connector kinds', () => {
+  it('reads a credential connector and its form out of the catalog', () => {
+    const p = normalizeProvider({
+      id: 'whatsapp',
+      name: 'WhatsApp',
+      kind: 'credential',
+      available: true,
+      fields: [
+        { name: 'phone_number_id', label: 'Phone number ID', required: true },
+        { name: 'access_token', label: 'Permanent access token', secret: true, required: true },
+      ],
+    })
+    expect(p.kind).toBe('credential')
+    expect(p.fields.map((f) => f.name)).toEqual(['phone_number_id', 'access_token'])
+    expect(p.fields[1].secret).toBe(true)
+  })
+
+  it('defaults to oauth, so a cloud that has not published `kind` keeps working', () => {
+    const p = normalizeProvider({ id: 'slack', name: 'Slack' })
+    expect(p.kind).toBe('oauth')
+    expect(p.fields).toEqual([])
+  })
+
+  it('reads an unknown kind as oauth rather than rendering a form with no fields', () => {
+    expect(normalizeProvider({ id: 'x', kind: 'sorcery' }).kind).toBe('oauth')
+  })
+
+  it('drops a field with no name — it could not be submitted under any key', () => {
+    const p = normalizeProvider({ id: 'sms', kind: 'credential', fields: [{ label: 'Orphan' }, { name: 'ok' }] })
+    expect(p.fields.map((f) => f.name)).toEqual(['ok'])
+  })
+
+  it('survives a garbage `fields` instead of throwing the page away', () => {
+    expect(normalizeProvider({ id: 'sms', kind: 'credential', fields: 'nope' }).fields).toEqual([])
+  })
+
+  it('reads {connected:true} as a finished connect — there is no redirect to follow', () => {
+    const r = normalizeConnectResult({ connected: true, account: '+1 555 0100' })
+    expect(r.connected).toBe(true)
+    expect(r.account).toBe('+1 555 0100')
+    expect(r.authorizeUrl).toBe('')
   })
 })

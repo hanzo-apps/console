@@ -29,7 +29,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from '~/lib/router'
-import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
+import { Button, Card, Input, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Cable, Plug, RefreshCw, GitBranch } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, ConnectorsApi, type ConnectorProvider as Provider } from '~/lib/api'
@@ -45,12 +45,72 @@ function fmtWhen(v: string): string {
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString()
 }
 
+/**
+ * The form a CREDENTIAL connector asks for, rendered from the catalog.
+ *
+ * Cloud publishes `fields` — name, label, whether it is secret — so this
+ * component never learns which providers exist. Adding a connector on the
+ * backend makes its form appear here with no change to this file, which is the
+ * same reason the OAuth half publishes its scopes.
+ *
+ * A secret field is a password input: it is the org's real credential, and it
+ * travels one way only. Nothing here reads a stored secret back — cloud seals it
+ * into KMS and never returns it.
+ */
+function CredentialForm({
+  p,
+  busy,
+  onSubmit,
+}: {
+  p: Provider
+  busy: boolean
+  onSubmit: (p: Provider, values: Record<string, string>) => void
+}) {
+  const [values, setValues] = useState<Record<string, string>>({})
+  const missing = p.fields.some((f) => f.required && !(values[f.name] ?? '').trim())
+
+  return (
+    <YStack gap="$2">
+      {p.fields.map((f) => (
+        <YStack key={f.name} gap="$1">
+          <Text fontSize="$1" color="$color11">
+            {f.label}
+            {f.required ? ' *' : ''}
+          </Text>
+          <Input
+            size="$3"
+            data-testid={`field-${p.id}-${f.name}`}
+            secureTextEntry={f.secret}
+            value={values[f.name] ?? ''}
+            onChangeText={(v: string) => setValues((prev) => ({ ...prev, [f.name]: v }))}
+          />
+        </YStack>
+      ))}
+      <PrimaryButton
+        size="$3"
+        onPress={() => onSubmit(p, values)}
+        disabled={busy || missing}
+        icon={busy ? undefined : <Plug size={15} />}
+      >
+        {busy ? <Spinner size="small" /> : 'Connect'}
+      </PrimaryButton>
+      {/* Say what happens, because it is not a redirect: the credentials are
+          checked against the provider before anything is stored, so a wrong
+          paste is refused here rather than on the first real send. */}
+      <Text fontSize="$1" color="$color10">
+        Checked with {p.name} before they are saved.
+      </Text>
+    </YStack>
+  )
+}
+
 /** One provider card — mark, name, description, status, connection facts, action. */
 function ProviderCard({
   p,
   busy,
   focused,
   onConnect,
+  onSubmitCredentials,
   onDisconnect,
   onManageRepos,
 }: {
@@ -59,6 +119,7 @@ function ProviderCard({
   /** True when /connectors/<id> named this card: ring it and bring it into view. */
   focused?: boolean
   onConnect: (p: Provider) => void
+  onSubmitCredentials: (p: Provider, values: Record<string, string>) => void
   onDisconnect: (p: Provider) => void
   onManageRepos?: (p: Provider) => void
 }) {
@@ -111,33 +172,40 @@ function ProviderCard({
       {/* Say WHY the button is inert, on the card, rather than leaving a dead control
           the reader has to guess about. The deployment holds no app credentials for
           this provider yet, and that is the whole of it. */}
-      {!p.connected && !p.available ? (
+      {!p.connected && !p.available && p.kind === 'oauth' ? (
         <Text fontSize="$1" color="$color10" data-testid={`unavailable-${p.id}`}>
           Awaiting app credentials on this deployment.
         </Text>
       ) : null}
 
-      <XStack items="center" justify="flex-end" gap="$2" mt="$1" flexWrap="wrap">
-        {p.connected && onManageRepos ? (
-          <Button size="$3" onPress={() => onManageRepos(p)} icon={<GitBranch size={15} />}>
-            Repositories
-          </Button>
-        ) : null}
-        {p.connected ? (
-          <Button size="$3" onPress={() => onDisconnect(p)} disabled={busy} icon={busy ? undefined : <Plug size={15} />}>
-            {busy ? <Spinner size="small" color="$color11" /> : 'Disconnect'}
-          </Button>
-        ) : (
-          <PrimaryButton
-            size="$3"
-            onPress={() => onConnect(p)}
-            disabled={!p.available || busy}
-            icon={busy ? undefined : <Plug size={15} />}
-          >
-            {busy ? <Spinner size="small" /> : 'Connect'}
-          </PrimaryButton>
-        )}
-      </XStack>
+      {/* A credential connector has no sign-in page to send anyone to, so the
+          card carries the form itself rather than a button that would have
+          nowhere to go. Connected, both kinds look the same — one Disconnect. */}
+      {!p.connected && p.kind === 'credential' ? (
+        <CredentialForm p={p} busy={busy} onSubmit={onSubmitCredentials} />
+      ) : (
+        <XStack items="center" justify="flex-end" gap="$2" mt="$1" flexWrap="wrap">
+          {p.connected && onManageRepos ? (
+            <Button size="$3" onPress={() => onManageRepos(p)} icon={<GitBranch size={15} />}>
+              Repositories
+            </Button>
+          ) : null}
+          {p.connected ? (
+            <Button size="$3" onPress={() => onDisconnect(p)} disabled={busy} icon={busy ? undefined : <Plug size={15} />}>
+              {busy ? <Spinner size="small" color="$color11" /> : 'Disconnect'}
+            </Button>
+          ) : (
+            <PrimaryButton
+              size="$3"
+              onPress={() => onConnect(p)}
+              disabled={!p.available || busy}
+              icon={busy ? undefined : <Plug size={15} />}
+            >
+              {busy ? <Spinner size="small" /> : 'Connect'}
+            </PrimaryButton>
+          )}
+        </XStack>
+      )}
     </Card>
   )
 }
@@ -250,6 +318,34 @@ export function OrgConnectorsModule({ params }: { params: Record<string, string>
     [toast],
   )
 
+  /**
+   * Connect a CREDENTIAL provider: the fields go up, cloud verifies them against
+   * the provider and seals them, and the answer is final — there is no redirect
+   * and nothing to come back from, so the list is reloaded in place.
+   *
+   * A refusal here means the provider rejected the credentials, which is the
+   * useful thing to say: the paste is on screen and can be corrected now.
+   */
+  const onSubmitCredentials = useCallback(
+    async (p: Provider, values: Record<string, string>) => {
+      setBusyId(p.id)
+      try {
+        const res = await ConnectorsApi.connect(p.id, values)
+        if (res.connected) {
+          toast.success(`${p.name} connected`, res.account || undefined)
+          await load()
+          return
+        }
+        toast.error(`Could not connect ${p.name}`, 'Nothing was connected. Check the details and try again.')
+      } catch (e) {
+        toast.error(`Could not connect ${p.name}`, e instanceof ApiError ? e.message : 'Nothing was connected. Try again.')
+      } finally {
+        setBusyId('')
+      }
+    },
+    [toast, load],
+  )
+
   const onDisconnect = useCallback(
     async (p: Provider) => {
       if (typeof window !== 'undefined' && !window.confirm(`Disconnect ${p.name}? Hanzo will stop accessing your ${p.name} workspace.`)) {
@@ -332,6 +428,7 @@ export function OrgConnectorsModule({ params }: { params: Record<string, string>
             p={p}
             busy={busyId === p.id}
             onConnect={onConnect}
+            onSubmitCredentials={onSubmitCredentials}
             onDisconnect={onDisconnect}
             onManageRepos={p.id === 'github' ? (pr) => setReposFor(pr.id) : undefined}
           />
