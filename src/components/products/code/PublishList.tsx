@@ -82,9 +82,52 @@ async function loadPublications(): Promise<Publication[]> {
   return repos.map((repo, i) => ({ repo, targets: targets[i] }))
 }
 
+/**
+ * One summary count, and the filter it applies.
+ *
+ * The counts are the headline, so they are also the control: measured on the hanzo org,
+ * 16 of 248 repos publish and 232 do not, and at that ratio an unfiltered list is a wall
+ * you scroll rather than a question you answer. Pressing a count narrows to it; pressing
+ * it again clears. `emphasis` is for the count that is a finding, which the caller
+ * decides — nothing here treats "nowhere" as an error, because whether a given repo
+ * SHOULD publish is not a fact this system records.
+ */
+function Count({
+  n,
+  label,
+  active,
+  emphasis,
+  onPress,
+}: {
+  n: number
+  label: string
+  active: boolean
+  emphasis?: boolean
+  onPress: () => void
+}) {
+  return (
+    <XStack
+      px="$2"
+      py="$1"
+      rounded="$2"
+      cursor="pointer"
+      bg={active ? '$color4' : 'transparent'}
+      hoverStyle={{ bg: '$color3' }}
+      onPress={onPress}
+      role="button"
+      aria-pressed={active}
+    >
+      <Text fontSize="$2" fontWeight={emphasis || active ? '700' : '400'} color={emphasis || active ? '$color12' : '$color10'}>
+        {n} {label}
+      </Text>
+    </XStack>
+  )
+}
+
 export function PublishList() {
   const router = useRouter()
   const [state, setState] = useState<Async<Publication[]>>({ phase: 'loading' })
+  const [only, setOnly] = useState<Reach | null>(null)
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
@@ -96,10 +139,11 @@ export function PublishList() {
     load()
   }, [load])
 
-  const rows = useMemo(
-    () => (state.phase === 'ready' ? byReach(state.data) : []),
-    [state],
-  )
+  const rows = useMemo(() => {
+    if (state.phase !== 'ready') return []
+    const ordered = byReach(state.data)
+    return only ? ordered.filter((p) => reachOf(p) === only) : ordered
+  }, [state, only])
   const counts = useMemo(
     () => (state.phase === 'ready' ? tally(state.data) : null),
     [state],
@@ -174,23 +218,32 @@ export function PublishList() {
       <XStack gap="$3" items="center" flexWrap="wrap">
         {counts ? (
           <>
-            <Text fontSize="$2" color="$color10">
-              {counts.total} {counts.total === 1 ? 'repository' : 'repositories'}
-            </Text>
-            <Text fontSize="$2" color="$color11">
-              {counts.published} publishing
-            </Text>
-            <Text
-              fontSize="$2"
-              fontWeight={counts.nowhere ? '700' : '400'}
-              color={counts.nowhere ? '$color12' : '$color10'}
-            >
-              {counts.nowhere} nowhere
-            </Text>
+            <Count
+              n={counts.total}
+              label={counts.total === 1 ? 'repository' : 'repositories'}
+              active={only === null}
+              onPress={() => setOnly(null)}
+            />
+            <Count
+              n={counts.published}
+              label="publishing"
+              active={only === 'published'}
+              onPress={() => setOnly(only === 'published' ? null : 'published')}
+            />
+            <Count
+              n={counts.nowhere}
+              label="nowhere"
+              active={only === 'nowhere'}
+              onPress={() => setOnly(only === 'nowhere' ? null : 'nowhere')}
+            />
             {counts.unknown ? (
-              <Text fontSize="$2" color="$color10">
-                {counts.unknown} unreadable
-              </Text>
+              <Count
+                n={counts.unknown}
+                label="unreadable"
+                emphasis
+                active={only === 'unknown'}
+                onPress={() => setOnly(only === 'unknown' ? null : 'unknown')}
+              />
             ) : null}
           </>
         ) : null}
@@ -200,7 +253,7 @@ export function PublishList() {
 
       {state.phase === 'error' ? (
         <BackendStateCard state={state.error} onRetry={() => load()} />
-      ) : state.phase === 'ready' && !rows.length ? (
+      ) : state.phase === 'ready' && !state.data.length ? (
         <EmptyState
           icon={Upload}
           title="No repositories yet"

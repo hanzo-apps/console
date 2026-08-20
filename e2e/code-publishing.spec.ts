@@ -97,6 +97,21 @@ test.describe('Code · Publishing', () => {
     await page.screenshot({ path: join(SHOTS, 'code-publishing.png'), fullPage: true })
   })
 
+  test('a count narrows the list to itself, and pressing it again clears', async ({ page }) => {
+    await openPublishing(page)
+    await expect(page.getByText('silent', { exact: true })).toBeVisible()
+
+    // Narrow to the repos that DO publish: the other two leave.
+    await page.getByText('1 publishing', { exact: true }).click()
+    await expect(page.getByText('cloud', { exact: true })).toBeVisible()
+    await expect(page.getByText('silent', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('unreadable', { exact: true })).toHaveCount(0)
+
+    // Pressing the same count again restores the full list.
+    await page.getByText('1 publishing', { exact: true }).click()
+    await expect(page.getByText('silent', { exact: true })).toBeVisible()
+  })
+
   test('is reachable from the Code hub tab strip', async ({ page }) => {
     await page.goto(`${BASE_URL}/code`, { waitUntil: 'domcontentloaded' })
     const tab = page.getByText('Publishing', { exact: true }).first()
