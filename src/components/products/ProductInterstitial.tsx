@@ -103,7 +103,6 @@ export function ProductInterstitial({ id }: { id: string }) {
             </Text>
             <Text fontSize="$2" color="$color10">
               {entry.category}
-              {entry.gcp ? ` · ${entry.gcp}` : ''}
               {stageOf(entry) === 'admin' ? ' · admin' : ''}
             </Text>
           </YStack>

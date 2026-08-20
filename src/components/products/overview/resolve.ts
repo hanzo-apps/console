@@ -12,7 +12,6 @@ import { OVERVIEW_SPECS, type OverviewSpec } from './spec'
 /** Build an honest fallback spec from the catalog entry's own fields. */
 export function defaultSpec(entry: CatalogEntry): OverviewSpec {
   const facts: OverviewSpec['facts'] = [{ label: 'Category', value: entry.category }]
-  if (entry.gcp) facts.push({ label: 'Equivalent to', value: entry.gcp })
   if (entry.repo) facts.push({ label: 'Open source', value: entry.repo })
 
   return {

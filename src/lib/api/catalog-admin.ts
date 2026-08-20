@@ -51,7 +51,6 @@ export interface CatalogEntry {
   name: string
   category: string
   description: string
-  gcp?: string
   iconKey: string
   brandColor: string
   route: string
@@ -111,7 +110,6 @@ export function normalizeEntry(raw: unknown): CatalogEntry {
     name: str(r.name),
     category: str(r.category),
     description: str(r.description),
-    gcp: str(r.gcp) || undefined,
     iconKey: str(r.iconKey),
     brandColor: str(r.brandColor),
     route: str(r.route),

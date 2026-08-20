@@ -25,8 +25,6 @@ export type PromptEntry = {
   label: string
   /** One-line description (verbatim from the catalog). */
   description: string
-  /** Optional GCP analog subtitle. */
-  gcp?: string
   /** Where it opens — an in-console path (`/id`) or an external URL. */
   opensAt: string
 }
@@ -45,39 +43,31 @@ export function entryOpensAt(e: { kind: string; id: string; href?: string }): st
 }
 
 /**
- * The curated overview — an accurate, plain-language description of what Hanzo is
- * and how it fits together. Every product family named here is real and appears in
- * the catalog; the surfaces beyond the console (hanzo.app, Chat, Desktop, Extension)
- * are real Hanzo products too. Written to what EXISTS — nothing invented.
+ * The curated overview — what the cloud IS, how it is organized, and how it is paid
+ * for. Deliberately NOT a list of products: the catalog section below is generated
+ * from the live registry, and a hand-written prose copy of it beside the real one is
+ * a second answer that goes stale the day a product ships. Everything named here is
+ * a fact about the WHOLE that no single catalog row states.
  */
 export function overviewSection(brand: string): string {
   return [
     `# What ${brand} is`,
-    `${brand} is a full AI cloud — an open-source equivalent of Google Cloud / AWS — for building, shipping, and running AI software. Everything lives under one organization, one balance, and one API (\`/v1\`). This console is where you manage it all.`,
+    `${brand} is a full AI cloud for building, shipping, and running AI software — models and agents, compute, data, delivery, and the money that pays for it. Everything lives under one organization, one balance, and one API (\`api.hanzo.ai\`, all of it under \`/v1\`). This console is where you manage it all.`,
     '',
-    'The product families (each is a category in the catalog below):',
-    '- **AI** — Hanzo serves its own **Zen** family of open models (the default) alongside leading third-party models through ONE gateway (api.hanzo.ai). Browse the live list in **Models** (/models) or try any of them in the **Playground** (/playground); also Agents, Inference, Embeddings, and Prompts.',
-    '- **Compute** — on-demand **GPUs** (H100/A100), managed **Containers**, serverless **Functions**, durable **Tasks**, **Machines**, and **Kubernetes**.',
-    '- **Training** — **Fine-tuning** to build and tune your own models on your own data.',
-    '- **Data** — managed primitives: **Base** (a realtime backend — spin up per-org Bases with content types, records, and auth), **Vector** (embeddings + semantic search), **SQL**, **KV** (key-value cache/queues), **S3** object storage, **DocDB** (documents), **Datastore** (wide-column analytics), and **Memory**.',
-    '- **Security** — **IAM** (orgs, users, RBAC), **KMS** (encryption keys), **Secrets**, **Authz**, **HSM**, **MPC**, and **Audit**.',
-    '- **Network / Platform / Dev** — Gateway, DNS, CDN, VPC; ship-and-run pipelines (**Projects**, **Builds**, **Registry** at ghcr.io/hanzoai, **Releases**); and developer tooling (**CLI**, **SDKs** for Python/TypeScript/Go/Rust, **API**, **API Keys**).',
-    '- **Observe** — usage, spend, **Traces**, **Metrics**, **Logs**, **Dashboards**, **Alerts**, **Evals**, and **Billing**.',
-    '- **Web3** — connect a **Wallet** and top up cloud credit (HUSD), plus **Tokens**, **Settlement**, **Indexer**, **Oracles**, and the Lux/Zoo chain apps.',
-    '- **Apps** — ready-made products: **Chat** (Zen + third-party models + MCP tools), **Bot** (agent gateway), **CRM**, **Content/CMS**, **ERP**, **Help Center**, **Search**, **Marketplace**, **Studio**, and **Templates**.',
-    '- **Commerce** — run a store: **Products**, **Orders**, **Customers**, **Inventory**, and **Promotions** (payments settle via Square in Billing).',
+    `Models: Hanzo serves its own **Zen** family of open models (the default) alongside every other model worth calling, through ONE gateway. Browse the live list in **Models** (/models) or try any of them in the **Playground** (/playground).`,
+    '',
+    'How it is organized: every product is one segment of the API and one page in this console, filed under a category. The catalog below is the complete list, generated from what the platform actually serves — if something is not in it, it does not exist yet.',
     '',
     `Beyond this console, Hanzo also ships **hanzo.app** (the web app builder — sites you publish appear under Platform › Apps), **Hanzo Chat**, the **Desktop** app, and a browser **Extension**.`,
     '',
-    `**Pricing** is pay-as-you-go: AI is metered per token and billed against your org's real credit balance — top up in **Wallets** or **Billing** (HUSD or card via Square). See live per-token model pricing in **Marketplace** (/marketplace), compare tiers in **Plans & Pricing** (/plans), and track spend in **AI Metrics** and **Billing**.`,
+    `**Pricing** is pay-as-you-go: AI is metered per token and billed against your org's real credit balance — top it up in **Wallets** or **Billing**. See live per-token model pricing in **Marketplace** (/marketplace), compare tiers in **Plans & Pricing** (/plans), and track spend in **AI Metrics** and **Billing**.`,
   ].join('\n')
 }
 
-/** One catalog line: `- Label [id] — description · like <GCP> · <path>`.
+/** One catalog line: `- Label [id] — description · <path>`.
  *  The bracketed id is the token the ⌘K nav contract replies with (`NAV <id>`). */
 export function entryLine(e: PromptEntry): string {
-  const gcp = e.gcp ? ` · like ${e.gcp}` : ''
-  return `- ${e.label} [${e.id}] — ${e.description}${gcp} · ${e.opensAt}`
+  return `- ${e.label} [${e.id}] — ${e.description} · ${e.opensAt}`
 }
 
 /**

@@ -134,10 +134,13 @@ on iam.hanzo.ai with an issuer mismatch. Fixed in `src/config/index.ts` (default
 
 ## Product-module registry (extensibility)
 
-`lib/products/registry.tsx` is the single source of nav + routing truth. Each
-cloud product is a `ProductModule { id, label, icon, description, routes }`. The
+`lib/products/registry.tsx` is the single source of nav + routing truth — of the
+NAV and the ROUTING, not of what a product is (see "The catalogue is the
+platform's" at the end of this file: a product's name and its one line come from
+`api.hanzo.ai/v1/openapi.json` through `lib/products/served.ts`). Each cloud
+product is a `ProductModule { id, label, icon, description, routes }`. The
 sidebar, overview, and the catch-all route all render from it. **Adding a cloud
-product = appending one entry + its module component(s); no shell or route
+product = appending one row + its module component(s); no shell or route
 edits.** A module owns its routes and components and knows nothing about
 siblings (orthogonal).
 
@@ -4730,3 +4733,88 @@ product, each `{realm: false, node: false}`), **6/6 passing** now. Worth knowing
 next person: the Profile screen looks identical either way. A reload is invisible at
 rest, which is the whole reason this survived so long and the whole reason the probe
 measures the JS realm and a shell-owned DOM node rather than a screenshot.
+
+## The catalogue is the platform's
+
+`registry.tsx` opened with "the single source of truth for the unified console" and
+held 186 rows, each typing a name and a one-line description for a catalogue this
+console does not own. The platform owns it: `api.hanzo.ai/v1/openapi.json` is a
+projection of the routers it mounted, so a tag in that document exists by
+construction, the tag IS the `/v1` segment, and its one line is the owning
+package's own words. Two lists, one subject, no comparison between them — the
+definition of drift, and it had run for a while (`vector` read "Managed vector
+database" here and something else upstream; five AI products shared one package
+synopsis there and five different sentences here).
+
+**The shape, copied from hanzo.ai.** That repo solved this first
+(`hanzo.ai/scripts/sync-catalog.mjs` + `data/taxonomy.json`): read the served
+document, join ONE small hand file carrying only what the platform has no opinion
+about. Here:
+
+- `scripts/sync-catalog.mjs` → `src/lib/products/served.data.json` (183 products ·
+  description + operation count each, 32KB, committed). `pnpm sync:catalog` writes
+  it, `pnpm check:catalog` fails on any disagreement. A build NEVER fails on an
+  unreachable platform — the committed record is the designed answer, read at
+  build time like `catalog.data.json` and `benchmarks.data.json` — but a `--check`
+  that could not read the document exits 1 rather than reporting agreement it
+  never observed.
+- `src/lib/products/served.ts` — the only reader of that file. `serves` · `pathOf`
+  · `nameOf` · `labelOf` · `lineOf`. Pure, so it is provable under vitest (the
+  registry itself still cannot be imported there — icon ESM).
+- `registry.tsx` declares `Declaration[]` and exports
+  `catalog = declared.map(project)`. Consumers see a plain `label` and
+  `description` and never learn which half answered — the optionality is a fact
+  about what a PERSON types and it ends at that map.
+
+**What a row still types**, because the platform has no opinion about it: the
+route→module binding, the glyph, the position in the nav, `stage`, `subpages`,
+`indexLabel`, `repo`, `docs`, `brands`, `shell`. And a `description` for a
+console-only surface — 111 of 186 rows name no served operation (operator boards,
+views over several services, the chain-app launch tiles), so nobody upstream can
+describe them and the row's line is the only copy in the world. Those pages are
+the reason this list is longer than the platform's, and none of them was deleted.
+
+**Held from both ends**, in `served.test.ts`, offline: a row may not type a
+description the platform publishes (70 were deleted), and a row the platform is
+silent about must type one. Neither can be forgotten into existence. A third:
+a row may not type a label its own id already spells (120 deleted; 66 remain,
+each an acronym — `IAM`, `GPUs`, `DNS` — or a name that is not its segment —
+`o11y` → Traces, `gitops` → Fleet).
+
+**Deleted with it:**
+
+- `status: 'enabled'` on all 186 rows + `ProductStatus`. The type had exactly one
+  value and no consumer: 186 lines saying the only thing they could say.
+- `gcp` on 67 rows, its 7 render sites ("Equivalent to …", "· like …"), its two
+  search weights, and the field on the `catalog-admin` wire mirror. Flagged years
+  ago in this file as "a separate product-wide call" — this is the call. A
+  competitor's product list is not a fact about ours, and the assistant prompt was
+  reading it out loud.
+- `lib/products/catalogue.ts`, `lib/api/taxonomy.ts` and their tests (449 lines) —
+  a second, unwired join that pulled `name`/`description`/`category` off a
+  taxonomy SERVICE at runtime. Nothing in `src/` imported either; two derivations
+  of one fact from two upstreams is two answers.
+- The assistant prompt's hand-written prose catalogue — a per-category product
+  enumeration sitting beside `catalogSection`, which already prints every product
+  from the live registry. The overview now states only what no single row states
+  (what the cloud is, how it is paid for).
+
+**Where a bad line is fixed: in the owning package.** Four served products
+(`finance`, `authz`, `logs`, `metrics`) publish no synopsis, so those rows keep
+their own — `lineOf` falls back rather than render a blank nav item — and every
+sync prints the gap. Several published lines are the wrong ones (`tags` and `edge`
+both carry the `sites` package's sentence; `models`/`chat`/`embeddings`/`memory`
+share the `ai` package's). That is now visible instead of papered over, and it is
+one Go doc comment away from fixed.
+
+**Not derived, deliberately:** `docs`. The default would have to be
+`${DOCS}/<id>`, and 118 rows have no docs page at that slug — the fallback to the
+docs root is the honest link. Whether a docs page EXISTS is a fact the docs site
+owns and neither this repo nor the served document states, so 68 rows still type
+it. `repo` likewise (47 products live in `hanzoai/cloud`; the document says
+nothing about provenance).
+
+**Verified:** `pnpm typecheck` clean · `pnpm test` 288 files / 3583 tests pass ·
+`pnpm build` compiled in 88s, 20/20 static pages · `node scripts/sync-catalog.mjs
+--check` reports the record, the registry and the platform agree (and exits 1 with
+"nothing was compared" when pointed at a dead address).

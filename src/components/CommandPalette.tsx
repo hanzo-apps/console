@@ -233,7 +233,6 @@ function CatalogRow({
         </Text>
         <Text fontSize="$1" color="$color10">
           {entry.category}
-          {entry.gcp ? ` · ${entry.gcp}` : ''}
         </Text>
       </YStack>
       {stageOf(entry) === 'admin' ? <Lock size={13} opacity={0.45} /> : null}

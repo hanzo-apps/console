@@ -1,0 +1,738 @@
+{
+  "source": "https://api.hanzo.ai/v1/openapi.json",
+  "fetched": "2026-08-20T20:51:01.570Z",
+  "products": {
+    "admin": {
+      "description": "The operator's view of the fleet: orgs, users, roles, spend and system health.",
+      "operations": 86
+    },
+    "ads": {
+      "description": "Your paid ad campaigns, launched and paused from one place.",
+      "operations": 7
+    },
+    "affiliates": {
+      "description": "A partner program that pays commission on what your referrals spend.",
+      "operations": 10
+    },
+    "agent": {
+      "description": "Autonomous agents for your org: define them, run them, keep every run.",
+      "operations": 4
+    },
+    "agents": {
+      "description": "Autonomous agents for your org: define them, run them, keep every run.",
+      "operations": 32
+    },
+    "ai": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 208
+    },
+    "allowance": {
+      "description": "How much a plan lets you do without paying, and how much of it you have left today.",
+      "operations": 1
+    },
+    "analytics": {
+      "description": "Product analytics: send an event, read back who did what.",
+      "operations": 4
+    },
+    "appearance": {
+      "description": "Your own account: API keys you mint and revoke, and org onboarding.",
+      "operations": 2
+    },
+    "ask": {
+      "description": "A plain-language question about your business, answered with real numbers.",
+      "operations": 2
+    },
+    "audio": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 5
+    },
+    "audit": {
+      "description": "Your org's tamper-evident audit trail: every security-relevant event, hash-chained and readable.",
+      "operations": 1
+    },
+    "authors": {
+      "description": "A royalty for open-source work: your repo runs, you get paid.",
+      "operations": 5
+    },
+    "authz": {
+      "description": "",
+      "operations": 3
+    },
+    "auto": {
+      "description": "Hanzo Auto: build a flow from triggers and actions, publish it, and watch every run.",
+      "operations": 11
+    },
+    "automations": {
+      "description": "Workflows that run themselves, on a schedule or a webhook.",
+      "operations": 18
+    },
+    "avatar": {
+      "description": "Your own account: API keys you mint and revoke, and org onboarding.",
+      "operations": 2
+    },
+    "base": {
+      "description": "Managed Hanzo Base: a hosted backend for your app — collections, records, access rules and sign-in.",
+      "operations": 1
+    },
+    "benchmark": {
+      "description": "One honest score for any model, on the tests everyone quotes.",
+      "operations": 9
+    },
+    "billing": {
+      "description": "Your org's balance, what it has spent, and the cards it pays with.",
+      "operations": 45
+    },
+    "blueprint": {
+      "description": "What a template costs to run, worked out before you deploy.",
+      "operations": 3
+    },
+    "books": {
+      "description": "Double-entry accounting: chart of accounts, ledger, bank reconciliation, and the reports that prove the books balance.",
+      "operations": 25
+    },
+    "bot": {
+      "description": "Your own machines, connected and ready to take a command.",
+      "operations": 9
+    },
+    "bots": {
+      "description": "A bot doing your work on a real desktop, live, while you watch.",
+      "operations": 3
+    },
+    "builds": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 1
+    },
+    "campaign": {
+      "description": "One go-to-market push across paid, organic and email at once.",
+      "operations": 11
+    },
+    "captable": {
+      "description": "Your cap table: stakeholders, share classes, grants, SAFEs, rounds, and who owns what.",
+      "operations": 31
+    },
+    "cart": {
+      "description": "Selling: checkout, subscriptions, invoices, spend alerts, payment webhooks and the storefront catalog.",
+      "operations": 4
+    },
+    "catalog": {
+      "description": "One place to browse every project, app and site built here.",
+      "operations": 8
+    },
+    "chains": {
+      "description": "The chain-access surface: which chains this deployment can reach, a JSON-RPC door onto each, and the two token reads every wallet UI needs.",
+      "operations": 2
+    },
+    "channels": {
+      "description": "One inbox for the chat apps you connect — Discord, Slack, Teams, Telegram.",
+      "operations": 7
+    },
+    "chat": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 3
+    },
+    "cloud": {
+      "description": "Bring your own cloud: link a DigitalOcean, AWS or GCP account and its clusters show up ready to run work.",
+      "operations": 5
+    },
+    "cloudflare": {
+      "description": "Your Cloudflare account, managed from Hanzo: zones, Pages, Workers, Workers AI, R2, KV and D1.",
+      "operations": 33
+    },
+    "clusters": {
+      "description": "The compute you rent from Hanzo: machines, GPUs and clusters — launch one, resize it, tear it down.",
+      "operations": 6
+    },
+    "code": {
+      "description": "Search and symbols across your repos, for you and your agents.",
+      "operations": 12
+    },
+    "coding": {
+      "description": "Autonomous agents for your org: define them, run them, keep every run.",
+      "operations": 1
+    },
+    "commands": {
+      "description": "",
+      "operations": 1
+    },
+    "commerce": {
+      "description": "Selling: checkout, subscriptions, invoices, spend alerts, payment webhooks and the storefront catalog.",
+      "operations": 123
+    },
+    "company": {
+      "description": "Incorporation end to end: pick a structure, add founders, pay, file, and e-sign.",
+      "operations": 22
+    },
+    "completions": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "compliance": {
+      "description": "Your KYC/KYB onboarding, accreditation records, and the evidence trail behind them.",
+      "operations": 17
+    },
+    "compute": {
+      "description": "The compute you rent from Hanzo: machines, GPUs and clusters — launch one, resize it, tear it down.",
+      "operations": 7
+    },
+    "connectors": {
+      "description": "How your org connects third-party accounts like Slack, and revokes them.",
+      "operations": 8
+    },
+    "content": {
+      "description": "Marketing content from draft to published, on every channel.",
+      "operations": 6
+    },
+    "crawl": {
+      "description": "Any web page turned into clean markdown a model can read.",
+      "operations": 1
+    },
+    "crm": {
+      "description": "Your sales pipeline: the companies, the people, the deals in play.",
+      "operations": 20
+    },
+    "csrf": {
+      "description": "Your own account: API keys you mint and revoke, and org onboarding.",
+      "operations": 1
+    },
+    "dataroom": {
+      "description": "A secure document room you share by link and watch page by page.",
+      "operations": 17
+    },
+    "deploy": {
+      "description": "Hanzo CD: see what each app is running, sync it, and roll back a bad release.",
+      "operations": 21
+    },
+    "destinations": {
+      "description": "Your events forwarded to the ad and analytics tools you use.",
+      "operations": 5
+    },
+    "dev-bridge": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "dns": {
+      "description": "Your DNS records: the zones and records behind every name you point at Hanzo.",
+      "operations": 5
+    },
+    "docs": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "documents": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 2
+    },
+    "domain": {
+      "description": "Hanzo Domains: search a name, see the price, buy it from your prepaid wallet.",
+      "operations": 7
+    },
+    "download": {
+      "description": "The code interpreter: run a snippet in a sandbox, and move files in and out of the session that sandbox IS.",
+      "operations": 1
+    },
+    "edge": {
+      "description": "Where your sites live: create one, deploy a build, roll back to any release.",
+      "operations": 1
+    },
+    "embed": {
+      "description": "Your own account: API keys you mint and revoke, and org onboarding.",
+      "operations": 1
+    },
+    "embeddings": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "enablement": {
+      "description": "The price list: what every model, provider, GPU tier, tool and hosting plan costs.",
+      "operations": 3
+    },
+    "engine": {
+      "description": "Hanzo Engine: which models the serving runtime has loaded, and the GPUs under it.",
+      "operations": 4
+    },
+    "entitlements": {
+      "description": "What your org may run: what the plan grants, and which of those products are switched on.",
+      "operations": 1
+    },
+    "environments": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 1
+    },
+    "errors": {
+      "description": "Product analytics: send an event, read back who did what.",
+      "operations": 1
+    },
+    "esign": {
+      "description": "A document out for signature, signed and filed with an audit trail.",
+      "operations": 13
+    },
+    "evals": {
+      "description": "Scoring a model on your own data, with a judge you choose.",
+      "operations": 16
+    },
+    "event": {
+      "description": "Product analytics: send an event, read back who did what.",
+      "operations": 3
+    },
+    "exec": {
+      "description": "The code interpreter: run a snippet in a sandbox, and move files in and out of the session that sandbox IS.",
+      "operations": 2
+    },
+    "experiments": {
+      "description": "A/B testing anything: a flag, an ad, a subject line, a model.",
+      "operations": 7
+    },
+    "feedback": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "files": {
+      "description": "The code interpreter: run a snippet in a sandbox, and move files in and out of the session that sandbox IS.",
+      "operations": 1
+    },
+    "finance": {
+      "description": "",
+      "operations": 8
+    },
+    "finetune": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 9
+    },
+    "flags": {
+      "description": "Feature flags: ship it dark, then turn it on for who you pick.",
+      "operations": 9
+    },
+    "fleet": {
+      "description": "The compute you rent from Hanzo: machines, GPUs and clusters — launch one, resize it, tear it down.",
+      "operations": 6
+    },
+    "flow": {
+      "description": "Hanzo Flow: build an agent workflow on a visual canvas, run it, and read every run.",
+      "operations": 8
+    },
+    "framework": {
+      "description": "Document types you define: describe a record once, then create, list, submit and cancel documents against it.",
+      "operations": 19
+    },
+    "functions": {
+      "description": "Your serverless code: publish it, call it over HTTP, watch every run and what it cost.",
+      "operations": 11
+    },
+    "gateway": {
+      "description": "Live control of the policy your API applies to every incoming request: CORS, rate limits, cache TTL and allowed methods, changed without a redeploy.",
+      "operations": 3
+    },
+    "git": {
+      "description": "Git hosting for your org: create repos, clone, push, and see what they cost.",
+      "operations": 40
+    },
+    "git-webhook": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 1
+    },
+    "gpus": {
+      "description": "The compute you rent from Hanzo: machines, GPUs and clusters — launch one, resize it, tear it down.",
+      "operations": 2
+    },
+    "guide": {
+      "description": "A step-by-step checklist that gets your business running on AI.",
+      "operations": 19
+    },
+    "help": {
+      "description": "A support desk: customers file tickets, your team answers them.",
+      "operations": 4
+    },
+    "iam": {
+      "description": "Hanzo's identity provider: users, organizations, applications, and the OIDC/OAuth2 endpoints every Hanzo service authenticates against.",
+      "operations": 203
+    },
+    "images": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "index": {
+      "description": "Fast full-text search over your own data, typos forgiven.",
+      "operations": 17
+    },
+    "indexers": {
+      "description": "Chain data: your block indexers and how far each has caught up, plus the on-chain price feeds.",
+      "operations": 1
+    },
+    "ingress": {
+      "description": "Your front door: automatic TLS certificates and hostname routing to any backend, changed live.",
+      "operations": 18
+    },
+    "insights": {
+      "description": "Product analytics: send an event, read back who did what.",
+      "operations": 2
+    },
+    "install-patch": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "instances": {
+      "description": "One-click data add-ons: a SQL, key-value, document, vector, search or object store, wired straight into your app.",
+      "operations": 28
+    },
+    "integrations": {
+      "description": "How your org connects third-party accounts like Slack, and revokes them.",
+      "operations": 40
+    },
+    "k8s": {
+      "description": "The compute you rent from Hanzo: machines, GPUs and clusters — launch one, resize it, tear it down.",
+      "operations": 5
+    },
+    "kb": {
+      "description": "Your team's wiki and your agents' memory, searchable by meaning.",
+      "operations": 9
+    },
+    "keys": {
+      "description": "Your own account: API keys you mint and revoke, and org onboarding.",
+      "operations": 3
+    },
+    "kms": {
+      "description": "Secret custody: your org's secrets sealed at rest, plus threshold signing.",
+      "operations": 7
+    },
+    "legal": {
+      "description": "The paperwork your company needs, drafted, signed and filed.",
+      "operations": 11
+    },
+    "licensing": {
+      "description": "",
+      "operations": 11
+    },
+    "links": {
+      "description": "The unified AI login manager's registry: the org+user-scoped record of WHICH provider accounts (Claude Max, ChatGPT Plus, a Hanzo API key, a raw provider key) a developer has signed into, ON WHICH MACHINES, with each account's latest usage snapshot.",
+      "operations": 11
+    },
+    "logs": {
+      "description": "",
+      "operations": 3
+    },
+    "machines": {
+      "description": "The compute you rent from Hanzo: machines, GPUs and clusters — launch one, resize it, tear it down.",
+      "operations": 8
+    },
+    "marketing": {
+      "description": "Lifecycle email: drip sequences that reach the right people.",
+      "operations": 35
+    },
+    "marketplace": {
+      "description": "The shop for tools and agents: browse, install into your project, publish your own free or priced.",
+      "operations": 6
+    },
+    "mcp": {
+      "description": "Everything your org can call, in one list: connector actions, functions, agents, skills and your own MCP servers.",
+      "operations": 3
+    },
+    "meet": {
+      "description": "The virtual office: it decides who may join a room and mints the short-lived token that lets them in.",
+      "operations": 3
+    },
+    "memory": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 7
+    },
+    "mesh": {
+      "description": "Package zt mounts the Hanzo Cloud NETWORKING surface: the tenant's Hanzo Zero Trust footprint — overlay networks, their routers and mesh services — served as clean, org-scoped REST off the unified cloud binary and fronting the Hanzo Zero Trust controller (hanzoai/zt, an OpenZiti-based fabric).",
+      "operations": 1
+    },
+    "messages": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 2
+    },
+    "metrics": {
+      "description": "",
+      "operations": 4
+    },
+    "ml": {
+      "description": "Model serving: deploy a model behind an endpoint and call it.",
+      "operations": 7
+    },
+    "models": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 4
+    },
+    "mq": {
+      "description": "Queue and stream admin for your org: create them, watch them drain, ack what you pulled.",
+      "operations": 15
+    },
+    "networks": {
+      "description": "Package zt mounts the Hanzo Cloud NETWORKING surface: the tenant's Hanzo Zero Trust footprint — overlay networks, their routers and mesh services — served as clean, org-scoped REST off the unified cloud binary and fronting the Hanzo Zero Trust controller (hanzoai/zt, an OpenZiti-based fabric).",
+      "operations": 3
+    },
+    "notify": {
+      "description": "Transactional email and SMS, sent through your org's own provider credential.",
+      "operations": 4
+    },
+    "o11y": {
+      "description": "Your logs, metrics and traces: ship them in, query them, chart them.",
+      "operations": 365
+    },
+    "oracles": {
+      "description": "Chain data: your block indexers and how far each has caught up, plus the on-chain price feeds.",
+      "operations": 1
+    },
+    "org": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 10
+    },
+    "orgs": {
+      "description": "Your own account: API keys you mint and revoke, and org onboarding.",
+      "operations": 3
+    },
+    "payments": {
+      "description": "Selling: checkout, subscriptions, invoices, spend alerts, payment webhooks and the storefront catalog.",
+      "operations": 2
+    },
+    "pipelines": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 1
+    },
+    "plans": {
+      "description": "The plan catalog: every tier you can buy, what it costs, and what it grants.",
+      "operations": 20
+    },
+    "platform": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 49
+    },
+    "plugins": {
+      "description": "What each host is running, and how to change it: enable, disable, reload, or pin a service to a version.",
+      "operations": 4
+    },
+    "prefs": {
+      "description": "Your own settings — theme, density, pinned nav — following you across every Hanzo app.",
+      "operations": 2
+    },
+    "pricing": {
+      "description": "The price list: what every model, provider, GPU tier, tool and hosting plan costs.",
+      "operations": 25
+    },
+    "projects": {
+      "description": "Where your sites live: create one, deploy a build, roll back to any release.",
+      "operations": 16
+    },
+    "prompts": {
+      "description": "Your prompt library, versioned, so nothing changes silently.",
+      "operations": 6
+    },
+    "pubsub": {
+      "description": "Your message bus: publish, subscribe, and durable streams your apps read at their own pace.",
+      "operations": 18
+    },
+    "query": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "query_multiple": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "rag": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 5
+    },
+    "referrals": {
+      "description": "Referral ATTRIBUTION: who referred whom, and whether that referee ever became a real customer.",
+      "operations": 2
+    },
+    "registry": {
+      "description": "Your container and package registry: push images, pull them back, see what you store.",
+      "operations": 6
+    },
+    "releases": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 1
+    },
+    "replay": {
+      "description": "Product analytics: send an event, read back who did what.",
+      "operations": 1
+    },
+    "rerank": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "research": {
+      "description": "Every experiment you have ever run, kept and comparable.",
+      "operations": 8
+    },
+    "responses": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "risk": {
+      "description": "HANZO RISK's model plane: the per-organisation feature surface and the per-organisation models trained on it.",
+      "operations": 31
+    },
+    "router": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 30
+    },
+    "rpc": {
+      "description": "The chain-access surface: which chains this deployment can reach, a JSON-RPC door onto each, and the two token reads every wallet UI needs.",
+      "operations": 1
+    },
+    "run": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 1
+    },
+    "runner": {
+      "description": "Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases, environments, logs, custom domains.",
+      "operations": 1
+    },
+    "s3": {
+      "description": "Object storage: your buckets and the files in them, with signed URLs for upload and download.",
+      "operations": 8
+    },
+    "sandboxes": {
+      "description": "The ONE compute primitive: a sandbox is a gVisor pod that runs somebody else's code, and every lifetime is the same object.",
+      "operations": 19
+    },
+    "sbom": {
+      "description": "What is inside a container image: every component, resolvable by digest or image ref.",
+      "operations": 3
+    },
+    "scrape": {
+      "description": "A web search and a page fetch your agents can call.",
+      "operations": 1
+    },
+    "search": {
+      "description": "One ranked result set over everything your org has stored.",
+      "operations": 3
+    },
+    "security": {
+      "description": "Secret scanning for your code: submit sources, get findings, masked never raw.",
+      "operations": 7
+    },
+    "sentinel": {
+      "description": "Your logs, metrics and traces: ship them in, query them, chart them.",
+      "operations": 20
+    },
+    "settings": {
+      "description": "How an org configures each product it uses, secret fields included.",
+      "operations": 2
+    },
+    "share": {
+      "description": "A public URL for a service on your own machine, and a list of what you have open.",
+      "operations": 2
+    },
+    "sites": {
+      "description": "Where your sites live: create one, deploy a build, roll back to any release.",
+      "operations": 21
+    },
+    "skills": {
+      "description": "The skill catalogue an AI client reads to learn what it can do.",
+      "operations": 4
+    },
+    "social": {
+      "description": "Posting to every social account you own, now or on a schedule.",
+      "operations": 13
+    },
+    "store": {
+      "description": "Selling: checkout, subscriptions, invoices, spend alerts, payment webhooks and the storefront catalog.",
+      "operations": 34
+    },
+    "summary": {
+      "description": "Your logs, metrics and traces: ship them in, query them, chart them.",
+      "operations": 1
+    },
+    "sync": {
+      "description": "Data sync: link two endpoints and keep them in step, on a webhook, on a schedule, or on demand.",
+      "operations": 6
+    },
+    "tags": {
+      "description": "Where your sites live: create one, deploy a build, roll back to any release.",
+      "operations": 1
+    },
+    "tasks": {
+      "description": "Hanzo Tasks: durable workflows that survive a crash, with every run visible and replayable.",
+      "operations": 10
+    },
+    "taxonomy": {
+      "description": "The product catalogue's shape: which categories exist, what each product is called, which category it sits in, what it is tagged with, and the order the two are shown in.",
+      "operations": 5
+    },
+    "team": {
+      "description": "Your org's shared workspace: documents edited together, files, seats, and agents as teammates.",
+      "operations": 17
+    },
+    "tel": {
+      "description": "The telecommunications surface: phone numbers, calls and messages, on whatever carrier the deployment is configured for.",
+      "operations": 10
+    },
+    "templates": {
+      "description": "A gallery of starter kits you can deploy as they come.",
+      "operations": 5
+    },
+    "todo": {
+      "description": "Hanzo Todo: boards, the work items on them, and the filters that make a board.",
+      "operations": 12
+    },
+    "tokens": {
+      "description": "The chain-access surface: which chains this deployment can reach, a JSON-RPC door onto each, and the two token reads every wallet UI needs.",
+      "operations": 1
+    },
+    "tools": {
+      "description": "Everything your org can call, in one list: connector actions, functions, agents, skills and your own MCP servers.",
+      "operations": 8
+    },
+    "traces": {
+      "description": "",
+      "operations": 4
+    },
+    "traffic": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 1
+    },
+    "translate": {
+      "description": "Text in, the same text out in the language you asked for.",
+      "operations": 3
+    },
+    "upload": {
+      "description": "The code interpreter: run a snippet in a sandbox, and move files in and out of the session that sandbox IS.",
+      "operations": 1
+    },
+    "usage": {
+      "description": "What your org ran and what it cost, broken down per account.",
+      "operations": 11
+    },
+    "validators": {
+      "description": "One-click validator onboarding: prove your Genesis NFT, get a node provisioned, queue its registration.",
+      "operations": 4
+    },
+    "vector": {
+      "description": "The read-only inventory of the search and vector backends: /v1/search/{indexes,stats} read from Meilisearch and /v1/vector/{collections,stats} from Qdrant, reshaped into the rows the console renders.",
+      "operations": 2
+    },
+    "videos": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 3
+    },
+    "wallets": {
+      "description": "Blockchain key custody: create wallets, rotate their keys, and sign with them.",
+      "operations": 8
+    },
+    "webhooks": {
+      "description": "How your app hears about events: register an endpoint, pick the events, get each one delivered and signed.",
+      "operations": 8
+    },
+    "websearch": {
+      "description": "A web search and a page fetch your agents can call.",
+      "operations": 6
+    },
+    "wecom-bot": {
+      "description": "Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks cloud BUILDS but cannot INSTALL.",
+      "operations": 2
+    },
+    "world": {
+      "description": "A live news feed filtered to what your project cares about.",
+      "operations": 6
+    },
+    "x402": {
+      "description": "Pay-per-request over HTTP 402: quote a price, take the payment, serve the resource.",
+      "operations": 1
+    }
+  }
+}

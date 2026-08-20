@@ -38,7 +38,6 @@ function promptGroupsFor(viewer: Viewer): PromptGroup[] {
       id: e.id,
       label: e.label,
       description: e.description,
-      gcp: e.gcp,
       opensAt: entryOpensAt(e),
     })),
   }))

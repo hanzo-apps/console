@@ -111,7 +111,6 @@ export function ProductSettingsView({ entry }: { entry: CatalogEntry }) {
         {/* About — real catalog facts, read-only. */}
         <Panel title="About" description={`What ${entry.label} is, and where it lives.`}>
           <Row label="Category" value={entry.category} first />
-          {entry.gcp ? <Row label="Equivalent to" value={entry.gcp} /> : null}
           <Row label="Open source" value={entry.repo ?? null} mono />
           <XStack gap="$2" px="$4" py="$3" borderTopWidth={1} borderColor="$borderColor" flexWrap="wrap">
             {entry.repo ? (

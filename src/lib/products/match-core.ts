@@ -49,14 +49,14 @@ export function resolveRoute(modules: ProductModule[], slug: string[]): Matched 
 
 /**
  * Boolean filter for the sidebar: does an entry contain the query across its
- * label/id/category/gcp/description? Empty query → true (everything shows). Unlike
+ * label/id/category/description? Empty query → true (everything shows). Unlike
  * `searchCatalog` (which RANKS into a flat list), the sidebar keeps its category
  * grouping and just needs a per-entry predicate.
  */
 export function entryMatches(e: CatalogEntry, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
-  return `${e.label} ${e.id} ${e.category} ${e.gcp ?? ''} ${e.description}`.toLowerCase().includes(q)
+  return `${e.label} ${e.id} ${e.category} ${e.description}`.toLowerCase().includes(q)
 }
 
 // ── Slug aliases (conventional URL → canonical entry id) ─────────────────────

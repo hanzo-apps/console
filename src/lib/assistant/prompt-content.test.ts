@@ -24,7 +24,7 @@ const GROUPS: PromptGroup[] = [
     category: 'Compute',
     summary: 'Kubernetes, containers, functions, GPUs, machines, and tasks.',
     entries: [
-      { id: 'gpus', label: 'GPUs', description: 'GPU clusters, utilization, and cost — on-demand H100/A100 compute.', gcp: 'Compute Engine GPUs', opensAt: '/gpus' },
+      { id: 'gpus', label: 'GPUs', description: 'GPU clusters, utilization, and cost — on-demand H100/A100 compute.', opensAt: '/gpus' },
       { id: 'functions', label: 'Functions', description: 'Event-driven serverless functions.', opensAt: '/functions' },
     ],
   },
@@ -32,7 +32,7 @@ const GROUPS: PromptGroup[] = [
     category: 'Data',
     summary: 'Vector, SQL, key-value, object, document, and memory stores.',
     entries: [
-      { id: 'base', label: 'Base', description: 'Firebase-like backend — build content types and manage your data, per org.', gcp: 'Firebase', opensAt: '/base' },
+      { id: 'base', label: 'Base', description: 'A hosted backend for your app — collections, records, access rules and sign-in.', opensAt: '/base' },
       { id: 'vector', label: 'Vector', description: 'Managed vector database — embeddings & semantic search.', opensAt: '/vector' },
     ],
   },
@@ -63,8 +63,8 @@ describe('entryOpensAt', () => {
 
 describe('entryLine', () => {
   it('renders label + NAV id token + description + deep-link (grounded, not invented)', () => {
-    const line = entryLine({ id: 'gpus', label: 'GPUs', description: 'On-demand H100/A100.', gcp: 'Compute Engine GPUs', opensAt: '/gpus' })
-    expect(line).toBe('- GPUs [gpus] — On-demand H100/A100. · like Compute Engine GPUs · /gpus')
+    const line = entryLine({ id: 'gpus', label: 'GPUs', description: 'On-demand H100/A100.', opensAt: '/gpus' })
+    expect(line).toBe('- GPUs [gpus] — On-demand H100/A100. · /gpus')
   })
 })
 

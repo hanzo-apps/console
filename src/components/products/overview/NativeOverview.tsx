@@ -241,7 +241,7 @@ export function NativeOverview({ entry }: { entry: CatalogEntry }) {
     <>
       <PageHeader
         title={entry.label}
-        subtitle={entry.gcp ? `${entry.category} · ${entry.gcp}` : entry.category}
+        subtitle={entry.category}
         actions={spec.actions.length ? <>{spec.actions.map(renderAction)}</> : undefined}
       />
 

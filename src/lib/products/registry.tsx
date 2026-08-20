@@ -1,26 +1,35 @@
 /**
- * Product catalog — the single source of truth for the unified console.
+ * Product catalog — what this console can OPEN, and how.
  *
- * ONE list (`catalog`) describes every Hanzo product, whether it is an
- * in-console admin module (owns routes, rendered here) or an external surface
- * (owned by another service, opened in a tab). The nav shell, the catalog
- * overview, the discover interstitials, the favorites system, and the router all
- * render from this list, so surfacing a product = adding ONE `CatalogEntry` — no
- * shell/route/page edits.
+ * ONE list (`declared`) names every surface, whether it is an in-console module
+ * (owns routes, rendered here) or a launch tile for an app on its own domain. The
+ * nav shell, the catalog overview, the discover interstitials, the favorites
+ * system, and the router all render from it, so surfacing a product = adding ONE
+ * row — no shell/route/page edits.
  *
- * Orthogonal: an entry owns its identity + how it opens and knows nothing about
+ * IT IS NOT THE SOURCE OF TRUTH FOR WHAT A PRODUCT IS, and the header used to say
+ * it was. That belongs to the platform: `api.hanzo.ai/v1/openapi.json` is a
+ * projection of the routers it mounted, so a tag exists by construction, the tag
+ * IS the `/v1` segment, and its one line is the owning package's own words.
+ * `scripts/sync-catalog.mjs` writes them to `served.data.json` and `catalog` below
+ * is `declared` projected through it (`~/lib/products/served`). A row therefore
+ * types no description for a product the platform describes, and no label for a
+ * name its own id already spells — there is nowhere left for the two to disagree.
+ *
+ * WHAT A ROW STILL DECLARES is the half the platform has no opinion about: the
+ * route→module binding, the glyph, the position in the nav, how finished the
+ * surface is, and a line of its own for a page that answers no operation. Those
+ * pages are the reason this list is longer than the platform's: a view over
+ * several services, an operator board, a launch tile — each is real, each opens,
+ * and none of them is a route upstream ever mounted.
+ *
+ * Orthogonal: a row owns its identity + how it opens and knows nothing about
  * siblings. The catalog only composes them. `productModules` (the in-console
  * subset) is derived, so the router/match layer is unchanged.
  *
- * Taxonomy: the ten canonical "Open AI Cloud" categories — exact labels and
- * order — as the open-source equivalent of Google Cloud, plus an appended
- * `Async` category for durable orchestration (Tasks/Temporal; GCP Cloud
- * Tasks/Workflows). The first ten keep their exact order; `Async` is appended so
- * nothing is reordered. Each entry names the Google Cloud product it stands in
- * for (`gcp`), and carries
- * an honest enablement `status`: an in-console module that works (`enabled`), a
- * live external Hanzo surface (`external`), or a primitive that ships but has no
- * console surface yet (`soon`). No fabricated states.
+ * Taxonomy: the category axis is `@hanzo/products`' (generated from the catalog
+ * API the marketing site and the docs read), plus `Settings` for the account
+ * administration this console draws next to the products — see `./brand-scope`.
  */
 import type { ComponentType } from 'react'
 import { Users,
@@ -114,6 +123,7 @@ import { config, type BrandId, type ShellId } from '~/config'
 import { ALWAYS_ON_PRODUCTS, filterEntitled } from '~/lib/entitlements'
 import { type NavSection, categoryOrder, categoriesForBrand, categoryInBrand } from './brand-scope'
 import { type Stage, type Viewer, listed, stageOf } from './stage'
+import { labelOf, lineOf } from './served'
 import { shellFor, isProductShell } from './shell'
 import { ProvidersModule } from '~/components/products/ProvidersModule'
 import { ProviderAdminModule } from '~/components/products/ProviderAdminModule'
@@ -394,35 +404,37 @@ export {
 import { entryInBrandScope } from './brand-scope'
 
 /**
- * Enablement state — one honest value: every catalog entry is live. An entry
- * either opens straight in (a bespoke admin surface or a native product overview)
- * or, for a deployed external app, launches its own domain — but it is always
- * usable. There is no "coming soon" state: an unfinished primitive is simply not
- * listed, never shown as a dead placeholder.
+ * The half of a catalog row a person writes: everything except the product's own
+ * name and its own line, which the platform already publishes (`./served`).
  *
- * `external` is NOT a status — it is a `kind` (the shape discriminant on
- * `CatalogEntry`), orthogonal to enablement: a launch tile for a deployed external
- * app (the Lux/Zoo chain-app suite) is `status: 'enabled'` (it's live) with
- * `kind: 'external'` (it opens in a new tab). How a live entry OPENS (native route
- * vs. external launch) is the kind, not this.
+ * Every row here is live. There is no "coming soon" value and never was one worth
+ * having: an unfinished surface is simply not listed, never shown as a dead
+ * placeholder. How a live row OPENS — an in-console route or a launch on another
+ * domain — is the `kind` discriminant below, not a state.
  */
-export type ProductStatus = 'enabled'
-
 type CatalogBase = {
-  /** Stable id and base path segment, e.g. 'vector'. */
+  /** Stable id, the base path segment, AND the `/v1` segment where the platform
+   *  serves one — e.g. 'vector'. One token, three uses, so a row cannot address a
+   *  product under one name and describe it under another. */
   id: string
-  /** Display label (the canonical menu name). */
-  label: string
+  /**
+   * Display label — OMIT unless the plain reading of the id is wrong. `nameOf`
+   * spells `machines` as "Machines" and `api-keys` as "Api Keys", so an acronym
+   * (`iam` → IAM), a name that is not its segment (`o11y` → Traces) and a rename
+   * type one; everything else does not, and cannot drift from its own id.
+   */
+  label?: string
   /** Display icon. */
   icon: ProductIcon
-  /** One-line description for the catalog + nav. */
-  description: string
-  /** The Google Cloud product this is the open equivalent of, shown as a subtitle. */
-  gcp?: string
+  /**
+   * One line for the catalog + nav — OMIT for a product the platform serves. Its
+   * owning package already wrote that line and `lineOf` reads it. Set it ONLY
+   * for a console-only surface (a view over several services, an operator board, a
+   * launch tile), which is the one case nobody upstream can describe.
+   */
+  description?: string
   /** Which nav section it sits in — a catalog category, or Settings. */
   category: NavSection
-  /** Enablement state — always 'enabled'; every listed entry is live. */
-  status: ProductStatus
   /** Source repo for the product, e.g. 'hanzoai/vector'. Only set where it exists. */
   repo?: string
   /** Canonical docs deep link (docs.hanzo.ai/<slug>); falls back to the docs root. */
@@ -493,9 +505,17 @@ type CatalogBase = {
  * Both share `CatalogBase`, so the nav / ⌘K / category pages render and
  * open either uniformly. The discriminant keeps consumers exhaustive.
  */
-export type CatalogEntry =
+type Declaration =
   | (CatalogBase & { kind: 'module'; routes: ProductRoute[] })
   | (CatalogBase & { kind: 'external'; href: string })
+
+/**
+ * A row after the projection — a declaration with the two facts the platform owns
+ * filled in. `label` and `description` are plain strings here because every
+ * consumer wants an answer, not a question: the optionality is a fact about what a
+ * PERSON types, and it ends at `catalog` below.
+ */
+export type CatalogEntry = Declaration & { label: string; description: string }
 
 // docs.hanzo.ai serves the Fumadocs site under the /docs base path
 // (docs.hanzo.ai/docs/<slug>), so product deep links must include it — a bare
@@ -529,20 +549,21 @@ const ext = {
 const overviewRoutes = (id: string): ProductRoute[] => [{ path: '', component: overviewFor(id) }]
 
 /**
- * The Hanzo product catalog — the open-source Google Cloud, ten categories.
- * In-console modules render here; external surfaces open in a tab. Every real
- * working module is preserved; everything else is an honest `external` or `soon`.
+ * Every surface this console can open, in nav order. In-console modules render
+ * here; a launch tile opens its own domain in a tab.
+ *
+ * The order IS the nav order and it is the one thing about this list a person is
+ * meant to arrange. Nothing else about a row may repeat what the platform already
+ * says about the same product — see `catalog` below, which is this list read
+ * through `./served`.
  */
-export const catalog: CatalogEntry[] = [
+const declared: Declaration[] = [
   // ── Observe — the usage/spend dashboard home (also rendered at '/') ───
   {
     id: 'overview',
-    label: 'Overview',
     icon: Gauge,
     description: 'Real-time usage, performance, and spend across your AI workloads.',
-    gcp: 'Cloud overview',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -560,9 +581,7 @@ export const catalog: CatalogEntry[] = [
     label: 'AI Accounts',
     icon: Boxes,
     description: 'Link your AI provider accounts and see unified usage across desktop, mobile, web, and CLI.',
-    gcp: 'Connected accounts',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -586,12 +605,9 @@ export const catalog: CatalogEntry[] = [
     // The operational god-view; Business/Finance are the P&L lenses. Reuses the ONE
     // LivingOverview — this entry is a config, not a new surface.
     id: 'overlord',
-    label: 'Overlord',
     icon: Radio,
     description: 'Every product, tenant, and org on the platform in one read — health and usage, nothing scoped away.',
-    gcp: 'Cloud console (org-wide)',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -604,12 +620,9 @@ export const catalog: CatalogEntry[] = [
     // from every customer's nav/palette; the loader is an all-orgs god
     // view and `/v1/admin/overview` is server-gated). Reuses the ONE LivingOverview.
     id: 'business',
-    label: 'Business',
     icon: TrendingUp,
     description: 'MRR, revenue, usage & cost, customers, and top agents across the whole platform.',
-    gcp: 'Cloud Billing overview',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -624,12 +637,9 @@ export const catalog: CatalogEntry[] = [
     // aggregate is server-gated by `getAdminGate`, so financial data never reaches a
     // customer). Reuses the ONE LivingOverview — this is a config, not a new surface.
     id: 'finance',
-    label: 'Finance',
     icon: Coins,
     description: 'DigitalOcean credit burn-down, spend, revenue, gross margin, and runway across the platform.',
-    gcp: 'Cloud Billing / FinOps',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -647,10 +657,7 @@ export const catalog: CatalogEntry[] = [
     id: 'catalog',
     label: 'Catalog & Pricing',
     icon: Tags,
-    description: 'Edit the platform product and pricing catalog — infra tiers, plans, and every product surface.',
-    gcp: 'Cloud Catalog',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/commerce',
     kind: 'module',
@@ -668,9 +675,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Subscription Plans',
     icon: CreditCard,
     description: 'Edit the platform subscription and DNS plan authority — prices, tiers, and features.',
-    gcp: 'Cloud Billing plans',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/commerce',
     kind: 'module',
@@ -686,12 +691,9 @@ export const catalog: CatalogEntry[] = [
     // by getAdminGate and the pending queue rides the global-admin /admin/iam proxy,
     // so access control never reaches a customer).
     id: 'launch-control',
-    label: 'Launch Control',
     icon: Rocket,
     description: 'Remove the waitlist from hosted services one at a time, and approve users off the waitlist.',
-    gcp: 'Feature flags / Access control',
     category: 'Security',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -709,9 +711,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Fleet Observability',
     icon: Activity,
     description: 'Cross-org requests, tokens, cost, latency, errors, logs and traces across the whole platform.',
-    gcp: 'Cloud Monitoring (fleet)',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -726,12 +726,8 @@ export const catalog: CatalogEntry[] = [
     // palette); the `research` head is org-scoped by the Bearer owner, so a
     // customer only ever reaches their OWN corpus, never Hanzo's platform R&D.
     id: 'research',
-    label: 'Research',
     icon: FlaskConical,
-    description: 'Falsifiable R&D experiments across the platform — every proof and every refutation, first-class.',
-    gcp: 'Vertex AI Experiments',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -757,9 +753,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Infrastructure',
     icon: Server,
     description: 'DigitalOcean fleet — droplets, block-storage volumes (with fill % and near-full warnings), DOKS clusters and load balancers, with monthly cost and what is safely reclaimable.',
-    gcp: 'Compute Engine / Persistent Disk',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -787,9 +781,7 @@ export const catalog: CatalogEntry[] = [
     label: 'SaaS Metrics',
     icon: TrendingUp,
     description: 'MRR/ARR, subscription mix, metered revenue, and top customers across the whole platform.',
-    gcp: 'Cloud Billing (SaaS)',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -807,9 +799,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Usage Caps & Promo',
     icon: Gift,
     description: 'Set the platform plan promo, and oversee or override any organization’s usage caps.',
-    gcp: 'Billing budgets / Promotions',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -825,9 +815,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Customers',
     icon: Users,
     description: 'Every organization on the platform — balances, usage, keys, access. Grant credit, suspend, reactivate.',
-    gcp: 'Cloud Billing accounts',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -840,9 +828,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Revenue',
     icon: Coins,
     description: 'Balances held, realized spend, MRR, ARPU, and per-customer revenue across the fleet.',
-    gcp: 'Cloud Billing revenue',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -857,9 +843,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Grants',
     icon: Gift,
     description: 'Every credit grant issued across the platform — comps, welcome/starter, support. Issue new grants.',
-    gcp: 'Cloud Billing credits',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -874,9 +858,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Projects',
     icon: FolderGit2,
     description: 'Every org’s deployed apps across all clusters — health, cluster, and live URL. Read-only.',
-    gcp: 'Cloud Deploy (fleet)',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -891,9 +873,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Analytics',
     icon: LineChart,
     description: 'Cohort retention, growth, churn, active customers, and revenue analytics across the customer base.',
-    gcp: 'Analytics · SaaS',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -904,12 +884,8 @@ export const catalog: CatalogEntry[] = [
     // off · beta · ga across the fleet, grant betas to orgs. GLOBAL-ADMIN ONLY; the
     // per-org self-service opt-in is the customer Beta-features surface below.
     id: 'enablement',
-    label: 'Enablement',
     icon: SlidersHorizontal,
-    description: 'Turn models, providers, and features off · beta · ga across the fleet, and grant betas to orgs.',
-    gcp: 'Feature management',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -929,9 +905,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Beta features',
     icon: Activity,
     description: 'Enable early-access models and features for your organization.',
-    gcp: 'Preview features',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -946,12 +920,8 @@ export const catalog: CatalogEntry[] = [
     // one cross-tenant GROUP BY, never a per-tenant fan-out (the tenant-data-hierarchy
     // invariant). Honest-empty until the compute-events emitter lands.
     id: 'bots',
-    label: 'Bots',
     icon: Bot,
-    description: 'Every @hanzo/bot agent booted across the platform, and its spend — grouped org → app → project.',
-    gcp: 'Fleet analytics · bots',
     category: 'Apps',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -967,9 +937,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Machines',
     icon: Boxes,
     description: 'Raw compute machines visor opens across every org, and their spend — grouped org → app → project.',
-    gcp: 'Fleet analytics · machines',
     category: 'Compute',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -986,9 +954,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Clusters',
     icon: Network,
     description: 'Every DOKS cluster visor manages across every org — grouped org → app → project.',
-    gcp: 'Fleet analytics · clusters',
     category: 'Compute',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -1004,9 +970,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Functions',
     icon: FunctionSquare,
     description: 'Every serverless function invoked across every org — grouped org → app → project.',
-    gcp: 'Fleet analytics · functions',
     category: 'Compute',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -1018,12 +982,8 @@ export const catalog: CatalogEntry[] = [
     // routing policy is the secondary "Routing" tab. Retires the old empty-by-default
     // trap (the separate "Model Catalog" entry is gone — this IS it).
     id: 'models',
-    label: 'Models',
     icon: Brain,
-    description: 'Browse the live model catalog and configure routing policy.',
-    gcp: 'Model Garden',
     category: 'AI',
-    status: 'enabled',
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [
@@ -1063,10 +1023,7 @@ export const catalog: CatalogEntry[] = [
     id: 'router',
     label: 'AI Usage & Training',
     icon: Waypoints,
-    description: 'See all your org’s AI usage (requests, tokens, spend, per-model), track training contribution and routing quality, and configure task pools and cost ceiling.',
-    gcp: 'Vertex AI (model routing)',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/ai',
     kind: 'module',
@@ -1085,11 +1042,9 @@ export const catalog: CatalogEntry[] = [
     // admin — a customer org gets 403). Hidden from a customer's nav; reaching it
     // directly shows an honest "managed by Hanzo" notice, never a red error.
     id: 'providers',
-    label: 'Providers',
     icon: Server,
     description: 'Model, storage, and embedding providers and credentials.',
     category: 'AI',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/ai',
     kind: 'module',
@@ -1113,11 +1068,7 @@ export const catalog: CatalogEntry[] = [
     label: 'AI Providers',
     icon: Server,
     description: 'Enable, disable, and set the primary upstream AI provider for the shared gateway.',
-    // No `gcp` analog — like the sibling customer `providers` entry above, provider
-    // routing administration is Hanzo-specific with no clean single GCP product
-    // equivalent (matching the sibling keeps the catalog metadata consistent).
     category: 'AI',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/ai',
     kind: 'module',
@@ -1134,12 +1085,9 @@ export const catalog: CatalogEntry[] = [
     // admin-aggregate heads). DISTINCT from routing: this is "how much credit remains and how
     // spend is funded", not "which upstream is primary".
     id: 'provider-billing',
-    label: 'Provider Billing',
     icon: Coins,
     description: 'Per-provider credit balance, burn, and runway, plus the credit-vs-paid usage split across the fleet.',
-    gcp: 'Cloud Billing (provider credits)',
     category: 'AI',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1157,11 +1105,9 @@ export const catalog: CatalogEntry[] = [
     // SuperAdmin-gated server-side). Reads ride the `guide` head on the /v1 user-bearer BFF
     // (allow-listed in proxy-allow.ts). This is the "see and modify the guide backend" surface.
     id: 'growth',
-    label: 'Growth',
     icon: Target,
     description: 'Observe and operate the Zen-of-Hanzo Guide engine — the authored blueprint, the tactic corpus, and the live growth read (stage · signals · next-best moves).',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1183,9 +1129,7 @@ export const catalog: CatalogEntry[] = [
     label: 'AI Economics',
     icon: LineChart,
     description: 'Model request mix, unit economics (margin + runway), and the eval → training flywheel across the fleet.',
-    gcp: 'Vertex AI (usage & cost)',
     category: 'AI',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1202,12 +1146,9 @@ export const catalog: CatalogEntry[] = [
     // the endpoints are super-admin gated server-side, so a non-admin sees the honest
     // SuperAdminRequired panel). Runtime policy lives as editable rows, never env.
     id: 'routing',
-    label: 'Routing',
     icon: Route,
     description: 'Set the platform auto-routing default and per-org overrides as data — the config-as-Base settings editor.',
-    gcp: 'Vertex AI (model routing)',
     category: 'AI',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/ai',
     kind: 'module',
@@ -1221,12 +1162,9 @@ export const catalog: CatalogEntry[] = [
     // keys are sealed to KMS server-side, never in the browser. Distinct from the
     // admin-only `providers` board (shared-gateway upstream config): this is per-org BYO.
     id: 'connections',
-    label: 'Connections',
     icon: KeyRound,
     description: 'Connect your OpenAI, Anthropic, or Google account by API key or sign-in — sealed to Hanzo KMS.',
-    gcp: 'Connected accounts',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/ai',
     kind: 'module',
@@ -1234,12 +1172,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'agents',
-    label: 'Agents',
     icon: Bot,
-    description: 'Build, deploy, and run autonomous agents.',
-    gcp: 'Agent Builder',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/agent',
     docs: `${DOCS}/agents`,
@@ -1268,11 +1202,9 @@ export const catalog: CatalogEntry[] = [
     // live agent-session plane (cloud clients/agents, /v1/agents/sessions): see + drive
     // every session (CLI on a laptop, bot in cloud, linked GPU box) + the run-target seam.
     id: 'mission-control',
-    label: 'Mission Control',
     icon: Terminal,
     description: 'See and drive every agent session from one swipeable board — pause, resume, stop, message.',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1289,12 +1221,8 @@ export const catalog: CatalogEntry[] = [
     // `/automation` alias here (match-core). hanzo-scoped so it never appears on a
     // Lux/Zoo console.
     id: 'automations',
-    label: 'Automations',
     icon: Workflow,
-    description: 'Build and run automation flows — a trigger, a few connector steps, and it runs without you.',
-    gcp: 'Application Integration',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     brands: ['hanzo'],
     repo: 'hanzoai/cloud',
@@ -1311,12 +1239,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'inference',
-    label: 'Inference',
     icon: Zap,
     description: 'Online and batch inference for deployed models.',
-    gcp: 'Vertex AI Prediction',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1338,9 +1263,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Fine-tuning',
     icon: Sparkles,
     description: 'Fine-tune and train models on your own data.',
-    gcp: 'Vertex AI Training',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     // The module renders its Jobs/Datasets/Checkpoints/Models tabs as REAL
@@ -1366,12 +1289,8 @@ export const catalog: CatalogEntry[] = [
     // gateway (/v1/models, /v1/embeddings); Explore is /v1/search. The old
     // Stores admin (StoresModule) is SUPERSEDED by this — one surface, not two.
     id: 'embeddings',
-    label: 'Embeddings',
     icon: Boxes,
-    description: 'Generate, store, and search vector embeddings at scale.',
-    gcp: 'Vertex AI Vector Search',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/ai',
     docs: `${DOCS}/embeddings`,
@@ -1395,11 +1314,9 @@ export const catalog: CatalogEntry[] = [
     // /v1/kb/graph, plus a vault importer (Obsidian/Notion/Roam/Evernote) over
     // /v1/kb/import. Org-scoped SERVER-SIDE via the /v1 bearer proxy.
     id: 'knowledge',
-    label: 'Knowledge',
     icon: Network,
     description: 'Your wiki, agent memory, and sources as one force-directed graph.',
     category: 'AI',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1410,11 +1327,8 @@ export const catalog: CatalogEntry[] = [
     // (GET /v1/evals/scores) over the cloud evals facade. Grouped under Observe
     // per the taxonomy; the entry stays in array position (no reorder).
     id: 'evals',
-    label: 'Evals',
     icon: ListChecks,
-    description: 'Evaluate model and agent outputs with scored runs.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
@@ -1435,11 +1349,9 @@ export const catalog: CatalogEntry[] = [
     // not a buried subpage. Honest edges only (domain→app routes; app→resource
     // where an env value exposes the link) — see components/products/map/graph.ts.
     id: 'map',
-    label: 'Map',
     icon: Network,
     description: 'Every app, database, and domain in your org on one live canvas.',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     docs: `${DOCS}/console`,
@@ -1450,10 +1362,7 @@ export const catalog: CatalogEntry[] = [
     id: 'gpus',
     label: 'GPUs',
     icon: Cpu,
-    description: 'GPU clusters, utilization, and cost — on-demand H100/A100 compute.',
-    gcp: 'Compute Engine GPUs',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/operator',
     docs: `${DOCS}/gpus`,
@@ -1477,11 +1386,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'machines',
-    label: 'Machines',
     icon: Server,
-    description: 'Compute machines and capacity across regions (your cluster nodes).',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     docs: `${DOCS}/machines`,
     kind: 'module',
@@ -1489,12 +1395,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'containers',
-    label: 'Containers',
     icon: Container,
     description: 'Run containers as managed, autoscaling services.',
-    gcp: 'Cloud Run',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     // The module renders its Workloads/Pods/Containers/Images/Namespaces/Events
@@ -1515,11 +1418,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'functions',
-    label: 'Functions',
     icon: FunctionSquare,
-    description: 'Event-driven serverless functions.',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/functions',
     docs: `${DOCS}/functions`,
@@ -1540,11 +1440,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'edge',
-    label: 'Edge',
     icon: Radio,
-    description: 'Compute at the edge, close to your users.',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/edge',
     docs: `${DOCS}/edge`,
@@ -1556,11 +1453,9 @@ export const catalog: CatalogEntry[] = [
     // primitive (deployed application services). The Cloud-Run-style "Containers"
     // product is a separate enabled entry (above) over the same PaaS backend.
     id: 'applications',
-    label: 'Applications',
     icon: Box,
     description: 'Deployed application services.',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [
@@ -1575,12 +1470,9 @@ export const catalog: CatalogEntry[] = [
     // Org-scoped by the Bearer owner via the /v1 bearer BFF. DISTINCT from the admin
     // `applications` fleet board (/v1/apps) and internal-admin platform.hanzo.ai.
     id: 'app-platform',
-    label: 'App Platform',
     icon: Rocket,
     description: 'Deploy and manage your container apps — projects, deploys, logs, secrets, domains.',
-    gcp: 'App Engine',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1592,11 +1484,8 @@ export const catalog: CatalogEntry[] = [
   //    factory over the provisioning contract (POST/GET/DELETE /v1/<kind>).
   {
     id: 'vector',
-    label: 'Vector',
     icon: Boxes,
-    description: 'Managed vector database — embeddings & semantic search.',
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/vector',
     docs: `${DOCS}/vector`,
@@ -1609,7 +1498,6 @@ export const catalog: CatalogEntry[] = [
     icon: Database,
     description: 'Managed SQL — databases, branches, replicas.',
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/sql',
     docs: `${DOCS}/sql`,
@@ -1621,9 +1509,7 @@ export const catalog: CatalogEntry[] = [
     label: 'KV',
     icon: Key,
     description: 'Managed key-value store — cache & queues.',
-    gcp: 'Memorystore',
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/kv',
     docs: `${DOCS}/kv`,
@@ -1637,12 +1523,8 @@ export const catalog: CatalogEntry[] = [
     // the provisioning surface (which allocates the s3 RESOURCE): a bucket
     // created here or there is browsable here, same org namespace.
     id: 's3',
-    label: 'S3',
     icon: HardDrive,
-    description: 'Managed object storage — buckets and objects over the S3 API, scoped to your org.',
-    gcp: 'Cloud Storage',
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/s3',
     docs: `${DOCS}/storage`,
@@ -1651,12 +1533,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'datastore',
-    label: 'Datastore',
     icon: Server,
     description: 'Managed wide-column analytics store.',
-    gcp: 'Bigtable',
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/datastore',
     docs: `${DOCS}/datastore`,
@@ -1669,11 +1548,8 @@ export const catalog: CatalogEntry[] = [
     // `<slug>.base.hanzo.ai`. All calls go through console2's `/superbase/*` proxy
     // (per-user IAM bearer minted server-side, org stamped from the JWT owner).
     id: 'base',
-    label: 'Base',
     icon: Boxes,
-    description: "Your organization's realtime backend — content types, records, and auth.",
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/base',
     docs: `${DOCS}/base`,
@@ -1694,9 +1570,7 @@ export const catalog: CatalogEntry[] = [
     label: 'DocDB',
     icon: FileText,
     description: 'Managed document database.',
-    gcp: 'Firestore',
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/docdb',
     docs: `${DOCS}/docdb`,
@@ -1707,12 +1581,8 @@ export const catalog: CatalogEntry[] = [
   // ── Network ──────────────────────────────────────────────────────────
   {
     id: 'gateway',
-    label: 'Gateway',
     icon: Network,
-    description: 'The unified, gated, priced API gateway — api.hanzo.ai.',
-    gcp: 'API Gateway',
     category: 'Network',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/gateway',
     docs: `${DOCS}/gateway`,
@@ -1726,11 +1596,9 @@ export const catalog: CatalogEntry[] = [
     // its own chain — see `nodeNetworksForBrand`). Reads live luxd RPC via the
     // /nodes proxy; honest "not reporting" per unreachable network.
     id: 'nodes',
-    label: 'Nodes',
     icon: Server,
     description: 'Blockchain node infrastructure — validators and peers across networks.',
     category: 'Network',
-    status: 'enabled',
     stage: 'beta',
     repo: 'luxfi/node',
     kind: 'module',
@@ -1742,7 +1610,6 @@ export const catalog: CatalogEntry[] = [
     icon: Waypoints,
     description: 'Private networks, subnets, and peering.',
     category: 'Network',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: VpcModule }],
@@ -1751,10 +1618,7 @@ export const catalog: CatalogEntry[] = [
     id: 'dns',
     label: 'DNS',
     icon: Globe,
-    description: 'Managed authoritative DNS.',
-    gcp: 'Cloud DNS',
     category: 'Network',
-    status: 'enabled',
     repo: 'hanzoai/dns',
     docs: ext.dns,
     kind: 'module',
@@ -1768,12 +1632,9 @@ export const catalog: CatalogEntry[] = [
     // search/price/buy over /v1/domain, billed to the org's prepaid balance, the
     // domain born on Hanzo nameservers with its zone handed to hanzoai/dns.
     id: 'domains',
-    label: 'Domains',
     icon: Tag,
     description: 'Search, register, and renew domain names.',
-    gcp: 'Cloud Domains',
     category: 'Network',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1786,11 +1647,8 @@ export const catalog: CatalogEntry[] = [
     // uses for Cloudflare-synced zones. Pages + Workers are wired; R2/KV/D1 are
     // honest Phase-2 tabs. Connecting the account is the generic integrations flow.
     id: 'cloudflare',
-    label: 'Cloudflare',
     icon: Cloud,
-    description: 'Manage your connected Cloudflare Pages, Workers, and routes.',
     category: 'Network',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -1802,7 +1660,6 @@ export const catalog: CatalogEntry[] = [
     icon: Cable,
     description: 'Global content delivery and edge caching.',
     category: 'Network',
-    status: 'enabled',
     stage: 'alpha',
     docs: ext.cdn,
     kind: 'module',
@@ -1810,22 +1667,18 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'load-balancer',
-    label: 'Load Balancer',
     icon: Spline,
     description: 'Layer 4/7 load balancing across services.',
     category: 'Network',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: LoadBalancerModule }],
   },
   {
     id: 'service-mesh',
-    label: 'Service Mesh',
     icon: Waypoints,
     description: 'Service-to-service routing, mTLS, and policy.',
     category: 'Network',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: ServiceMeshModule }],
@@ -1836,9 +1689,7 @@ export const catalog: CatalogEntry[] = [
     id: 'iam',
     label: 'IAM',
     icon: Shield,
-    description: 'Organizations, users, and roles (RBAC) — Hanzo IAM.',
     category: 'Security',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/iam',
     docs: `${DOCS}/iam`,
@@ -1854,11 +1705,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'authz',
-    label: 'Authz',
     icon: ShieldCheck,
     description: 'Fine-grained authorization policies and checks.',
     category: 'Security',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/authz',
     docs: `${DOCS}/authz`,
@@ -1869,9 +1718,7 @@ export const catalog: CatalogEntry[] = [
     id: 'kms',
     label: 'KMS',
     icon: KeyRound,
-    description: 'Encryption keys and cryptographic operations — Hanzo KMS.',
     category: 'Security',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/kms',
     docs: `${DOCS}/kms`,
@@ -1884,7 +1731,6 @@ export const catalog: CatalogEntry[] = [
     icon: Fingerprint,
     description: 'Hardware-backed key protection.',
     category: 'Security',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/hsm',
     kind: 'module',
@@ -1893,12 +1739,9 @@ export const catalog: CatalogEntry[] = [
   {
     // Secret Manager facet of the same zero-knowledge KMS backend.
     id: 'secrets',
-    label: 'Secrets',
     icon: Lock,
     description: 'Store and rotate secrets — zero-knowledge, on Hanzo KMS.',
-    gcp: 'Secret Manager',
     category: 'Security',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/kms',
     docs: `${DOCS}/kms`,
@@ -1911,7 +1754,6 @@ export const catalog: CatalogEntry[] = [
     icon: Network,
     description: 'Threshold signing & multi-party computation — Hanzo MPC.',
     category: 'Security',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/mpc',
     docs: `${DOCS}/mpc`,
@@ -1920,11 +1762,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'audit',
-    label: 'Audit',
     icon: ScrollText,
-    description: 'Audit log of identity and access events.',
     category: 'Security',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/iam',
     kind: 'module',
@@ -1932,11 +1771,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'zero-trust',
-    label: 'Zero Trust',
     icon: ShieldCheck,
     description: 'Private service access: routers, identities, policies, and sessions.',
     category: 'Security',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/zt',
     docs: `${DOCS}/zero-trust`,
@@ -1961,7 +1798,6 @@ export const catalog: CatalogEntry[] = [
     icon: Terminal,
     description: 'The hanzo command-line interface.',
     category: 'Dev',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/cli',
     docs: ext.cli,
@@ -1974,7 +1810,6 @@ export const catalog: CatalogEntry[] = [
     icon: Package,
     description: 'Python, TypeScript, Go, and Rust SDKs.',
     category: 'Dev',
-    status: 'enabled',
     stage: 'alpha',
     docs: ext.sdk,
     kind: 'module',
@@ -1986,7 +1821,6 @@ export const catalog: CatalogEntry[] = [
     icon: Code2,
     description: 'The REST API reference for every service.',
     category: 'Dev',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/ai',
     docs: ext.api,
@@ -2014,11 +1848,8 @@ export const catalog: CatalogEntry[] = [
     // sub-features (test/deliveries/rotate) degrade gracefully if not yet routed.
     // The `:view` route is the deliveries deep-link (auto-expands that endpoint).
     id: 'webhooks',
-    label: 'Webhooks',
     icon: Webhook,
-    description: 'Deliver platform events to your endpoints — signed, retried, logged.',
     category: 'Dev',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2035,11 +1866,8 @@ export const catalog: CatalogEntry[] = [
     // redirect target (?connected=<id> / ?error=<id>). Single route (no `:tab`): the
     // old read-only DataTable surface is superseded by this Connect grid.
     id: 'integrations',
-    label: 'Integrations',
     icon: Cable,
-    description: 'Connect Slack, GitHub, and more so Hanzo AI can work across your tools.',
     category: 'Settings',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/integrations`,
@@ -2058,11 +1886,9 @@ export const catalog: CatalogEntry[] = [
     // gateway (GET /v1/models + POST /v1/chat/completions). Grouped under AI per
     // the taxonomy; the entry stays in array position (no reorder).
     id: 'playground',
-    label: 'Playground',
     icon: Play,
     description: 'Try models and prompts interactively.',
     category: 'AI',
-    status: 'enabled',
     repo: 'hanzoai/ai',
     kind: 'module',
     routes: [{ path: '', component: PlaygroundModule }],
@@ -2078,12 +1904,8 @@ export const catalog: CatalogEntry[] = [
     // every brand's console shows ITS OWN org's repos, no cross-brand leak. git.hanzo.ai
     // stays the `git clone`/`git push` smart-HTTP host; THIS is the dashboard it links to.
     id: 'code',
-    label: 'Code',
     icon: Code2,
-    description: 'Browse every repo, search across your code, and get cited answers — the unified hub over native git.',
-    gcp: 'Cloud Source Repositories',
     category: 'Dev',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2105,7 +1927,6 @@ export const catalog: CatalogEntry[] = [
     icon: Code,
     description: 'The Hanzo AI development environment.',
     category: 'Dev',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/code',
     docs: ext.ide,
@@ -2114,11 +1935,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'desktop',
-    label: 'Desktop',
     icon: Monitor,
     description: 'The Hanzo desktop app.',
     category: 'Dev',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/desktop',
     docs: ext.desktop,
@@ -2135,12 +1954,8 @@ export const catalog: CatalogEntry[] = [
     // deep-link the SAME project to hanzo.app (edit) + hanzo.chat (chat) on one shared
     // key. The Infrastructure-category flagship; `projects` stays the thin scope picker.
     id: 'platform',
-    label: 'Platform',
     icon: Layers,
-    description: 'Create, deploy, and ship your projects — drop a build, bind a domain, and edit or chat about the same project across hanzo.app and hanzo.chat.',
-    gcp: 'App Hosting',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2158,10 +1973,7 @@ export const catalog: CatalogEntry[] = [
     id: 'store',
     label: 'App Store',
     icon: Boxes,
-    description: 'Deploy open-source apps to your cloud in one click — Postgres, n8n, Grafana, and a thousand others.',
-    gcp: 'Cloud Marketplace',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2187,13 +1999,10 @@ export const catalog: CatalogEntry[] = [
     // NOT admin-gated: shipping your own code is the customer's own business, and
     // every read is org-scoped server-side from the bearer proxy's token owner.
     id: 'deploy',
-    label: 'Deploy',
     icon: Rocket,
     description:
       'Ship an app or a static site — pick a repo, bind a host, set env, deploy. Then watch CD reconcile it, CI build it, and storage serve it.',
-    gcp: 'Cloud Deploy',
     category: 'Infrastructure',
-    status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -2227,9 +2036,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Fleet',
     icon: GitBranch,
     description: 'The fleet deploy map — every operator App CR as a live node with reconciled health, sync, resource topology, CI builds, logs, and one-click rollback. The Hanzo operator reconciles.',
-    gcp: 'Cloud Deploy',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -2240,12 +2047,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'projects',
-    label: 'Projects',
     icon: FolderGit2,
-    description: 'Projects organize resources under your org — the scope for o11y, API keys, datasets, and deploys.',
-    gcp: 'Resource Manager',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -2262,12 +2065,9 @@ export const catalog: CatalogEntry[] = [
     // The `:view` route serves My Issues / Teams / Cycles / Roadmap; `:view/:sub` a team
     // board (teams/ENG). Issue detail is a pane, not a route.
     id: 'tracker',
-    label: 'Tracker',
     icon: ClipboardList,
     description: 'Every issue across every team and GitHub repo — one board, keyboard-first, agent-actionable.',
-    gcp: 'Cloud Issue Tracker',
     category: 'Infrastructure',
-    status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
     routes: [
@@ -2293,12 +2093,9 @@ export const catalog: CatalogEntry[] = [
     // (`/tenants/packages`). Reseller self-scoping + a real `parentOrgId` are the
     // foundation follow-ups (flagged honestly in the board, never fabricated).
     id: 'tenants',
-    label: 'Tenants',
     icon: Building2,
     description: 'White-label tenants + resold sub-orgs — brand, domain, IAM scope, packages, and billing.',
-    gcp: 'Cloud Identity (org management)',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -2317,12 +2114,9 @@ export const catalog: CatalogEntry[] = [
     // above (the org's resource SCOPE for o11y/keys/datasets) and from Compute
     // `Applications` (PaaS container apps) — this is the hanzo.app sites store only.
     id: 'apps',
-    label: 'Apps',
     icon: AppWindow,
     description: 'The sites you build and publish in hanzo.app — live URL, deploy history, and one-click editing.',
-    gcp: 'Firebase Hosting',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/apps`,
@@ -2336,34 +2130,24 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'environments',
-    label: 'Environments',
     icon: Layers,
-    description: 'Promote builds across dev, staging, and prod.',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: EnvironmentsModule }],
   },
   {
     id: 'builds',
-    label: 'Builds',
     icon: Hammer,
-    description: 'Build images and artifacts from source.',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: BuildsModule }],
   },
   {
     id: 'registry',
-    label: 'Registry',
     icon: Package,
-    description: 'Container images and artifacts — ghcr.io/hanzoai.',
-    gcp: 'Artifact Registry',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/registry',
     docs: `${DOCS}/registry`,
@@ -2372,22 +2156,16 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'releases',
-    label: 'Releases',
     icon: Rocket,
-    description: 'Versioned releases and rollbacks.',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: ReleasesModule }],
   },
   {
     id: 'pipelines',
-    label: 'Pipelines',
     icon: GitBranch,
-    description: 'CI/CD pipelines from commit to deploy.',
     category: 'Infrastructure',
-    status: 'enabled',
     stage: 'beta',
     docs: `${DOCS}/pipelines`,
     kind: 'module',
@@ -2399,11 +2177,8 @@ export const catalog: CatalogEntry[] = [
     // org-scoped by the Bearer owner. Not admin-gated: a paying customer runs their
     // own clusters. The unified fleet cockpit (see + attach + connect) is Kubernetes.
     id: 'clusters',
-    label: 'Clusters',
     icon: Network,
-    description: 'Provision and manage your Kubernetes clusters and node pools.',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/operator',
     kind: 'module',
@@ -2416,11 +2191,9 @@ export const catalog: CatalogEntry[] = [
     // BYO cluster via `POST /v1/clusters`, connect a box via `hanzo gpu connect`,
     // connect a cloud account — coming). Org-scoped by the Bearer owner; honest states.
     id: 'kubernetes',
-    label: 'Kubernetes',
     icon: Boxes,
     description: 'Your unified compute fleet — clusters, GPUs, and connected machines.',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/operator',
     kind: 'module',
@@ -2433,11 +2206,8 @@ export const catalog: CatalogEntry[] = [
   // ── Observe ──────────────────────────────────────────────────────────
   {
     id: 'usage',
-    label: 'Usage',
     icon: Coins,
-    description: "Your organization's total footprint — spend by category, LLM usage, and compute — in one place, with CSV export.",
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/usage`,
@@ -2446,11 +2216,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'logs',
-    label: 'Logs',
     icon: ScrollText,
     description: 'Structured logs across all services.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/logs`,
@@ -2463,11 +2231,8 @@ export const catalog: CatalogEntry[] = [
     // lifecycle (resolve/ignore/reopen). Honest RuntimeNotice when the runtime is
     // not initialized (503) or unrouted (404); never fabricated issues.
     id: 'errors',
-    label: 'Errors',
     icon: AlertTriangle,
-    description: 'Grouped exceptions and crashes across your services.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/errors`,
@@ -2488,12 +2253,9 @@ export const catalog: CatalogEntry[] = [
     // discover, logs (owns the base slug → its own panel, not the shared sub-page),
     // traces, stats (Monitor), projects, members.
     id: 'sentry',
-    label: 'Sentry',
     icon: AlertTriangle,
     description: 'Errors, logs and traces from your services — issues, discover, logs, traces, monitor, and projects.',
-    gcp: 'Cloud Error Reporting',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     shell: 'sentry',
@@ -2510,11 +2272,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'metrics',
-    label: 'Metrics',
     icon: BarChart3,
     description: 'Live platform service health and infrastructure metrics.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/metrics`,
@@ -2528,9 +2288,7 @@ export const catalog: CatalogEntry[] = [
     id: 'o11y',
     label: 'Traces',
     icon: Activity,
-    description: 'End-to-end LLM and agent traces.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/traces`,
@@ -2542,11 +2300,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'service-map',
-    label: 'Service Map',
     icon: Waypoints,
     description: 'Per-service RED metrics and the live dependency graph.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
@@ -2564,7 +2320,6 @@ export const catalog: CatalogEntry[] = [
     icon: BarChart3,
     description: 'Requests, tokens, spend, and per-model usage for your org.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/ai',
     docs: `${DOCS}/billing`,
@@ -2580,12 +2335,9 @@ export const catalog: CatalogEntry[] = [
     // run-for-pay product tag. Spend billed = cost + 25% (the served revenue R).
     // Canonical: docs/architecture/run-for-pay-pricing.md.
     id: 'open-edition',
-    label: 'Open Edition',
     icon: TrendingUp,
     description: 'Run open-source workloads for pay — spend billed at cost + 25%, tokens, and per-model usage.',
-    gcp: 'Marketplace / pay-as-you-go',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/billing`,
@@ -2600,11 +2352,8 @@ export const catalog: CatalogEntry[] = [
     // the events collector emits) + LLM (top models) — every metric a real query,
     // never fabricated. See universe/docs/architecture/unified-analytics.md.
     id: 'analytics',
-    label: 'Analytics',
     icon: BarChart3,
-    description: 'Per-org web, commerce, and LLM analytics over the unified warehouse.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/analytics',
     docs: `${DOCS}/analytics`,
@@ -2624,12 +2373,8 @@ export const catalog: CatalogEntry[] = [
     // `destinations` is declared BEFORE `:slug` — routes are tried in order, so the
     // literal wins over the parameter and the sub-page is reachable.
     id: 'tags',
-    label: 'Tags',
     icon: Tags,
-    description: 'Browser pixels per site, server-side conversions per org, and the one-line install.',
-    gcp: 'Google Tag Manager',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2643,11 +2388,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'dashboards',
-    label: 'Dashboards',
     icon: LineChart,
     description: 'Product analytics and observability dashboards.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/analytics',
     docs: `${DOCS}/dashboards`,
@@ -2659,11 +2402,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'alerts',
-    label: 'Alerts',
     icon: Bell,
     description: 'Alerting rules and notification policies.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
@@ -2678,12 +2419,8 @@ export const catalog: CatalogEntry[] = [
     // surface shown in billing-only shell mode at billing.<brand> (SAME component,
     // filtered nav + default route), so console and billing.hanzo.ai are 1:1.
     id: 'billing',
-    label: 'Billing',
     icon: CreditCard,
-    description: 'Balance, spend, budgets, invoices, subscriptions, and payment methods.',
-    gcp: 'Cloud Billing',
     category: 'Observe',
-    status: 'enabled',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/billing`,
     kind: 'module',
@@ -2714,9 +2451,7 @@ export const catalog: CatalogEntry[] = [
     label: 'Finance',
     icon: Wallet,
     description: 'Your organization’s ledger, spend, credits, invoices, and payment methods.',
-    gcp: 'Cloud Billing / FinOps',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/finance',
     kind: 'module',
@@ -2725,11 +2460,9 @@ export const catalog: CatalogEntry[] = [
   {
     // Real, enabled — the all-services health view, from real cluster data.
     id: 'status',
-    label: 'Status',
     icon: Gauge,
     description: 'Live health of every Hanzo service across your clusters.',
     category: 'Observe',
-    status: 'enabled',
     // GLOBAL-ADMIN ONLY (`admin: true`): the board reads the whole platform's
     // VictoriaMetrics `up{}` inventory through the SuperAdmin-gated cloud VM proxy
     // (`/v1/o11y/vm/*`, clients/o11y/vmproxy.go), which 403s a non-super caller. So a
@@ -2746,9 +2479,7 @@ export const catalog: CatalogEntry[] = [
     id: 'plans',
     label: 'Plans & Pricing',
     icon: Tag,
-    description: 'Compare plans and pricing for every cloud service.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/billing',
     kind: 'module',
@@ -2764,11 +2495,9 @@ export const catalog: CatalogEntry[] = [
     // redeploy, logs). Data is brand-scoped in the /trading proxy (lux.cloud sees
     // only Lux networks). The bots are ordinary PaaS git apps — one deploy path.
     id: 'trading',
-    label: 'Trading',
     icon: LineChart,
     description: 'Deploy and manage the Lux DEX market-maker and trader bots — live quote quality, order book, and controls.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'luxfi/maker',
     kind: 'module',
@@ -2785,11 +2514,9 @@ export const catalog: CatalogEntry[] = [
     // Honest to the CLOB reality (book depth, not pooled USD TVL); honest-empty until
     // the indexer reports. The analytics twin of the Trading (deploy/manage) module.
     id: 'markets',
-    label: 'Markets',
     icon: BarChart3,
     description: 'The Lux DEX economy — TVL/depth, 24h volume, fees, per-market price and liquidity, and recent trades from the on-chain indexer.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'luxfi/graph',
     kind: 'module',
@@ -2797,11 +2524,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'settlement',
-    label: 'Settlement',
     icon: ArrowLeftRight,
     description: 'On-chain settlement for compute and payouts.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/ledger',
     docs: `${DOCS}/blockchain`,
@@ -2816,7 +2541,6 @@ export const catalog: CatalogEntry[] = [
     icon: Wallet,
     description: 'Connect a wallet and top up cloud credit with HUSD.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/billing',
     kind: 'module',
@@ -2824,11 +2548,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'referrals',
-    label: 'Referrals',
     icon: Gift,
-    description: 'Share your referral link and earn cloud credit when organizations get started.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2850,7 +2571,6 @@ export const catalog: CatalogEntry[] = [
     icon: Gift,
     description: 'Fleet-wide referral program — invites, qualification, and credit granted.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2858,11 +2578,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'affiliates',
-    label: 'Affiliates',
     icon: Handshake,
-    description: 'Partner with Hanzo — earn ongoing commission on the customers you refer.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2877,7 +2594,6 @@ export const catalog: CatalogEntry[] = [
     icon: Handshake,
     description: 'Partner-commission program — applications, accrual, and payouts.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2885,14 +2601,11 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'authors',
-    label: 'Authors',
     icon: BookOpen,
-    description: 'Earn when your open-source project is deployed on Hanzo.',
     // Dev, not Web3: the audience is open-source developers shipping code, and the
     // subject is their project. A wallet is how the payout arrives — the mechanism,
     // not the category. Filing it under Web3 hid it from everyone it is meant for.
     category: 'Dev',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2907,7 +2620,6 @@ export const catalog: CatalogEntry[] = [
     icon: BookOpen,
     description: 'OSS-author royalty program — verifications, deploys, accruals, payouts.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2919,11 +2631,8 @@ export const catalog: CatalogEntry[] = [
     // console shows — the admin half of the out-of-box "assemble your own backend"
     // flow. Reads/writes /v1/orgs/{org}/entitlements (org-scoped server-side).
     id: 'entitlements',
-    label: 'Entitlements',
     icon: ShieldCheck,
-    description: "Manage which products the active organization has enabled.",
     category: 'Settings',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2932,11 +2641,9 @@ export const catalog: CatalogEntry[] = [
   {
     // Global-admin reserve-fund board (hidden from every customer nav/palette).
     id: 'treasury',
-    label: 'Treasury',
     icon: Landmark,
     description: 'Platform reserve fund — revenue-share policy, backed growth-loop payouts, double-entry journal, Hanzo L1 anchor.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'admin',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -2944,11 +2651,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'tokens',
-    label: 'Tokens',
     icon: Coins,
-    description: 'Issue and manage tokens and balances.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/treasury',
     kind: 'module',
@@ -2959,11 +2663,8 @@ export const catalog: CatalogEntry[] = [
     // provisioning primitive, surfaced in the lux/zoo web3 consoles. Reads the
     // real bootnode control plane via console2's /bootnode proxy (honest states).
     id: 'networks',
-    label: 'Networks',
     icon: Blocks,
-    description: 'Blockchain networks — chain, nodes, status, and RPC.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/bootnode',
     docs: `${DOCS}/networks`,
@@ -2972,33 +2673,26 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'indexer',
-    label: 'Indexer',
     icon: Database,
     description: 'Index and query on-chain data.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: IndexerModule }],
   },
   {
     id: 'oracles',
-    label: 'Oracles',
     icon: Radio,
-    description: 'Bring off-chain data on-chain.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: OraclesModule }],
   },
   {
     id: 'attestations',
-    label: 'Attestations',
     icon: ShieldCheck,
     description: 'Verifiable attestations and proofs.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'beta',
     kind: 'module',
     routes: [{ path: '', component: AttestationsModule }],
@@ -3017,11 +2711,9 @@ export const catalog: CatalogEntry[] = [
     // authoritative server gate. Honest by construction — every value folds real
     // telemetry, on-chain uptime is labeled a tracker bug, nothing fabricated.
     id: 'lux-network',
-    label: 'Lux Network',
     icon: Waypoints,
     description: 'Validators, node and pod memory, and Lux service health across the fleet, as each node reports it.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'admin',
     brands: ['lux'],
     repo: 'hanzoai/console',
@@ -3041,7 +2733,6 @@ export const catalog: CatalogEntry[] = [
     icon: Compass,
     description: 'Lux Network block explorer — search transactions, addresses, and contracts.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
@@ -3053,7 +2744,6 @@ export const catalog: CatalogEntry[] = [
     icon: ArrowLeftRight,
     description: 'Trade digital assets on the Lux exchange.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
@@ -3065,7 +2755,6 @@ export const catalog: CatalogEntry[] = [
     icon: Waypoints,
     description: 'Bridge assets across chains on the Lux Network.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
@@ -3077,7 +2766,6 @@ export const catalog: CatalogEntry[] = [
     icon: Droplet,
     description: 'Claim testnet tokens for building on Lux.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
@@ -3089,7 +2777,6 @@ export const catalog: CatalogEntry[] = [
     icon: Shield,
     description: 'Multisig smart-contract wallet on Lux (Safe).',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
@@ -3101,7 +2788,6 @@ export const catalog: CatalogEntry[] = [
     icon: Coins,
     description: 'Swap tokens on the Lux on-chain decentralized exchange.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
@@ -3113,7 +2799,6 @@ export const catalog: CatalogEntry[] = [
     icon: Wallet,
     description: 'Manage your assets across the Lux C, P, and X chains.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['lux'],
     kind: 'external',
@@ -3125,7 +2810,6 @@ export const catalog: CatalogEntry[] = [
     icon: Compass,
     description: 'Zoo Network block explorer — search transactions, addresses, and contracts.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['zoo'],
     kind: 'external',
@@ -3137,7 +2821,6 @@ export const catalog: CatalogEntry[] = [
     icon: ArrowLeftRight,
     description: 'Trade digital assets on the Zoo exchange.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['zoo'],
     kind: 'external',
@@ -3149,7 +2832,6 @@ export const catalog: CatalogEntry[] = [
     icon: Waypoints,
     description: 'Bridge assets across chains on the Zoo Network.',
     category: 'Web3',
-    status: 'enabled',
     stage: 'alpha',
     brands: ['zoo'],
     kind: 'external',
@@ -3159,11 +2841,8 @@ export const catalog: CatalogEntry[] = [
   // ── Apps ─────────────────────────────────────────────────────────────
   {
     id: 'chat',
-    label: 'Chat',
     icon: MessageSquare,
-    description: 'AI chat with Zen models, third-party models, and MCP tools.',
     category: 'Apps',
-    status: 'enabled',
     repo: 'hanzoai/chat',
     docs: `${DOCS}/chat`,
     kind: 'module',
@@ -3178,11 +2857,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'bot',
-    label: 'Bot',
     icon: Bot,
-    description: 'Agent gateway — channels, skills, and a chat-completions API at /v1/bot.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/bot',
     kind: 'module',
@@ -3199,11 +2875,8 @@ export const catalog: CatalogEntry[] = [
     // per-org progress tracks a state per step, and the Business AI can DO a step for
     // you (streamed). Foundational onboarding — always-on for every org (entitlements).
     id: 'guide',
-    label: 'Guide',
     icon: Compass,
-    description: 'Your interactive launch checklist — the Business AI can do each step for you.',
     category: 'Apps',
-    status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // Overview ('') renders the whole guide; ':tab' is reserved for future sub-tabs
@@ -3220,9 +2893,7 @@ export const catalog: CatalogEntry[] = [
     id: 'crm',
     label: 'CRM',
     icon: Building2,
-    description: 'Companies, contacts, and opportunities — your Business-OS CRM, per org.',
     category: 'Apps',
-    status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // The index IS Companies (`/crm`); the other two collections render via the
@@ -3247,9 +2918,7 @@ export const catalog: CatalogEntry[] = [
     id: 'tel',
     label: 'Telecom',
     icon: Phone,
-    description: 'Phone numbers, calls, and messages for your org — on whatever carrier this deployment runs.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3274,11 +2943,8 @@ export const catalog: CatalogEntry[] = [
     // report honest "pending — manual review" while those providers are stubs. The company
     // SIDE only (formation + the org's own cap table) — a securities raise runs elsewhere.
     id: 'company',
-    label: 'Company',
     icon: Landmark,
-    description: 'Incorporate your company — the whole formation, from choosing an entity to issuing founder equity.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3293,9 +2959,7 @@ export const catalog: CatalogEntry[] = [
     id: 'captable',
     label: 'Cap Table',
     icon: Coins,
-    description: 'Your capitalization ledger — stakeholders, share classes, issued equity, SAFEs, and rounds.',
     category: 'Apps',
-    status: 'enabled',
     repo: 'hanzoai/cloud',
     kind: 'module',
     // Summary ('') is the computed cap table; the five lenses render via the `:tab` route
@@ -3319,11 +2983,8 @@ export const catalog: CatalogEntry[] = [
     // Center: marketing.hanzo.ai boots THIS product alone (config.marketingOnly). Per-org,
     // honest-empty by construction — every state is loading / BackendStateCard / empty.
     id: 'marketing',
-    label: 'Marketing',
     icon: Megaphone,
-    description: 'Campaigns across channels (email, social, ads) — your marketing surface, per org.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3336,11 +2997,8 @@ export const catalog: CatalogEntry[] = [
     // THIS product alone (config.adsOnly). Per-org, honest-empty by construction —
     // every state is loading / BackendStateCard / empty.
     id: 'ads',
-    label: 'Ads',
     icon: Target,
-    description: 'Ad campaigns across platforms (Meta, Google, TikTok, X) — your ads surface, per org.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3359,9 +3017,7 @@ export const catalog: CatalogEntry[] = [
     id: 'social',
     label: 'Publish',
     icon: Share2,
-    description: 'Queue and publish your content everywhere — schedule and post across networks (X, Instagram, LinkedIn, TikTok), per org.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3372,11 +3028,9 @@ export const catalog: CatalogEntry[] = [
     // `/v1/crm/applications` surface (cloud clients/crm on Base/SQLite). Public
     // marketing form → AI screen → staff pipeline board. Per-org (hanzo).
     id: 'startups',
-    label: 'Startups',
     icon: Rocket,
     description: 'Startup Program applications — AI-screened pipeline board, per org.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3393,7 +3047,6 @@ export const catalog: CatalogEntry[] = [
     icon: FileText,
     description: 'Native CMS — pages, posts, articles, media, and navigation as DocTypes on the Hanzo Framework, per organization.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3414,7 +3067,6 @@ export const catalog: CatalogEntry[] = [
     icon: Boxes,
     description: 'Native ERP on the Hanzo Framework — items, sales, purchasing, accounting, and HR as DocTypes, per organization.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3435,7 +3087,6 @@ export const catalog: CatalogEntry[] = [
     icon: LifeBuoy,
     description: 'Native support desk on the Hanzo Framework — tickets, agents, teams, and SLAs as DocTypes, per organization.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     kind: 'module',
@@ -3450,11 +3101,9 @@ export const catalog: CatalogEntry[] = [
     // Deque's axe-core against the current page 100% client-side (engine lazy-loaded
     // into its own chunk); pure sort/summarize logic lives in ~/lib/a11y/scan.
     id: 'accessibility',
-    label: 'Accessibility',
     icon: Accessibility,
     description: 'Scan the current page for WCAG accessibility issues — axe-core, in your browser.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -3462,12 +3111,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'marketplace',
-    label: 'Marketplace',
     icon: Store,
-    description: 'Browse and deploy AI models & providers — real pricing, live availability.',
-    gcp: 'Marketplace',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     docs: `${DOCS}/marketplace`,
@@ -3476,11 +3121,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'search',
-    label: 'Search',
     icon: Search,
-    description: 'Managed search — full-text & hybrid indexes.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/search',
     docs: `${DOCS}/search`,
@@ -3497,10 +3139,7 @@ export const catalog: CatalogEntry[] = [
     id: 'websearch',
     label: 'Web Search',
     icon: Search,
-    description: 'Search and crawl the web for your agents — self-hosted, no third-party keys.',
-    gcp: 'Programmable Search / Vertex AI Search',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/crawl`,
@@ -3527,12 +3166,8 @@ export const catalog: CatalogEntry[] = [
     // the scrape endpoint) — one module for the one product, cross-linked, never a
     // duplicate surface. (Was a native-overview stub; upgraded to the real panel.)
     id: 'crawl',
-    label: 'Crawl',
     icon: Globe,
-    description: 'Crawl and extract the web to clean markdown for your agents — self-hosted (Crawl4AI).',
-    gcp: 'Web crawl',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/cloud',
     docs: `${DOCS}/crawl`,
@@ -3550,11 +3185,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'studio',
-    label: 'Studio',
     icon: Sparkles,
     description: 'Build AI apps and pipelines visually.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/studio',
     docs: `${DOCS}/ai-studio`,
@@ -3565,11 +3198,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'templates',
-    label: 'Templates',
     icon: Blocks,
-    description: 'Starter apps you can fork and deploy — a working project on the first commit.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/gallery',
     kind: 'module',
@@ -3577,11 +3207,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'console',
-    label: 'Console',
     icon: Boxes,
     description: 'The unified cloud console — this app.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'alpha',
     repo: 'hanzoai/console',
     docs: `${DOCS}/console`,
@@ -3595,12 +3223,9 @@ export const catalog: CatalogEntry[] = [
   //    stay in Billing. Each page is a native in-console module — no subdomain.
   {
     id: 'products',
-    label: 'Products',
     icon: Package,
     description: 'Your store catalog — items customers can buy.',
-    gcp: 'Commerce',
     category: 'Apps',
-    status: 'enabled',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
     kind: 'module',
@@ -3608,11 +3233,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'orders',
-    label: 'Orders',
     icon: ClipboardList,
     description: 'Purchases placed in your store — status, customer, and total.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
@@ -3621,11 +3244,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'customers',
-    label: 'Customers',
     icon: Users,
     description: 'People who order from or have an account with your store.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
@@ -3634,11 +3255,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'inventory',
-    label: 'Inventory',
     icon: Boxes,
     description: 'Stock on hand per SKU across your catalog.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
@@ -3647,11 +3266,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'promotions',
-    label: 'Promotions',
     icon: Tag,
     description: 'Discount codes and promotions customers apply at checkout.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
@@ -3664,7 +3281,6 @@ export const catalog: CatalogEntry[] = [
     icon: Store,
     description: 'Storefront configuration and how payments are processed.',
     category: 'Apps',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/commerce',
     docs: `${DOCS}/commerce`,
@@ -3680,7 +3296,6 @@ export const catalog: CatalogEntry[] = [
     icon: KeySquare,
     description: 'The cloud API credential for your account — SDKs, CLI, gateway.',
     category: 'Dev',
-    status: 'enabled',
     repo: 'hanzoai/iam',
     docs: `${DOCS}/api`,
     kind: 'module',
@@ -3688,11 +3303,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'settings',
-    label: 'Settings',
     icon: SlidersHorizontal,
-    description: 'Organization and account settings — name, defaults, and branding.',
     category: 'Settings',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/iam',
     kind: 'module',
@@ -3711,11 +3323,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'contact',
-    label: 'Contact',
     icon: LifeBuoy,
     description: 'Reach support, sales, and the Hanzo community — the in-console assistant answers first.',
     category: 'Settings',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/console',
     kind: 'module',
@@ -3723,11 +3333,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'prompts',
-    label: 'Prompts',
     icon: FileText,
-    description: 'Versioned prompts with labels and history.',
     category: 'AI',
-    status: 'enabled',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/prompts`,
     kind: 'module',
@@ -3741,11 +3348,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'datasets',
-    label: 'Datasets',
     icon: Database,
     description: 'Curate evaluation datasets and items.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/datasets`,
@@ -3762,11 +3367,8 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'experiments',
-    label: 'Experiments',
     icon: Workflow,
-    description: 'Dataset runs, comparisons, and experiment analytics.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/experiments`,
@@ -3782,11 +3384,9 @@ export const catalog: CatalogEntry[] = [
   //    evaluation results. Both render honest states when the runtime is 503.
   {
     id: 'sessions',
-    label: 'Sessions',
     icon: MessageSquare,
     description: 'Traces grouped into multi-turn sessions.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/sessions`,
@@ -3798,11 +3398,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'scores',
-    label: 'Scores',
     icon: ListChecks,
     description: 'Evaluation scores from feedback, graders, and review.',
     category: 'Observe',
-    status: 'enabled',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/scores`,
     kind: 'module',
@@ -3816,11 +3414,9 @@ export const catalog: CatalogEntry[] = [
     // Native — score DEFINITIONS (data type + valid range/categories) on the REAL
     // /v1/evals/rubrics surface. Read-only list; honest RuntimeNotice on 503.
     id: 'score-configs',
-    label: 'Score Configs',
     icon: Ruler,
     description: 'Score definitions — data types, ranges, and categories.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/score-configs`,
@@ -3831,11 +3427,9 @@ export const catalog: CatalogEntry[] = [
     // Native — human-review queues on the REAL /v1/o11y/reviews surface.
     // Read-only list; honest RuntimeNotice when the runtime is not initialized.
     id: 'annotation-queues',
-    label: 'Annotation Queues',
     icon: ClipboardList,
     description: 'Review queues for scoring traces and observations.',
     category: 'Observe',
-    status: 'enabled',
     repo: 'hanzoai/o11y',
     docs: `${DOCS}/annotation-queues`,
     kind: 'module',
@@ -3849,11 +3443,9 @@ export const catalog: CatalogEntry[] = [
     // trapped in this file's opening JSDoc (the `/**` never closed before it), so it
     // never registered despite `ObservationsModule` existing + fetching real data.
     id: 'observations',
-    label: 'Observations',
     icon: Activity,
     description: 'Spans, generations, and events inside traces.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
@@ -3862,11 +3454,9 @@ export const catalog: CatalogEntry[] = [
   {
     // Per-user analytics — same JSDoc-trap fix as Observations; `UsersModule` exists.
     id: 'users',
-    label: 'Users',
     icon: Users,
     description: 'Per-user analytics — trace volume, tokens, and cost.',
     category: 'Observe',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/o11y',
     kind: 'module',
@@ -3881,11 +3471,8 @@ export const catalog: CatalogEntry[] = [
     // renders now and shows an honest "initializing" card until the backend is
     // deployed — never fabricated memories.
     id: 'memory',
-    label: 'Memory',
     icon: NotebookPen,
-    description: 'Your personal memory — searchable, editable, in one place.',
     category: 'Data',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/ai',
     docs: `${DOCS}/memory`,
@@ -3901,12 +3488,8 @@ export const catalog: CatalogEntry[] = [
     // canonical home is the Async category (Tasks/Temporal); maps to GCP Cloud
     // Tasks/Workflows.
     id: 'tasks',
-    label: 'Tasks',
     icon: Workflow,
-    description: 'Durable workflows and schedules — every running and finished task.',
-    gcp: 'Cloud Tasks',
     category: 'Compute',
-    status: 'enabled',
     stage: 'beta',
     repo: 'hanzoai/tasks',
     docs: `${DOCS}/tasks`,
@@ -3936,10 +3519,7 @@ export const catalog: CatalogEntry[] = [
     id: 'team',
     label: 'Members',
     icon: Users,
-    description: 'Organization members and roles — invite, assign roles, remove.',
-    gcp: 'IAM & Admin',
     category: 'Settings',
-    status: 'enabled',
     repo: 'hanzoai/iam',
     docs: `${DOCS}/iam`,
     kind: 'module',
@@ -3952,11 +3532,9 @@ export const catalog: CatalogEntry[] = [
   },
   {
     id: 'profile',
-    label: 'Profile',
     icon: IdCard,
     description: 'Your account — identity, security, and personal API keys.',
     category: 'Settings',
-    status: 'enabled',
     repo: 'hanzoai/iam',
     kind: 'module',
     routes: [
@@ -3970,6 +3548,21 @@ export const catalog: CatalogEntry[] = [
     ],
   },
 ]
+
+/**
+ * The catalog every surface renders: what a person declared, read through what the
+ * platform serves.
+ *
+ * This is the ONE place the two halves meet. A consumer downstream sees a plain
+ * `label` and `description` and never learns which of them came from where —
+ * which is the point: there is no second question to ask, and no second place to
+ * ask it.
+ */
+export const catalog: CatalogEntry[] = declared.map((d) => ({
+  ...d,
+  label: labelOf(d),
+  description: lineOf(d),
+}))
 
 /** In-console module (router/match) shape — derived from the catalog. */
 export type ProductModule = {

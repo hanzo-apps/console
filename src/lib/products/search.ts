@@ -2,7 +2,7 @@
  * Catalog search — rank the product catalog against a query for the command
  * palette. ONE scorer, no dependency: an exact substring beats a subsequence,
  * an earlier/contiguous match beats a scattered one, and fields are weighted
- * (label > id > category/gcp > description). Empty query returns the catalog in
+ * (label > id > category > description). Empty query returns the catalog in
  * its natural order, so the palette can show everything by default.
  */
 import { visibleCatalog, type CatalogEntry } from './registry'
@@ -42,7 +42,6 @@ function scoreEntry(q: string, e: CatalogEntry): number {
     fuzzy(q, e.label) * 3,
     fuzzy(q, e.id) * 2,
     fuzzy(q, e.category),
-    fuzzy(q, e.gcp ?? ''),
     fuzzy(q, e.description) * 0.5,
   )
 }

@@ -105,6 +105,7 @@ import {
 import { productSubpages, subpageWired, activeSubpage } from '~/lib/products/match'
 import { subpageIcon } from '~/components/ui/SubNav'
 import { ProductGuidePanel } from '~/components/guide/ProductGuidePanel'
+import { Brief } from '~/components/products/Brief'
 import { ConsoleFooter } from '~/components/ConsoleFooter'
 import { openProduct } from '~/lib/products/open'
 import { entryMatches } from '~/lib/products/search'
@@ -1163,6 +1164,10 @@ export function Dashboard({ children }: { children: ReactNode }) {
           <XStack justify="center" px="$3" $md={{ px: '$4' }} $xl={{ px: '$6' }}>
             <YStack testID="product-content" width="100%" maxW={CONTENT_MAX} pt="$3" pb={80} $md={{ pt: '$4' }} $xl={{ pt: '$5', gap: '$5' }} gap="$4">
               <TopOnArrival content={content} />
+              {/* Every product, handed to an agent from the top of its own page — ONE
+                  mount, so no product module carries a line of it. Renders nothing
+                  where the address is not a product. */}
+              <Brief />
               <ProductGuide />
               {children}
               <ConsoleFooter />

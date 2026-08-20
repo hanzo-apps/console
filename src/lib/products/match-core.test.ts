@@ -88,8 +88,6 @@ describe('entryMatches — the sidebar filter (ask 4)', () => {
     icon: I,
     description: 'Managed vector database — embeddings & semantic search.',
     category: 'Data',
-    status: 'enabled',
-    gcp: 'Vertex Vector Search',
     kind: 'module',
     routes: [],
   } as unknown as CatalogEntry
@@ -101,9 +99,8 @@ describe('entryMatches — the sidebar filter (ask 4)', () => {
     expect(entryMatches(entry, 'vec')).toBe(true)
   })
 
-  it('matches across id, category, gcp, and description — not just the label', () => {
+  it('matches across id, category, and description — not just the label', () => {
     expect(entryMatches(entry, 'data')).toBe(true) // category
-    expect(entryMatches(entry, 'vertex')).toBe(true) // gcp
     expect(entryMatches(entry, 'semantic')).toBe(true) // description
     expect(entryMatches(entry, 'kubernetes')).toBe(false)
   })

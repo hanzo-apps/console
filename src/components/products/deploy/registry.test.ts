@@ -12,7 +12,7 @@
  *  - a `deploy` SLUG_ALIAS makes the front door unreachable, because
  *    `canonicalSlug` rewrites the head before any lookup happens;
  *  - a `stage: 'admin'` on a customer surface hides it from every customer;
- *  - two entries labelled "Deploy" put identically-named rows in one nav section,
+ *  - two entries named "Deploy" put identically-named rows in one nav section,
  *    one of them the admin ESTATE map;
  *  - a sub-page with no `:tab` route renders an honest stub, and nothing fails.
  */
@@ -21,9 +21,23 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { SLUG_ALIASES } from '~/lib/products/match-core'
+import { labelOf } from '~/lib/products/served'
 import type { Stage } from '~/lib/products/stage'
 
 const SRC = readFileSync(join(__dirname, '..', '..', '..', 'lib', 'products', 'registry.tsx'), 'utf8')
+
+/**
+ * A row's display name, computed the way the catalog computes it: the label the
+ * row types, else the name its id reads as. A row does not type a label it would
+ * only be repeating, so asserting on `label:` text alone would now miss most of
+ * the catalogue — including both products this file exists to pin.
+ */
+const nameIn = (id: string, src: string): string =>
+  labelOf({ id, label: (src.match(/^\s*label: '(.*)',\s*$/m) ?? [])[1] })
+
+/** Every row's display name, in catalog order. */
+const names = (): string[] =>
+  [...SRC.matchAll(/^ {4}id: '([^']+)',$/gm)].map((m) => nameIn(m[1], entrySrc(m[1])))
 
 /** The stage an entry's source declares, read the way `stageOf` reads the value:
  *  unset is `ga`. This is the DATA half — the predicate over it is proved with
@@ -44,8 +58,8 @@ function entrySrc(id: string): string {
 describe('the Deploy product', () => {
   const src = entrySrc('deploy')
 
-  it('is an Infrastructure module labelled Deploy', () => {
-    expect(src).toMatch(/^\s*label: 'Deploy',\s*$/m)
+  it('is an Infrastructure module named Deploy', () => {
+    expect(nameIn('deploy', src)).toBe('Deploy')
     expect(src).toMatch(/^\s*category: 'Infrastructure',\s*$/m)
     expect(src).toMatch(/^\s*kind: 'module',\s*$/m)
   })
@@ -64,8 +78,8 @@ describe('the Deploy product', () => {
     expect(slugs).toEqual(['apps', 'sites', 'domains', 'cd', 'ci', 'storage'])
   })
 
-  it('is the ONE entry labelled Deploy in the whole catalog', () => {
-    expect([...SRC.matchAll(/^\s*label: 'Deploy',\s*$/gm)]).toHaveLength(1)
+  it('is the ONE entry named Deploy in the whole catalog', () => {
+    expect(names().filter((n) => n === 'Deploy')).toHaveLength(1)
   })
 })
 
@@ -78,15 +92,15 @@ describe('/deploy resolves to the front door', () => {
 
   it('leaves App Platform addressable under its own id', () => {
     expect(SLUG_ALIASES['app-platform']).toBeUndefined()
-    expect(entrySrc('app-platform')).toMatch(/^\s*label: 'App Platform',\s*$/m)
+    expect(nameIn('app-platform', entrySrc('app-platform'))).toBe('App Platform')
   })
 })
 
 describe('the estate fleet map stays admin-only, under its own name', () => {
   const src = entrySrc('gitops')
 
-  it('is labelled Fleet, not Deploy', () => {
-    expect(src).toMatch(/^\s*label: 'Fleet',\s*$/m)
+  it('is named Fleet, not Deploy', () => {
+    expect(nameIn('gitops', src)).toBe('Fleet')
   })
 
   it('is still admin-gated — it shows every org, not just yours', () => {

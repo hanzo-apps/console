@@ -25,7 +25,6 @@ const entry = (over: Partial<CatalogEntry> & { id: string }): CatalogEntry => ({
   icon: I,
   description: `The ${over.id} product.`,
   category: 'Network',
-  status: 'enabled',
   kind: 'module',
   routes: [],
   ...over,
@@ -46,7 +45,7 @@ describe('resolveSpec', () => {
   })
 
   it('derives an honest default for an entry with no registered spec', () => {
-    const spec = defaultSpec(entry({ id: 'vpc', label: 'VPC', category: 'Network', gcp: 'VPC', repo: 'hanzoai/vpc' }))
+    const spec = defaultSpec(entry({ id: 'vpc', label: 'VPC', category: 'Network', repo: 'hanzoai/vpc' }))
     expect(spec.health).toEqual({ kind: 'none' }) // never fabricates health
     expect(spec.facts.some((f) => f.value === 'Network')).toBe(true) // real category fact
     expect(spec.facts.some((f) => f.value === 'hanzoai/vpc')).toBe(true) // real repo fact

@@ -11,6 +11,8 @@
     "build": "next build --webpack",
     "build:embed": "node scripts/build-embed.mjs",
     "start": "next start -p 4000",
+    "sync:catalog": "node scripts/sync-catalog.mjs",
+    "check:catalog": "node scripts/sync-catalog.mjs --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",

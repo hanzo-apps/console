@@ -101,11 +101,6 @@ function ProductCard({
             <Text fontSize="$5" fontWeight="700">
               {entry.label}
             </Text>
-            {entry.gcp ? (
-              <Text fontSize="$1" color="$color10">
-                {entry.gcp}
-              </Text>
-            ) : null}
           </YStack>
         </XStack>
         <XStack gap="$1.5" items="center">

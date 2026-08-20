@@ -28,7 +28,6 @@ const sentryEntry: CatalogEntry = {
   icon: I,
   description: '',
   category: 'Observe',
-  status: 'enabled',
   shell: 'sentry',
   kind: 'module',
   subpages: SUBPAGES,
