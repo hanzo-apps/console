@@ -2,7 +2,7 @@
 
 /**
  * Cloudflare — an org's Cloudflare Pages + Workers managed from the console, over
- * the cloud asset plane at `/v1/integrations/cloudflare/*` (cloud `clients/cloudflare`,
+ * the cloud asset plane at `/v1/connectors/cloudflare/*` (cloud `clients/cloudflare`,
  * a sibling of the `cloudflare` CONNECTOR that seals the token and of hanzodns which
  * drives the same token for `/v1/dns`).
  *
@@ -16,7 +16,7 @@
  * owner and reads THAT org's KMS-sealed Cloudflare token), so no credential reaches
  * the browser. States are honest end to end:
  *   - 503 → the org has not connected Cloudflare → prompt to connect (the generic
- *     `OrgIntegrationsModule` already renders the connect card; we LINK to it rather
+ *     `OrgConnectorsModule` already renders the connect card; we LINK to it rather
  *     than rebuilding a second connect flow);
  *   - 403 → reads are open to any org member, mutations require ORG ADMIN — say so;
  *   - 501 → an honest Phase-2 answer;
@@ -92,7 +92,7 @@ function CloudflareError({ state, onRetry }: { state: BackendState; onRetry?: ()
           'The same connection also backs Cloudflare-synced zones in DNS.',
           'Connecting requires org admin.',
         ]}
-        primary={{ label: 'Connect Cloudflare', onPress: () => router.push('/integrations'), icon: <Cloud size={16} /> }}
+        primary={{ label: 'Connect Cloudflare', onPress: () => router.push('/connectors'), icon: <Cloud size={16} /> }}
       />
     )
   }

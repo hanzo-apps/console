@@ -39,7 +39,7 @@ const LABELS: Record<string, string> = {
   git: 'Git',
   tasks: 'Tasks',
   templates: 'Templates',
-  integrations: 'Integrations',
+  connectors: 'Connectors',
   automations: 'Automations',
   notify: 'Notify',
   bot: 'Bot',

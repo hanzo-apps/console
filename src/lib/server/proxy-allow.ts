@@ -181,15 +181,15 @@ export const CLOUD_HEADS: readonly string[] = [
   // /v1 exactly like crm/tracker — the single `tel` head admits every sub-path
   // (the availability search, a number's :id release, a call's :id hangup).
   'tel',
-  // Integrations (cloud clients/integrations): /v1/integrations[/:provider[/connect|
-  // /disconnect]]. The generic, provider-agnostic OAuth connector framework (Slack =
-  // reference impl, GitHub = registered seam). connect/list/disconnect resolve the org
-  // from the Bearer owner (principal.Tenant) and 403 a cookie-only call, so they route
-  // through /v1 exactly like crm/agents — the single `integrations` head admits the
-  // list + per-provider detail + the connect/disconnect POST actions. (The provider
-  // `callback` is Slack-initiated, state-authed, and hits cloud DIRECTLY at api.hanzo.ai
-  // — never through this proxy — so it is out of scope here.)
-  'integrations',
+  // Connectors (cloud clients/connectors): /v1/connectors[/:provider[/connect|
+  // /disconnect]]. The generic, provider-agnostic OAuth framework — sixteen
+  // providers over ONE flow, so this single head admits the whole catalog: the
+  // list, per-provider detail, and the connect/disconnect POST actions. They
+  // resolve the org from the Bearer owner (principal.Org) and 403 a cookie-only
+  // call, so they route through /v1 exactly like crm/agents. (A provider's
+  // `callback` is provider-initiated, state-authed, and hits cloud DIRECTLY at
+  // api.hanzo.ai — never through this proxy — so it is out of scope here.)
+  'connectors',
   // Unified analytics (cloud clients/analytics): /v1/analytics/{overview,timeseries,
   // realtime,top/*,llm/*}. Read-only per-org warehouse (Hanzo Datastore); the
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only

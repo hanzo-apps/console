@@ -313,15 +313,15 @@ export {
 // Integrations connector framework. The value + its types are exported under
 // `Integration*`-prefixed names so the connector `Provider` never collides with the
 // AI-model `Provider` (from ./types). The pure normalizers stay importable directly
-// from './integrations' (the unit test uses that path).
-export { IntegrationsApi, GitHubApi } from './integrations'
+// from './connectors' (the unit test uses that path).
+export { ConnectorsApi, GitHubApi } from './connectors'
 export type {
-  Provider as IntegrationProvider,
+  Provider as ConnectorProvider,
   Connection as IntegrationConnection,
   ConnectResult as IntegrationConnectResult,
   GitHubRepo,
   GitHubImportResult,
-} from './integrations'
+} from './connectors'
 // White-label tenant provisioning — clusters/domain/package/brand over the /paas
 // service-token proxy (REAL cluster ops, honest-not-connected domain/package/brand).
 export {

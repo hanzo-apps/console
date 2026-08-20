@@ -328,7 +328,7 @@ export function DashboardsModule({ params }: { params: Record<string, string> })
 
 // NOTE: the old read-only Integrations DataTable (blob-storage / Slack / Mixpanel /
 // Insights surfaces) is superseded by the customer-facing Connect grid in
-// `OrgIntegrationsModule` — the registry's `integrations` entry routes there now, so
+// `OrgConnectorsModule` — the registry's `integrations` entry routes there now, so
 // there is exactly ONE integrations surface. Its `integrationSurfaces` + module were
 // removed here to avoid a second, dead one.
 

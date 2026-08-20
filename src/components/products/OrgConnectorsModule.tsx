@@ -5,7 +5,7 @@
  * connects Slack / GitHub (and any provider the cloud connector framework registers)
  * via a Connect button that runs the ORG-AUTHED OAuth flow through the canonical `/v1`
  * client — the surface that answers "I can't just hit an API endpoint unauthed": the
- * button POSTs `/v1/integrations/:provider/connect` (bearer minted server-side, org from
+ * button POSTs `/v1/connectors/:provider/connect` (bearer minted server-side, org from
  * the token owner), then top-level-navigates to the returned provider authorize URL.
  *
  * Works for ANY org: every call is org-scoped SERVER-SIDE by the minted bearer, and the
@@ -13,7 +13,7 @@
  * global admin switched to) — nothing is hardcoded to a single org.
  *
  * The provider `callback` (state-authed, Slack-initiated) 302s the browser back here at
- * `/integrations?connected=<id>&account=<label>` (or `?error=<id>&reason=<msg>`); this
+ * `/connectors?connected=<id>&account=<label>` (or `?error=<id>&reason=<msg>`); this
  * module reads that query on mount and shows an honest success/error toast + refetches.
  * Every state is honest — loading spinner, `BackendStateCard` on failure, empty state
  * when the framework returns no providers.
@@ -32,10 +32,10 @@ import { useRouter } from '~/lib/router'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Cable, Plug, RefreshCw, GitBranch } from '@hanzogui/lucide-icons-2'
 
-import { ApiError, IntegrationsApi, type IntegrationProvider as Provider } from '~/lib/api'
+import { ApiError, ConnectorsApi, type ConnectorProvider as Provider } from '~/lib/api'
 import { ProviderLogo } from '~/components/ui/ProviderLogo'
 import { useToast } from '~/components/ui/Toast'
-import { GitHubReposView } from '~/components/products/integrations/GitHubReposView'
+import { GitHubReposView } from '~/components/products/connectors/GitHubReposView'
 import { BackendStateCard, EmptyState, PageHeader, PrimaryButton, StatusTag, classifyRead, type BackendState } from '@hanzo/ui/product'
 
 /** Format an RFC3339 (or any Date-parseable) timestamp; degrade to the raw value. */
@@ -56,7 +56,7 @@ function ProviderCard({
 }: {
   p: Provider
   busy: boolean
-  /** True when /integrations/<id> named this card: ring it and bring it into view. */
+  /** True when /connectors/<id> named this card: ring it and bring it into view. */
   focused?: boolean
   onConnect: (p: Provider) => void
   onDisconnect: (p: Provider) => void
@@ -142,9 +142,9 @@ function ProviderCard({
   )
 }
 
-export function OrgIntegrationsModule({ params }: { params: Record<string, string> }) {
+export function OrgConnectorsModule({ params }: { params: Record<string, string> }) {
   /**
-   * `/integrations/<provider>` deep-links one connector.
+   * `/connectors/<provider>` deep-links one connector.
    *
    * It is a LINK worth sending someone — "go connect Cloudflare" is a sentence
    * with a URL — and until the route existed it answered the console's own
@@ -185,7 +185,7 @@ export function OrgIntegrationsModule({ params }: { params: Record<string, strin
 
   const load = useCallback(() => {
     setLoading(true)
-    IntegrationsApi.list()
+    ConnectorsApi.list()
       .then((ps) => {
         setProviders(ps)
         setError(null)
@@ -201,7 +201,7 @@ export function OrgIntegrationsModule({ params }: { params: Record<string, strin
   useEffect(() => load(), [load])
 
   // Handle the OAuth callback return. The provider callback 302s the browser to
-  // /integrations?connected=<id>&account=<label> (success) or ?error=<id>&reason=<msg>.
+  // /connectors?connected=<id>&account=<label> (success) or ?error=<id>&reason=<msg>.
   //
   // The latch is what makes this ONE-SHOT, and it is not belt-and-braces. Stripping
   // the params with router.replace cannot do it alone: the replace is asynchronous, so
@@ -226,7 +226,7 @@ export function OrgIntegrationsModule({ params }: { params: Record<string, strin
     }
     // The latch covers this mount; stripping the params covers the NEXT one, so a
     // refresh or a back-navigation does not replay a connection that already happened.
-    router.replace('/integrations')
+    router.replace('/connectors')
   }, [connectedId, erroredId, account, reason, toast, router, load])
 
   const onConnect = useCallback(
@@ -234,7 +234,7 @@ export function OrgIntegrationsModule({ params }: { params: Record<string, strin
       if (!p.available) return
       setBusyId(p.id)
       try {
-        const { authorizeUrl } = await IntegrationsApi.connect(p.id)
+        const { authorizeUrl } = await ConnectorsApi.connect(p.id)
         if (authorizeUrl) {
           // Top-level navigation to the provider's authorize page (leaves the app).
           window.location.href = authorizeUrl
@@ -257,7 +257,7 @@ export function OrgIntegrationsModule({ params }: { params: Record<string, strin
       }
       setBusyId(p.id)
       try {
-        await IntegrationsApi.disconnect(p.id)
+        await ConnectorsApi.disconnect(p.id)
         toast.success(`Disconnected ${p.name}`)
         load()
       } catch (e) {
@@ -301,7 +301,7 @@ export function OrgIntegrationsModule({ params }: { params: Record<string, strin
     return (
       <YStack gap="$4">
         {header}
-        <BackendStateCard state={error} onRetry={() => load()} hint="endpoint · GET /v1/integrations" />
+        <BackendStateCard state={error} onRetry={() => load()} hint="endpoint · GET /v1/connectors" />
       </YStack>
     )
   }

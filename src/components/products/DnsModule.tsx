@@ -12,7 +12,7 @@
  * DNSSEC · status) drills into a zone's records TABLE with add / edit / delete, the
  * Cloudflare orange-cloud Proxied toggle (only on a proxyable record of a Cloudflare
  * zone), TTL and type. "Connect Cloudflare" kicks the existing
- * `/v1/integrations/cloudflare/connect` OAuth flow (reusing `IntegrationsApi`, DRY).
+ * `/v1/connectors/cloudflare/connect` OAuth flow (reusing `ConnectorsApi`, DRY).
  *
  * Every read/write is same-origin, keyless and org-scoped SERVER-SIDE (the `/v1`
  * bearer BFF mints a short-lived user token; the cloud `dns` head resolves the org
@@ -42,7 +42,7 @@ import {
   type RecordType,
   type Zone,
 } from '~/lib/api/dns'
-import { IntegrationsApi } from '~/lib/api/integrations'
+import { ConnectorsApi } from '~/lib/api/connectors'
 import { SlideOver } from '~/components/ui/SlideOver'
 import { useToast } from '~/components/ui/Toast'
 import { BackendStateCard, ConfirmDelete, DataTable, EmptyState, FieldRow, FieldSelect, FieldSwitch, FieldText, FieldTextArea, PageHeader, PrimaryButton, StatusTag, classifyBackend, type BackendState, type Column } from '@hanzo/ui/product'
@@ -331,7 +331,7 @@ export function DnsModule(_props: { params: Record<string, string> }) {
   // reports honestly on press.
   useEffect(() => {
     let alive = true
-    IntegrationsApi.get('cloudflare')
+    ConnectorsApi.get('cloudflare')
       .then((p) => alive && setCf({ available: p.available, connected: p.connected }))
       .catch(() => alive && setCf(null))
     return () => {
@@ -381,7 +381,7 @@ export function DnsModule(_props: { params: Record<string, string> }) {
 
   const connectCloudflare = useCallback(async () => {
     try {
-      const { authorizeUrl } = await IntegrationsApi.connect('cloudflare')
+      const { authorizeUrl } = await ConnectorsApi.connect('cloudflare')
       if (authorizeUrl) {
         window.location.assign(authorizeUrl)
         return

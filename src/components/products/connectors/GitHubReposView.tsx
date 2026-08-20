@@ -18,7 +18,7 @@ import { ArrowLeft, Github, RefreshCw, DownloadCloud, Lock } from '@hanzogui/luc
 
 import { ApiError, GitHubApi, type GitHubRepo } from '~/lib/api'
 import { useToast } from '~/components/ui/Toast'
-import { repoStatusLabel, pendingRepoNames } from '~/components/products/integrations/logic'
+import { repoStatusLabel, pendingRepoNames } from '~/components/products/connectors/logic'
 import { BackendStateCard, EmptyState, PageHeader, PrimaryButton, StatusTag, classifyRead, type BackendState } from '@hanzo/ui/product'
 
 function RepoRow({

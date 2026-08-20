@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
-  IntegrationsApi,
+  ConnectorsApi,
   GitHubApi,
   normalizeConnection,
   normalizeProvider,
@@ -9,14 +9,14 @@ import {
   normalizeConnectResult,
   normalizeGitHubRepo,
   normalizeGitHubRepos,
-} from './integrations'
+} from './connectors'
 
 /**
  * Integrations API + pure normalizers. The module calls the DOCUMENTED cloud
- * `/v1/integrations` contract same-origin, keyless and prefix-free (`originV1Url` →
- * `<origin>/v1/integrations`); `next.config.mjs` rewrites that head to the user-bearer
+ * `/v1/connectors` contract same-origin, keyless and prefix-free (`originV1Url` →
+ * `<origin>/v1/connectors`); `next.config.mjs` rewrites that head to the user-bearer
  * `/v1` proxy. These tests pin (1) that each call hits the EXACT same-origin
- * `/v1/integrations` path with the right verb (the canonical Agents/CRM form — never a
+ * `/v1/connectors` path with the right verb (the canonical Agents/CRM form — never a
  * direct cloud-origin call, which 403s), (2) that the real Provider JSON shape (the
  * CONNECTORS_CONTRACT tags) normalizes, (3) the list reads any envelope key, and (4) a
  * garbage/absent field degrades to a safe default — never throws.
@@ -82,7 +82,7 @@ describe('Integrations normalizers — contract Provider shape, defensive', () =
   })
 })
 
-describe('IntegrationsApi — hits the same-origin /v1/integrations contract (rewritten to the /v1 BFF)', () => {
+describe('ConnectorsApi — hits the same-origin /v1/connectors contract (rewritten to the /v1 BFF)', () => {
   const fetched: { url: string; method: string }[] = []
 
   beforeEach(() => {
@@ -96,7 +96,7 @@ describe('IntegrationsApi — hits the same-origin /v1/integrations contract (re
         ? { authorizeUrl: 'https://slack.com/oauth/v2/authorize?x=1' }
         : url.endsWith('/disconnect')
           ? { disconnected: true }
-          : url.endsWith('/integrations/slack')
+          : url.endsWith('/connectors/slack')
             ? { id: 'slack', name: 'Slack', available: true, connected: false }
             : { providers: [{ id: 'slack', name: 'Slack' }, { id: 'github', name: 'GitHub' }] }
       return Promise.resolve(
@@ -109,27 +109,27 @@ describe('IntegrationsApi — hits the same-origin /v1/integrations contract (re
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('lists providers via GET the same-origin /v1/integrations path (not a direct cloud-origin call)', async () => {
-    const out = await IntegrationsApi.list()
-    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/integrations`, method: 'GET' })
+  it('lists providers via GET the same-origin /v1/connectors path (not a direct cloud-origin call)', async () => {
+    const out = await ConnectorsApi.list()
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/connectors`, method: 'GET' })
     expect(out.map((p) => p.id)).toEqual(['slack', 'github'])
   })
 
   it('gets one provider by id', async () => {
-    const p = await IntegrationsApi.get('slack')
-    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/integrations/slack`, method: 'GET' })
+    const p = await ConnectorsApi.get('slack')
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/connectors/slack`, method: 'GET' })
     expect(p.id).toBe('slack')
   })
 
   it('connects with POST and returns the authorizeUrl', async () => {
-    const { authorizeUrl } = await IntegrationsApi.connect('slack')
-    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/integrations/slack/connect`, method: 'POST' })
+    const { authorizeUrl } = await ConnectorsApi.connect('slack')
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/connectors/slack/connect`, method: 'POST' })
     expect(authorizeUrl).toBe('https://slack.com/oauth/v2/authorize?x=1')
   })
 
   it('disconnects with POST', async () => {
-    await IntegrationsApi.disconnect('slack')
-    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/integrations/slack/disconnect`, method: 'POST' })
+    await ConnectorsApi.disconnect('slack')
+    expect(fetched[0]).toEqual({ url: `${ORIGIN}/v1/connectors/slack/disconnect`, method: 'POST' })
   })
 })
 
@@ -164,7 +164,7 @@ describe('GitHub repo normalizers — defensive, snake_case tolerant', () => {
   })
 })
 
-describe('GitHubApi — hits the same-origin /v1/integrations/github contract', () => {
+describe('GitHubApi — hits the same-origin /v1/connectors/github contract', () => {
   const fetched: { url: string; method: string; body?: unknown }[] = []
   beforeEach(() => {
     fetched.length = 0
@@ -184,19 +184,19 @@ describe('GitHubApi — hits the same-origin /v1/integrations/github contract', 
 
   it('lists repos via GET the same-origin github/repos path', async () => {
     const out = await GitHubApi.listRepos()
-    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/integrations/github/repos`, method: 'GET' })
+    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/connectors/github/repos`, method: 'GET' })
     expect(out.map((r) => r.name)).toEqual(['widgets'])
     expect(out[0].imported).toBe(true)
   })
 
   it('imports selected repos via POST with the {repos} body', async () => {
     const res = await GitHubApi.importRepos({ repos: ['widgets'] })
-    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/integrations/github/repos/import`, method: 'POST', body: { repos: ['widgets'] } })
+    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/connectors/github/repos/import`, method: 'POST', body: { repos: ['widgets'] } })
     expect(res).toEqual({ queued: 1, repos: ['widgets'] })
   })
 
   it('imports all via POST with the {all:true} body', async () => {
     await GitHubApi.importRepos({ all: true })
-    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/integrations/github/repos/import`, method: 'POST', body: { all: true } })
+    expect(fetched[0]).toMatchObject({ url: `${ORIGIN}/v1/connectors/github/repos/import`, method: 'POST', body: { all: true } })
   })
 })

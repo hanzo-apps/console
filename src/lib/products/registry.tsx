@@ -264,7 +264,7 @@ import { AccessibilityModule } from '~/components/products/AccessibilityModule'
 import { TeamModule } from '~/components/products/TeamModule'
 import { ProfileModule } from '~/components/products/ProfileModule'
 import { livingOverviewModule } from '~/components/products/overview/living/LivingOverviewModule'
-import { OrgIntegrationsModule } from '~/components/products/OrgIntegrationsModule'
+import { OrgConnectorsModule } from '~/components/products/OrgConnectorsModule'
 import {
   DashboardsModule,
   ExperimentsModule,
@@ -1859,26 +1859,33 @@ const declared: Declaration[] = [
     ],
   },
   {
-    // The customer-facing "connect your tools" page. A logged-in org connects
-    // Slack / GitHub (and any provider the cloud connector framework registers) via
-    // a Connect button that runs the ORG-AUTHED OAuth flow through the canonical /v1
-    // client — the slug stays `/integrations` because it is the backend callback's
-    // redirect target (?connected=<id> / ?error=<id>). Single route (no `:tab`): the
-    // old read-only DataTable surface is superseded by this Connect grid.
-    id: 'integrations',
+    // The customer-facing "connect your tools" page. A logged-in org connects X,
+    // GitHub, Google, Slack — any of the sixteen the cloud catalog declares — via
+    // a Connect button that runs the ORG-AUTHED OAuth flow through the canonical
+    // /v1 client. Single route (no `:tab`): the old read-only DataTable surface is
+    // superseded by this Connect grid.
+    //
+    // THE SLUG IS `connectors`, and it has to be: cloud's callback 302s the
+    // browser to {console}/connectors?connected=<id>, so this id IS that landing
+    // page. It used to be `integrations` — and the comment here said it had to
+    // stay that way for exactly this reason, which was true while cloud redirected
+    // there. Cloud says `connectors` now, end to end: package, endpoint, KMS
+    // namespace, redirect. A slug that disagreed would land every completed OAuth
+    // on a 404.
+    id: 'connectors',
     icon: Cable,
     category: 'Settings',
     stage: 'beta',
     repo: 'hanzoai/cloud',
-    docs: `${DOCS}/integrations`,
+    docs: `${DOCS}/connectors`,
     kind: 'module',
-    // `:provider` deep-links one connector — /integrations/cloudflare is a link
+    // `:provider` deep-links one connector — /connectors/github is a link
     // worth sending someone, and it 404'd because the product mounted only its
     // index. Same component: the page IS the list, and the param decides which
     // card it opens on rather than routing somewhere else.
     routes: [
-      { path: '', component: OrgIntegrationsModule },
-      { path: ':provider', component: OrgIntegrationsModule },
+      { path: '', component: OrgConnectorsModule },
+      { path: ':provider', component: OrgConnectorsModule },
     ],
   },
   {
