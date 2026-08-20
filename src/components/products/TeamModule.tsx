@@ -6,8 +6,15 @@
  * Lists the org's members (and, read-only, its RBAC roles) from IAM via the
  * server-gated `/org/iam` proxy scoped to `currentOrg()`, and lets an ORG ADMIN
  * invite a member (email + role), change a member's role (admin ↔ member), and
- * remove a member. This is what closes "can't manage members in an org" — it does
- * NOT require a global admin (unlike the cross-tenant IAM module).
+ * DELETE a member's account. It does NOT require a global admin (unlike the
+ * cross-tenant IAM module).
+ *
+ * The delete is `delete-user`, not a membership revoke: it ends the person's Hanzo
+ * account everywhere, not their place in this org. `delete-membership` exists and
+ * has no caller, because the invite path makes people members of their HOME org and
+ * IAM refuses a home-org revoke — so pointing the button at it would fail for most
+ * of the list. Until membership is separable from the account, the control says what
+ * it does rather than what we wish it did.
  *
  * Honest by construction: real members / roles or an honest empty; loading, 404
  * (IAM not routed), and 403 (access) are truthful states, never fabricated rows.
@@ -278,11 +285,11 @@ function RemoveDialog({
     setBusy(true)
     try {
       await TeamApi.remove(member)
-      toast.success('Member removed', `${member.email || member.name} was removed.`)
+      toast.success('Account deleted', `${member.email || member.name}'s Hanzo account was deleted.`)
       onOpenChange(false)
       onRemoved()
     } catch (e) {
-      toast.error('Could not remove member', e instanceof ApiError ? e.message : undefined)
+      toast.error('Could not delete the account', e instanceof ApiError ? e.message : undefined)
     } finally {
       setBusy(false)
     }
@@ -294,17 +301,19 @@ function RemoveDialog({
         <Dialog.Overlay key="remove-overlay" bg="rgba(0,0,0,0.55)" />
         <Dialog.Content key="remove-content" bordered elevate width={440} maxW="92vw" p="$4" gap="$3">
           <VisuallyHidden>
-            <Dialog.Title>Remove member</Dialog.Title>
+            <Dialog.Title>Delete account</Dialog.Title>
           </VisuallyHidden>
-          <Text fontSize="$6" fontWeight="800">Remove member?</Text>
+          <Text fontSize="$6" fontWeight="800">Delete this account?</Text>
           <Text fontSize="$3" color="$color11">
-            {member?.email || member?.name} loses access to this organization straight away. To give it back you would
-            have to invite them again.
+            This deletes {member?.email || member?.name}'s Hanzo account outright — every
+            session ends and their membership in every other organization goes with it.
+            It does not scope to this organization, and it cannot be undone. Re-inviting
+            them afterwards does not bring the old account back.
           </Text>
           <XStack gap="$2" justify="flex-end">
             <Button chromeless onPress={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
             <Button theme="red" onPress={() => void submit()} disabled={busy} icon={busy ? <Spinner size="small" /> : <Trash2 size={16} />}>
-              Remove
+              Delete account
             </Button>
           </XStack>
         </Dialog.Content>
@@ -425,7 +434,7 @@ function MembersTab({ org, canManage }: { org: string; canManage: boolean }) {
                   {u.isAdmin ? 'Make member' : 'Make admin'}
                 </Button>
               )}
-              <Button size="$2" chromeless theme="red" icon={<Trash2 size={14} />} disabled={busy} onPress={() => setRemoving(u)} aria-label={`Remove ${u.name}`} />
+              <Button size="$2" chromeless theme="red" icon={<Trash2 size={14} />} disabled={busy} onPress={() => setRemoving(u)} aria-label={`Delete ${u.name}'s account`} />
             </XStack>
           )
         },

@@ -94,7 +94,14 @@ export const TeamApi = {
   /** Change a member (role/admin flag). `id` = `owner/name`; body is the full user. */
   update: (id: string, user: IamUser): Promise<void> => iamMutate('update-user', user, { id }),
 
-  /** Remove a member. Body is the full user object (owner must be the caller's org). */
+  /**
+   * DELETE the member's Hanzo ACCOUNT. Body is the full user object (owner must be
+   * the caller's org). This is not a membership revoke — the account is gone rather
+   * than suspended, so every session ends and membership in every other org goes
+   * with it. `delete-membership` is the org-scoped verb and has no caller anywhere:
+   * the invite path makes people members of their HOME org, and IAM refuses a
+   * home-org revoke, so it would fail for most of a team list.
+   */
   remove: (user: IamUser): Promise<void> => iamMutate('delete-user', user),
 
   /**
