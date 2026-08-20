@@ -24,6 +24,7 @@ import { usePathname } from 'next/navigation'
 import { useAnalytics, usePageview } from '@hanzo/event/react'
 
 import { useSession } from '~/lib/auth/session'
+import { primeBearer } from '~/lib/event'
 
 export function AnalyticsBridge() {
   const analytics = useAnalytics()
@@ -37,8 +38,18 @@ export function AnalyticsBridge() {
     // inventing an id for them. Identity flows from the token's own claims.
     const userId = account?.userId
     if (!userId || identified.current === userId) return
-    identified.current = userId
-    analytics.identify(userId)
+    // `identify` is one of the kinds the anonymous lane REFUSES, so sending it with
+    // a lapsed bearer loses it silently behind a 200. Settle any due refresh first;
+    // the dedupe happens at send time so two effect runs still identify once.
+    let cancelled = false
+    void primeBearer().then(() => {
+      if (cancelled || identified.current === userId) return
+      identified.current = userId
+      analytics.identify(userId)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [account, analytics])
 
   return null

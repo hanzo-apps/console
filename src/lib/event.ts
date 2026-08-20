@@ -39,7 +39,7 @@
 import { createAnalytics, type Analytics } from '@hanzo/event'
 import { setTelemetry } from '@hanzo/ui/telemetry'
 
-import { iamAccessToken } from '~/lib/auth/iam'
+import { iamAccessToken, iamExpiresInSeconds, iamValidAccessToken } from '~/lib/auth/iam'
 
 /** Honor an explicit browser opt-out signal (GPC, then legacy DNT). SSR (no
  *  navigator) defaults to enabled; the browser instance reads the real signal. */
@@ -84,6 +84,46 @@ function consented(): boolean {
 // that needs a PER-HOST key resolved at RUNTIME, e.g. the `GET /v1/brand?host=`
 // shape src/config already anticipates; a module-scope const cannot receive it).
 
+// ── The bearer is kept fresh, because `getToken` cannot await ────────────────
+//
+// @hanzo/event's contract is `getToken?: () => string | undefined | null` — it is
+// called at FLUSH time and is strictly synchronous, so the refresh cannot happen
+// inside it. Keep the SDK's STORED token valid instead and let `getToken` read it:
+// `iamValidAccessToken()` refreshes in place, so one background call makes every
+// later read — and every event batched after it — carry a live bearer.
+//
+// This matters because the door is fail-closed on the CREDENTIAL, not on the
+// request. An unresolvable bearer is not an error: it silently takes the ANONYMOUS
+// lane, which admits only pageview and error. So a lapsed token drops `identify`
+// and every product event, and still answers 200 — the same invisible loss the
+// session cookie caused, just through a narrower window.
+//
+// Single-flight: IAM rotates refresh tokens, so two concurrent refreshes race and
+// one loses.
+const REFRESH_WITHIN_SECONDS = 120
+let refreshing: Promise<string | null> | null = null
+
+/** Settle a refresh if one is due, so the next read carries a live bearer. */
+export function primeBearer(): Promise<string | null> {
+  if (!refreshing) {
+    refreshing = iamValidAccessToken().finally(() => {
+      refreshing = null
+    })
+  }
+  return refreshing
+}
+
+/** The stored bearer, kicking a background refresh once it nears expiry. */
+function bearer(): string | undefined {
+  const token = iamAccessToken()
+  if (!token) return undefined
+  // null = the token carries no `exp`, is unparseable, or is already past it —
+  // every one of those needs a refresh, same as nearing expiry.
+  const secs = iamExpiresInSeconds()
+  if (secs === null || secs <= REFRESH_WITHIN_SECONDS) void primeBearer()
+  return token
+}
+
 /** Error-plane credential. Unset → captureError is inert (fail-safe). */
 const dsn = process.env.NEXT_PUBLIC_HANZO_EVENT_DSN?.trim() || undefined
 
@@ -100,7 +140,7 @@ export const eventClient: Analytics = createAnalytics({
   // The client calls this at flush time, so a sign-in — and every silent refresh
   // after it — is picked up with no rebuild. Returns undefined on the server and
   // when signed out, which is the anonymous path.
-  getToken: () => iamAccessToken() ?? undefined,
+  getToken: bearer,
   dsn,
   enabled: consented(),
 })
@@ -117,8 +157,9 @@ export const eventClient: Analytics = createAnalytics({
 //
 // Registering `eventClient` as the ambient client is the whole fix, and it is what
 // keeps the promise this file's header makes: ONE client, one batch, one anon id,
-// one stream, same-origin with the session cookie — so component events arrive
-// CREDENTIALED and are attributed to the signed-in org. `AnalyticsProvider` in
+// one stream. What makes those component events CREDENTIALED is `getToken` above —
+// the visitor's own IAM bearer — NOT the same-origin session cookie, which carries
+// no principal cloud will resolve (see the note above). `AnalyticsProvider` in
 // Provider.tsx already hands this same instance to `useAnalytics()`.
 //
 // The wrapper is the `Telemetry` shape @hanzogui/telemetry hands out; every method
