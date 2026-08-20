@@ -41,7 +41,6 @@ export function cardMetric(r: ServiceMetrics): ServiceMetric | undefined {
   return { label: 'req', points: r.requests.map((p) => p.v), value: compact(r.summary.requests) }
 }
 
-
 /**
  * Fetch the card Requests metric for each app, keyed by `app.id`. Concurrency-capped;
  * an app with no telemetry (or an o11y miss) is simply absent from the map — the canvas

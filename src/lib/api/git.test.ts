@@ -232,17 +232,29 @@ describe('mirrors', () => {
     expect(normalizeMirror({ id: 'mir_1', host: 'github.com' })).toBeNull()
   })
 
-  it('normalizeMirrors reads data/mirrors/items, garbage → []', () => {
+  it('reads the list from data/mirrors/items, and from a bare array', () => {
     const one = [{ url: 'https://github.com/a/b.git' }]
     expect(normalizeMirrors({ data: one })).toHaveLength(1)
     expect(normalizeMirrors({ mirrors: one })).toHaveLength(1)
     expect(normalizeMirrors({ items: one })).toHaveLength(1)
-    expect(normalizeMirrors(null)).toEqual([])
-    expect(normalizeMirrors({ data: [{ nope: 1 }] })).toEqual([])
+    expect(normalizeMirrors(one)).toHaveLength(1)
   })
 
-  it('an empty list is a real answer (publishes nowhere), not a failure', () => {
+  it('an empty list is a real answer (no target configured), not a failure', () => {
     expect(normalizeMirrors({ data: [] })).toEqual([])
+    expect(normalizeMirrors([])).toEqual([])
+  })
+
+  // The distinction the whole face rests on: a payload with no list is NOT "no target".
+  // Returning [] for any of these would accuse every repo in the org at once.
+  it('returns null — never [] — when the payload carries no list at all', () => {
+    for (const p of [undefined, null, {}, 'ok', 7, { data: null }, { error: 'nope' }, { targets: [] }]) {
+      expect(normalizeMirrors(p)).toBeNull()
+    }
+  })
+
+  it('a list of unreadable rows is still a list — it answered, it just named no target', () => {
+    expect(normalizeMirrors({ data: [{ nope: 1 }] })).toEqual([])
   })
 })
 

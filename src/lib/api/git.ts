@@ -16,6 +16,7 @@
  *   GET /v1/git/repos/:name/blob?ref&path      → blob (utf8|base64, binary, trunc)
  *   GET /v1/git/repos/:name/commits?ref&path&limit → { commits: commit[] }
  *   GET /v1/git/repos/:name/readme?ref         → { path, content, encoding }
+ *   GET /v1/git/repos/:name/mirrors            → { data: mirrorTarget[] } outbound targets
  *
  * Called SAME-ORIGIN with NO prefix (`cloudProxyV1Url('git/...')` →
  * `<origin>/v1/git/...`, the CTO one-endpoint form). On a standalone console the
@@ -284,11 +285,35 @@ export function normalizeMirror(raw: unknown): Mirror | null {
   }
 }
 
-/** Normalize the list payload → `Mirror[]` (reads the array from any common envelope key). */
-export function normalizeMirrors(payload: unknown): Mirror[] {
-  return arrayUnder(payload, ['data', 'mirrors', 'items', 'rows', 'results'])
-    .map(normalizeMirror)
-    .filter((m): m is Mirror => m !== null)
+/**
+ * Normalize the list payload → `Mirror[]`, or `null` when the payload carried NO list
+ * at all.
+ *
+ * The distinction is the whole point. Every other normalizer here may fold an
+ * unrecognised payload to an empty array, because for a tree or a commit log "empty"
+ * and "could not read" both render the same em dash. For mirrors they are opposite
+ * claims: `[]` means this repo publishes nowhere — a finding a caller displays and
+ * sorts to the top — so silently producing `[]` for a 204, a `{}`, a renamed envelope
+ * or an intermediary's placeholder body would accuse every repo in the org at once.
+ * `null` says "no answer here" and lets the caller report it as unread.
+ */
+export function normalizeMirrors(payload: unknown): Mirror[] | null {
+  const list = Array.isArray(payload)
+    ? (payload.filter((x) => x && typeof x === 'object') as Record<string, unknown>[])
+    : listUnder(payload, ['data', 'mirrors', 'items', 'rows', 'results'])
+  if (list === null) return null
+  return list.map(normalizeMirror).filter((m): m is Mirror => m !== null)
+}
+
+/** The first key holding an array, as records — or `null` when no key holds one. */
+function listUnder(payload: unknown, keys: string[]): Record<string, unknown>[] | null {
+  if (!payload || typeof payload !== 'object') return null
+  const o = payload as Record<string, unknown>
+  for (const k of keys) {
+    const v = o[k]
+    if (Array.isArray(v)) return v.filter((x) => x && typeof x === 'object') as Record<string, unknown>[]
+  }
+  return null
 }
 
 // ── Derived helpers (pure — unit-tested) ─────────────────────────────────────
@@ -356,10 +381,10 @@ export const GitApi = {
     restGet<unknown>(withQuery(gitUrl(`repos/${encodeURIComponent(name)}/readme`), { ref })).then(normalizeReadme),
 
   /**
-   * Where a repo publishes (`GET /v1/git/repos/:name/mirrors`). An empty array is a
-   * real answer — the repo publishes nowhere — so callers must distinguish it from a
-   * failed read, which throws.
+   * A repo's outbound targets (`GET /v1/git/repos/:name/mirrors`). An empty array is a
+   * real answer — no target is configured — and `null` means the response carried no
+   * list to read. Both differ from a failed read, which throws.
    */
-  mirrors: (name: string): Promise<Mirror[]> =>
+  mirrors: (name: string): Promise<Mirror[] | null> =>
     restGet<unknown>(gitUrl(`repos/${encodeURIComponent(name)}/mirrors`)).then(normalizeMirrors),
 }

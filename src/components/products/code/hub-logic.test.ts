@@ -11,6 +11,7 @@ import {
   askFilePrompt,
   byReach,
   hostsOf,
+  UNNAMED_HOST,
   reachOf,
   tally,
   HUB_TABS,
@@ -96,13 +97,13 @@ describe('publishing', () => {
     targets,
   })
 
-  it('separates publishing nowhere from a read that failed', () => {
+  it('separates having no target from a read that failed', () => {
     expect(reachOf(pub('a', []))).toBe('nowhere')
     expect(reachOf(pub('a', 'unknown'))).toBe('unknown')
-    expect(reachOf(pub('a', [mirror({})]))).toBe('published')
+    expect(reachOf(pub('a', [mirror({})]))).toBe('set')
   })
 
-  it('sorts the silent repos first, then unknown, then published; by name within', () => {
+  it('sorts the repos with no target first, then unknown, then the rest; by name within', () => {
     const ordered = byReach([
       pub('zeta', [mirror({})]),
       pub('beta', []),
@@ -115,7 +116,7 @@ describe('publishing', () => {
 
   it('tallies each reach and the total', () => {
     expect(tally([pub('a', []), pub('b', [mirror({})]), pub('c', 'unknown'), pub('d', [])])).toEqual({
-      published: 1,
+      set: 1,
       nowhere: 2,
       unknown: 1,
       total: 4,
@@ -133,10 +134,12 @@ describe('publishing', () => {
     expect(hostsOf(pub('a', []))).toEqual([])
   })
 
-  it('falls back to the url when a target carries no host, so no destination vanishes', () => {
-    expect(hostsOf(pub('a', [mirror({ host: '', url: 'https://example.test/x.git' })]))).toEqual([
-      'https://example.test/x.git',
-    ])
+  // The cell shows names. A url is the raw record — unbounded, and the one field that
+  // could carry a credential — so an unnamed target is COUNTED but never PRINTED.
+  it('names an unreadable host without printing the url', () => {
+    const creds = 'https://x-access-token:ghp_secret@github.com:notaport/o/r.git'
+    expect(hostsOf(pub('a', [mirror({ host: '', url: creds })]))).toEqual([UNNAMED_HOST])
+    expect(hostsOf(pub('a', [mirror({ host: '', url: creds })])).join()).not.toContain('ghp_secret')
   })
 })
 

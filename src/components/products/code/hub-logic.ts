@@ -76,23 +76,32 @@ export function groupReposByOrg(repos: Repo[]): RepoGroup[] {
  * One repo and the downstream remotes its advanced refs are pushed to.
  *
  * `targets` is deliberately `Mirror[] | 'unknown'`, not `Mirror[]`. An empty array and
- * a failed read are OPPOSITE facts — "this repo publishes nowhere" is a finding, "we
- * could not ask" is an absence of one — and collapsing them would report a broken read
- * as a broken repo, which is the exact confusion this face exists to end.
+ * a failed read are OPPOSITE facts — "no target is configured" is a finding, "we could
+ * not ask" is an absence of one — and collapsing them would report a broken read as a
+ * broken repo, which is the exact confusion this face exists to end.
  */
 export type Publication = { repo: Repo; targets: Mirror[] | 'unknown' }
 
-/** What a repo's publication amounts to. `nowhere` is the state worth surfacing. */
-export type Reach = 'published' | 'nowhere' | 'unknown'
+/**
+ * What is KNOWN about a repo's outbound targets.
+ *
+ * `set` deliberately does not say "publishing". The store keeps a target's url and
+ * nothing else — no enabled flag, no last-push time, no last error (the push reactor
+ * logs a failure and drops it) — and the push credential is shared per host, so revoking
+ * it stops every mirror in the org while every row still holds its target. A board that
+ * read `set` as "publishing" would be at its most confident in exactly the moment it was
+ * most wrong. It reports the configuration, which is what the system records.
+ */
+export type Reach = 'set' | 'nowhere' | 'unknown'
 
 /** The reach of one publication. PURE. */
 export function reachOf(p: Publication): Reach {
   if (p.targets === 'unknown') return 'unknown'
-  return p.targets.length > 0 ? 'published' : 'nowhere'
+  return p.targets.length > 0 ? 'set' : 'nowhere'
 }
 
-/** Reach order for the list: the repos that publish NOWHERE are what you came to see. */
-const REACH_RANK: Record<Reach, number> = { nowhere: 0, unknown: 1, published: 2 }
+/** Reach order for the list: the repos with NO target are what you came to see. */
+const REACH_RANK: Record<Reach, number> = { nowhere: 0, unknown: 1, set: 2 }
 
 /**
  * Order publications so the silent repos sort first, then the unreadable ones, then the
@@ -108,23 +117,31 @@ export function byReach(ps: Publication[]): Publication[] {
 
 /** How many repos sit in each reach — the one-line summary above the table. PURE. */
 export function tally(ps: Publication[]): Record<Reach, number> & { total: number } {
-  const t = { published: 0, nowhere: 0, unknown: 0, total: ps.length }
+  const t = { set: 0, nowhere: 0, unknown: 0, total: ps.length }
   for (const p of ps) t[reachOf(p)]++
   return t
 }
 
+/** What a target whose host could not be read is called. Never the url: the cell shows
+ *  names, and a url is the raw record — unbounded text that may carry credentials. */
+export const UNNAMED_HOST = 'unnamed host'
+
 /**
- * The distinct hosts a repo publishes to, in first-seen order — the cell text. A target
- * whose host is empty degrades to its url rather than vanishing, so a row never claims
- * fewer destinations than it has. PURE.
+ * The distinct hosts a repo targets, in first-seen order — the cell text.
+ *
+ * A target whose host is empty counts as `UNNAMED_HOST` rather than vanishing, so a row
+ * never claims fewer destinations than it has, and never by printing the url: cloud
+ * strips userinfo on write, but that is cloud's invariant to keep, not this cell's to
+ * depend on, and a cell that prints whatever the record holds has no bound on what it
+ * can show. PURE.
  */
 export function hostsOf(p: Publication): string[] {
   if (p.targets === 'unknown') return []
   const seen = new Set<string>()
   const out: string[] = []
   for (const m of p.targets) {
-    const h = m.host || m.url
-    if (h && !seen.has(h)) {
+    const h = m.host || UNNAMED_HOST
+    if (!seen.has(h)) {
       seen.add(h)
       out.push(h)
     }

@@ -159,7 +159,11 @@ export type PlatformApp = {
 
 /** Severity order for drift, worst first. Anything unrecognised sorts last. */
 const DRIFT_RANK: Record<string, number> = { red: 0, critical: 0, error: 0, high: 0, yellow: 1, warn: 1, medium: 1 }
-const rankOf = (sev?: string): number => DRIFT_RANK[(sev ?? '').toLowerCase()] ?? 2
+
+/** A field the inventory is trusted for but does not type-check: anything not a string reads as absent. */
+const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+
+const rankOf = (sev?: unknown): number => DRIFT_RANK[text(sev).toLowerCase()] ?? 2
 
 /**
  * The distinct drift flags on an app, worst first — the WHY behind the severity word.
@@ -171,16 +175,41 @@ const rankOf = (sev?: string): number => DRIFT_RANK[(sev ?? '').toLowerCase()] ?
  * payload. Deduplicated by kind so a repeated flag does not pad the line. PURE.
  */
 export function driftReasons(app: PlatformApp): AppDriftFlag[] {
-  const flags = app.drift?.flags ?? []
+  const flags = Array.isArray(app.drift?.flags) ? app.drift.flags : []
+  // Sort BEFORE deduplicating, so a kind reported twice keeps its WORST severity
+  // rather than whichever copy the inventory happened to list first.
+  const ranked = flags.filter((f) => text(f?.kind)).sort((a, b) => rankOf(a?.severity) - rankOf(b?.severity))
   const seen = new Set<string>()
   const out: AppDriftFlag[] = []
-  for (const f of flags) {
-    const kind = (f?.kind ?? '').trim()
-    if (!kind || seen.has(kind)) continue
+  for (const f of ranked) {
+    const kind = text(f.kind)
+    if (seen.has(kind)) continue
     seen.add(kind)
     out.push(f)
   }
-  return out.sort((a, b) => rankOf(a.severity) - rankOf(b.severity))
+  return out
+}
+
+/**
+ * The WORST severity the app reports — the top-level one and every flag's, folded
+ * together. The top-level field alone is not the answer: a red flag can arrive with
+ * no summary severity beside it, and reading only the summary paints that row in the
+ * ordinary register, which is the one row that must not look ordinary. PURE.
+ */
+export function driftSeverity(app: PlatformApp): string {
+  const candidates = [app.drift?.severity, ...driftReasons(app).map((f) => f.severity)]
+  let best: string = ''
+  let bestRank = Number.POSITIVE_INFINITY
+  for (const c of candidates) {
+    const s = text(c)
+    if (!s || s.toLowerCase() === 'none') continue
+    const r = rankOf(s)
+    if (r < bestRank) {
+      bestRank = r
+      best = s
+    }
+  }
+  return best
 }
 
 /**
@@ -190,9 +219,9 @@ export function driftReasons(app: PlatformApp): AppDriftFlag[] {
  * empty badge that hides a real finding. PURE.
  */
 export function driftLabel(app: PlatformApp): string {
-  const kinds = driftReasons(app).map((f) => f.kind)
+  const kinds = driftReasons(app).map((f) => text(f.kind))
   if (kinds.length) return kinds.join(', ')
-  const sev = (app.drift?.severity ?? '').trim()
+  const sev = text(app.drift?.severity)
   return sev && sev.toLowerCase() !== 'none' ? sev : ''
 }
 

@@ -6,10 +6,12 @@
  * `{data: repoView[]}` for `GET /v1/git/repos` and `{data: mirrorTargetView[]}` for
  * `GET /v1/git/repos/:name/mirrors`.
  *
- * The claim under test is the one the face exists to make: a repo with NO mirror
- * target reads "Nowhere", and a repo whose target list could not be READ reads
- * "Unreadable" — never "Nowhere". Collapsing those two would report a broken read as
- * a broken repo, and a board that cries wolf is worse than the kubectl it replaced.
+ * The claim under test is the one the face exists to make: a repo with NO mirror target
+ * reads "No target", and a repo whose target list could not be READ reads "Unreadable" —
+ * never "No target". That holds for a thrown read (500) AND for a 200 whose body carries
+ * no list at all, which is the shape an unimplemented route or a placeholder answers with.
+ * Collapsing those would report a broken read as a broken repo, and a board that cries
+ * wolf is worse than the kubectl it replaced.
  *
  * Run: BASE_URL=http://localhost:4000 npx playwright test code-publishing
  */
@@ -31,13 +33,16 @@ const REPOS = {
     { id: 'r1', org: 'hanzo', name: 'cloud', defaultBranch: 'main', cloneUrl: '', sshUrl: '', sizeBytes: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-08-19T00:00:00Z' },
     { id: 'r2', org: 'hanzo', name: 'silent', defaultBranch: 'main', cloneUrl: '', sshUrl: '', sizeBytes: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-08-18T00:00:00Z' },
     { id: 'r3', org: 'hanzo', name: 'unreadable', defaultBranch: 'main', cloneUrl: '', sshUrl: '', sizeBytes: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-08-17T00:00:00Z' },
+    { id: 'r4', org: 'hanzo', name: 'mute', defaultBranch: 'main', cloneUrl: '', sshUrl: '', sizeBytes: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-08-16T00:00:00Z' },
   ],
 }
 
-/** `cloud` publishes to github; `silent` has an EMPTY list; `unreadable` 500s. */
+/** `cloud` has a target; `silent` has an EMPTY list; `unreadable` 500s; `mute` 200s with no list. */
 const MIRRORS: Record<string, unknown> = {
   cloud: { data: [{ id: 'mir_1', repo: 'cloud', host: 'github.com', url: 'https://github.com/hanzoai/cloud.git', createdAt: '2026-02-01T00:00:00Z' }] },
   silent: { data: [] },
+  // A 200 that answers with no list. NOT "no target" — nothing was read.
+  mute: {},
 }
 
 const json = (route: Route, body: unknown) =>
@@ -77,7 +82,7 @@ test.describe('Code · Publishing', () => {
     await openPublishing(page)
 
     // Every repo the backend returned is on the board.
-    for (const name of ['cloud', 'silent', 'unreadable']) {
+    for (const name of ['cloud', 'silent', 'unreadable', 'mute']) {
       await expect(page.getByText(name, { exact: true }).first()).toBeVisible()
     }
 
@@ -85,13 +90,18 @@ test.describe('Code · Publishing', () => {
     await expect(page.getByText('github.com', { exact: true }).first()).toBeVisible()
 
     // The empty list is a finding; the failed read is NOT the same finding.
-    await expect(page.getByText('Nowhere', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('No target', { exact: true }).first()).toBeVisible()
     await expect(page.getByText('Unreadable', { exact: true }).first()).toBeVisible()
 
     // And the summary counts them apart.
-    await expect(page.getByText('1 publishing', { exact: true })).toBeVisible()
-    await expect(page.getByText('1 nowhere', { exact: true })).toBeVisible()
-    await expect(page.getByText('1 unreadable', { exact: true })).toBeVisible()
+    await expect(page.getByText('1 with a target', { exact: true })).toBeVisible()
+    await expect(page.getByText('1 with none', { exact: true })).toBeVisible()
+    // BOTH the 500 and the empty-bodied 200 land here — two unread repos, one accusation
+    // avoided. A regression that folds the 200 into "no target" reads "2 with none".
+    await expect(page.getByText('2 unreadable', { exact: true })).toBeVisible()
+
+    // The board reports configuration, not delivery — it must say so on the page.
+    await expect(page.getByText(/not proof one arrived/)).toBeVisible()
 
     mkdirSync(SHOTS, { recursive: true })
     await page.screenshot({ path: join(SHOTS, 'code-publishing.png'), fullPage: true })
@@ -102,13 +112,14 @@ test.describe('Code · Publishing', () => {
     await expect(page.getByText('silent', { exact: true })).toBeVisible()
 
     // Narrow to the repos that DO publish: the other two leave.
-    await page.getByText('1 publishing', { exact: true }).click()
+    await page.getByText('1 with a target', { exact: true }).click()
     await expect(page.getByText('cloud', { exact: true })).toBeVisible()
     await expect(page.getByText('silent', { exact: true })).toHaveCount(0)
     await expect(page.getByText('unreadable', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('mute', { exact: true })).toHaveCount(0)
 
     // Pressing the same count again restores the full list.
-    await page.getByText('1 publishing', { exact: true }).click()
+    await page.getByText('1 with a target', { exact: true }).click()
     await expect(page.getByText('silent', { exact: true })).toBeVisible()
   })
 
@@ -118,7 +129,7 @@ test.describe('Code · Publishing', () => {
     await expect(tab).toBeVisible({ timeout: 45_000 })
     await tab.click()
     await expect(page).toHaveURL(/\/code\/publishing$/)
-    await expect(page.getByText('Nowhere', { exact: true }).first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText('No target', { exact: true }).first()).toBeVisible({ timeout: 30_000 })
   })
 
   test('a repo row opens that repo', async ({ page }) => {

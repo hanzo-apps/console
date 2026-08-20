@@ -376,7 +376,7 @@ export const CLOUD_HEADS: readonly string[] = [
   // Bearer owner). The single `deploy` head admits every sub-path; the console never
   // touches the cluster — a cookie-only/forbidden call 403s like the rest.
   'deploy',
-  // Hanzo Git (cloud clients/git): /v1/git/repos[/:name[/{refs,tree,blob,commits,readme}]].
+  // Hanzo Git (cloud clients/git): /v1/git/repos[/:name[/{refs,tree,blob,commits,readme,mirrors}]].
   // The org's hosted code repositories — the native-Go git host welded into the cloud
   // binary (smart-HTTP + the /v1/git control plane + the JSON browse surface). The
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only

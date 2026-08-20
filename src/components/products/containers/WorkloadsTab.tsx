@@ -14,7 +14,7 @@ import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { ChevronRight } from '@hanzogui/lucide-icons-2'
 
 import type { PlatformApp } from '~/lib/api'
-import { driftLabel } from '~/lib/api/platform'
+import { driftLabel, driftSeverity } from '~/lib/api/platform'
 import { fmtAge } from './resource'
 import { toneColor } from '~/components/ui/tone'
 import { DataTable, StatusTag, type Column } from '@hanzo/ui/product'
@@ -28,8 +28,9 @@ import { DataTable, StatusTag, type Column } from '@hanzo/ui/product'
 function DriftBadge({ app }: { app: PlatformApp }) {
   const label = driftLabel(app)
   if (!label) return <Text fontSize="$2" color="$color10">—</Text>
-  const sev = (app.drift?.severity ?? '').toLowerCase()
-  const hot = ['high', 'critical', 'error', 'red'].includes(sev)
+  // The worst severity ANYWHERE on the app, not just the summary field: a red flag can
+  // arrive with no summary beside it, and that row is the one that must not read as ordinary.
+  const hot = ['high', 'critical', 'error', 'red'].includes(driftSeverity(app).toLowerCase())
   return (
     <Text
       fontSize="$1"

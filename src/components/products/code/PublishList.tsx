@@ -1,29 +1,35 @@
 'use client'
 
 /**
- * Publishing face of the Code hub — where each repo's code actually reaches.
+ * Publishing face of the Code hub — where each repo's pushes are set to go.
  *
  * A repo on the native git host publishes by holding outbound mirror targets: when a
- * push lands, the advanced branch is force-pushed to each target. So "is this repo
- * publishing?" is answered by its target list, and a repo with NO targets publishes
- * NOWHERE — a fact that, until this page, was visible only by asking the API repo by
- * repo, and so was not visible at all.
+ * push lands, the advanced branch is force-pushed to each target. So a repo with NO
+ * target cannot publish, and until this page that was visible only by asking the API
+ * one repo at a time — which is to say it was not visible.
+ *
+ * WHAT THIS PAGE DOES NOT CLAIM. The store keeps a target's url and nothing more: no
+ * enabled flag, no last-push time, no last error. The push reactor logs a failed push
+ * and moves on, and the credential is shared per host, so revoking it stops every
+ * mirror in the org while every target row survives untouched. A page that read "has a
+ * target" as "is publishing" would therefore be most confident precisely when it was
+ * most wrong. It reports the configuration, and the footnote says so.
  *
  * Reads the REAL per-org `/v1/git` subsystem (`GitApi.repos` then `GitApi.mirrors` per
  * repo, org-scoped SERVER-SIDE — no org param leaves the browser and no viewer sees an
  * org they could not already list). The per-repo reads are concurrency-capped and each
  * is caught INDIVIDUALLY: a repo whose target list could not be read is marked unknown,
- * never silently counted as publishing nowhere. Confusing those two would turn a broken
- * read into a false accusation, which is the failure this page exists to remove.
+ * never counted as having none. Confusing those two would turn a broken read into a
+ * false accusation, which is the failure this page exists to remove.
  *
- * Silent repos sort first. Row press opens the repo browser (`/code/repos/:name`).
+ * Repos with no target sort first. Row press opens the repo browser.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from '~/lib/router'
 import { Button, Text, XStack, YStack } from '@hanzo/gui'
 import { GitBranch, RefreshCw, Upload } from '@hanzogui/lucide-icons-2'
 
-import { GitApi, type Mirror, type Repo } from '~/lib/api/git'
+import { GitApi, repoKey, type Mirror, type Repo } from '~/lib/api/git'
 import { mapLimit } from '~/lib/map-limit'
 import { fmtRelative } from '~/lib/api/agents'
 import { byReach, hostsOf, reachOf, repoHref, tally, type Publication, type Reach } from './hub-logic'
@@ -55,8 +61,8 @@ type Async<T> =
  * read we could not make has nothing to report about the repo itself.
  */
 const REACH_TAG: Record<Reach, { status: string; tone: Tone }> = {
-  published: { status: 'Publishing', tone: 'settled' },
-  nowhere: { status: 'Nowhere', tone: 'stopped' },
+  set: { status: 'Target set', tone: 'settled' },
+  nowhere: { status: 'No target', tone: 'stopped' },
   unknown: { status: 'Unreadable', tone: 'quiet' },
 }
 
@@ -73,9 +79,10 @@ async function loadPublications(): Promise<Publication[]> {
     IN_FLIGHT,
     async (i) => {
       try {
-        targets[i] = await GitApi.mirrors(repos[i].name)
+        // `null` means the response carried no list to read — as unread as a throw.
+        targets[i] = (await GitApi.mirrors(repos[i].name)) ?? 'unknown'
       } catch {
-        // Leave it `unknown`: we could not ask, which is not the same as "nowhere".
+        // Leave it `unknown`: we could not ask, which is not the same as "no target".
       }
     },
   )
@@ -86,11 +93,11 @@ async function loadPublications(): Promise<Publication[]> {
  * One summary count, and the filter it applies.
  *
  * The counts are the headline, so they are also the control: measured on the hanzo org,
- * 16 of 248 repos publish and 232 do not, and at that ratio an unfiltered list is a wall
- * you scroll rather than a question you answer. Pressing a count narrows to it; pressing
- * it again clears. `emphasis` is for the count that is a finding, which the caller
- * decides — nothing here treats "nowhere" as an error, because whether a given repo
- * SHOULD publish is not a fact this system records.
+ * 16 of 248 repos hold a target and 232 hold none, and at that ratio an unfiltered list
+ * is a wall you scroll rather than a question you answer. Pressing a count narrows to it;
+ * pressing it again clears. `emphasis` is for the count that is a finding, which the
+ * caller decides — nothing here treats "no target" as an error, because whether a given
+ * repo SHOULD publish is not a fact this system records.
  */
 function Count({
   n,
@@ -172,7 +179,7 @@ export function PublishList() {
       },
       {
         key: 'reach',
-        header: 'Publishes',
+        header: 'Target',
         width: 130,
         render: (p) => {
           const t = REACH_TAG[reachOf(p)]
@@ -225,14 +232,14 @@ export function PublishList() {
               onPress={() => setOnly(null)}
             />
             <Count
-              n={counts.published}
-              label="publishing"
-              active={only === 'published'}
-              onPress={() => setOnly(only === 'published' ? null : 'published')}
+              n={counts.set}
+              label="with a target"
+              active={only === 'set'}
+              onPress={() => setOnly(only === 'set' ? null : 'set')}
             />
             <Count
               n={counts.nowhere}
-              label="nowhere"
+              label="with none"
               active={only === 'nowhere'}
               onPress={() => setOnly(only === 'nowhere' ? null : 'nowhere')}
             />
@@ -268,11 +275,17 @@ export function PublishList() {
           columns={columns}
           rows={rows}
           loading={state.phase === 'loading'}
-          rowKey={(p) => p.repo.id}
+          rowKey={(p) => repoKey(p.repo)}
           onRowPress={(p) => router.push(repoHref(p.repo.name))}
-          empty="No repositories yet."
         />
       )}
+
+      {state.phase === 'ready' && rows.length ? (
+        <Text fontSize="$1" color="$color10">
+          A target is where pushes are sent, not proof one arrived — the mirror store records
+          the destination, not the outcome of the last push.
+        </Text>
+      ) : null}
     </YStack>
   )
 }
