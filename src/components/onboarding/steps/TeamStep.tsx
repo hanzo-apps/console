@@ -3,7 +3,7 @@
 /**
  * Step 3 — Your workspace. Confirms the org the user is in (created at first-run
  * org onboarding) and lets them optionally NAME it. REAL: reads/writes the org via
- * the org-admin `TeamApi` (`get-organization` / `update-organization`, pinned to the
+ * the org-admin `TeamApi` (read + update the org record, pinned to the
  * caller's own org server-side). Renaming is best-effort — a read/write failure never
  * blocks the flow (the workspace already exists).
  */

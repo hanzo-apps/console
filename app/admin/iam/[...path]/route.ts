@@ -19,82 +19,95 @@ import { forwardIam } from '~/lib/server/iam-proxy'
 
 export const runtime = 'nodejs'
 
-/** Read segments — reachable via GET only. */
+/**
+ * Read routes — reachable via GET only. A listing is the bare entity and a single
+ * read is `<entity>/get`, so both halves of a pair are named explicitly rather
+ * than admitted by prefix: an entity opened for reading must not thereby open its
+ * writes, which live under the same first segment.
+ */
 const GET_SEGMENTS = new Set([
-  'get-organizations',
-  'get-organization',
-  'get-users',
-  'get-user',
-  'get-applications',
-  'get-application',
-  'get-providers',
-  'get-provider',
-  'get-roles',
-  'get-records',
-  // Waitlist approval queue (iam#104) — the Pending-Users board reads this. The
-  // /admin/iam gate is already global-admin-only, matching IAM's own
-  // GetPendingUsers auth (global admin or org admin). REUSED, not rebuilt.
+  'organizations',
+  'organizations/get',
+  'users',
+  'users/get',
+  'applications',
+  'applications/get',
+  'providers',
+  'roles',
+  'audit-logs',
+  // The Pending-Users board reads this. IAM serves NO approval surface — the route
+  // does not exist there — so this answers 404 until one is built; see the note on
+  // IamAdminApi.pendingUsers. Left listed so the board's own honest error state is
+  // what a reader sees, rather than this proxy's.
   'get-pending-users',
 ])
 
 /**
- * Mutation segments — reachable via POST only (JSON body forwarded).
+ * Write routes — reachable via POST only (JSON body forwarded). A create is the
+ * bare entity; an update and a delete are `<entity>/update` and `<entity>/delete`.
  *
- * The org-metadata WRITES (`add-organization`/`update-organization`/`delete-organization`)
- * are the DATA-DRIVEN white-label backbone: a tenant IS an org record, and its BRAND
- * (logo / favicon / themeData) is a real writable IAM field on that record. This is
- * how the Tenants board CREATES a tenant and WRITES its brand — no hardcoded brand map.
- * These are safe on THIS proxy because the gate is already GLOBAL-ADMIN-ONLY and
- * `forwardIam` pins the org NAME (`orgNameSegments` below) so the write is scoped
- * (a non-global caller — who can't reach this route anyway — could never retarget
- * another tenant's org via the id or the body `name`).
+ * The org-metadata WRITES are the DATA-DRIVEN white-label backbone: a tenant IS an
+ * org record, and its BRAND (logo / favicon / themeData) is a real writable IAM
+ * field on that record. This is how the Tenants board CREATES a tenant and WRITES
+ * its brand — no hardcoded brand map. These are safe on THIS proxy because the gate
+ * is already GLOBAL-ADMIN-ONLY and `forwardIam` pins the org NAME
+ * (`ORG_NAME_SEGMENTS` below) so the write is scoped — a non-global caller, who
+ * cannot reach this route anyway, could never retarget another tenant's org
+ * through the body `name`.
+ *
+ * `providers/get` and `roles/get` are single READS that IAM registers as POSTs, so
+ * they belong on this side of the split. They are the entity's own read, not a
+ * write, and carry no body beyond the key.
  */
 const POST_SEGMENTS = new Set([
-  'add-user',
-  'update-user',
-  'delete-user',
-  'add-application',
-  'update-application',
-  'delete-application',
-  'add-provider',
-  'update-provider',
-  'delete-provider',
-  'add-role',
-  'update-role',
-  'delete-role',
-  'add-organization',
-  'update-organization',
-  'delete-organization',
-  // Waitlist approval actions (iam#104) — approve/reject a pending user. Body is
-  // `{id:"owner/name"}`; the global-admin gate + forwardIam's owner scoping apply.
+  'users',
+  'users/update',
+  'users/delete',
+  'applications',
+  'applications/update',
+  'applications/delete',
+  'providers',
+  'providers/get',
+  'providers/update',
+  'providers/delete',
+  'roles',
+  'roles/get',
+  'roles/update',
+  'roles/delete',
+  'organizations',
+  'organizations/update',
+  'organizations/delete',
+  // Approve/reject a pending user. IAM serves neither — see GET_SEGMENTS.
   'approve-user',
   'reject-user',
 ])
 
 /**
- * Organization objects are owned by IAM's built-in `admin`, and the org
- * list/get endpoints scope results to the caller's org server-side — so `admin`
- * is an acceptable owner THERE (never for tenant data like users/roles). The
- * org-metadata WRITES join it: they operate on the `admin`-owned org record.
+ * Organization rows are owned by IAM's built-in `admin` — the owner is the
+ * registry the row lives in, not the tenant it describes — so `admin` is an
+ * acceptable owner THERE (never for tenant data like users or roles). Every
+ * organization route joins it, reads and writes alike.
  */
 const ORG_ENDPOINTS = new Set([
-  'get-organizations',
-  'get-organization',
-  'add-organization',
-  'update-organization',
-  'delete-organization',
+  'organizations',
+  'organizations/get',
+  'organizations/update',
+  'organizations/delete',
 ])
 
 /**
- * Segments carrying an org NAME to guard — a non-global admin can't read/write
+ * Routes carrying an org NAME to guard — a non-global admin can't read or write
  * another org's settings via the `admin` metadata owner. (This route's gate is
  * already global-only, so this is defense-in-depth: it keeps the org-name scoping
  * identical to the `/org/iam` self-service proxy, one policy for both.)
+ *
+ * The bare `organizations` is NOT here: a listing names no org, so there is no
+ * name to pin, and IAM decides that listing on the principal alone.
  */
 const ORG_NAME_SEGMENTS = new Set([
-  'get-organization',
-  'update-organization',
-  'delete-organization',
+  'organizations/get',
+  'organizations/update',
+  'organizations/delete',
 ])
 
 const forbidden = () => NextResponse.json({ error: 'forbidden' }, { status: 403 })

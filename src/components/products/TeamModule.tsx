@@ -338,10 +338,10 @@ function MembersTab({ org, canManage }: { org: string; canManage: boolean }) {
       const id = `${u.owner}/${u.name}`
       setBusyId(id)
       try {
-        // update-user overwrites from the body, so send the FULL current user
-        // with only isAdmin changed (never a partial that would blank fields).
-        const full = await TeamApi.member(id).catch(() => u)
-        await TeamApi.update(id, { ...full, isAdmin: !u.isAdmin })
+        // The update REPLACES the row, so send the FULL current user with only
+        // isAdmin changed (never a partial, which would blank the rest).
+        const full = await TeamApi.member(u.owner, u.name).catch(() => u)
+        await TeamApi.update({ ...full, isAdmin: !u.isAdmin })
         toast.success('Role updated', `${u.email || u.name} is now ${!u.isAdmin ? 'admin' : 'member'}.`)
         load()
       } catch (e) {

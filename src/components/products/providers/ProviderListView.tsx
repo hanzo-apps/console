@@ -25,7 +25,7 @@ export function ProviderListView({ onOpen }: { onOpen: (p: Provider) => void }) 
   // Tenant scope: casibase providers are owned by the ORG, not the username. Use
   // the active org scope (the same value stamped as X-Org-Id and switched by the
   // OrgSwitcher) so reads resolve the org's custom providers and a global admin's
-  // org switch re-scopes (get-providers honors the owner param for admins).
+  // org switch re-scopes (the providers list honors the owner param for admins).
   const owner = currentOrg()
 
   const [rows, setRows] = useState<ProviderRow[]>([])

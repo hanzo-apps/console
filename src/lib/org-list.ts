@@ -5,13 +5,12 @@
  * (or the query it is asked to page), so the switcher stays a thin render of this
  * and every branch is unit-tested.
  *
- * SCALE — the switcher is TRULY lazy: it fetches one page of `get-organizations`
+ * SCALE — the switcher is TRULY lazy: it fetches one page of the `organizations` registry
  * at a time (`orgQuery`), appends via `mergeOrgs`, and loads more on demand
  * (infinite-scroll / "Load more") — never the whole tenant table up front. Search
- * is debounced and pushed to the server (`field`/`value` on the query) so a term
- * narrows the fetched set at the source; `visibleRows` ALSO client-filters the
- * loaded rows (over BOTH name and displayName) so what renders is always correct —
- * whether or not the backend honored the server filter.
+ * narrows the LOADED rows (`orgRows` → `filterOrgs`, over both name and
+ * displayName): IAM's list takes an owner and a window and no filter, so there is
+ * no term to push at it and nothing to reconcile a server answer against.
  *
  * The pure helpers here are shared with the OrgSwitcher hook (which owns the fetch)
  * and reuse the org-picker's label/monogram helpers so there is ONE way to derive
@@ -69,25 +68,27 @@ export function tierOf(org: Organization): OrgTier | null {
 // ── Paging ───────────────────────────────────────────────────────────────────
 
 /**
- * The `get-organizations` query for page `page` (0-based) with an optional search
- * term. Pages are server-side (`p`/`pageSize`); a non-empty term is pushed to the
- * server as a `name` LIKE filter (`field`/`value`) so it narrows AT THE SOURCE and
- * scales to thousands of orgs. Sorted by name for a stable, resumable order.
+ * The organization-list query for page `page` (0-based). Pages are server-side
+ * (`pageQuery` cuts them into `limit`/`offset`), which is what keeps the switcher
+ * lazy over a large registry.
+ *
+ * The search term is NOT sent. IAM's list takes an owner and a window and nothing
+ * else — no name filter, no sort key — so a term pushed at it would be ignored and
+ * the caller would read a full page as a narrowed one. `orgRows` already narrows
+ * what has loaded through `filterOrgs`, so search still works; what it no longer
+ * does is narrow AT THE SOURCE. For a registry large enough that the match lives
+ * past the loaded pages, the fix is a filter on IAM's list, not a parameter here
+ * that nothing reads.
+ *
+ * Order is IAM's own (newest first) rather than by name — the list carries no sort
+ * key either, and asking for one silently changes nothing.
  */
-export function orgQuery(page: number, query: string, pageSize: number = ORG_PAGE_SIZE): ListParams {
-  const q = query.trim()
-  const params: ListParams = {
+export function orgQuery(page: number, _query: string, pageSize: number = ORG_PAGE_SIZE): ListParams {
+  return {
     owner: 'admin', // IAM orgs are owned by the reserved `admin` org
-    page: page + 1, // the backend `p` is 1-based (listQuery maps page→p)
+    page: page + 1, // 1-based, matching listQuery's `p`; page 0 is offset 0
     pageSize,
-    sortField: 'name',
-    sortOrder: 'ascending',
   }
-  if (q) {
-    params.field = 'name'
-    params.value = q
-  }
-  return params
 }
 
 /** Append a freshly-fetched page, deduped by `owner/name`, preserving order. */
@@ -107,7 +108,7 @@ export function mergeOrgs(existing: Organization[], incoming: Organization[]): O
 /**
  * Whether more pages remain — a FULL page implies there may be more, a short
  * (or empty) page means we've reached the end. This needs no reliable total
- * count from the backend, so it's correct even when `data2` is absent.
+ * count from the backend, so it's correct even when none is reported.
  */
 export function pageIsFull(lastCount: number, pageSize: number = ORG_PAGE_SIZE): boolean {
   return lastCount >= pageSize
@@ -144,10 +145,10 @@ export function rowFor(org: Organization): OrgRow {
 }
 
 /**
- * The rows to render for a query: client-filter the accumulated (server-paged)
- * rows over BOTH name and displayName, so the visible list is always correct even
- * if the backend ignored the `field`/`value` server filter, then map to row
- * view-models. One call → one source of truth for what the switcher shows.
+ * The rows to render for a query: filter the accumulated (server-paged) rows over
+ * BOTH name and displayName, then map to row view-models. This is where search
+ * HAPPENS — IAM's list carries no filter — so it is the one source of truth for
+ * what the switcher shows.
  */
 export function orgRows(orgs: Organization[], query: string): OrgRow[] {
   return filterOrgs(orgs, query).map(rowFor)

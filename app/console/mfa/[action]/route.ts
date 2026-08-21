@@ -27,7 +27,7 @@ const TOTP = 'app' // IAM TotpType
  * pinned to the resolved session user for TWO reasons: (1) the handler targets that
  * user, and (2) the IAM authz filter derives the request OBJECT from `owner`/`name`
  * (query) and grants self-access when it equals the bearer subject — the SAME rule
- * that lets `get-users?owner=<me>` through. We send these as the QUERY STRING with an
+ * that lets `users?owner=<me>` through. We send these as the QUERY STRING with an
  * EMPTY body: the authz filter's object-derivation reads a form body as JSON, so a
  * form-encoded body yields an empty object (→ no self-match → denied); with the
  * params in the query and no body it reads owner/name and the self grant applies.

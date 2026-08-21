@@ -3,18 +3,18 @@ import { describe, expect, it } from 'vitest'
 import { bodyField, pinnedSearch } from './iam-proxy'
 
 describe('pinnedSearch (org-keyed lister pin — RED CRITICAL)', () => {
-  it('PINS an omitted organization to the caller org for a non-SuperAdmin (closes the cross-tenant enumeration)', () => {
-    // Omitted org would make IAM return EVERY org's projects; pin forces the caller's own.
-    expect(pinnedSearch('', true, false, 'maxpower')).toBe('?organization=maxpower')
+  // The pin is on `owner`, because `owner` is what IAM scopes a listing on.
+  it('PINS an omitted owner to the caller org for a non-SuperAdmin (closes the cross-tenant enumeration)', () => {
+    expect(pinnedSearch('', true, false, 'maxpower')).toBe('?owner=maxpower')
   })
 
-  it('OVERWRITES a supplied organization for a non-SuperAdmin (server-authoritative)', () => {
-    expect(pinnedSearch('?organization=hanzo', true, false, 'maxpower')).toBe('?organization=maxpower')
-    expect(pinnedSearch('?organization=maxpower', true, false, 'maxpower')).toBe('?organization=maxpower')
+  it('OVERWRITES a supplied owner for a non-SuperAdmin (server-authoritative)', () => {
+    expect(pinnedSearch('?owner=hanzo', true, false, 'maxpower')).toBe('?owner=maxpower')
+    expect(pinnedSearch('?owner=maxpower', true, false, 'maxpower')).toBe('?owner=maxpower')
   })
 
   it('leaves a SuperAdmin free to target any org (or all)', () => {
-    expect(pinnedSearch('?organization=hanzo', true, true, 'admin')).toBe('?organization=hanzo')
+    expect(pinnedSearch('?owner=hanzo', true, true, 'admin')).toBe('?owner=hanzo')
     expect(pinnedSearch('', true, true, 'admin')).toBe('')
   })
 

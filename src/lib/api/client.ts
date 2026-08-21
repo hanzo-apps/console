@@ -40,6 +40,46 @@ export const envelopeTotal = (env: { total?: unknown; data2?: unknown }, rows: u
   return Array.isArray(rows) ? rows.length : 0
 }
 
+// ── The IAM wire contract ────────────────────────────────────────────────────
+//
+// IAM answers with the TYPED RECORD, not a status envelope: a list is
+// `{ <entity>: T[], total }` (the organization registry spells the count
+// `count`), a single read is the record itself. It lives here beside
+// `envelopeTotal` — the contract of the OTHER surfaces — so the two cookie and
+// bearer clients read one definition instead of each keeping their own.
+
+/**
+ * The key a list answer files its rows under: the entity segment in the spelling
+ * Go gave the JSON tag, so `audit-logs` reads back as `auditLogs`. Deriving it
+ * beats a table of entity → key: a new entity needs no edit.
+ */
+export const rowsKey = (entity: string): string =>
+  entity.replace(/-(.)/g, (_, c: string) => c.toUpperCase())
+
+/** The rows of a list answer, or [] when the body carries none. */
+export function rowsOf<T>(entity: string, body: unknown): T[] {
+  const rows = (body as Record<string, unknown> | null)?.[rowsKey(entity)]
+  return Array.isArray(rows) ? (rows as T[]) : []
+}
+
+/**
+ * The count a list answer reports. Two spellings, one meaning: most entities say
+ * `total`, the organization registry says `count`. Neither present falls back to
+ * what actually arrived.
+ */
+export function countOf(body: unknown, rows: unknown[]): number {
+  const o = (body ?? {}) as Record<string, unknown>
+  if (typeof o.total === 'number') return o.total
+  if (typeof o.count === 'number') return o.count
+  return rows.length
+}
+
+/** Rows + count out of one list answer. */
+export const pageOf = <T>(entity: string, body: unknown): { rows: T[]; total: number } => {
+  const rows = rowsOf<T>(entity, body)
+  return { rows, total: countOf(body, rows) }
+}
+
 export class ApiError extends Error {
   readonly status: number
   constructor(message: string, status = 0) {
@@ -443,32 +483,39 @@ export async function post<T = string>(path: string, body?: unknown, query?: Que
 }
 
 /**
- * IAM over the SAME `/v1` path + resilient fetch as every cloud call — IAM's
- * `{status,msg,data,total}` envelope IS our `ApiResponse`, so there is no second
- * client. These target `/v1/iam/<segment>`, which the cloud IAM edge (org-scoped)
- * serves in the one-binary console and the `/v1` bearer proxy forwards in the split
- * one — ONE path, ONE gate, in both topologies. `iamList` surfaces the total
- * (`total`, legacy `data2`) that plain `get` drops.
+ * IAM over the SAME `/v1` path + resilient fetch as every cloud call. These target
+ * `/v1/iam/<entity>`, which the cloud IAM edge (org-scoped) serves in the
+ * one-binary console and the `/v1` bearer proxy forwards in the split one — ONE
+ * path, ONE gate, in both topologies.
+ *
+ * IAM answers with the RECORD, never a status envelope, so these read the typed
+ * shape through the ONE contract in `iam-envelope` (shared with the cookie client,
+ * so the two cannot drift). `request` already threw on a non-2xx, which is the
+ * whole verdict here — there is no `status` field left to branch on.
  */
-export async function iamList<T>(segment: string, query?: Query): Promise<{ rows: T[]; total: number }> {
-  const r = await request<T[]>('GET', `iam/${segment}`, { query })
-  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
-  const rows = Array.isArray(r.data) ? r.data : []
-  return { rows, total: envelopeTotal(r, rows) }
+const iamBody = async (
+  method: 'GET' | 'POST',
+  path: string,
+  opts: { query?: Query; body?: unknown } = {},
+): Promise<unknown> => request<unknown>(method, `iam/${path}`, opts)
+
+export const iamList = <T>(entity: string, query?: Query): Promise<{ rows: T[]; total: number }> =>
+  iamBody('GET', entity, { query }).then((body) => pageOf<T>(entity, body))
+
+export async function iamOne<T>(entity: string, key: Query): Promise<T> {
+  const record = (await iamBody('GET', `${entity}/get`, { query: key })) as T
+  if (record === undefined || record === null) throw new ApiError('Not found', 404)
+  return record
 }
 
-export async function iamOne<T>(segment: string, query?: Query): Promise<T> {
-  const r = await request<T>('GET', `iam/${segment}`, { query })
-  if (r.status !== 'ok') throw new ApiError(r.msg || 'Request failed')
-  if (r.data === undefined || r.data === null) throw new ApiError('Not found', 404)
-  return r.data
-}
-
-export const iamMutate = (segment: string, body?: unknown, query?: Query): Promise<void> =>
-  post<unknown>(`iam/${segment}`, body, query).then(() => undefined)
-
-/** Owner/name -> the `id` query param the backend expects (`owner/name`). */
-export const idOf = (owner: string, name: string): string => `${owner}/${encodeURIComponent(name)}`
+/**
+ * A write, addressed by its full route (`users`, `users/update`, `users/delete`).
+ * The record it acts on rides in the BODY — IAM keys every write on the (owner,
+ * name) the body carries, so there is no `?id=` to build and no place for a query
+ * key to disagree with the record beside it.
+ */
+export const iamMutate = (path: string, body?: unknown): Promise<void> =>
+  iamBody('POST', path, { body }).then(() => undefined)
 
 /**
  * A resource member URL: `<collection>/<owner>/<name>`.

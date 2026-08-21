@@ -74,7 +74,7 @@ export function TenantDetail({
     try {
       // The tenant's brand IS its IAM org record — logo/favicon/themeData are real
       // writable org fields, so this is DATA-driven and REAL (global-admin IAM proxy).
-      await IamAdminApi.updateOrganization(tenant.org, {
+      await IamAdminApi.updateOrganization({
         owner: 'admin',
         name: tenant.org,
         displayName: tenant.display,

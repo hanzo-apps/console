@@ -59,10 +59,25 @@ async function mountConsole(page: Page, seen: Scoped[]) {
     const url = route.request().url()
     seen.push({ url, org: route.request().headers()['x-org-id'] ?? null })
 
-    if (url.includes('get-organizations')) {
-      const query = new URL(url).searchParams.get('value') ?? ''
-      const rows = ORGS.filter((o) => o.displayName.toLowerCase().includes(query.toLowerCase()))
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', data: rows, data2: rows.length }) })
+    // The org registry answers the TYPED record — rows under `organizations`,
+    // count beside them — and it takes no search term, so every row comes back
+    // and the switcher narrows what it holds. `/get` first: it is a prefix match
+    // on the same word, and the single read must not be served the listing.
+    if (url.includes('/iam/organizations/get')) {
+      const name = new URL(url).searchParams.get('name') ?? ''
+      const row = ORGS.find((o) => o.name === name)
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(row ?? {}),
+      })
+    }
+    if (url.includes('organizations')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ organizations: ORGS, count: ORGS.length }),
+      })
     }
     if (url.includes('billing/balance')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ spendableCents: 4250 }) })

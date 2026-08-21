@@ -106,7 +106,7 @@ type Tone = { tone: 'ok' | 'err'; text: string }
 
 /**
  * Users with full CRUD — create, promote/demote admin, and delete — over the
- * ready IamAdminApi mutations (add/update/delete-user) through the server-gated
+ * ready IamAdminApi mutations (add/update/delete a user) through the server-gated
  * /admin/iam proxy, scoped to `owner`. This is the IAM user surface, in
  * console: no link-out for the common lifecycle. Honest states throughout.
  */
@@ -157,7 +157,7 @@ function UsersAdminView({ owner }: { owner: string }) {
       const k = `${u.owner}/${u.name}`
       setBusy(k)
       try {
-        await IamAdminApi.updateUser(k, { ...u, isAdmin: !u.isAdmin })
+        await IamAdminApi.updateUser({ ...u, isAdmin: !u.isAdmin })
         run()
       } catch (e) {
         setState({ phase: 'error', err: asApiError(e) })
@@ -253,7 +253,7 @@ function UsersAdminView({ owner }: { owner: string }) {
 
 /**
  * Roles with full CRUD — create and delete RBAC roles over IamAdminApi
- * (add/update/delete-role → /v1/iam/*), scoped to `owner`. Mirrors
+ * (add/update/delete a role → /v1/iam/roles*), scoped to `owner`. Mirrors
  * UsersAdminView; membership editing stays in the full IAM app.
  */
 function RolesAdminView({ owner }: { owner: string }) {

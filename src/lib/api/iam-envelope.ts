@@ -1,19 +1,25 @@
 /**
- * IAM envelope client factory — the ONE typed client for the IAM
- * `{status,msg,data,total}` envelope (legacy `data2` count accepted), bound to a
- * same-origin gated proxy base.
+ * The IAM wire contract, and the cookie-authenticated client that speaks it.
+ *
+ * IAM answers with the TYPED RECORD, not a status envelope. A list is
+ * `{ <entity>: T[], total }` (organizations spell the count `count`), a
+ * single read is the record itself, and a write answers with what it wrote.
+ * There is no `status:"ok"` to branch on: the HTTP code is the whole verdict,
+ * and a failure body carries its reason under `error`.
+ *
+ * That contract — how a list files its rows and its count — lives in `client.ts`
+ * beside the one it replaced, and both this cookie client and the bearer client
+ * read it from there, so the two cannot come to disagree about the wire.
  *
  * The browser never holds an IAM credential: it calls a SAME-ORIGIN server route
  * (`/admin/iam/*` for cross-tenant global-admin ops, `/org/iam/*` for a customer
  * managing their OWN org) with just the session cookie; the server route enforces
  * the gate + tenant scoping and forwards to IAM as the user. Both speak the same
- * envelope, so this ONE factory serves both (DRY) — only the base path differs.
+ * contract, so this ONE factory serves both — only the base path differs.
  */
-import { ApiError, envelopeTotal } from './client'
+import { ApiError, pageOf } from './client'
 
-type Envelope<T> = { status?: string; msg?: string; data?: T; total?: number; data2?: unknown }
-
-/** Paged result — rows plus the backend's total (`total`, legacy `data2`). */
+/** Paged result — rows plus the count IAM reported. */
 export type Paged<T> = { rows: T[]; total: number }
 
 export type Query = Record<string, string | number | boolean | undefined | null>
@@ -31,13 +37,13 @@ export function qs(query?: Query): string {
   return s ? `?${s}` : ''
 }
 
-/** A cookie-authenticated IAM-envelope client rooted at `base` (e.g. `/org/iam`). */
+/** A cookie-authenticated IAM client rooted at `base` (e.g. `/org/iam`). */
 export function makeIamClient(base: string) {
   async function iamReq<T>(
     method: 'GET' | 'POST',
     segment: string,
     opts: { query?: Query; body?: unknown } = {},
-  ): Promise<Envelope<T>> {
+  ): Promise<T> {
     let res: Response
     try {
       res = await fetch(`${base}/${segment}${qs(opts.query)}`, {
@@ -53,27 +59,27 @@ export function makeIamClient(base: string) {
       throw new ApiError(e instanceof Error ? e.message : 'Network request failed')
     }
     if (res.status === 403) throw new ApiError('forbidden', 403)
-    const json = (await res.json().catch(() => null)) as Envelope<T> | null
-    if (!res.ok || !json || json.status !== 'ok') {
-      throw new ApiError(json?.msg || `Request failed (HTTP ${res.status})`, res.status)
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    // The code is the verdict. A refusal names its reason under `error` — zip's
+    // shape and the proxy's own both do — so read that and fall back to the code.
+    if (!res.ok) {
+      const reason = typeof json?.error === 'string' ? json.error : ''
+      throw new ApiError(reason || `Request failed (HTTP ${res.status})`, res.status)
     }
-    return json
+    return json as T
   }
 
-  async function iamList<T>(segment: string, query: Query): Promise<Paged<T>> {
-    const r = await iamReq<T[]>('GET', segment, { query })
-    const rows = Array.isArray(r.data) ? r.data : []
-    return { rows, total: envelopeTotal(r, rows) }
+  const iamList = <T>(entity: string, query: Query): Promise<Paged<T>> =>
+    iamReq<unknown>('GET', entity, { query }).then((body) => pageOf<T>(entity, body))
+
+  async function iamOne<T>(entity: string, key: Query): Promise<T> {
+    const record = await iamReq<T>('GET', `${entity}/get`, { query: key })
+    if (record === undefined || record === null) throw new ApiError('Not found', 404)
+    return record
   }
 
-  async function iamOne<T>(segment: string, query: Query): Promise<T> {
-    const r = await iamReq<T>('GET', segment, { query })
-    if (r.data === undefined || r.data === null) throw new ApiError('Not found', 404)
-    return r.data
-  }
-
-  const iamMutate = (segment: string, body: unknown, query?: Query): Promise<void> =>
-    iamReq<unknown>('POST', segment, { body, query }).then(() => undefined)
+  const iamMutate = (path: string, body: unknown): Promise<void> =>
+    iamReq<unknown>('POST', path, { body }).then(() => undefined)
 
   return { iamReq, iamList, iamOne, iamMutate }
 }

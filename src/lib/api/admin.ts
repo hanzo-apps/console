@@ -5,17 +5,17 @@
  * The browser holds no IAM/KMS credential. Every call here is SAME-ORIGIN to
  * `/admin/iam/*` or `/admin/kms/*`, sending only the first-party session cookie;
  * the server route (`app/admin/{iam,kms}/[...path]/route.ts`) enforces the GLOBAL
- * admin gate and forwards to IAM / KMS as the user. IAM speaks the
- * `{status,msg,data,total}` envelope (legacy `data2` count accepted); KMS speaks
- * plain JSON.
+ * admin gate and forwards to IAM / KMS as the user. IAM answers with the typed
+ * record — a list files its rows under the entity's own name, a single read IS the
+ * record — and KMS speaks plain JSON.
  *
  * Cross-tenant (any org) is global-admin only — a customer managing their OWN org
- * uses `TeamApi` (the `/org/iam` proxy) instead. Both share the ONE envelope
- * client (`makeIamClient`), differing only in the gated base path.
+ * uses `TeamApi` (the `/org/iam` proxy) instead. Both share the ONE client
+ * (`makeIamClient`), differing only in the gated base path.
  */
 import { ApiError, iamList as cloudIamList, iamOne as cloudIamOne, iamMutate as cloudIamMutate } from './client'
 import { IS_EMBED } from '~/lib/embed'
-import { listQuery, type ListParams } from './types'
+import { listQuery, pageQuery, type ListParams } from './types'
 import { makeIamClient, DEFAULT_PAGE_SIZE, qs, type Query, type Paged } from './iam-envelope'
 
 export type { Paged }
@@ -32,7 +32,7 @@ export type ThemeData = {
   isEnabled?: boolean
 }
 
-/** An IAM organization (`get-organizations`). */
+/** An IAM organization (the `organizations` registry). */
 export type Organization = {
   owner: string
   name: string
@@ -48,7 +48,7 @@ export type Organization = {
   [key: string]: unknown
 }
 
-/** An IAM user (`get-users`), including the MFA surface (`get-user`). */
+/** An IAM user (the `users` entity), including the MFA surface. */
 export type IamUser = {
   owner: string
   name: string
@@ -71,7 +71,7 @@ export type IamUser = {
   [key: string]: unknown
 }
 
-/** An IAM application (`get-applications`). */
+/** An IAM application (the `applications` entity). */
 export type IamApplication = {
   owner: string
   name: string
@@ -83,7 +83,7 @@ export type IamApplication = {
   [key: string]: unknown
 }
 
-/** An IAM identity provider (`get-providers`). */
+/** An IAM identity provider (the `providers` entity). */
 export type IamProvider = {
   owner: string
   name: string
@@ -94,7 +94,7 @@ export type IamProvider = {
   [key: string]: unknown
 }
 
-/** An IAM role — the RBAC grant (`get-roles`). */
+/** An IAM role — the RBAC grant (the `roles` entity). */
 export type Role = {
   owner: string
   name: string
@@ -108,7 +108,7 @@ export type Role = {
   [key: string]: unknown
 }
 
-/** An IAM audit record (`get-records`). */
+/** An IAM audit record (the `audit-logs` entity). */
 export type AuditRecord = {
   id?: string | number
   owner?: string
@@ -142,22 +142,35 @@ export type AuditRecord = {
  *    for a super admin, and cloud/IAM enforces the per-principal org scope.
  */
 type IamClient = {
-  iamList: <T>(segment: string, query: Query) => Promise<Paged<T>>
-  iamOne: <T>(segment: string, query: Query) => Promise<T>
-  iamMutate: (segment: string, body: unknown, query?: Query) => Promise<void>
+  iamList: <T>(entity: string, query: Query) => Promise<Paged<T>>
+  iamOne: <T>(entity: string, key: Query) => Promise<T>
+  iamMutate: (path: string, body: unknown) => Promise<void>
 }
 const admin: IamClient = IS_EMBED
   ? { iamList: cloudIamList, iamOne: cloudIamOne, iamMutate: cloudIamMutate }
   : makeIamClient('/admin/iam')
 
+/**
+ * Every organization row is filed under the reserved `admin` owner — an org's
+ * OWNER is the registry it lives in, not the tenant it describes, whose slug is
+ * the row's `name`. One constant so the reads and the writes cannot disagree
+ * about where the registry is.
+ */
+export const ORG_OWNER = 'admin'
+
 export const IamAdminApi = {
-  /** Organizations are owned by the built-in `admin`; IAM scopes to the caller. */
+  /**
+   * The organization registry. IAM admits a LISTING here only to a SuperAdmin —
+   * an org row sits under the reserved `admin` owner, where a read is authorized
+   * against the org NAMED, and a listing names none. An org admin reading their
+   * own org uses `organization(name)` (or TeamApi), which does name one.
+   */
   organizations: (params: ListParams = {}): Promise<Paged<Organization>> =>
-    admin.iamList<Organization>('get-organizations', listQuery({ owner: 'admin', pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<Organization>('organizations', pageQuery({ owner: ORG_OWNER, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   /** A single organization by name (IAM orgs are owned by `admin`). */
   organization: (name: string): Promise<Organization> =>
-    admin.iamOne<Organization>('get-organization', { id: `admin/${name}` }),
+    admin.iamOne<Organization>('organizations', { owner: ORG_OWNER, name }),
 
   /**
    * Create a tenant ORG (the white-label tenant record). Global-admin only.
@@ -165,7 +178,7 @@ export const IamAdminApi = {
    * tenant slug. This is the DATA-DRIVEN create — a new tenant is a new org row.
    */
   addOrganization: (org: Organization): Promise<void> =>
-    admin.iamMutate('add-organization', { ...org, owner: 'admin' }),
+    admin.iamMutate('organizations', { ...org, owner: ORG_OWNER }),
 
   /**
    * Update a tenant ORG — the BRAND write (logo / favicon / themeData are real IAM
@@ -173,55 +186,70 @@ export const IamAdminApi = {
    * retarget another tenant. This is how the Tenants board persists a brand as DATA
    * (no hardcoded brand map).
    */
-  updateOrganization: (name: string, org: Organization): Promise<void> =>
-    admin.iamMutate('update-organization', { ...org, owner: 'admin' }, { id: `admin/${name}` }),
+  updateOrganization: (org: Organization): Promise<void> =>
+    admin.iamMutate('organizations/update', { ...org, owner: ORG_OWNER }),
 
   /** Delete a tenant ORG (the whole tenant record). Global-admin only. */
   deleteOrganization: (org: Organization): Promise<void> =>
-    admin.iamMutate('delete-organization', { ...org, owner: 'admin' }),
+    admin.iamMutate('organizations/delete', { ...org, owner: ORG_OWNER }),
 
   users: (owner: string, params: ListParams = {}): Promise<Paged<IamUser>> =>
-    admin.iamList<IamUser>('get-users', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<IamUser>('users', pageQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
-  /** A single user by id (`owner/name`) — includes the MFA fields. */
-  getUser: (id: string): Promise<IamUser> => admin.iamOne<IamUser>('get-user', { id }),
+  /** A single user by its (owner, name) — includes the MFA fields. */
+  getUser: (owner: string, name: string): Promise<IamUser> =>
+    admin.iamOne<IamUser>('users', { owner, name }),
 
   applications: (owner: string, params: ListParams = {}): Promise<Paged<IamApplication>> =>
-    admin.iamList<IamApplication>('get-applications', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<IamApplication>('applications', pageQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
-  application: (id: string): Promise<IamApplication> =>
-    admin.iamOne<IamApplication>('get-application', { id }),
+  application: (owner: string, name: string): Promise<IamApplication> =>
+    admin.iamOne<IamApplication>('applications', { owner, name }),
 
   providers: (owner: string, params: ListParams = {}): Promise<Paged<IamProvider>> =>
-    admin.iamList<IamProvider>('get-providers', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<IamProvider>('providers', pageQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   roles: (owner: string, params: ListParams = {}): Promise<Paged<Role>> =>
-    admin.iamList<Role>('get-roles', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<Role>('roles', pageQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
   records: (owner: string, params: ListParams = {}): Promise<Paged<AuditRecord>> =>
-    admin.iamList<AuditRecord>('get-records', listQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
+    admin.iamList<AuditRecord>('audit-logs', pageQuery({ owner, pageSize: DEFAULT_PAGE_SIZE, ...params })),
 
-  // Mutations — IAM takes the object as the JSON body; updates take `?id`.
-  addUser: (user: IamUser): Promise<void> => admin.iamMutate('add-user', user),
-  updateUser: (id: string, user: IamUser): Promise<void> => admin.iamMutate('update-user', user, { id }),
-  deleteUser: (user: IamUser): Promise<void> => admin.iamMutate('delete-user', user),
+  // Writes — the record rides in the body, which is where IAM reads the
+  // (owner, name) it acts on. An update REPLACES the row, so a caller spreads
+  // the loaded record and overrides only what it edits.
+  //
+  // The user entity is the one that NESTS: its create/update take the record
+  // under `user`, beside a write-only `password` that is not a field on the
+  // record. Every other entity is its own body.
+  addUser: (user: IamUser): Promise<void> => admin.iamMutate('users', { user }),
+  updateUser: (user: IamUser): Promise<void> => admin.iamMutate('users/update', { user }),
+  deleteUser: (user: IamUser): Promise<void> => admin.iamMutate('users/delete', user),
 
-  addApplication: (app: IamApplication): Promise<void> => admin.iamMutate('add-application', app),
-  updateApplication: (id: string, app: IamApplication): Promise<void> => admin.iamMutate('update-application', app, { id }),
-  deleteApplication: (app: IamApplication): Promise<void> => admin.iamMutate('delete-application', app),
+  addApplication: (app: IamApplication): Promise<void> => admin.iamMutate('applications', app),
+  updateApplication: (app: IamApplication): Promise<void> => admin.iamMutate('applications/update', app),
+  deleteApplication: (app: IamApplication): Promise<void> => admin.iamMutate('applications/delete', app),
 
-  addProvider: (p: IamProvider): Promise<void> => admin.iamMutate('add-provider', p),
-  updateProvider: (id: string, p: IamProvider): Promise<void> => admin.iamMutate('update-provider', p, { id }),
-  deleteProvider: (p: IamProvider): Promise<void> => admin.iamMutate('delete-provider', p),
+  addProvider: (p: IamProvider): Promise<void> => admin.iamMutate('providers', p),
+  updateProvider: (p: IamProvider): Promise<void> => admin.iamMutate('providers/update', p),
+  deleteProvider: (p: IamProvider): Promise<void> => admin.iamMutate('providers/delete', p),
 
-  addRole: (role: Role): Promise<void> => admin.iamMutate('add-role', role),
-  updateRole: (id: string, role: Role): Promise<void> => admin.iamMutate('update-role', role, { id }),
-  deleteRole: (role: Role): Promise<void> => admin.iamMutate('delete-role', role),
+  addRole: (role: Role): Promise<void> => admin.iamMutate('roles', role),
+  updateRole: (role: Role): Promise<void> => admin.iamMutate('roles/update', role),
+  deleteRole: (role: Role): Promise<void> => admin.iamMutate('roles/delete', role),
 
-  // ── Waitlist approval queue (iam#104) — the launch dashboard's Pending-Users
-  //    board. REUSES the IAM approval API through the SAME global-admin /admin/iam
-  //    proxy; there is no second approval store. `owner` optionally scopes the
-  //    queue to one org (global admin sees all when omitted).
+  // ── Waitlist approval queue — the launch dashboard's Pending-Users board.
+  //
+  // NOT MIGRATED, because there is nothing to migrate to: IAM serves no approval
+  // surface at all. `get-pending-users`, `approve-user` and `reject-user` appear
+  // NOWHERE in its source — not as a route, not as a handler, not as a name — so
+  // these three have no native spelling and answer 404.
+  //
+  // Left addressed as they are rather than repointed at an invented route: a
+  // guessed path would 404 identically while reading as migrated, and the board
+  // above it would keep its honest error state either way. What unblocks this is
+  // an approval entity in IAM (the `isForbidden` column on the user is what such
+  // a thing would flip), which is a decision for that service, not a spelling.
   pendingUsers: (owner?: string, params: ListParams = {}): Promise<Paged<IamUser>> =>
     admin.iamList<IamUser>('get-pending-users', listQuery({ pageSize: DEFAULT_PAGE_SIZE, ...(owner ? { owner } : {}), ...params })),
   /** Approve a pending user off the waitlist (globally). id = `owner/name`. */

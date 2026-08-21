@@ -20,37 +20,42 @@ import { forwardIam } from '~/lib/server/iam-proxy'
 
 export const runtime = 'nodejs'
 
-/** Reads — any member of the org (own org only, unless global). */
+/**
+ * Reads — any member of the org (own org only, unless global). A listing is the
+ * bare entity, a single read is `<entity>/get`; both halves are named explicitly
+ * so opening an entity for reading never opens its writes, which share the first
+ * segment.
+ */
 const GET_SEGMENTS = new Set([
-  'get-users',
-  'get-user',
-  'get-roles',
-  'get-organization',
+  'users',
+  'users/get',
+  'roles',
+  'organizations/get',
   // Projects live under the org (IAM-served); the console host's /v1 sends /v1/iam/*
   // to the cloud binary → 404, so the Projects page routes here (Bearer → IAM).
-  'get-organization-projects',
+  'projects',
 ])
 
 /** Writes — org admin only, own org only (unless global). */
 const POST_SEGMENTS = new Set([
-  'add-user',
-  'update-user',
-  'delete-user',
-  // Org branding/settings — org-admin only, pinned to the caller's OWN org by both
-  // the `?id` name AND the body name (below), so a brand admin can't retarget another.
-  'update-organization',
+  'users',
+  'users/update',
+  'users/delete',
+  // Org branding/settings — org-admin only, pinned to the caller's OWN org by the
+  // body name (below), so a brand admin can't retarget another.
+  'organizations/update',
   // Project CRUD — org-admin only (requireAdminForWrite), pinned to the caller's org.
-  'add-project',
-  'delete-project',
+  'projects',
+  'projects/delete',
 ])
 
-/** Org objects are owned by the `admin` metadata org (name guarded separately). */
-const ORG_META = new Set(['get-organization', 'update-organization'])
-/** Segments carrying an org NAME to pin to the caller's scope (read id + write body). */
-const ORG_NAME = new Set(['get-organization', 'update-organization'])
-/** Segments keyed by `organization` (projects) — pin it to the caller's own org so an
- *  omitted/empty organization can't enumerate/pollute across tenants. */
-const ORG_PARAM = new Set(['get-organization-projects', 'add-project', 'delete-project'])
+/** Org rows are owned by the `admin` metadata org (name guarded separately). */
+const ORG_META = new Set(['organizations/get', 'organizations/update'])
+/** Routes carrying an org NAME to pin to the caller's scope (read query + write body). */
+const ORG_NAME = new Set(['organizations/get', 'organizations/update'])
+/** Org-keyed project routes — the owner is pinned to the caller's own org so an
+ *  omitted/empty one can't enumerate or pollute across tenants. */
+const ORG_PARAM = new Set(['projects', 'projects/delete'])
 
 const forbidden = () => NextResponse.json({ error: 'forbidden' }, { status: 403 })
 

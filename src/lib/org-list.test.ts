@@ -18,27 +18,29 @@ const org = (name: string, extra: Partial<Organization> = {}): Organization => (
   ...extra,
 })
 
-describe('orgQuery (server-side pagination + search)', () => {
-  it('pages 0-based → 1-based `p`, owned by admin, sorted by name', () => {
+describe('orgQuery (server-side pagination)', () => {
+  it('pages 0-based → 1-based, owned by admin', () => {
     expect(orgQuery(0, '')).toEqual({
       owner: 'admin',
       page: 1,
       pageSize: ORG_PAGE_SIZE,
-      sortField: 'name',
-      sortOrder: 'ascending',
     })
     expect(orgQuery(3, '').page).toBe(4)
   })
 
-  it('pushes a non-empty (trimmed) query to the server as a name LIKE filter', () => {
-    const q = orgQuery(0, '  acme ')
-    expect(q.field).toBe('name')
-    expect(q.value).toBe('acme')
-  })
-
-  it('omits the filter for an empty/whitespace query', () => {
-    expect(orgQuery(0, '   ').field).toBeUndefined()
-    expect(orgQuery(0, '   ').value).toBeUndefined()
+  /**
+   * IAM's org list takes an owner and a window and nothing else. A term sent at it
+   * would be ignored, and the caller would read a full page as a narrowed one —
+   * which is why the term is dropped here and `orgRows` narrows what has loaded.
+   */
+  it('never sends a search term, a filter field, or a sort key', () => {
+    for (const q of ['', '   ', '  acme ']) {
+      const params = orgQuery(0, q)
+      expect(params.field).toBeUndefined()
+      expect(params.value).toBeUndefined()
+      expect(params.sortField).toBeUndefined()
+      expect(params.sortOrder).toBeUndefined()
+    }
   })
 
   it('honors a caller pageSize', () => {

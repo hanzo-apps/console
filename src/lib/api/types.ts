@@ -188,3 +188,26 @@ export const listQuery = (p: ListParams = {}): Record<string, string | number | 
   sortField: p.sortField,
   sortOrder: p.sortOrder,
 })
+
+/**
+ * The same request against IAM, which pages by WINDOW rather than by page number:
+ * `owner` scopes it and `limit`/`offset` cut the window, and that is the whole
+ * vocabulary — a list takes no search term and no sort key.
+ *
+ * So `field`/`value`/`sortField`/`sortOrder` are dropped here rather than renamed:
+ * there is nothing on the other side to receive them, and passing a filter the
+ * server ignores is how a caller comes to believe a full list is a narrowed one.
+ * Narrowing an IAM listing is the CALLER's job until IAM offers a filter.
+ *
+ * `page` is 1-based, matching `listQuery`'s `p`, so the two read alike at a call
+ * site; the first page is offset 0.
+ */
+export const pageQuery = (p: ListParams = {}): Record<string, string | number | undefined> => {
+  const size = p.pageSize
+  const page = p.page && p.page > 1 ? p.page : 1
+  return {
+    owner: p.owner,
+    limit: size,
+    offset: size ? (page - 1) * size : undefined,
+  }
+}

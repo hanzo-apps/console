@@ -4,12 +4,12 @@
  * Both the SUPER admin proxy (`/admin/iam`) and the SELF-SERVICE org member proxy
  * (`/org/iam`) use this: they differ only in the GATE (who is admitted) and the
  * allow-list. Everything after — the allow-list check, TENANT SCOPING of every
- * owner the request references (query `owner`, `id`'s owner, AND the mutation
- * BODY's owner), the org-name guard for org-metadata reads, the org-admin
- * requirement for writes, forwarding as the user-bound bearer, and returning the
- * IAM envelope verbatim — lives here, so the policy is applied identically and the
- * cross-tenant write gap (IAM add/update/delete take the object in the BODY, not a
- * query param) is closed for BOTH proxies.
+ * owner the request references (query `owner`, AND the mutation BODY's owner,
+ * including the one nested under `user`), the org-name guard for org-metadata
+ * reads, the org-admin requirement for writes, forwarding as the user-bound
+ * bearer, and returning IAM's answer verbatim — lives here, so the policy is
+ * applied identically and the cross-tenant write gap (a write takes its target in
+ * the BODY, not a query param) is closed for BOTH proxies.
  */
 import { type NextRequest, NextResponse } from 'next/server'
 
@@ -22,47 +22,49 @@ const forbidden = () => NextResponse.json({ error: 'forbidden' }, { status: 403 
 const notFound = () => NextResponse.json({ error: 'not found' }, { status: 404 })
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-/** The `<owner>` of an `<owner>/<name>` id, or the whole id when there's no slash. */
-function idOwner(id: string | null): string | null {
-  if (!id) return null
-  const slash = id.indexOf('/')
-  return slash > 0 ? id.slice(0, slash) : id
-}
-
-/** The `<name>` of an `<owner>/<name>` id, or the whole id when there's no slash. */
-function idName(id: string | null): string | null {
-  if (!id) return null
-  const slash = id.indexOf('/')
-  return slash > 0 ? id.slice(slash + 1) : id
-}
-
-/** A string `key` field of a JSON body, or null (best-effort — a mutation carries it). */
+/**
+ * A string `key` of a JSON body — at the top level, or inside a nested `user`.
+ *
+ * The user is the ONE entity whose writes NEST: IAM takes the record under `user`,
+ * beside a write-only password that is not a field on the record. Reading only the
+ * top level would find no owner on exactly those two writes and wave them through,
+ * so the nesting is followed here for the same reason IAM follows it in its own
+ * AuthzTarget — the owner CHECKED has to be the owner WRITTEN.
+ */
 export function bodyField(text: string, key: string): string | null {
   if (!text) return null
   try {
     const j = JSON.parse(text) as Record<string, unknown>
-    const v = j[key]
-    return typeof v === 'string' ? v : null
+    const top = j[key]
+    if (typeof top === 'string') return top
+    const user = j.user
+    if (typeof user !== 'object' || user === null) return null
+    const nested = (user as Record<string, unknown>)[key]
+    return typeof nested === 'string' ? nested : null
   } catch {
     return null
   }
 }
 
 /**
- * The forwarded query string, PINNING `organization` to the caller's own scope when
- * the segment is org-keyed and the caller is NOT a SuperAdmin — so an omitted/empty
- * `organization` can't make IAM's lister return every org's rows (RED CRITICAL). A
- * SuperAdmin's value is left as-is (they may target any org, or all).
+ * The forwarded query string, PINNING `owner` to the caller's own scope when the
+ * segment is org-keyed and the caller is NOT a SuperAdmin — so an omitted/empty
+ * scope can't widen the listing. A SuperAdmin's value is left as-is (they may
+ * target any org, or all).
+ *
+ * `owner` is the pin because `owner` is what IAM scopes a listing on. The pin used
+ * to be on `organization`, which the project lister once keyed off; it reads the
+ * owner now, so pinning the old name would leave the caller's scope unstated.
  */
 export function pinnedSearch(rawSearch: string, orgKeyed: boolean, isSuperAdmin: boolean, orgScope: string): string {
   const p = new URLSearchParams(rawSearch)
-  if (orgKeyed && !isSuperAdmin) p.set('organization', orgScope)
+  if (orgKeyed && !isSuperAdmin) p.set('owner', orgScope)
   const s = p.toString()
   return s ? `?${s}` : ''
 }
 
 export type IamForwardOpts = {
-  /** `<owner>/<name>` path segment, e.g. `get-users`. */
+  /** The IAM route below `/v1/iam/`, e.g. `users` or `users/update`. */
   segment: string
   method: 'GET' | 'POST'
   /** Allow-list for this method — nothing else is reachable. */
@@ -72,19 +74,17 @@ export type IamForwardOpts = {
   /** Writes require org admin (the org proxy). The admin proxy gate is already
    *  SuperAdmin-only, so this is a no-op there. */
   requireAdminForWrite: boolean
-  /** Segments carrying an org NAME to guard (get-organization) so a brand admin
+  /** Routes carrying an org NAME to guard (`organizations/get`) so a brand admin
    *  can't read another org's settings via the `admin` metadata owner. */
   orgNameSegments?: Set<string>
-  /** Segments keyed by the `organization` param/body field (projects). For these a
-   *  non-SuperAdmin's org is PINNED to their own scope — validating is not enough
-   *  because an OMITTED/EMPTY organization makes IAM's lister drop its WHERE and
-   *  return every org's rows (IAM bypasses Casbin for project routes → this proxy is
-   *  the only gate). RED CRITICAL. */
+  /** Org-keyed routes (projects). For these a non-SuperAdmin's `owner` is PINNED
+   *  to their own scope — validating is not enough, because an OMITTED/EMPTY owner
+   *  leaves the scope unstated and this proxy is the gate. RED CRITICAL. */
   orgParamSegments?: Set<string>
 }
 
 /**
- * Enforce the policy for `gate`, then forward to IAM. Returns the IAM envelope
+ * Enforce the policy for `gate`, then forward to IAM. Returns IAM's answer
  * verbatim (status + content-type preserved), or a typed 403/404/502.
  */
 export async function forwardIam(
@@ -113,17 +113,20 @@ export async function forwardIam(
   const ownerOk = (owner: string | null) =>
     policyOwnerAllowed(owner, { isSuperAdmin: gate.isSuperAdmin, orgScope: gate.orgScope, orgMetadataOk })
 
-  // Every org the request references must be in scope: ?owner, the ?id owner, the
-  // ?organization param (the projects lister keys on it), and — critically — for a
-  // mutation the BODY owner + BODY organization (else a brand admin could POST
-  // add-project/add-user with a body field = another tenant, which a query-only
-  // check would miss). ownerOk(null) is true, so an absent field is a no-op.
+  // Every org the request references must be in scope: ?owner, the ?organization
+  // param, and — critically — for a mutation the BODY owner + BODY organization
+  // (else a brand admin could POST a project/user with a body field = another
+  // tenant, which a query-only check would miss). ownerOk(null) is true, so an
+  // absent field is a no-op.
+  //
+  // There is no `?id=<owner>/<name>` half to unpack any more: IAM addresses a
+  // record by SEPARATE owner and name, so the owner is read where it is sent.
   if (!ownerOk(url.searchParams.get('owner'))) return forbidden()
-  if (!ownerOk(idOwner(url.searchParams.get('id')))) return forbidden()
   if (!ownerOk(url.searchParams.get('organization'))) return forbidden()
 
-  // Org-metadata reads (get-organization id=admin/<name>): also pin the org NAME.
-  if (opts.orgNameSegments?.has(segment) && !orgNameAllowed(idName(url.searchParams.get('id')), gate)) {
+  // Org-metadata reads (organizations/get?owner=admin&name=<org>): also pin the
+  // org NAME, which is the tenant — its owner is only the registry it lives in.
+  if (opts.orgNameSegments?.has(segment) && !orgNameAllowed(url.searchParams.get('name'), gate)) {
     return forbidden()
   }
 
@@ -134,20 +137,20 @@ export async function forwardIam(
     bodyText = await req.text()
     if (!ownerOk(bodyField(bodyText, 'owner'))) return forbidden()
     if (!ownerOk(bodyField(bodyText, 'organization'))) return forbidden()
-    // Org-metadata WRITE (update-organization): the ?id name is pinned above; the
-    // record's own `name` field must ALSO be in scope, so a non-global admin can't
-    // retarget/rename another tenant's org via the body. (No-op when absent.)
+    // Org-metadata WRITE (organizations/update): the record's own `name` field is
+    // the tenant, and it must be in scope so a non-global admin can't retarget or
+    // rename another tenant's org through the body. (No-op when absent.)
     if (opts.orgNameSegments?.has(segment) && !orgNameAllowed(bodyField(bodyText, 'name'), gate)) {
       return forbidden()
     }
-    // An org-keyed WRITE (add/delete-project) from a non-SuperAdmin MUST carry
-    // their OWN org in owner+organization — ownerOk already blocks a FOREIGN org;
-    // this also rejects an omitted/empty one (which would create an owner="" row
-    // visible in the cross-tenant enumeration). RED.
-    if (orgKeyed && !gate.isSuperAdmin) {
-      if (bodyField(bodyText, 'organization') !== gate.orgScope || bodyField(bodyText, 'owner') !== gate.orgScope) {
-        return forbidden()
-      }
+    // An org-keyed WRITE (a project create/delete) from a non-SuperAdmin MUST carry
+    // their OWN org as the owner — ownerOk already blocks a FOREIGN one; this also
+    // rejects an omitted/empty owner, which would create an owner="" row visible in
+    // the cross-tenant enumeration. `organization` is checked by ownerOk above and
+    // is not required here: it is an indexed attribute of the record, while `owner`
+    // is the key IAM scopes on, and a delete carries only the key.
+    if (orgKeyed && !gate.isSuperAdmin && bodyField(bodyText, 'owner') !== gate.orgScope) {
+      return forbidden()
     }
   }
 

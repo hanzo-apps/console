@@ -42,12 +42,13 @@ async function openShell(page: Page, logo: string | null) {
     if (req.resourceType() === 'document') return route.continue()
     const url = new URL(req.url())
 
-    // The ONE org read the chrome makes (`useOrgIdentity` → get-organization).
-    if (url.pathname.endsWith('/v1/iam/get-organization')) {
+    // The ONE org read the chrome makes (`useOrgIdentity` → organizations/get).
+    // A single read answers with the RECORD itself, not a status envelope.
+    if (url.pathname.endsWith('/v1/iam/organizations/get')) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: envelope({ owner: 'admin', name: ORG, displayName: 'Acme Labs', logo: logo ?? '' }),
+        body: JSON.stringify({ owner: 'admin', name: ORG, displayName: 'Acme Labs', logo: logo ?? '' }),
       })
     }
     // The logo bytes — a 1x1 PNG, so the <img> genuinely paints.

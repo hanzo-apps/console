@@ -1,10 +1,10 @@
 /**
  * Projects API — projects live UNDER the brand org (Hanzo IAM owns them) and
  * scope every resource (o11y, API keys, datasets, deploys) below them. Served by
- * **IAM** (not the cloud binary): `get-organization-projects` (org-scoped list),
- * `add-project`, `delete-project`. The IAM `Project` is keyed `(owner, name)` with
- * an indexed `organization`; we set owner = organization = the brand org so the
- * record is owned and listed under it.
+ * **IAM** (not the cloud binary) at the one `projects` entity: `GET` for the
+ * org-scoped list, `POST` to create, `POST projects/delete` to remove. The IAM
+ * `Project` is keyed `(owner, name)` with an indexed `organization`; we set
+ * owner = organization = the brand org so the record is owned and listed under it.
  *
  * ROUTING: these are `/v1/iam/*` endpoints reached over the ONE cloud IAM edge
  * (iam_edge.go). The one-binary console (console.hanzo.ai served by cloud) calls
@@ -18,7 +18,7 @@
  * dimension — IAM's Project has no environments column — so they live in
  * `lib/scope.ts`, not in this payload.
  */
-import { idOf, iamList, iamMutate } from './client'
+import { iamList, iamMutate } from './client'
 import { currentOrg } from '~/lib/org-scope'
 import { STOCK_ENVIRONMENTS } from '~/lib/scope'
 
@@ -55,18 +55,21 @@ export const ProjectApi = {
    * `organization` to the caller's own validated scope (the org-isolation gate,
    * since IAM's own authz is permissive on this route). Returns exactly the
    * projects under the caller's org.
+   *
+   * `owner` is the scope IAM reads — it resolves the listing against the caller's
+   * own principal and refuses any other org, so this is a request to be told which
+   * projects are ours, not a filter we are trusted to have applied.
    */
-  list: (): Promise<Project[]> =>
-    iamList<Project>('get-organization-projects', { organization: org() }).then((r) => r.rows),
+  list: (): Promise<Project[]> => iamList<Project>('projects', { owner: org() }).then((r) => r.rows),
 
   /**
-   * Create a project under the org (`POST /org/iam/add-project`). `name` is the
-   * org-unique id (slug-safe — it doubles as the deploy site slug and the shared
-   * cross-surface `?project=` key); `displayName` is the friendly label (defaults to
-   * `name` for callers that don't distinguish them).
+   * Create a project under the org. `name` is the org-unique id (slug-safe — it
+   * doubles as the deploy site slug and the shared cross-surface `?project=` key);
+   * `displayName` is the friendly label (defaults to `name` for callers that don't
+   * distinguish them).
    */
   create: (p: { name: string; displayName?: string; description?: string }): Promise<void> =>
-    iamMutate('add-project', {
+    iamMutate('projects', {
       owner: org(),
       name: p.name,
       displayName: p.displayName ?? p.name,
@@ -74,7 +77,7 @@ export const ProjectApi = {
       description: p.description ?? '',
     }),
 
-  /** Delete a project (`POST /org/iam/delete-project`, keyed by `owner/name`). */
+  /** Delete a project. The (owner, name) it removes rides in the body. */
   remove: (name: string): Promise<void> =>
-    iamMutate('delete-project', { owner: org(), name, organization: org() }, { id: idOf(org(), name) }),
+    iamMutate('projects/delete', { owner: org(), name }),
 }
