@@ -13,7 +13,7 @@
  * global admin switched to) — nothing is hardcoded to a single org.
  *
  * The provider `callback` (state-authed, Slack-initiated) 302s the browser back here at
- * `/connectors?connected=<id>&account=<label>` (or `?error=<id>&reason=<msg>`); this
+ * `/integrations?connected=<id>&account=<label>` (or `?error=<id>&reason=<msg>`); this
  * module reads that query on mount and shows an honest success/error toast + refetches.
  * Every state is honest — loading spinner, `BackendStateCard` on failure, empty state
  * when the framework returns no providers.
@@ -212,7 +212,7 @@ function ProviderCard({
 
 export function OrgConnectorsModule({ params }: { params: Record<string, string> }) {
   /**
-   * `/connectors/<provider>` deep-links one connector.
+   * `/integrations/<provider>` deep-links one connector.
    *
    * It is a LINK worth sending someone — "go connect Cloudflare" is a sentence
    * with a URL — and until the route existed it answered the console's own
@@ -269,7 +269,7 @@ export function OrgConnectorsModule({ params }: { params: Record<string, string>
   useEffect(() => load(), [load])
 
   // Handle the OAuth callback return. The provider callback 302s the browser to
-  // /connectors?connected=<id>&account=<label> (success) or ?error=<id>&reason=<msg>.
+  // /integrations?connected=<id>&account=<label> (success) or ?error=<id>&reason=<msg>.
   //
   // The latch is what makes this ONE-SHOT, and it is not belt-and-braces. Stripping
   // the params with router.replace cannot do it alone: the replace is asynchronous, so
@@ -294,7 +294,7 @@ export function OrgConnectorsModule({ params }: { params: Record<string, string>
     }
     // The latch covers this mount; stripping the params covers the NEXT one, so a
     // refresh or a back-navigation does not replay a connection that already happened.
-    router.replace('/connectors')
+    router.replace('/integrations')
   }, [connectedId, erroredId, account, reason, toast, router, load])
 
   const onConnect = useCallback(

@@ -1849,22 +1849,33 @@ const declared: Declaration[] = [
     // /v1 client. Single route (no `:tab`): the old read-only DataTable surface is
     // superseded by this Connect grid.
     //
-    // THE SLUG IS `connectors`, and it has to be: cloud's callback 302s the
-    // browser to {console}/connectors?connected=<id>, so this id IS that landing
-    // page. It used to be `integrations` — and the comment here said it had to
-    // stay that way for exactly this reason, which was true while cloud redirected
-    // there. Cloud says `connectors` now, end to end: package, endpoint, KMS
-    // namespace, redirect. A slug that disagreed would land every completed OAuth
-    // on a 404.
-    id: 'connectors',
+    // THE SLUG IS `integrations`, and it has to be: cloud's callback 302s the
+    // browser to {console}/integrations?connected=<id> (apps/integrations,
+    // failRedirect/successRedirect), so this id IS that landing page and a slug
+    // that disagreed would land every completed OAuth on a 404.
+    //
+    // It was briefly `connectors`, on a reading of the PUBLIC hanzoai/cloud repo
+    // — which has no connector plane at all. The deployed service is the PRIVATE
+    // hanzo-inc/cloud, where this has always been /v1/integrations. The API base
+    // and the proxy head were already corrected; this was the half left pointing
+    // at a page nothing redirects to.
+    //
+    // ONE NAME PER LAYER, not one across every layer: the product is Connectors
+    // on screen (its description, its components) and the route it lives at is
+    // the one cloud actually serves.
+    id: 'integrations',
     icon: Cable,
-    description: 'Connect X, GitHub, Google, Slack and the rest of your tools to this org.',
+    // No hand-typed description: `integrations` is a SERVED capability, so the
+    // platform already publishes one at /v1/openapi.json, and a second copy here
+    // is a line that can drift from what the API says about itself. served.test
+    // holds that rule, and it started applying the moment this row's id went back
+    // to the name cloud actually serves.
     category: 'Settings',
     stage: 'beta',
     repo: 'hanzoai/cloud',
-    docs: `${DOCS}/connectors`,
+    docs: `${DOCS}/integrations`,
     kind: 'module',
-    // `:provider` deep-links one connector — /connectors/github is a link
+    // `:provider` deep-links one connector — /integrations/github is a link
     // worth sending someone, and it 404'd because the product mounted only its
     // index. Same component: the page IS the list, and the param decides which
     // card it opens on rather than routing somewhere else.

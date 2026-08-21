@@ -92,7 +92,7 @@ function CloudflareError({ state, onRetry }: { state: BackendState; onRetry?: ()
           'The same connection also backs Cloudflare-synced zones in DNS.',
           'Connecting requires org admin.',
         ]}
-        primary={{ label: 'Connect Cloudflare', onPress: () => router.push('/connectors'), icon: <Cloud size={16} /> }}
+        primary={{ label: 'Connect Cloudflare', onPress: () => router.push('/integrations'), icon: <Cloud size={16} /> }}
       />
     )
   }
