@@ -3,7 +3,7 @@
 /**
  * Deploy drop zone — drag-and-drop (or pick) a `.zip`/`.tar.gz` BUILT static site, OR a
  * FOLDER that is packed to a tar.gz in the browser. Hands the raw artifact bytes +
- * Content-Type to `onDeploy`; the parent POSTs them to `/v1/projects/:slug/deploy`.
+ * Content-Type to `onDeploy`; the parent POSTs them to `/v1/projects/sites/:slug/deploy`.
  * Honest by construction: an unsupported file / empty folder shows a reason, never a
  * silent no-op; a browser without `CompressionStream` says so instead of failing opaquely.
  */

@@ -4,10 +4,10 @@
  *
  * `GET /v1/knowledge/graph` returns the org's knowledge as nodes (kb-page/kb-memory/
  * kb-source) + edges (parent tree, wikilinks, connector provenance), shaped for a
- * force-directed renderer. `POST /v1/knowledge/import?format=` ingests an Obsidian
- * vault zip / Notion export zip / Roam JSON / Evernote .enex as a kb-page tree with the
+ * force-directed renderer. `POST /v1/knowledge/import?format=` ingests an Obsidian vault
+ * zip / Notion export zip / Roam JSON / Evernote .enex as a kb-page tree with the
  * links intact. Both are org-scoped SERVER-SIDE: the read/write rides the same-origin
- * `/v1` user-bearer BFF (`cloudProxyV1Url`, the `knowledge` head allow-listed in
+ * `/v1` user-bearer BFF (`cloudProxyV1Url`, the `kb` head allow-listed in
  * proxy-allow.ts), which mints a short-lived IAM token and lets cloud resolve the org
  * from the token `owner` — no credential in the browser. In the go:embed console the
  * same `/v1/knowledge/*` path reaches cloud directly under the session cookie.

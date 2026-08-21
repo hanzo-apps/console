@@ -83,6 +83,11 @@ export type Destination = {
   account: string
   /** The org's stored NON-SECRET ids, keyed by field. Never holds a secret. */
   config: Record<string, string>
+  /** Whether the hosted tag injects a browser pixel for this platform, so a SITE can
+   *  carry a pixel id for it. False means the platform receives conversions
+   *  server-side only, and offering a per-site input would promise an injection that
+   *  never happens. Derived server-side from the tag's own injector map. */
+  pixel: boolean
   /** The non-secret inputs to render. */
   fields: DestinationField[]
   /** The KMS secret NAMES this platform custodies — names only, never values. */
@@ -126,6 +131,7 @@ export function normalizeDestination(raw: unknown): Destination {
     connected: bool(r.connected),
     enabled: bool(r.enabled),
     live: bool(r.live),
+    pixel: bool(r.pixel),
     account: str(r.account),
     config: normalizeConfig(r.config),
     fields: (Array.isArray(r.fields) ? r.fields : []).map(normalizeField).filter((f) => f.key),
@@ -245,3 +251,19 @@ export const DestinationsApi = {
   test: (platform: string): Promise<DestinationTest> =>
     restPost<unknown>(originV1Url(`${BASE}/${enc(platform)}/test`)).then(normalizeTest),
 }
+
+/**
+ * The platforms a SITE can carry a browser pixel for, in catalog order.
+ *
+ * DERIVED, never listed: the console used to keep its own array of four, which went
+ * stale the moment the tag learned to inject eight — a customer could not configure
+ * the other four at all. `pixel` is the server's own answer, read off the same map
+ * the tag dispatches on, so this cannot drift again. `example` comes from the
+ * platform's first non-secret input, which is the id that ships in the page.
+ */
+export const pixelPlatforms = (
+  rows: readonly Destination[],
+): { platform: string; label: string; example: string }[] =>
+  rows
+    .filter((d) => d.pixel)
+    .map((d) => ({ platform: d.platform, label: d.name, example: d.fields[0]?.example ?? '' }))

@@ -3,8 +3,8 @@
 /**
  * useFleetLive — the org's LIVE compute fleet, polled together while mounted:
  *  - connected workers (`/v1/visor/fleet/workers`) — presence + heartbeat,
- *  - the gpu-jobs queue + recent history (`/v1/visor/fleet/jobs`, recency-BOUNDED) —
- *    what's queued/running per GPU,
+ *  - the gpu-jobs queue + recent history (`/v1/visor/fleet/jobs`, recency-BOUNDED) — what's
+ *    queued/running per GPU,
  *  - the board (`/v1/visor/fleet`) — per-unit live GPU utilization + running/sessions,
  *  - the util/cost series (`/v1/visor/fleet/samples`) — the usage sparkline.
  *

@@ -5,15 +5,15 @@
  * namespace): the 17 infra tiers increment 1 seeded (11 cloud + 3 gpu + 3
  * datastore), plus every product surface docs/pricing/the console read from. This
  * client drives its SuperAdmin CRUD:
- *   GET    /v1/commerce/catalog/entries       — list (incl. unpublished + cost/margin)
- *   POST   /v1/commerce/catalog/entries       — create (unique slug)
- *   PUT    /v1/commerce/catalog/entries/:slug — update (slug identity is immutable)
- *   DELETE /v1/commerce/catalog/entries/:slug — delete
- *   POST   /v1/commerce/catalog/seed          — upsert the embedded seed (non-destructive)
+ *   GET    /v1/commerce/catalog/entries          — list (incl. unpublished + cost/margin)
+ *   POST   /v1/commerce/catalog/entries          — create (unique slug)
+ *   PUT    /v1/commerce/catalog/entries/:slug     — update (slug identity is immutable)
+ *   DELETE /v1/commerce/catalog/entries/:slug     — delete
+ *   POST   /v1/commerce/catalog/seed             — upsert the embedded seed (non-destructive)
  *
  * SOURCE + AUTH: the console's OWN same-origin `/v1/commerce/catalog/*` (`cloudProxyV1Url`).
  * On the standalone console (admin.hanzo.ai / dev) this terminates at the console's
- * `app/v1/commerce/[...path]` user-bearer proxy → commerce; on the go:embed console
+ * `app/v1/commerce/catalog/[...path]` user-bearer proxy → commerce; on the go:embed console
  * (console.hanzo.ai) the SAME path hits the cloud binary's embedded commerce mount
  * directly. Either way the org is server-authoritative (the Bearer/session owner),
  * and commerce's `requireSuperAdmin` (owner=="admin") is the authoritative gate —

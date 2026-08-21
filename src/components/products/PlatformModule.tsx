@@ -8,7 +8,7 @@
  *             cross-surface links) — `PlatformDetail`
  *
  * The project is IAM-native (`ProjectApi`, keyed by `name`); deploy is the cloud site
- * store (`/v1/projects`, slug === the IAM name). ONE shared key across console,
+ * store (`/v1/projects/sites`, slug === the IAM name). ONE shared key across console,
  * hanzo.app, and hanzo.chat.
  */
 import { PlatformHome } from './platform-home/PlatformHome'

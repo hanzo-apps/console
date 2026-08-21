@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Lock the /v1/projects contract by capturing every transport call (URL + args),
+// Lock the /v1/projects/sites contract by capturing every transport call (URL + args),
 // without touching the network. cloudProxyV1Url is stubbed to a predictable `/v1/<path>`.
 const calls = { get: [] as string[], post: [] as unknown[][], patch: [] as unknown[][], raw: [] as unknown[][] }
 
@@ -43,15 +43,15 @@ beforeEach(() => {
   calls.raw = []
 })
 
-describe('PlatformSitesApi — the /v1/projects contract', () => {
-  it('list → GET /v1/projects', async () => {
+describe('PlatformSitesApi — the /v1/projects/sites contract', () => {
+  it('list → GET /v1/projects/sites', async () => {
     await PlatformSitesApi.list()
-    expect(calls.get).toContain('/v1/projects')
+    expect(calls.get).toContain('/v1/projects/sites')
   })
 
-  it('create → POST /v1/projects', async () => {
+  it('create → POST /v1/projects/sites', async () => {
     await PlatformSitesApi.create({ name: 'my-app', slug: 'my-app', framework: 'static' })
-    expect(calls.post[0][0]).toBe('/v1/projects')
+    expect(calls.post[0][0]).toBe('/v1/projects/sites')
   })
 
   it('deploy → POST-raw /v1/projects/:slug/deploy with the BYTES + Content-Type verbatim', async () => {
@@ -75,14 +75,16 @@ describe('PlatformSitesApi — the /v1/projects contract', () => {
     expect(calls.post[0][1]).toEqual({ domains: ['x.example.com'] })
   })
 
-  it('never targets an /api/ prefix or a "svc" suffix', async () => {
+  it('never targets a legacy /api/ prefix or a "svc" suffix', async () => {
     await PlatformSitesApi.list()
     await PlatformSitesApi.deploy('my-app', new Uint8Array(), 'application/gzip')
     const all = [...calls.get, ...calls.raw.map((c) => c[0] as string), ...calls.post.map((c) => c[0] as string)]
     for (const u of all) {
       expect(u).not.toContain('/api/')
       expect(u).not.toContain('svc')
-      expect(u.startsWith('/v1/projects')).toBe(true)
+      // The collection lives under `sites`; a site's own record and sub-resources are
+      // the project's. Both are `/v1/projects`, and nothing is under `/v1/platform` any more.
+      expect(u.startsWith('/v1/projects/')).toBe(true)
     }
   })
 })

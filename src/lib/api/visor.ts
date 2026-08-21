@@ -6,7 +6,9 @@
  *    Bearer owner and 403 a cookie-only call, so they go through the canonical, prefix-free
  *    same-origin `/v1/visor/machines*` — the `app/v1/[...path]/route.ts` bearer BFF mints a
  *    short-lived user token and forwards to cloud-api (org resolved from the Bearer
- *    owner). This is the visor-backed native cloud surface.
+ *    owner). This is the visor-backed native cloud surface. Launch is a POST on the
+ *    collection itself: cloud answers it at `/v1/visor/machines`, and `/machines/launch`
+ *    is visor's OWN upstream spelling, one segment away and not ours to call.
  *  - The public compute CATALOG (regions / CPU sizes / GPU accelerators, un-scoped)
  *    reads visor DIRECTLY through the `/v1/vm` proxy (`app/v1/vm/[...path]/route.ts` → visor)
  *    at `/v1/vm/{regions,sizes,gpus}`. Visor's `/v1/gpus` is the accelerator CATALOG

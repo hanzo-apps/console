@@ -11,9 +11,9 @@
  *
  * The enablement registry (cloud clients/pricing) returns PLAIN JSON, not the
  * casibase envelope, so it uses a small raw-JSON fetch. The ADMIN set/list ride the
- * same admin-aggregate gate (`/v1/admin/pricing/enablement`); the USER self-service
- * view + opt-in ride the per-tenant `/v1` proxy (`/v1/pricing/enablement`), which
- * scopes to the caller's own org — a customer can never flip global state.
+ * same admin-aggregate gate (`/v1/admin/pricing/enablement`); the USER self-service view +
+ * opt-in ride the per-tenant `/v1` proxy (`/v1/pricing/enablement`), which scopes to the
+ * caller's own org — a customer can never flip global state.
  *
  * OPTIONAL-SAFE end to end: every field degrades to an honest 0 / empty / em-dash;
  * NOTHING is fabricated. Money is USD cents.

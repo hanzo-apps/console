@@ -3,11 +3,11 @@
  * over the canonical same-origin `/v1` surface (v1-first: no service prefix, no
  * nested version).
  *
- *   GET   /v1/ai/router/policy          → the effective policy resolved for the
- *                                         caller's org (org > "*" > conf)
- *   PUT   /v1/ai/router/policy          → upsert the caller's OWN org policy
- *   GET   /v1/ai/router/stats           → the org-scoped routing aggregate (cost
- *                                         saved, quality proxy, distributions)
+ *   GET   /v1/ai/router/policy        → the effective policy resolved for the
+ *                                       caller's org (org > "*" > conf)
+ *   PUT   /v1/ai/router/policy        → upsert the caller's OWN org policy
+ *   GET   /v1/ai/router/stats         → the org-scoped routing aggregate (cost
+ *                                       saved, quality proxy, distributions)
  *   GET   /v1/ai/training-contribution  → the org's opt-in flag
  *   PATCH /v1/ai/training-contribution  → set the org's opt-in flag
  *

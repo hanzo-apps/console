@@ -666,7 +666,7 @@ this pass is small and precise, not padding.
 - **Intentionally NOT built (honest):** Feature Flags / Backups / Support Tickets have NO backend
   anywhere in the Hanzo stack — adding permanent empty-state pages would be fabricated padding.
   Regions/Nodes duplicate `clusters`/`kubernetes`/`machines` (nodes derive from cluster node
-  pools; there is no nodes route by design). Jobs is intentionally Tasks (registry's own
+  pools; there is no `/v1/visor/machines` route by design). Jobs is intentionally Tasks (registry's own
   decision). No `Billing` category exists in `brand-scope.ts` — billing lives under `Observe`.
 - **No cloud changes.** The billing sub-pages ride the existing `/billing/*` proxy (which already
   forwards any path with server-side org scoping); commerce already serves subscriptions +
@@ -735,7 +735,7 @@ not configured" message. Plus a rich **Agents** dashboard over `/v1/agents`.
   `proxy-allow.ts`); Containers / Applications → **paas** `/paas`; Tasks → **tasksd**
   `/tasksd/v1/tasks/*`; Edge → honest managed/coming-soon (no backend). Verified live
   in-cluster: visor `/v1/regions|sizes|gpus` = 200 real DO catalog + pricing,
-  `/v1/machines` = 403 without the bearer (per-org); cloud `/v1/agents`/`/v1/functions`
+  `/v1/visor/machines` = 403 without the bearer (per-org); cloud `/v1/agents`/`/v1/functions`
   = 404 (concurrent cloud lane binding them), `/v1/prompts` = 200 `{data,meta}`; tasks
   `/v1/tasks/cluster/health` = 200.
 - **Agents dashboard** (`AgentsModule` + `lib/api/agents.ts` + `agents/{parts,forms}.tsx`):
@@ -1617,7 +1617,7 @@ backend's real tenancy model (RED-checkable).
   real desk once reachable. `erp.ts` `ErpApi`.
 - **Commerce — Products full CRUD + real store settings.** Products is now create +
   list + **delete** over `/v1/product` (validator needs name+sku+slug — auto-slugified);
-  Store settings reads the org's REAL storefront (`/v1/store/current`,
+  Store settings reads the org's REAL storefront (`/v1/commerce/store/current`,
   `CommerceApi.currentStore`). Orders/Customers/Inventory/Promotions stay real per-org
   reads on the shared `CommerceResource`. All via the `/commerce` bearer proxy (org from
   the token owner; per-org SQLite). Kind-names verified live (product/order/user=
@@ -1662,7 +1662,7 @@ same live pass surfaced, folds in RED's LOW-1, and lands the two Playground fixe
   `''` (rowKey collisions). Fixed with a number-aware `idStr`. And the media bytes url carries
   a `?prefix=<tenant>` query my filename-reconstruction dropped → new `cmsMediaSrc` proxies the
   doc's REAL `url` (path+query) through `/cms` (never the cross-origin host). +5 cms tests.
-- **[live-shape] Commerce store settings.** `/v1/store/current` wraps the record as
+- **[live-shape] Commerce store settings.** `/v1/commerce/store/current` wraps the record as
   `{ store: {...} }` (verified live) — `currentStore` now unwraps `.store` before normalizing
   (a bare object still works), so the Store-settings page shows the real name/currency.
 - **[RED LOW-1] `/erp` allow-list pinned to the 3 UI DocTypes.** Was any `api/resource/
@@ -3736,7 +3736,10 @@ re-opened a closed money hole to fix nothing. The trial credit still lands — c
 grants it server-side when a card is vaulted, and signup grants it server-side — and
 that path is untouched. `src/lib/billing/welcome.ts` had no callers left at all.
 
-Scope, checked rather than assumed: the Billing Center's tab slugs
+Scope, checked rather than assumed at the time: the finance ledger kept a compound
+name for the saved cards because that was the spelling that answered. SUPERSEDED by the
+fold — that capability is gone entirely and the saved cards answer at
+`/v1/billing/methods`; see the last section. The Billing Center's tab slugs
 (`/billing/payment-methods`, `/billing/credits`) are console page URLs, not server
 routes, and are unchanged.
 
@@ -4189,7 +4192,8 @@ says why the old way went: a console CSS fix was a CLOUD release (~22 min) on a
 single-replica `strategy: Recreate`, which took api.hanzo.ai down for a measured 2m15s.
 
 The publish route exists and is org-gated — `GET /v1/projects/hanzo-console/releases`
-answers **403 `X-Org-Id required`**, not 404. `apps/sites` pulls no OCI image; a release
+answers **403 `X-Org-Id required`**, not 404 (it was measured before sites folded
+under projects). `apps/sites` pulls no OCI image; a release
 is uploaded bytes.
 
 **Consequence, measured 2026-08-08:** console `main` carries the design-system work
@@ -4798,3 +4802,76 @@ nothing about provenance).
 `pnpm build` compiled in 88s, 20/20 static pages · `node scripts/sync-catalog.mjs
 --check` reports the record, the registry and the platform agree (and exits 1 with
 "nothing was compared" when pointed at a dead address).
+
+## Every read moves to the one address its capability answers at
+
+HIP-0139 gives a capability ONE address, and cloud closed the misfiled ones by fold:
+each route moved a segment down under the app that serves it, with no alias and no
+redirect behind it. Forward only — the old addresses stop resolving when the next
+cloud release rolls, so a console that still spells them is a console whose pages go
+blank on the deploy, not one that degrades.
+
+**The document is the oracle, not the memory of it.** `openapi.yaml` at cloud main
+lists every path the binary serves; `public.yaml` is the customer half. The method
+that found the stale ones is mechanical and self-checking: enumerate every `/v1/…`
+literal AND every builder stem (`cloudProxyV1Url('machines')` carries no `/v1/` to
+grep for, which is exactly why a literal-only sweep reads clean and ships broken),
+normalise `{id}`/`:id`/`${…}` to one wildcard, and match against the document. What
+it does not serve is stale; the destination is the same TAIL under the new root.
+
+**What moved.** visor took six roots (`machines · gpus · clusters · fleet · k8s ·
+compute`); `account` took six per-person ones (`keys · orgs · appearance · avatar ·
+csrf · embed`); `platform` took the four build aggregates; `projects` took `sites ·
+edge · tags`; `ai` took `router · org/settings · finetune · memory · rag ·
+docs/ingest · feedback · traffic`; commerce took `cart · catalog · payments ·
+plans/{entries,seed} · store`; and `entitlements · provisioning · integrations ·
+explorer · pricing · openapi · knowledge · link · auto · lsp · dataset · label ·
+reference · leaderboard · admission · treasury` each answer at their own name now.
+`proxy-allow.ts` carries the OWNER, never the old root, which is what a head-based
+list was always supposed to mean.
+
+**Three that are not a rename.**
+
+- `POST /v1/machines/launch` was never cloud's; it is visor's upstream spelling, and
+  cloud answers a launch as `POST` on the collection — now `/v1/visor/machines`. The
+  console had been posting at an address only the far side of the proxy knows.
+- `GET /v1/gpus/pools` had no server before the fold and has no head after it. The
+  read is gone; the operator Pools tab derives its rows from the org's own clusters,
+  the same pure function the customer tab already used.
+- `GET /v1/edge/nodes` likewise. `/v1/projects/edge` answers a STATE — which provider
+  fronts the sites, whether it can act, what it caches and for how long — so the
+  module shows that instead of a node table nothing ever filled.
+
+**The money reads changed shape, not just address.** `/v1/finance` was a second
+spelling of one capability: `balance` and `usage` are billing's own reads under
+another name, `credits`/`invoices`/`payment-methods` are addresses commerce already
+serves under `/v1/billing`, `ledger` is cloud's typed op at `/v1/billing/ledger`, and
+the reserve fund is `/v1/treasury`. A fold onto an address somebody already answers
+is a DELETION, so three of them re-parse as well as re-point (`finance-ledger.ts`):
+
+- `balance` — `{balance,holds,available,account}` in cents, where the old shape named
+  `pending` what commerce calls `holds`, and a prepaid wallet owes nothing.
+- `usage` — one row per BILLED call, where the old address answered a rollup over
+  `?range=`. The rollup has no server; it is computed from the rows with the SAME
+  normalizer AI Metrics reads them with, never a second parse of one wire.
+- `credits` — commerce's own creditgrant rows, keyed by `userId`. The browser never
+  sends one: the billing proxy pins `user`/`userId`/`customerId` to the caller's
+  server-resolved subject on every request, which is the same pin that keeps the
+  read inside the caller's own tenant.
+
+`/v1/billing/ledger` gets a static route of its own (`app/v1/billing/ledger`). It has
+to: the `[...path]` catch-all beside it forwards `/v1/billing/*` to commerce with the
+service token, and commerce does not answer that one — cloud does, from the caller's
+own bearer.
+
+**Two BFFs stopped being their own front door.** The catalog and plan CMS proxies
+moved to `app/v1/commerce/{catalog,plans}/[...path]`, because that is where the
+document serves them. Commerce's OWN mount is still `/v1/{catalog,plans}/*` — a
+standalone binary opens its bundle at `/v1`, and only the co-resident mount inside
+cloud moved — so the upstream path each handler builds is unchanged. Client address
+from the document, upstream address from the service: they are different facts and
+the handler is where they meet.
+
+**Verified:** `pnpm typecheck` clean · `pnpm test` 289 files / 3615 tests pass · a
+grep of the final tree for every folded root finds no live caller, only the notes
+that say where it went.

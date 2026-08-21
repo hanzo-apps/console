@@ -2,13 +2,12 @@
  * Pure view-logic for the unified RESOURCE overview (unit-tested; no React, no I/O).
  *
  * The overview folds three REAL, per-org inventories into one at-a-glance picture —
- * Apps (`/v1/platform`), GPUs (`/v1/visor/gpus`), and Nodes/Machines
- * (`/v1/visor/machines`). As of the unioned cloud inventory each GPU/machine carries a
- * `provider` (`visor`/`doks` = Hanzo Cloud, or `byo` = a bring-your-own worker /
- * on-prem node), so the board can split "online" into cloud vs BYO and badge a
- * bring-your-own GB10 distinctly. These helpers are total functions over that shape —
- * an absent field never throws, and an unknown status counts as offline (never a
- * fabricated "online").
+ * Apps (`/v1/platform`), GPUs (`/v1/visor/gpus`), and Nodes/Machines (`/v1/visor/machines`). As of
+ * the unioned cloud inventory each GPU/machine carries a `provider` (`visor`/`doks` =
+ * Hanzo Cloud, or `byo` = a bring-your-own worker / on-prem node), so the board can
+ * split "online" into cloud vs BYO and badge a bring-your-own GB10 distinctly. These
+ * helpers are total functions over that shape — an absent field never throws, and an
+ * unknown status counts as offline (never a fabricated "online").
  */
 
 /** Where a resource lives: Hanzo Cloud, or a customer's own (bring-your-own) fleet. */

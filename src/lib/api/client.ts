@@ -104,8 +104,9 @@ const baseHeaders = (hasBody: boolean): Record<string, string> => {
     //     it is advisory at every one of them: the gateway STRIPS it at ingress; the
     //     `/v1`, `/vm` and `/commerce` bearer proxies DROP it (a browser-chosen
     //     project must not pick cloud's per-project eval key — see the RED MED-1
-    //     suite in lib/server/bearer-proxy.test.ts); only the embed's cloud, which
-    //     sanitizes it, still honors it.
+    //     suite in lib/server/bearer-proxy.test.ts); only the off-gateway readers
+    //     (`/paas`, under its own admin gate + server-resolved org, and the embed's
+    //     cloud, which sanitizes it) still honor it.
     // Both are sent only when a project is selected (absent = org-level), so the
     // absent-header ⟺ default-project wire contract is unchanged. The assertion
     // retires once the gateway mints `X-Project-Id` from the intent — at which point
@@ -525,7 +526,7 @@ export async function cloudDelete<T = string>(path: string, query?: Query): Prom
 // ── Plain-REST layer ────────────────────────────────────────────────────────
 // Some sub-services mounted on the same backend speak plain REST (raw JSON,
 // 2xx / 201 / 204, DELETE) instead of the casibase `{status,msg,data}` envelope
-// — the provisioning service (POST/GET/DELETE /v1/provisioning/<kind>) and the platform
+// — the provisioning service (POST/GET/DELETE /v1/<kind>) and the platform DOKS
 // control plane. Same cookie credentials and `ApiError` as the envelope path;
 // only the body shape and verbs differ, so the transport stays in this one file.
 //
@@ -559,8 +560,8 @@ export const originV1Url = (path: string): string => {
  * `/v1/`-rooted with ZERO prefix (CTO contract), and the `app/v1/[...path]` catch-all
  * mints a short-lived user bearer from the session and forwards to cloud-api `/v1/*`
  * (org from the Bearer owner). Kept as a named alias so the call sites that reach the
- * bearer BFF for a surface that 403s on a cookie-only call (framework/s3/provisioning/
- * ai/…) read intentionally; the address is allow-listed in proxy-allow.ts.
+ * bearer BFF for a head that 403s on a cookie-only call (framework/s3/provisioning/
+ * store-admin/…) read intentionally; the head is allow-listed in proxy-allow.ts.
  */
 export const cloudProxyV1Url = originV1Url
 
@@ -595,7 +596,7 @@ export const billingProxyV1Url = (path: string): string =>
  * `/v1/vm/<path>`.
  *
  * NB: the visor `/v1/vm/gpus` catalog (accelerator models + VRAM + price) is DISTINCT from
- * the cloud GPU INVENTORY at `/v1/visor/gpus` (a per-org shape served by the cloud BFF) — the
+ * the cloud-api GPU INVENTORY at `/v1/visor/gpus` (a per-org shape served by the cloud BFF) — the
  * catalog MUST read visor, never cloud-api.
  */
 export const vmProxyV1Url = (path: string): string =>

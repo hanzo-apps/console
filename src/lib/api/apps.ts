@@ -26,7 +26,7 @@
  *   GET   /v1/projects/:slug               get              → App
  *   GET   /v1/projects/:slug/deployments   deploy history   → AppDeployment[]
  *   PATCH /v1/projects/:slug               update           → App
- *   GET   /v1/projects/tags?key=<pk->      resolved tags    → BrowserTag[]
+ *   GET   /v1/projects/tags?key=<pk->               resolved tags    → BrowserTag[]
  *
  * A site carries its own browser TAG CONFIG (`App.tags`, platform → non-secret pixel
  * id) and the publishable `key` the hosted tag ships in the page. Both live here
@@ -93,7 +93,7 @@ export type App = {
   /**
    * The site's publishable ingest key (`pk-…`). PUBLISHABLE means it belongs in a
    * page's source — it names a write scope and mints no principal — so cloud returns
-   * it in full and the console shows it in full. It is what the hosted tag carries.
+   * it in full and the console shows it in full. It is what `event.js` carries.
    */
   key: string
   /** Browser tag config: platform slug → non-secret pixel id. Never a secret. */
@@ -116,12 +116,6 @@ export type BrowserTag = { platform: string; type: string; id: string }
  * page for it, so offering an input here would promise an injection that never
  * happens. `example` shows the shape of a real id, never a working one.
  */
-export const BROWSER_PLATFORMS: readonly { platform: string; label: string; example: string }[] = [
-  { platform: 'ga4', label: 'Google Analytics 4', example: 'G-XXXXXXXXXX' },
-  { platform: 'meta', label: 'Meta', example: '1234567890123456' },
-  { platform: 'tiktok', label: 'TikTok', example: 'CXXXXXXXXXXXXXXXXXXX' },
-  { platform: 'x', label: 'X (Twitter)', example: 'oxxxx' },
-]
 
 /** One deploy attempt of a site (projectsvc `deploymentView`, versioned per app). */
 export type AppDeployment = {
@@ -204,9 +198,10 @@ export function normalizeApp(raw: unknown): App {
 export function mergeTags(
   current: Record<string, string>,
   draft: Record<string, string>,
+  rendered: readonly string[],
 ): Record<string, string> {
   const out = { ...current }
-  for (const { platform } of BROWSER_PLATFORMS) {
+  for (const platform of rendered) {
     const id = (draft[platform] ?? '').trim()
     if (id) out[platform] = id
     else delete out[platform]
@@ -272,7 +267,7 @@ export function builderEditUrl(slug: string, appBase = 'https://hanzo.app'): str
  * The PUBLIC API host a customer's own page fetches the hosted tag from.
  *
  * Deliberately NOT `config.cloudUrl`: in the browser that resolves to the console's
- * own origin, so the snippet would tell a customer to load the tag from the host
+ * own origin, so the snippet would tell a customer to load `event.js` from the host
  * they happen to be reading the console on. The tag ships in someone else's page and
  * must name the gated API host every brand's traffic already reaches.
  */
@@ -280,8 +275,8 @@ const TAG_HOST = 'https://api.hanzo.ai'
 
 /**
  * The one-line install for a site, keyed by its publishable `pk-`. The tag then
- * fetches `GET /v1/projects/tags?key=` itself to learn which pixels to inject, so this
- * line never changes as the site's tags do. `defer` keeps it off the parser's critical
+ * fetches `GET /v1/projects/tags?key=` itself to learn which pixels to inject, so this line
+ * never changes as the site's tags do. `defer` keeps it off the parser's critical
  * path. Pure + host-defaulted so it is testable, matching `builderEditUrl`.
  */
 export const installTag = (key: string, host = TAG_HOST): string =>
@@ -319,5 +314,5 @@ export const AppsApi = {
    * set at 200, never an error.
    */
   browserTags: (key: string): Promise<BrowserTag[]> =>
-    restGet<unknown>(originV1Url(`${BASE}/tags?key=${enc(key)}`)).then(normalizeBrowserTags),
+    restGet<unknown>(originV1Url(`projects/tags?key=${enc(key)}`)).then(normalizeBrowserTags),
 }

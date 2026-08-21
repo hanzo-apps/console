@@ -9,9 +9,9 @@
  * or an honest not-configured / unavailable / empty state.
  *
  * THREE real sources, in honest priority:
- *  1. GPU inventory — `GET /v1/visor/gpus` (the unified cloud binary, via the
- *     same-origin user-bearer `/v1` proxy, org resolved from the Bearer owner).
- *     Per-GPU rows + live telemetry (`/v1/visor/gpus/alerts`).
+ *  1. GPU inventory — `GET /v1/visor/gpus` (the unified cloud binary, via the same-origin
+ *     user-bearer `/v1` proxy → cloud-api /v1/visor/gpus, org resolved from the Bearer
+ *     owner). Per-GPU rows + live telemetry (`/v1/visor/gpus/alerts`).
  *     A not-yet-served route (404) → the caller renders the honest not-configured /
  *     unavailable card, never an empty grid.
  *  2. Cluster inventory — `PlatformApi.listClusters()` (the org's DOKS). GPU-bearing
@@ -23,8 +23,10 @@
  *     Powers cost. Not yet registered on the backend → 404 → the caller degrades to
  *     the commerce usage total (`BillingApi.usage`) and finally to `—`.
  *
- * Per-GPU telemetry time-series (utilization-over-time, temps) and alerts stay
- * honestly empty until a provider/agent connects them upstream. ALL calls are
+ * Per-GPU telemetry time-series (utilization-over-time, temps) and alerts stay honestly
+ * empty until a provider/agent connects them upstream. Pools are DERIVED from the org's
+ * own clusters (`gpuPoolsFromClusters`) — visor serves no pool inventory, so there is no
+ * pool read here to serve one. ALL calls are
  * org-scoped server-side: `/v1/visor/gpus*` by the minted Bearer's owner claim, and the
  * `/v1` usage ledger by the `X-Org-Id` (`currentOrg()`) `client.ts` stamps.
  *

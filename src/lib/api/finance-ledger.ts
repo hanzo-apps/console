@@ -1,42 +1,43 @@
 /**
- * Finance ledger — the signed-in tenant's per-org view of the unified ledger: credits,
- * invoices, payment methods, the double-entry ledger, and the treasury summary.
+ * The Finance dashboard's transport — the seven reads `@hanzo/finance-ui` makes, each
+ * pointed at the address that answers it.
  *
- * This is a thin transport: the SHARED `@hanzo/finance-ui` owns the data contract, the
- * optional-safe normalizers, and the components — the SAME package finance.hanzo.ai
- * renders — so a credits/invoices card is identical in both surfaces. Here we only
- * inject console's transport: every read goes through the console's OWN `/v1`
- * user-bearer proxy, which mints a short-lived user token and forwards to cloud with
- * the org resolved from the Bearer owner. A cookie-only bare `/v1/*` would 403 on the
- * live ingress, so the explicit `/v1` address is load-bearing. `billing` and `treasury`
- * are allow-listed in `proxy-allow.ts` CLOUD_HEADS. Read-only; writes stay in the
- * billing portal.
+ * `/v1/finance` was a second spelling of one capability and it is gone. Balance and usage
+ * are billing's OWN reads under another name; credits, invoices and payment-methods are
+ * addresses commerce already serves under `/v1/billing`; the double-entry postings answer
+ * at `/v1/billing/ledger`; and the reserve fund answers at `/v1/treasury`. Nothing was
+ * aliased, so this file names the six new addresses and there is no seventh spelling.
+ *
+ * Repointing alone was not enough: three of them changed SHAPE, and a reader of the old
+ * addresses re-parses as well as re-points. Each reshape below says which fact moved.
+ *
+ * The tenant boundary is unchanged: `/v1/billing/*` rides the console's own commerce
+ * proxy, which pins the caller's billing subject onto `user`/`userId`/`customerId`
+ * server-side — which is also how the credits read gets the `userId` commerce requires,
+ * without the browser ever naming a subject. `/v1/treasury` rides the `/v1` bearer BFF.
+ * Read-only; writes stay in the billing portal.
  */
 import { httpFinanceClient, type FinanceClient } from '@hanzo/finance-ui'
-import { ApiError, restGet, cloudProxyV1Url } from './client'
+import { dayKey, normalizeUsageRecords } from './aimetrics'
+import { restGet, billingProxyV1Url, cloudProxyV1Url } from './client'
 
-/**
- * Where each finance read lives (HIP-0139): the ledger reads sit under `/v1/billing`,
- * the reserve summary under `/v1/treasury`.
- *
- * `balance` and `usage` are absent on purpose. Billing serves reads by those names but
- * they answer a DIFFERENT question in a different shape, and a card showing the wrong
- * number is worse than a card showing none — so they have no address here and the
- * dashboard renders its honest state for those two.
- */
+/** finance-ui's read name → the address that answers it. */
 const ADDRESS: Record<string, string> = {
+  balance: 'billing/balance',
   credits: 'billing/credits',
+  usage: 'billing/usage',
   invoices: 'billing/invoices',
-  ledger: 'billing/ledger',
   'payment-methods': 'billing/methods',
+  ledger: 'billing/ledger',
   treasury: 'treasury',
 }
 
-/** Build the console proxy URL for one finance read, with an optional query. */
-export function financeUrl(head: string, query?: Record<string, string | number | undefined>): string {
-  const address = ADDRESS[head]
-  if (!address) throw new ApiError(`Finance serves no "${head}" read.`, 404)
-  let url = cloudProxyV1Url(address)
+/** Build the same-origin URL for one finance read, with an optional query. */
+export function financeUrl(path: string, query?: Record<string, string | number | undefined>): string {
+  const address = ADDRESS[path] ?? path
+  let url = address.startsWith('billing/')
+    ? billingProxyV1Url(address.slice('billing/'.length))
+    : cloudProxyV1Url(address)
   if (query) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(query)) if (v !== undefined) qs.set(k, String(v))
@@ -48,8 +49,8 @@ export function financeUrl(head: string, query?: Record<string, string | number 
 
 /**
  * Unwrap a casibase `{ status, msg, data }` envelope; pass a bare payload through. The
- * backend may serve either shape (like commerce vs the casibase surfaces), so we unwrap
- * defensively before handing the payload to the shared normalizers.
+ * money surfaces serve either shape (commerce's own bytes on the raw routes, a bare body
+ * on the typed ones), so we unwrap defensively before handing it to the shared normalizers.
  */
 export function unwrapEnvelope(body: unknown): unknown {
   if (body && typeof body === 'object' && 'data' in (body as Record<string, unknown>) && 'status' in (body as Record<string, unknown>)) {
@@ -58,10 +59,72 @@ export function unwrapEnvelope(body: unknown): unknown {
   return body
 }
 
-async function transport(path: string, query?: Record<string, string | number | undefined>): Promise<unknown> {
-  const body = await restGet<unknown>(financeUrl(path, query))
-  return unwrapEnvelope(body)
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+
+/**
+ * `/v1/billing/balance` answers `{balance, holds, available, account}` in whole USD cents,
+ * where the old address answered `{currency, availableCents, pendingCents, dueCents}`.
+ * Same wallet, same number, different object: `holds` is what `pending` named, and a
+ * prepaid wallet owes nothing, so `due` is 0.
+ */
+export function reshapeBalance(payload: unknown): unknown {
+  const r = (payload ?? {}) as Record<string, unknown>
+  return {
+    currency: 'usd',
+    availableCents: num(r.available),
+    pendingCents: num(r.holds),
+    dueCents: 0,
+  }
 }
 
-/** The console-wired finance client — real per-org reads over the `/v1` bearer proxy. */
+/** `?range=` as a span in days — finance-ui's four windows. */
+const DAYS: Record<string, number> = { '24h': 1, '7d': 7, '30d': 30, '90d': 90 }
+
+/**
+ * `/v1/billing/usage` answers ONE ROW PER BILLED CALL, where the old address answered a
+ * rollup over `?range=`. The rollup is not lost, it just has no server that writes it, so
+ * it is computed here from the SAME rows — read with the SAME normalizer the AI Metrics
+ * page uses, never a second parse of the same wire.
+ */
+export function reshapeUsage(payload: unknown, range: unknown): unknown {
+  const days = DAYS[String(range)] ?? 30
+  const end = Date.now()
+  const start = end - days * 86_400_000
+  const rows = normalizeUsageRecords(payload).filter((r) => r.at != null && r.at >= start)
+
+  const perDay = new Map<string, number>()
+  const perProduct = new Map<string, { cents: number; units: number; tokens: number }>()
+  let totalCents = 0
+  for (const r of rows) {
+    totalCents += r.cents
+    const day = dayKey(r.at as number)
+    perDay.set(day, (perDay.get(day) ?? 0) + r.cents)
+    const label = r.product || r.model || 'Usage'
+    const line = perProduct.get(label) ?? { cents: 0, units: 0, tokens: 0 }
+    line.cents += r.cents
+    line.units += 1
+    line.tokens += r.totalTokens
+    perProduct.set(label, line)
+  }
+
+  return {
+    totalCents,
+    currency: 'usd',
+    start: new Date(start).toISOString(),
+    end: new Date(end).toISOString(),
+    series: [...perDay].sort((a, b) => a[0].localeCompare(b[0])).map(([date, cents]) => ({ date, cents })),
+    lines: [...perProduct]
+      .sort((a, b) => b[1].cents - a[1].cents)
+      .map(([label, l]) => ({ label, units: l.units, tokens: l.tokens, cents: l.cents })),
+  }
+}
+
+async function transport(path: string, query?: Record<string, string | number | undefined>): Promise<unknown> {
+  const body = unwrapEnvelope(await restGet<unknown>(financeUrl(path, query)))
+  if (path === 'balance') return reshapeBalance(body)
+  if (path === 'usage') return reshapeUsage(body, query?.range)
+  return body
+}
+
+/** The console-wired finance client — real per-org money reads at their own addresses. */
 export const financeClient = (): FinanceClient => httpFinanceClient(transport)

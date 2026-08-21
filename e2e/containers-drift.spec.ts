@@ -20,7 +20,7 @@ const SHOTS = join(process.cwd(), 'e2e-shots')
 
 requireFixtureServer()
 
-/** `GET /v1/platform/apps` — the fleet inventory envelope (`{apps: [...]}`). */
+/** `GET /paas/apps` — the fleet inventory envelope (`{apps: [...]}`). */
 const APPS = {
   apps: [
     {
@@ -61,9 +61,9 @@ const json = (route: Route, body: unknown) =>
 async function mockNetwork(page: Page): Promise<void> {
   await page.route('**/*', (route) => {
     const path = new URL(route.request().url()).pathname
-    if (path.endsWith('/v1/platform/apps')) return json(route, APPS)
+    if (/\/(v1\/)?paas\/apps$/.test(path)) return json(route, APPS)
     if (path.endsWith('/v1/visor/clusters')) return json(route, { data: [] })
-    if (path.includes('/v1/')) return json(route, {})
+    if (path.includes('/v1/') || path.includes('/paas/')) return json(route, {})
     return route.continue()
   })
   await primeSession(page)

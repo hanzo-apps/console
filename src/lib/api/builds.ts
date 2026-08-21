@@ -3,7 +3,7 @@
  *
  * One canonical reader for the native build records (git push → native Actions →
  * image → registry). Same-origin `/v1/platform/builds` through the user-bearer BFF (the
- * `platform` head is allow-listed in proxy-allow.ts); org is resolved server-side
+ * `builds` head is allow-listed in proxy-allow.ts); org is resolved server-side
  * from the Bearer owner, so a cookie-only call 403s and the caller renders an
  * honest state. Optional-safe normalizers tolerate snake_case + camelCase and
  * degrade a missing field to '' — never a fabricated build.

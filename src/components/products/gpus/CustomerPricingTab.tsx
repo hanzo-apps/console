@@ -2,7 +2,7 @@
 
 /**
  * GPUs · Pricing (customer) — the REAL, live per-accelerator price list, straight from
- * visor's GPU catalog (`GET /v1/vm/gpus`). Every row is a
+ * visor's GPU catalog (`GET /v1/visor/gpus` via the user-bearer `/v1/vm` proxy). Every row is a
  * real accelerator with its real hourly rate and the 730-hour monthly equivalent — the
  * SAME figure the Launch drawer quotes and charges (one pricing source). Nothing is
  * indicative or fabricated: an empty catalog renders an honest "catalog unavailable"

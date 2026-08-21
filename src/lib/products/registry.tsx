@@ -2435,10 +2435,10 @@ const declared: Declaration[] = [
   },
   {
     // The signed-in org's per-tenant view of the UNIFIED finance ledger (hanzoai/
-    // finance, embedded in cloud): metered spend, credits, invoices, payment methods,
-    // and the double-entry ledger, over /v1/billing/{credits,invoices,ledger,methods}
-    // scoped to the caller's org (the `/v1` bearer proxy resolves the org from the
-    // token owner). Renders the
+    // finance, embedded in cloud): balance, metered spend, credits, invoices, payment
+    // methods, and the double-entry ledger, each at the address that owns it, scoped to
+    // the caller's org (the `/v1` bearer proxy resolves the org from the token owner).
+    // Renders the
     // SHARED @hanzo/finance-ui board — the SAME component finance.hanzo.ai renders — so
     // a spend/usage/credits card is identical across both surfaces (the shared-reuse
     // point). Distinct id from the admin `finance` platform-FinOps board (admin: true)

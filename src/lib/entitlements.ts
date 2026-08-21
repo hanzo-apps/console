@@ -7,13 +7,13 @@
  * "Add product" flow enables more. A super admin bypasses this entirely (sees the
  * whole catalog — the gating is a customer concern).
  *
- * TRANSPORT (single change-point):
+ * TRANSPORT (single change-point): the real endpoint is being built in parallel —
  *   GET  /v1/entitlements/orgs/{org}  → { enabled: string[] }   (product ids)
  *   POST /v1/entitlements/orgs/{org}  { add?: string[]; remove?: string[] }
  * routed through the console's hardened `/v1` user-bearer proxy (org resolved
- * server-side from the Bearer owner). A deployment that does not route the surface
- * 404s and the caller treats the set as `null` = UNGATED (show everything) — an
- * honest degradation, never a fabricated entitlement.
+ * server-side from the Bearer owner). Swapping the mock for the real backend is
+ * this file alone. Until it lands the GET 404s and the caller treats the set as
+ * `null` = UNGATED (show everything) — so there is zero regression pre-launch.
  *
  * The pure helpers (ALWAYS_ON_PRODUCTS, entitledSet, filterEntitled, nextEnabled)
  * carry no React/I/O and are unit-tested in isolation; `EntitlementsApi` is the
@@ -116,7 +116,7 @@ const url = (org: string): string =>
 
 /** The `/v1/entitlements/orgs/{org}` client (the ONE swap point for the real API). */
 export const EntitlementsApi = {
-  /** The org's enabled product ids. Throws `ApiError` (404 when the surface isn't routed here). */
+  /** The org's enabled product ids. Throws `ApiError` (status 404) until the endpoint lands. */
   async get(org: string): Promise<Entitlements> {
     return normalize(await restGet<unknown>(url(org)))
   },

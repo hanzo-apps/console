@@ -3,11 +3,11 @@
  *
  * Runs against a LOCAL server (BASE_URL=http://localhost:4000) with the whole network
  * mocked (same pattern as budgets-responsive): `/auth/session` → a NON-admin customer so
- * the customer GPUs surface (CustomerGpus) mounts, `/v1/visor/fleet/workers` → the
- * home-lab fleet (dbc / evo / spark, the exact byoWorker shape), and every other data
- * call → an honest empty-ok envelope. It proves the "Connected machines" section renders
- * the real fleet with live heartbeat, that the body never scrolls horizontally on a
- * phone (390) OR a tablet (768), and screenshots each width.
+ * the customer GPUs surface (CustomerGpus) mounts, `/v1/visor/fleet/workers` → the home-lab
+ * fleet (dbc / evo / spark, the exact byoWorker shape), and every other data call → an
+ * honest empty-ok envelope. It proves the "Connected machines" section renders the real
+ * fleet with live heartbeat, that the body never scrolls horizontally on a phone (390)
+ * OR a tablet (768), and screenshots each width.
  *
  * Run: BASE_URL=http://localhost:4000 npx playwright test gpus-responsive
  */
@@ -24,8 +24,7 @@ requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
 // A NON-admin customer (owner is a normal org, not the reserved `admin`) → the customer
-// GPUs surface, which reads /v1/visor/fleet/workers. (An admin would see the platform
-// fleet board instead.)
+// GPUs surface, which reads /v1/visor/fleet/workers. (An admin would see the /paas fleet.)
 const ACCOUNT = {
   owner: 'hanzo',
   name: 'a',
@@ -45,7 +44,7 @@ const WORKERS = [
   { id: 'spark', hostname: 'spark', provider: 'byo', location: 'on-prem', status: 'offline', os: 'linux', version: '1.4.0', lastHeartbeat: new Date(Date.now() - 10 * 60_000).toISOString(), gpus: [{ name: 'NVIDIA GB10', memoryTotal: '131072 MiB' }], capabilities: [] },
 ]
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()

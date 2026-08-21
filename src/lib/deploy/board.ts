@@ -3,7 +3,7 @@
  *
  * An APP is a container workload the operator reconciles (`/v1/platform/projects/
  * :project/apps`, `PaasApi`); a SITE is a static build served from object storage
- * (`/v1/projects`, `PlatformSitesApi`). They are separate backends on
+ * (`/v1/projects/sites`, `PlatformSitesApi`). They are separate backends on
  * purpose, but a person reading "what have I shipped" wants ONE list, so this
  * module folds both into `DeployRow` and nothing downstream branches on which
  * store a row came from.
@@ -58,7 +58,7 @@ export type DeployRow = {
   updatedAt: number
 }
 
-/** Unix SECONDS (what cloud reports) as epoch MILLISECONDS; 0 when absent. */
+/** Unix SECONDS (what `/v1/platform/*` reports) as epoch MILLISECONDS; 0 when absent. */
 const secondsToMs = (seconds?: number): number => (seconds && seconds > 0 ? seconds * 1000 : 0)
 
 /** Every non-blank bound host, order preserved. */
@@ -281,7 +281,7 @@ export function toAppInput(form: DeployForm): CreateAppInput {
   }
 }
 
-/** The site create body (`POST /v1/projects`). */
+/** The site create body (`POST /v1/projects/sites`). */
 export function toSiteInput(form: DeployForm): CreateSiteInput {
   const repo = form.repo.trim()
   return {

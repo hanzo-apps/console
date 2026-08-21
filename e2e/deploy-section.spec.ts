@@ -3,8 +3,8 @@
  *
  * Runs against a LOCAL server (BASE_URL=http://localhost:4000) with the whole
  * network mocked, so the shapes asserted here are the shapes cloud actually
- * serves (bare arrays for platform projects/apps and for sites, `{applications}` for
- * the CD projection, `{builds}` for CI, `{buckets}` for storage) and nothing depends on
+ * serves (bare arrays for projects/apps/sites, `{applications}` for the CD
+ * projection, `{builds}` for CI, `{buckets}` for storage) and nothing depends on
  * live estate data.
  *
  * It proves: the section renders in the console's own chrome (left nav, org
@@ -67,7 +67,7 @@ const APPS = [
   },
 ]
 
-/** `GET /v1/projects` — bare `projectsProjects`. */
+/** `GET /v1/projects/sites` — bare `projectsProjects`. */
 const SITES = [
   {
     id: 's1',
@@ -136,7 +136,7 @@ async function mockNetwork(page: Page): Promise<void> {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/v1/platform/projects')) return json(route, PROJECTS)
     if (path.includes('/v1/platform/projects/') && path.endsWith('/apps')) return json(route, APPS)
-    if (path.endsWith('/v1/projects')) return json(route, SITES)
+    if (path.endsWith('/v1/projects/sites')) return json(route, SITES)
     if (path.endsWith('/v1/deploy/applications')) return json(route, CD)
     if (path.endsWith('/v1/platform/builds')) return json(route, BUILDS)
     if (path.endsWith('/v1/s3/buckets')) return json(route, BUCKETS)
@@ -329,7 +329,7 @@ test('a half-loaded board names the gap and shows no count it cannot know', asyn
     if (path.includes('/v1/platform/projects/') && path.endsWith('/apps')) {
       return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"boom"}' })
     }
-    if (path.endsWith('/v1/projects')) return json(route, SITES)
+    if (path.endsWith('/v1/projects/sites')) return json(route, SITES)
     return json(route, {})
   })
   await primeSession(page)

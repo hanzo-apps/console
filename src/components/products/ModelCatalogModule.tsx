@@ -83,7 +83,7 @@ const Fact = ({ label, value }: { label: string; value: string }) => (
   </YStack>
 )
 
-/** One subscription-tier badge (resolved from the model's `tier` via /v1/plan/subscriptions). */
+/** One subscription-tier badge (resolved from the model's `tier` via /v1/plan). */
 function PlanBadge({ plan }: { plan: Plan }) {
   const rpm = plan.limits?.requestsPerMinute
   const tpm = plan.limits?.tokensPerMinute

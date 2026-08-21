@@ -1,8 +1,8 @@
 /**
  * Admin referrals — the GLOBAL-ADMIN operator view of the referral program over
- * cloud-api's `GET /v1/admin/referrals` + `POST /v1/admin/referrals/sweep`
+ * cloud-api's `GET /v1/admin/affiliates/referrals` + `POST /v1/admin/referrals/sweep`
  * (cloud `clients/referrals`). Reads go through `originGet` — the console's OWN
- * origin (`<origin>/v1/admin/referrals`), which `next.config.mjs` rewrites to the
+ * origin (`<origin>/v1/admin/affiliates/referrals`), which `next.config.mjs` rewrites to the
  * GLOBAL-ADMIN-GATED `app/admin/aggregate` proxy (`getAdminGate`, fail-closed 403,
  * THEN a minted user bearer). The browser holds no admin credential.
  *
@@ -100,9 +100,11 @@ export function normalizeAdminReferrals(payload: unknown): AdminReferralsView {
 }
 
 export const AdminReferralsApi = {
-  /** GET /v1/admin/referrals — every referral + a fleet summary (global-admin). */
+  /** GET /v1/admin/affiliates/referrals — every referral + a fleet summary (global-admin).
+   *  The board is the affiliates programme's; only the bonus ledger and the sweep still
+   *  answer under `admin/referrals`. */
   list: async (limit?: number): Promise<AdminReferralsView> => {
-    const data = await originGet<unknown>('admin/referrals', limit ? { limit: String(limit) } : undefined)
+    const data = await originGet<unknown>('admin/affiliates/referrals', limit ? { limit: String(limit) } : undefined)
     return normalizeAdminReferrals(data)
   },
   /** POST /v1/admin/referrals/sweep — qualify-check every pending referral. */

@@ -3,14 +3,15 @@
 /**
  * The three neighbouring planes a deploy touches, and the domains it publishes on.
  *
- * Each reads the ONE head that OWNS its subject, so the estate keeps a single path
- * to each fact:
+ * Each reads the ONE canonical head for its subject — there is no `/v1/platform/cd`,
+ * `/v1/platform/ci`, or `/v1/platform/s3`, and inventing those aliases would give
+ * the estate two paths to the same data:
  *
  *   CD      → `GET /v1/deploy/applications` (`GitopsApi`). The reconciliation
  *             projection over the operator's App CRs — sync + health per app.
  *             Tenant-scoped server-side: a member sees only its own org's apps.
- *   CI      → `GET /v1/platform/builds` (`BuildsApi`). The native build record
- *             written by git push → Actions → image. There is no forge-runs endpoint.
+ *   CI      → `GET /v1/platform/builds` (`BuildsApi`). The native build record written by
+ *             git push → Actions → image. There is no forge-runs endpoint.
  *   Storage → `GET /v1/s3/buckets` (`StorageApi`). Org-scoped object storage.
  *   Domains → the hosts already bound to this org's apps and sites, folded from
  *             the board rather than re-fetched per app.
