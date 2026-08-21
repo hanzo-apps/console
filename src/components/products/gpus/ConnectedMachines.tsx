@@ -3,9 +3,9 @@
 /**
  * Connected machines — the org's BYO fleet dialed in via `hanzo gpu connect`, with
  * LIVE heartbeat AND, now, LIVE work: each row carries its GPU utilization (from the
- * `/v1/fleet` board) and its queue (running · queued, from `/v1/fleet/jobs`), and
- * expands to show the running job + everything queued behind it, each cancelable. This
- * is where a user SEES their own hardware come online and SEES what it is doing.
+ * `/v1/visor/fleet` board) and its queue (running · queued, from `/v1/visor/fleet/jobs`),
+ * and expands to show the running job + everything queued behind it, each cancelable.
+ * This is where a user SEES their own hardware come online and SEES what it is doing.
  *
  * Honest by construction — loading paints skeleton rows, a load failure shows the shared
  * platform state card, a real empty list is the "connect a machine" prompt, and a GPU

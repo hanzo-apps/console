@@ -2,7 +2,7 @@
 
 /**
  * Embeddings · Collections — the org's knowledge stores as vector collections
- * (`GET /v1/get-stores`), each mapping to the Qdrant/Search index
+ * (`GET /v1/ai/stores`), each mapping to the Qdrant/Search index
  * `{owner}-{store}-docs`. Search + status/model filters + pagination over real
  * rows; honest "—" for the stats the store API does not expose (vector count,
  * dimension, index size); metric is the real fixed cosine; the timestamp shown is
@@ -148,7 +148,7 @@ export function CollectionsView({
   ]
 
   if (error) {
-    return <BackendStateCard state={error} onRetry={() => void load()} hint="endpoint · GET /v1/get-stores" />
+    return <BackendStateCard state={error} onRetry={() => void load()} hint="endpoint · GET /v1/ai/stores" />
   }
   if (!loading && rows.length === 0) {
     return (

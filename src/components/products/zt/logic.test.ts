@@ -10,7 +10,7 @@ import {
   liveCount,
   deriveTopology,
   topologyIsEmpty,
-  derivePosture,
+  POSTURE,
 } from './logic'
 
 const sections = (over: Partial<ZtSections>): ZtSections => ({ ...emptySections, ...over })
@@ -53,18 +53,17 @@ describe('liveCount', () => {
 })
 
 describe('deriveTopology', () => {
-  it('maps real rows into router/service/identity columns with status', () => {
+  it('maps real rows into router/service columns with status', () => {
     const t = deriveTopology(
       sections({
         routers: [{ name: 'r1', status: 'online' }],
-        services: [{ name: 's1' }],
-        identities: [{ name: 'i1', status: 'revoked' }],
+        services: [{ name: 's1', status: 'active' }],
       }),
     )
     expect(t.router.map((n) => n.name)).toEqual(['r1'])
     expect(t.router[0].status).toBe('online')
     expect(t.service[0].kind).toBe('service')
-    expect(t.identity[0].status).toBe('revoked')
+    expect(t.service[0].status).toBe('active')
   })
   it('caps each column at perColumn', () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ name: `r${i}` }))
@@ -77,19 +76,10 @@ describe('deriveTopology', () => {
   })
 })
 
-describe('derivePosture — true suite, honest PQ %', () => {
-  it('states the platform PQ suite regardless of session data', () => {
-    const p = derivePosture(null)
-    expect(p.kem).toBe('ML-KEM-768')
-    expect(p.sig).toBe('ML-DSA-65')
-    expect(p.transport).toBe('Hanzo zap')
-  })
-  it('pqSessionsPct is null when sessions report no cipher (no guessing)', () => {
-    expect(derivePosture([{ id: 's1' }, { id: 's2' }]).pqSessionsPct).toBeNull()
-  })
-  it('computes % from real cipher/pq fields', () => {
-    expect(derivePosture([{ cipher: 'ML-KEM-768' }, { cipher: 'ML-KEM-768' }]).pqSessionsPct).toBe(100)
-    expect(derivePosture([{ cipher: 'ML-KEM-768' }, { cipher: 'aes-gcm' }]).pqSessionsPct).toBe(50)
-    expect(derivePosture([{ pq: true }, { pq: false }, { pq: false }]).pqSessionsPct).toBe(33)
+describe('POSTURE — the platform transport suite', () => {
+  it('states the real PQ primitives', () => {
+    expect(POSTURE.kem).toBe('ML-KEM-768')
+    expect(POSTURE.sig).toBe('ML-DSA-65')
+    expect(POSTURE.transport).toBe('Hanzo zap')
   })
 })

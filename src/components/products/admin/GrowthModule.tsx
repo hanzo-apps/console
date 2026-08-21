@@ -886,11 +886,10 @@ function LivePanel({ nonce }: { nonce: number }) {
 }
 
 /**
- * SEAM for the cross-tenant "every org's growth stage" macro table. This build reads the
- * admin org's OWN `/v1/guide/profile` (Hanzo's dogfood) above; the all-orgs table needs a
- * new SuperAdmin cross-org endpoint (a follow-on: `GET /v1/admin/guide/orgs`). This panel is
- * the drop-in point — wiring the table later is additive (fetch the aggregate here, render
- * an org → stage grid), no rewiring of the module.
+ * The cross-tenant "every org's growth stage" macro table. The panel above reads the admin
+ * org's OWN `/v1/guide/profile`; a table across every org is a different question, and
+ * cloud publishes no cross-org aggregate of it — so this renders what it can say honestly
+ * rather than a grid it would have to invent.
  */
 export function GrowthOrgOverview() {
   return (

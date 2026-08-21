@@ -1,40 +1,30 @@
 'use client'
 
 /**
- * Wallet & HUSD Top-up — connect a wallet on Hanzo Mainnet, see your HUSD and
- * cloud credit balances, and top up credit by sending HUSD.
+ * Wallet — connect a wallet on Hanzo Mainnet and read your HUSD next to your
+ * cloud credit balance.
  *
- * Non-custodial: the user signs in their OWN wallet (window.ethereum) via
- * `~/lib/wallet/hanzo-evm` (ethers v6). The send → record → credit flow is:
- * send HUSD to the treasury, POST the tx to the console's verify-and-record
- * endpoint (`/billing/topup/wallet`), which checks the transfer on-chain and
- * records it to commerce as a `husd` crypto payment.
+ * Non-custodial and read-only: the user signs in their OWN wallet
+ * (window.ethereum) via `~/lib/wallet/hanzo-evm` (ethers v6), and this page
+ * never asks for a signature or moves funds. Paying for credit in crypto is a
+ * DEPOSIT, not a send-then-report: billing hands out a deposit address
+ * (`POST /v1/billing/crypto/deposit`, with `/v1/billing/crypto/options` for the
+ * assets it takes and `/v1/billing/crypto/deposit/{id}` for the state of one)
+ * and credits the balance when the chain watcher sees a confirmed transfer, so
+ * no client-supplied transaction hash takes part.
  *
  * Honest states only — when no wallet is installed, when HUSD is not yet
- * deployed (greenfield), when the chain is unreachable, or when the endpoint is
- * unconfigured, the UI says so. It never shows a fabricated balance or credit.
+ * deployed (greenfield), or when the chain is unreachable, the UI says so. It
+ * never shows a fabricated balance or credit.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
-import {
-  Wallet,
-  Coins,
-  CreditCard,
-  RefreshCw,
-  ArrowUpRight,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-} from '@hanzogui/lucide-icons-2'
+import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
+import { Wallet, Coins, CreditCard, RefreshCw, AlertCircle } from '@hanzogui/lucide-icons-2'
 
-import { AccountApi, type Account } from '~/lib/api'
-import { WalletApi } from '~/lib/api/wallet'
-import { useCloudBalance, invalidateBalance, spendableCents, balanceSplitLabel } from '~/lib/billing/live-balance'
+import { useCloudBalance, spendableCents, balanceSplitLabel } from '~/lib/billing/live-balance'
 import * as evm from '~/lib/wallet/hanzo-evm'
 import { PageHeader } from '@hanzo/ui/product'
 import { usd } from '~/lib/money'
-
-const userIdOf = (a: Account | null): string | undefined => a?.email ?? a?.name ?? undefined
 
 type Loadable<T> =
   | { state: 'idle' | 'loading' }
@@ -43,24 +33,14 @@ type Loadable<T> =
   | { state: 'noauth' }
   | { state: 'error'; error: string }
 
-type Topup =
-  | { state: 'idle' }
-  | { state: 'sending' }
-  | { state: 'recording' }
-  | { state: 'success'; txHash: string; creditedCents: number }
-  | { state: 'error'; error: string }
-
 export function WalletModule(_props: { params: Record<string, string> }) {
-  const [account, setAccount] = useState<Account | null>(null)
   const [conn, setConn] = useState<evm.Connection | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [connectErr, setConnectErr] = useState<string | null>(null)
   const [walletHusd, setWalletHusd] = useState<Loadable<bigint>>({ state: 'idle' })
-  const [amount, setAmount] = useState('')
-  const [topup, setTopup] = useState<Topup>({ state: 'idle' })
 
   // Cloud credit = the ONE shared live balance (same value the sidebar + Cost page
-  // show), auto-refreshing on focus/visibility/poll and after a completion/top-up.
+  // show), auto-refreshing on focus/visibility/poll and after a completion.
   const { phase: cloudPhase, balance: cloudBalance, error: cloudError, refresh: refreshCloud } = useCloudBalance()
   const cloudCents = spendableCents(cloudBalance)
 
@@ -85,17 +65,13 @@ export function WalletModule(_props: { params: Record<string, string> }) {
     }
   }, [])
 
-  // ── Mount: account + already-authorized wallet ──────────────────────────────
+  // ── Mount: already-authorized wallet ────────────────────────────────────────
   useEffect(() => {
     let live = true
     void (async () => {
-      const acc = await AccountApi.current()
-      if (!live) return
-      setAccount(acc)
       const addr = await evm.currentAddress()
       if (!live || !addr) return
-      const c = { address: addr, chainId: evm.HANZO_MAINNET.chainId }
-      setConn(c)
+      setConn({ address: addr, chainId: evm.HANZO_MAINNET.chainId })
       void loadWalletHusd(addr)
     })()
     return () => {
@@ -118,44 +94,18 @@ export function WalletModule(_props: { params: Record<string, string> }) {
     }
   }, [loadWalletHusd])
 
-  const onTopup = useCallback(async () => {
-    if (!conn) return
-    const n = Number.parseFloat(amount)
-    if (!Number.isFinite(n) || n <= 0) {
-      setTopup({ state: 'error', error: 'Enter an amount greater than zero.' })
-      return
-    }
-    setTopup({ state: 'sending' })
-    try {
-      const txHash = await evm.sendHusdTopup(amount)
-      setTopup({ state: 'recording' })
-      const result = await WalletApi.recordWalletTopup({
-        txHash,
-        fromAddress: conn.address,
-        userId: userIdOf(account),
-      })
-      setTopup({ state: 'success', txHash: result.txHash, creditedCents: result.creditedCents })
-      setAmount('')
-      invalidateBalance() // credit landed — reflect it in the cloud-credit card now
-      void loadWalletHusd(conn.address)
-    } catch (e) {
-      setTopup({ state: 'error', error: e instanceof Error ? e.message : 'Top-up failed' })
-    }
-  }, [conn, amount, account, loadWalletHusd])
-
   const refresh = useCallback(() => {
     refreshCloud()
     void loadWalletHusd(conn?.address ?? null)
   }, [conn, refreshCloud, loadWalletHusd])
 
-  const busy = topup.state === 'sending' || topup.state === 'recording'
   const onHanzo = conn?.chainId === evm.HANZO_MAINNET.chainId
 
   return (
     <>
       <PageHeader
-        title="Wallet & HUSD Top-up"
-        subtitle="Connect a wallet on Hanzo Mainnet to view balances and top up cloud credit with HUSD."
+        title="Wallet"
+        subtitle="Connect a wallet on Hanzo Mainnet to see your HUSD next to your cloud credit."
         actions={
           <Button icon={<RefreshCw size={16} />} onPress={refresh}>
             Refresh
@@ -272,88 +222,11 @@ export function WalletModule(_props: { params: Record<string, string> }) {
         </Card>
       </XStack>
 
-      {/* ── Top-up ──────────────────────────────────────────────────────────── */}
-      <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
-        <XStack items="center" gap="$2">
-          <ArrowUpRight size={16} />
-          <Text fontSize="$5" fontWeight="700">
-            Top up with HUSD
-          </Text>
-        </XStack>
-
-        {!evm.topupConfigured() ? (
-          <YStack gap="$3" maxW={460}>
-            <Text fontSize="$3" color="$color11">
-              On-chain HUSD top-up runs once HUSD is live on Hanzo Mainnet — your HUSD balance already shows
-              above when a wallet is connected. To add cloud credit today, top up with a card on Billing.
-            </Text>
-            <XStack>
-              <Button
-                theme="light"
-                icon={<CreditCard size={15} />}
-                onPress={() => { if (typeof window !== 'undefined') window.location.assign('/billing') }}
-              >
-                Add credit on Billing
-              </Button>
-            </XStack>
-          </YStack>
-        ) : !conn ? (
-          <Text fontSize="$3" color="$color11">
-            Connect your wallet above to top up.
-          </Text>
-        ) : (
-          <YStack gap="$3" maxW={420}>
-            <Text fontSize="$3" color="$color11">
-              Send HUSD to your cloud credit. 1 HUSD = $1.00 credit.
-            </Text>
-            <XStack gap="$2" items="center">
-              <Input
-                flex={1}
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="Amount in HUSD"
-                disabled={busy}
-              />
-              <Button theme="light" onPress={onTopup} disabled={busy || !amount}>
-                {topup.state === 'sending'
-                  ? 'Confirm in wallet…'
-                  : topup.state === 'recording'
-                    ? 'Crediting…'
-                    : 'Top up'}
-              </Button>
-            </XStack>
-
-            {topup.state === 'success' ? (
-              <XStack items="center" gap="$2">
-                <CheckCircle2 size={16} />
-                <Text fontSize="$3" color="$color11">
-                  Credited {usd(topup.creditedCents)}.
-                </Text>
-                <Button
-                  size="$2"
-                  chromeless
-                  icon={<ExternalLink size={13} />}
-                  onPress={() => window.open(evm.txUrl(topup.txHash), '_blank', 'noopener')}
-                >
-                  View transaction
-                </Button>
-              </XStack>
-            ) : topup.state === 'error' ? (
-              <XStack items="center" gap="$2">
-                <AlertCircle size={16} />
-                <Text fontSize="$3" color="$color11">
-                  {topup.error}
-                </Text>
-              </XStack>
-            ) : null}
-          </YStack>
-        )}
-      </Card>
-
       <Card p="$4" gap="$1.5" borderWidth={1} borderColor="$borderColor" bg="$color2">
         <Text fontSize="$3" color="$color11">
-          HUSD is the Hanzo USD stablecoin on Hanzo Mainnet (chain {evm.HANZO_MAINNET.chainId}). Top-ups
-          are verified on-chain and credited to the same balance used across every Hanzo Cloud product.
+          HUSD is the Hanzo USD stablecoin on Hanzo Mainnet (chain {evm.HANZO_MAINNET.chainId}). Your
+          cloud credit is the one balance every Hanzo Cloud product spends from — add to it in Hanzo
+          Billing, where a crypto payment is made by sending to a deposit address Billing issues you.
         </Text>
       </Card>
     </>

@@ -5,7 +5,7 @@
  * connects Slack / GitHub (and any provider the cloud connector framework registers)
  * via a Connect button that runs the ORG-AUTHED OAuth flow through the canonical `/v1`
  * client — the surface that answers "I can't just hit an API endpoint unauthed": the
- * button POSTs `/v1/connectors/:provider/connect` (bearer minted server-side, org from
+ * button POSTs `/v1/integrations/:provider/connect` (bearer minted server-side, org from
  * the token owner), then top-level-navigates to the returned provider authorize URL.
  *
  * Works for ANY org: every call is org-scoped SERVER-SIDE by the minted bearer, and the
@@ -397,7 +397,7 @@ export function OrgConnectorsModule({ params }: { params: Record<string, string>
     return (
       <YStack gap="$4">
         {header}
-        <BackendStateCard state={error} onRetry={() => load()} hint="endpoint · GET /v1/connectors" />
+        <BackendStateCard state={error} onRetry={() => load()} hint="endpoint · GET /v1/integrations" />
       </YStack>
     )
   }

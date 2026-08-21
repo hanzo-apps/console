@@ -13,12 +13,7 @@ export { AccountApi } from './account'
 export { ProjectApi, projectEnvironments, type Project } from './projects'
 export { BotApi, type BotHealth } from './bot'
 export { PlansApi, type Plan, type PlanLimits } from './plans'
-export {
-  WalletApi,
-  type CloudBalance,
-  type WalletTopupRequest,
-  type WalletTopupResult,
-} from './wallet'
+export { WalletApi, type CloudBalance } from './wallet'
 export { ProviderApi } from './providers'
 export { ModelRouteApi } from './model-routes'
 export {
@@ -181,39 +176,9 @@ export {
   TRAIN_GPUS,
   type TrainJob,
   type TrainStatus,
-  type TrainExperiment,
-  type MetricPoint,
   type MlModel,
   type CreateTrainJobInput,
 } from './train'
-// Interactive training — the ENGINE plane (live LoRA client: forward_backward /
-// optim_step / sample / save_weights), distinct from TrainApi's cloud k8s jobs.
-export {
-  TrainingApi,
-  LLAMA_TARGET_MODULES,
-  DEFAULT_LORA,
-  normLoraConfig,
-  normClientInfo,
-  normClientDetail,
-  normForwardBackward,
-  normSampleResult,
-  type LoraConfig,
-  type TrainingClientStatus,
-  type TrainingClientInfo,
-  type TrainingClientDetail,
-  type Datum,
-  type PromptCompletion,
-  type TokenDatum,
-  type ForwardBackwardResult,
-  type OptimStepResult,
-  type AdamParams,
-  type SamplingParams,
-  type SampleInput,
-  type SampleSequence,
-  type SampleResult,
-  type SaveWeightsResult,
-  type CreateClientInput,
-} from './training'
 export {
   O11yApi,
   type O11yList,
@@ -232,38 +197,7 @@ export {
   type TraceDetail,
   type SessionDetail,
 } from './o11y'
-export {
-  TelemetryApi,
-  windowOf,
-  serviceNameOf,
-  toServiceHealth,
-  summarizeHealth,
-  parseInstant,
-  parseRange,
-  type Sample,
-  type Series,
-  type ServiceHealth,
-  type HealthSummary,
-  type RangeWindow,
-} from './telemetry'
-export {
-  LuxInfraApi,
-  LUX_QUERIES,
-  LUX_SERVICES,
-  livenessOf,
-  networkLabel,
-  toNetworks,
-  toNodeMemory,
-  toTopPods,
-  toServices,
-  type LuxInfra,
-  type Liveness,
-  type ValidatorRow,
-  type NetworkSummary,
-  type NodeMem,
-  type PodMem,
-  type ServiceStatus,
-} from './lux-infra'
+export { TelemetryApi, type Availability, type ServiceHealth, type Sample } from './telemetry'
 export {
   ApmApi,
   apmWindow,
@@ -322,13 +256,3 @@ export type {
   GitHubRepo,
   GitHubImportResult,
 } from './connectors'
-// White-label tenant provisioning — clusters/domain/package/brand over the /paas
-// service-token proxy (REAL cluster ops, honest-not-connected domain/package/brand).
-export {
-  TenantsApi,
-  type TenantCluster,
-  type TenantDomain,
-  type TenantBrandConfig,
-  type BindDomainInput,
-  type BrandInput,
-} from './tenants'

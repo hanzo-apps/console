@@ -1,6 +1,6 @@
 /**
  * Plan promo — the ONE place the limited-time discount is interpreted. The plan
- * catalog (/v1/plans) carries `promoPercent` (off the list price) through
+ * catalog (/v1/plan) carries `promoPercent` (off the list price) through
  * `promoUntil` (RFC3339); every surface derives the effective price from here so
  * there is no second discount source of truth.
  */

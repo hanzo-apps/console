@@ -1,190 +1,108 @@
 /**
- * Telemetry API — live platform health + infra metrics from VictoriaMetrics
- * (Prometheus-compatible), via the SuperAdmin-gated cloud VM proxy at the same-origin,
- * FLAT version-less `/v1/o11y/vm/{query,query_range}` (cloud clients/o11y/vmproxy.go);
- * the upstream VM `api/v1/*` path is resolved INSIDE the proxy, never in our route.
+ * Fleet availability — how much of the Hanzo platform is up right now, and how much was
+ * up across a window. ONE read, `GET /v1/o11y/availability` (HIP-0139), PLATFORM SUDO:
+ * the whole fleet's inventory is not tenant data, so every customer is 403.
  *
- * Why not a Next route: the console ships as a static export go:embedded into the cloud
- * binary (output:'export'), which STRIPS every server route — so the former same-origin
- * `/telemetry/[...path]` proxy is gone and a browser call to it 404s (this file's whole
- * reason for the repoint). The cloud proxy is the one-and-only-one source now: it is
- * gated to platform SuperAdmins, allowlists the query to exactly {up, sum(up), count(up)}
- * (the three the infra-health board sends), and returns VM's native Prometheus envelope
- * VERBATIM — so the parse helpers below are unchanged.
+ * The number is the fleet prober's own measurement (cloud apps/o11y/probes.go): each
+ * service is asked its OWN health URL every 30 seconds, so a service is listed down
+ * because it did not answer, never because something failed to collect it. There is no
+ * per-replica identity under it — a Service address is not a pod — so a row carries the
+ * service and the verdict and nothing that would have to be invented.
  *
- * This is the REAL source the Status and Metrics surfaces read: VictoriaMetrics scrapes a
- * health target per Hanzo service (`up{job="iam-health"}`, `up{job="cloud-api-health"}`,
- * …) plus process/runtime series. Every value is a fold over what VictoriaMetrics returns
- * — an empty result rolls up to honest zeros / empty series, never a fabricated health
- * dot. The parse helpers are pure (JSON in, view-model out) so they unit-test without a
- * live TSDB.
+ * Honest two ways. An empty inventory folds to zeros and an empty trend, never a
+ * fabricated health dot. And a store that cannot be reached answers 503, which arrives
+ * here as a thrown ApiError for the caller to render as unavailable: a board of zeroes
+ * and a fleet that is entirely down look identical, and painting one as the other is the
+ * most expensive lie a status surface can tell.
+ *
+ * `range` is clamped server-side (7d ceiling) and `stepSec` to [30, 3600]; the response
+ * reports what was ACTUALLY used, which is why a caller reads `range` back instead of
+ * assuming the numbers it asked for. The shaper is pure (JSON in, view-model out), so it
+ * unit-tests without a live store.
  */
 import { ApiError, cloudProxyV1Url, restGet } from './client'
 
-// ── Wire shape (Prometheus/VictoriaMetrics query API) ────────────────────────
+// ── View models ──────────────────────────────────────────────────────────────
 
-/** Raw Prometheus result — instant `value:[ts,val]` OR range `values:[[ts,val]…]`. */
-type PromResult = {
-  metric?: Record<string, string>
-  value?: [number, string]
-  values?: [number, string][]
-}
-type PromResponse = {
-  status?: string
-  data?: { resultType?: string; result?: PromResult[] }
-  error?: string
-  errorType?: string
-}
-
-/** One instant sample: its labels + a finite numeric value at a timestamp (s). */
-export type Sample = { metric: Record<string, string>; value: number; ts: number }
-/** One time-series: its labels + ordered (t seconds, v) points. */
-export type Series = { metric: Record<string, string>; points: { t: number; v: number }[] }
-
-const numOf = (v: string | undefined): number => {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : NaN
-}
-
-/** Parse an instant-vector response into finite samples (NaN values dropped). */
-export function parseInstant(body: unknown): Sample[] {
-  const r = body as PromResponse
-  const rows = r?.data?.result ?? []
-  const out: Sample[] = []
-  for (const row of rows) {
-    if (!row.value) continue
-    const value = numOf(row.value[1])
-    if (!Number.isFinite(value)) continue
-    out.push({ metric: row.metric ?? {}, value, ts: row.value[0] })
-  }
-  return out
-}
-
-/** Parse a range (matrix) response into series with finite points. */
-export function parseRange(body: unknown): Series[] {
-  const r = body as PromResponse
-  const rows = r?.data?.result ?? []
-  return rows.map((row) => ({
-    metric: row.metric ?? {},
-    points: (row.values ?? [])
-      .map(([t, v]) => ({ t, v: numOf(v) }))
-      .filter((p) => Number.isFinite(p.v)),
-  }))
-}
-
-// ── Service health (the Status board) ────────────────────────────────────────
-
-/** One scraped service target and whether it is up. */
-export type ServiceHealth = {
-  /** Scrape job — the service identity (e.g. `iam-health`, `cloud-api-health`). */
-  job: string
-  /** Human service name (the `-health` suffix stripped, `_` → ` `). */
-  service: string
-  /**
-   * Customer-safe endpoint — a public FQDN (port stripped) or `''` when the scrape
-   * instance is internal (in-cluster `.svc`, loopback, or a private IP). REDACTED at
-   * the source by `redactInstance`, so the raw internal `host:port` never reaches the
-   * browser (defense in depth). Render `instance || '—'`.
-   */
-  instance: string
-  /** `up == 1`. */
-  up: boolean
-  /** Optional brand label, when the series carries one. */
-  brand?: string
-}
-
-/** `iam-health` → `iam`, `cloud-api-health` → `cloud-api`; else the job verbatim. */
-export function serviceNameOf(job: string): string {
-  return job.replace(/-health$/, '')
-}
+/** One probed service: its name, and whether it answered its health URL last cycle. */
+export type ServiceHealth = { name: string; up: boolean }
 
 /**
- * Redact an internal scrape instance (`host:port`) for a CUSTOMER-facing status board.
- * A Prometheus `instance` label is the in-cluster address the collector scrapes —
- * `visor.hanzo.svc:19000`, `localhost:8428`, `127.0.0.1:8429`, `10.x.x.x:9000` — which
- * must NEVER render to a customer (it exposes internal topology). We keep only what is
- * safe and useful: a non-private, non-internal PUBLIC host (e.g. `iam.hanzo.ai`) is
- * shown port-stripped; anything in-cluster / loopback / private-IP / bare-port is
- * dropped to `''` (the UI renders `—`). The status verdict still comes from `up`, so a
- * redacted row loses no health signal — only the internal address. Applied at the
- * source so the internal address never even reaches the browser (defense in depth).
+ * One measurement of the fleet, covering `stepSec` of the trend. `total` is how many
+ * services reported at all across that span, and it can be LOWER than the fleet's total
+ * today — a service added last week reported nothing the week before, and saying so is
+ * the point.
  */
-export function redactInstance(instance: string): string {
-  const raw = (instance ?? '').trim()
-  if (!raw) return ''
-  const host = raw.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split('/')[0].split(':')[0].trim().toLowerCase()
-  if (!host) return ''
-  // Loopback + unqualified / internal-TLD in-cluster names (no public TLD).
-  const INTERNAL_TLD = /\.(local|svc|internal|intranet|corp|lan|home|cluster)$/
-  if (host === 'localhost' || INTERNAL_TLD.test(host) || host.includes('.svc.') || host.includes('.cluster.') || !host.includes('.')) return ''
-  // RFC1918 / link-local / loopback IPv4 and any IPv6 literal — internal by definition.
-  if (/^(10|127)\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^169\.254\./.test(host) || host.includes(':')) return ''
-  // A public FQDN: show the host, port stripped (a customer never needs the scrape port).
-  return host
+export type Sample = {
+  /** Start of the span, RFC3339 in UTC. */
+  t: string
+  /** How many services were up at the end of the span. */
+  up: number
+  /** How many services reported at all across the span. */
+  total: number
 }
 
-/** Map `up` samples → the service-health board, sorted down-first then by name. */
-export function toServiceHealth(samples: Sample[]): ServiceHealth[] {
-  const rows = samples.map((s) => {
-    const job = s.metric.job ?? s.metric.instance ?? 'unknown'
-    return {
-      job,
-      service: serviceNameOf(job),
-      instance: redactInstance(s.metric.instance ?? ''),
-      up: s.value === 1,
-      brand: s.metric.brand,
-    }
-  })
-  // Down services first (they need attention), then alphabetical by service.
-  return rows.sort((a, b) => Number(a.up) - Number(b.up) || a.service.localeCompare(b.service))
+/** The whole platform-health board in one read: the instant inventory and the trend. */
+export type Availability = {
+  /** How many services are up right now. */
+  up: number
+  /** How many services the prober currently watches. */
+  total: number
+  /** The current inventory, sorted by name. */
+  services: ServiceHealth[]
+  /** The trend, oldest first. */
+  series: Sample[]
+  /** The window and step the server ACTUALLY used, after clamping. */
+  range: { sinceSec: number; stepSec: number }
 }
 
-/** Rollup counts for the health board / KPIs. */
-export type HealthSummary = { total: number; healthy: number; down: number }
-export function summarizeHealth(rows: ServiceHealth[]): HealthSummary {
-  const healthy = rows.filter((r) => r.up).length
-  return { total: rows.length, healthy, down: rows.length - healthy }
+// ── Shaper (JSON in, view-model out) ─────────────────────────────────────────
+
+const int = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? Math.trunc(v) : 0)
+const rows = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : [])
+
+/** Fold the availability read into the board. Anything absent counts as zero, not as up. */
+export function parseAvailability(body: unknown): Availability {
+  const w = (body ?? {}) as {
+    up?: unknown
+    total?: unknown
+    services?: unknown
+    series?: unknown
+    range?: { sinceSec?: unknown; stepSec?: unknown }
+  }
+  return {
+    up: int(w.up),
+    total: int(w.total),
+    services: rows<{ name?: unknown; up?: unknown }>(w.services)
+      .filter((s) => typeof s?.name === 'string' && s.name !== '')
+      .map((s) => ({ name: s.name as string, up: s.up === true })),
+    series: rows<{ t?: unknown; up?: unknown; total?: unknown }>(w.series)
+      .filter((p) => typeof p?.t === 'string' && p.t !== '')
+      .map((p) => ({ t: p.t as string, up: int(p.up), total: int(p.total) })),
+    range: { sinceSec: int(w.range?.sinceSec), stepSec: int(w.range?.stepSec) },
+  }
 }
 
 // ── Transport ────────────────────────────────────────────────────────────────
 
-/**
- * Build the transport URL for a VM read through the SuperAdmin cloud VM proxy:
- * `cloudProxyV1Url('o11y/vm/<path>')` → `<origin>/v1/o11y/vm/{query,query_range}`
- * (root-relative `/v1/...` on the server, where there is no `window`). `path` is the
- * FLAT `query` or `query_range` — the upstream VictoriaMetrics `api/v1/*` nesting is
- * resolved INSIDE the cloud proxy, never in our public path. The query/start/end/step
- * params are appended.
- */
-const url = (path: string, params: Record<string, string | number>): string => {
-  const abs = cloudProxyV1Url(`o11y/vm/${path}`)
-  const u = new URL(abs, typeof window !== 'undefined' ? window.location.origin : 'http://_')
-  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, String(v))
-  return typeof window !== 'undefined' ? u.toString() : `${u.pathname}${u.search}`
-}
-
-/** A range window (seconds). `step` is the resolution; `points ≈ (end-start)/step`. */
-export type RangeWindow = { start: number; end: number; step: number }
-
-/** Build a range window ending now, spanning `seconds`, targeting ~`points` samples. */
-export function windowOf(seconds: number, points = 60): RangeWindow {
-  const end = Math.floor(Date.now() / 1000)
-  const step = Math.max(15, Math.round(seconds / points))
-  return { start: end - seconds, end, step }
+/** `<origin>/v1/o11y/availability` (root-relative on the server, where there is no `window`). */
+const url = (params: Record<string, number | undefined>): string => {
+  const q = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v))
+  const path = cloudProxyV1Url('o11y/availability')
+  const query = q.toString()
+  return query ? `${path}?${query}` : path
 }
 
 export const TelemetryApi = {
-  /** Instant query — the current value of `promql` (e.g. `up`, `sum(up)`). */
-  instant: async (promql: string): Promise<Sample[]> =>
-    parseInstant(await restGet<unknown>(url('query', { query: promql }))),
-
-  /** Range query — `promql` sampled across a window (for a chart). */
-  range: async (promql: string, w: RangeWindow): Promise<Series[]> =>
-    parseRange(await restGet<unknown>(url('query_range', { query: promql, start: w.start, end: w.end, step: w.step }))),
-
-  /** The live service-health board (`up` per scrape target). */
-  serviceHealth: async (): Promise<ServiceHealth[]> => toServiceHealth(await TelemetryApi.instant('up')),
+  /**
+   * Read the fleet: how many services are up now, the current inventory, and the
+   * up-versus-reporting trend across `range` seconds. Omit `range` to take the server's
+   * hour, and `stepSec` to let it pick ~60 steps; both come back on `range` clamped.
+   */
+  availability: async (range?: number, stepSec?: number): Promise<Availability> =>
+    parseAvailability(await restGet<unknown>(url({ range, stepSec }))),
 }
 
-/** Re-export the typed error so callers classify 401/501/502 honestly. */
+/** Re-export the typed error so callers classify 403/503 honestly. */
 export { ApiError }

@@ -1,11 +1,11 @@
 'use client'
 
 /**
- * Traces — list + detail over `/v1/sentinel/traces`. The list is the root
+ * Traces — list + detail over `/v1/o11y/sentinel/traces`. The list is the root
  * transactions with roll-up duration/span/error counts; the detail is the span
- * WATERFALL for one trace (`/v1/sentinel/traces/:id`). This is the APM-span domain
+ * WATERFALL for one trace (`/v1/o11y/sentinel/traces/:id`). This is the APM-span domain
  * (duration/waterfall) — distinct from the console's LLM-trace module (cost/tokens/
- * scores over `/v1/o11y`), so it is its own surface in the same idiom (DataTable +
+ * scores over `/v1/o11y/traces`), so it is its own surface in the same idiom (DataTable +
  * honest states), never fabricated spans.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'

@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from '~/lib/router'
 import { Button, Card, Input, Text, XStack, YStack } from '@hanzo/gui'
-import { CreditCard, ShieldCheck, Check, ArrowRight, Coins, FlaskConical } from '@hanzogui/lucide-icons-2'
+import { CreditCard, ShieldCheck, Check, ArrowRight, FlaskConical } from '@hanzogui/lucide-icons-2'
 
 import { BillingApi, type PaymentConfig } from '~/lib/api/billing'
 import { isLiveSquareEnv, dollarsToCents, validateTopupCents, PRESET_TOPUP_USD } from '~/lib/billing/square'
@@ -265,19 +265,6 @@ export function BillingCredits(_props: { params: Record<string, string> }) {
         </Card>
       )}
 
-      {/* Secondary: crypto stays available */}
-      <XStack items="center" gap="$1.5">
-        <Coins size={14} opacity={0.7} />
-        <Text
-          fontSize="$2"
-          color="$color11"
-          cursor="pointer"
-          hoverStyle={{ color: '$color12' }}
-          onPress={() => router.push('/wallet')}
-        >
-          Prefer crypto? Top up with HUSD →
-        </Text>
-      </XStack>
     </>
   )
 }

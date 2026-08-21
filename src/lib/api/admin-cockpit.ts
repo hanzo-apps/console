@@ -11,9 +11,9 @@
  *
  * The enablement registry (cloud clients/pricing) returns PLAIN JSON, not the
  * casibase envelope, so it uses a small raw-JSON fetch. The ADMIN set/list ride the
- * same admin-aggregate gate (`/v1/admin/enablement`); the USER self-service view +
- * opt-in ride the per-tenant `/v1` proxy (`/v1/enablement`), which scopes to the
- * caller's own org — a customer can never flip global state.
+ * same admin-aggregate gate (`/v1/admin/pricing/enablement`); the USER self-service
+ * view + opt-in ride the per-tenant `/v1` proxy (`/v1/pricing/enablement`), which
+ * scopes to the caller's own org — a customer can never flip global state.
  *
  * OPTIONAL-SAFE end to end: every field degrades to an honest 0 / empty / em-dash;
  * NOTHING is fabricated. Money is USD cents.
@@ -270,7 +270,7 @@ const asState = (v: unknown): EnablementState => (v === 'off' || v === 'beta' ||
 export const EnablementApi = {
   /** GLOBAL-admin: the managed registry (kind/id/state/grants). */
   list: async (): Promise<AdminEnablementItem[]> => {
-    const d = await enablementReq<{ items?: unknown[] }>('GET', '/v1/admin/enablement')
+    const d = await enablementReq<{ items?: unknown[] }>('GET', '/v1/admin/pricing/enablement')
     return arr(d?.items).map((i) => {
       const r = (i ?? {}) as Record<string, unknown>
       return { kind: str(r.kind), id: str(r.id), state: asState(r.state), betaOrgs: arr(r.betaOrgs).map(str), updatedAt: num(r.updatedAt) }
@@ -278,10 +278,10 @@ export const EnablementApi = {
   },
   /** GLOBAL-admin: set an item off|beta|ga (+optional grant list). */
   set: (body: { kind: string; id: string; state: EnablementState; betaOrgs?: string[] }): Promise<AdminEnablementItem> =>
-    enablementReq<AdminEnablementItem>('PUT', '/v1/admin/enablement', body),
+    enablementReq<AdminEnablementItem>('PUT', '/v1/admin/pricing/enablement', body),
   /** Any authed user: their effective view + betas to opt into. */
   view: async (): Promise<{ org: string; items: UserEnablementItem[]; betas: UserEnablementItem[] }> => {
-    const d = await enablementReq<{ org?: string; items?: unknown[]; betas?: unknown[] }>('GET', '/v1/enablement')
+    const d = await enablementReq<{ org?: string; items?: unknown[]; betas?: unknown[] }>('GET', '/v1/pricing/enablement')
     const map = (v: unknown): UserEnablementItem => {
       const r = (v ?? {}) as Record<string, unknown>
       return { kind: str(r.kind), id: str(r.id), state: asState(r.state), effective: bool(r.effective), optedIn: bool(r.optedIn), canOptIn: bool(r.canOptIn) }
@@ -289,6 +289,6 @@ export const EnablementApi = {
     return { org: str(d?.org), items: arr(d?.items).map(map), betas: arr(d?.betas).map(map) }
   },
   /** User self-service: opt the caller's OWN org into / out of a beta item. */
-  optIn: (body: { kind: string; id: string }): Promise<UserEnablementItem> => enablementReq<UserEnablementItem>('POST', '/v1/enablement/optin', body),
-  optOut: (body: { kind: string; id: string }): Promise<UserEnablementItem> => enablementReq<UserEnablementItem>('POST', '/v1/enablement/optout', body),
+  optIn: (body: { kind: string; id: string }): Promise<UserEnablementItem> => enablementReq<UserEnablementItem>('POST', '/v1/pricing/enablement/optin', body),
+  optOut: (body: { kind: string; id: string }): Promise<UserEnablementItem> => enablementReq<UserEnablementItem>('POST', '/v1/pricing/enablement/optout', body),
 }

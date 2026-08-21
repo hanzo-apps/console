@@ -7,10 +7,10 @@
  * server-side — a caller only ever sees their own org's machines. No token reaches
  * the browser.
  *
- * NOT the `/paas` pattern: `/paas` forwards a god-mode control-plane SERVICE token
- * and is gated to brand admins. Compute is a TENANT action (any signed-in org user
- * may list/manage their own machines), so this is user-scoped (resolveUser), and
- * visor itself authorizes the forwarded user bearer.
+ * Compute is a TENANT action (any signed-in org user may list/manage their own
+ * machines), so this is user-scoped (resolveUser) and visor itself authorizes the
+ * forwarded user bearer. No service token, no brand-admin gate — the caller's own
+ * identity is the whole authorization story.
  *
  * Least privilege on the path: only the visor `v1/*` surface is reachable
  * (`allowVisorSurface`); anything else 404s.

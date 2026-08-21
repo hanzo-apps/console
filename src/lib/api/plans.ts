@@ -3,14 +3,13 @@
  * that actually gets charged), read through the console's OWN per-tenant billing
  * proxy at the canonical GET /v1/billing/plans -> commerce api/billing.ListPlans.
  *
- * Why the billing proxy, not /v1/pricing or /v1/plans: the billing proxy injects the
+ * Why the billing proxy, not /v1/pricing or /v1/plan: the billing proxy injects the
  * commerce SERVICE token server-side (the SAME proxy every working billing call uses —
- * balance, usage, subscriptions), whereas the old /v1/pricing read rendered "Not
- * authorized" and NO tiers — nobody could see or buy Pro. So the catalog loads for a
- * signed-in user. Read-only
- * discovery: actually paying happens at config.billingUrl (the brand billing portal
- * over commerce, Square checkout), which the cards link to — one money surface, never
- * reimplemented here.
+ * balance, usage, subscriptions), whereas a bare /v1/pricing read answers "Not
+ * authorized" with NO tiers — nobody can see or buy Pro. Here the catalog loads for a
+ * signed-in user. Read-only discovery: actually paying happens at config.billingUrl (the
+ * brand billing portal over commerce, Square checkout), which the cards link to — one
+ * money surface, never reimplemented here.
  *
  * Wire shape (commerce `staticPlan` — a BARE ARRAY, prices in CENTS):
  *   [{ slug, name, description, category, price, priceAnnual, currency, interval,

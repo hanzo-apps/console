@@ -4,12 +4,13 @@
  * Base — the org's own realtime backend, usable BY CLICKING.
  *
  * An organization HAS a Base. Not a registry of Bases, not an instance to pick
- * from a list: one per org, served by the cloud binary itself at `/v1/base/*`,
- * on the same per-org encrypted store every other subsystem writes to. So this
- * module is the whole product — browse the content types, open one, read and
- * edit its records — rendered from each collection's own field schema through
- * @hanzo/data (`DataTable` for the list, `RecordDetail`/`RecordForm` for the
- * record), so every field type shows the right Display/Input with no per-type code.
+ * from a list: one per org on the managed Base (base.hanzo.ai), reached through
+ * the console's own `/v1/superbase` proxy, which scopes every read and write to
+ * the caller's org. So this module is the whole product — browse the content
+ * types, open one, read and edit its records — rendered from each collection's
+ * own field schema through @hanzo/data (`DataTable` for the list, `RecordDetail`/
+ * `RecordForm` for the record), so every field type shows the right Display/Input
+ * with no per-type code.
  *
  * Three views by route (segment count is unambiguous, same as Models' `:tab`):
  *   `/base`                    — the content-type index (pick one to browse)
@@ -37,13 +38,14 @@ const BASE_PATH = '/base'
 /**
  * The org's Base, same-origin.
  *
- * `/v1/base` is the Base engine the cloud binary hosts for THIS org — the org
- * comes from the validated principal, so the door cannot be pointed at another
- * tenant's data. Base is told this prefix at router build (`BASE_API_PREFIX`),
- * which replaces its own `/v1` default, so its collections API answers natively
- * underneath it and nothing here rewrites a path.
+ * `/v1/superbase` is the console's own proxy to the managed Base. It resolves the
+ * caller from the session cookie, mints a user-bound IAM token and stamps
+ * `X-Org-Id` from that token's owner, so the door cannot be pointed at another
+ * tenant's data. It re-roots the tail onto Base's own `v1/collections/*` contract,
+ * so the collections API answers natively underneath it and nothing here rewrites
+ * a path.
  */
-const BASE_ROOT = '/v1/base'
+const BASE_ROOT = '/v1/superbase'
 
 export function BaseModule({ params }: { params: Record<string, string> }) {
   const router = useRouter()
@@ -148,7 +150,7 @@ function CollectionsIndex({ api, onOpen }: { api: BaseDataApi; onOpen: (name: st
         }
       />
       {state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={reload} hint="base · GET /v1/base/collections" />
+        <BackendStateCard state={state.error} onRetry={reload} hint="base · GET /v1/superbase/collections" />
       ) : state.phase === 'loading' ? (
         <Text fontSize="$3" color="$color10">
           Loading content types…

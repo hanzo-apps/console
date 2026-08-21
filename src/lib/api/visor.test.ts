@@ -67,7 +67,6 @@ describe('interpretVisorError — an error is an error, never the empty state', 
   it('no state leaks infra-token / not-configured jargon to a customer', () => {
     for (const e of [new ApiError('x', 401), new ApiError('x', 403), new ApiError('x', 404), new ApiError('x', 503), new Error('network')]) {
       const v = interpretVisorError(e)
-      expect(v.message.toLowerCase()).not.toContain('paas')
       expect(v.message.toLowerCase()).not.toContain('token')
       expect(v.message.toLowerCase()).not.toContain('not configured')
     }
@@ -125,7 +124,7 @@ describe('compute catalog normalizers (real visor shapes)', () => {
 describe('VisorApi routes each call to the correct server proxy (Problem-1 regression)', () => {
   // ROOT CAUSE of "Accelerators 0 available to launch": the accelerator CATALOG lives on
   // VISOR (a distinct backend), NOT cloud-api — cloud-api serves no visor catalog route,
-  // and its `/v1/gpus` is a different (per-org inventory) shape. So the catalog MUST
+  // and its `/v1/visor/gpus` is a different (per-org inventory) shape. So the catalog MUST
   // address the `/v1/vm` (visor) proxy, while machines ride the cloud `/v1` bearer BFF. This
   // test mocks fetch and pins the exact URL each call hits — the guard that would have
   // caught the wrong-backend bug (mirrors the v8.4.34 wiring lesson).
@@ -151,29 +150,29 @@ describe('VisorApi routes each call to the correct server proxy (Problem-1 regre
   it('machines list uses the /v1 user-bearer proxy (org from the Bearer owner)', async () => {
     stubFetch({ machines: [] })
     await VisorApi.machines()
-    expect(seen[0].url).toBe(cloudProxyV1Url('machines'))
-    expect(seen[0].url).toContain('/v1/machines')
+    expect(seen[0].url).toBe(cloudProxyV1Url('visor/machines'))
+    expect(seen[0].url).toContain('/v1/visor/machines')
   })
 
-  it('launch POSTs a real (dryRun:false) launch to /v1/machines/launch', async () => {
+  it('launch POSTs a real (dryRun:false) launch to /v1/visor/machines', async () => {
     stubFetch({ status: 'ok', data: { id: 'm1' } })
     await VisorApi.launch({ size: 'gpu-h100x1-80gb', region: 'nyc1', name: 'box' })
-    expect(seen[0].url).toBe(cloudProxyV1Url('machines/launch'))
+    expect(seen[0].url).toBe(cloudProxyV1Url('visor/machines'))
     expect(seen[0].method).toBe('POST')
     expect(JSON.parse(seen[0].body as string)).toMatchObject({ size: 'gpu-h100x1-80gb', dryRun: false })
   })
 
-  it('quote POSTs a dryRun:true (no-spend) launch to /v1/machines/launch', async () => {
+  it('quote POSTs a dryRun:true (no-spend) launch to the SAME address', async () => {
     stubFetch({ status: 'ok', data: { priceHourly: 2.5 } })
     await VisorApi.quote({ size: 'gpu-h100x1-80gb', region: 'nyc1', name: 'q' })
-    expect(seen[0].url).toBe(cloudProxyV1Url('machines/launch'))
+    expect(seen[0].url).toBe(cloudProxyV1Url('visor/machines'))
     expect(JSON.parse(seen[0].body as string)).toMatchObject({ dryRun: true })
   })
 
   it('terminate DELETEs the machine on the /v1 bearer BFF', async () => {
     stubFetch({})
     await VisorApi.terminate('abc-123')
-    expect(seen[0].url).toBe(cloudProxyV1Url('machines/abc-123'))
+    expect(seen[0].url).toBe(cloudProxyV1Url('visor/machines/abc-123'))
     expect(seen[0].method).toBe('DELETE')
   })
 })

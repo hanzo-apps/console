@@ -24,7 +24,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4010'
 requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })

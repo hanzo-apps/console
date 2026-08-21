@@ -4,7 +4,7 @@
  * New training job — the create panel for the Training console. The base-model
  * picker is the REAL model catalog (`aicatalog.fetchCatalog`, zen-first, available
  * models); training type / dataset / hyperparams / compute are user inputs.
- * "Start training job" POSTs the real `/v1/train/jobs` (via the `/training` proxy);
+ * "Start training job" POSTs the real `/v1/ai/finetune/jobs` (via the `/training` proxy);
  * that endpoint is billing-gated by the ResourceMeter, so an unfunded org gets a
  * 402 which is surfaced HONESTLY inline (never swallowed). "Save as config" stores
  * the inputs client-side for reuse. No fabricated success — the row only appears

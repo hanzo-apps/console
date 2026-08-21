@@ -37,7 +37,7 @@ const byo = (over: Partial<Cluster> = {}): Cluster => ({
   ...over,
 })
 
-/** A machine row (`GET /v1/machines`). BYO boxes carry provider "byo". */
+/** A machine row (`GET /v1/visor/machines`). BYO boxes carry provider "byo". */
 const machine = (over: Partial<VisorMachine> = {}): VisorMachine => ({ id: 'm1', ...over })
 
 describe('clusterKind / isByoCluster', () => {

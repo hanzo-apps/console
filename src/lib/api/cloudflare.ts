@@ -1,17 +1,16 @@
 /**
  * Cloudflare asset-plane API — an org's Cloudflare Pages, Workers and (Phase 2)
- * R2/KV/D1 over the cloud `clients/cloudflare` surface, which lives UNDER the
- * unified integrations namespace at `/v1/integrations/cloudflare/*` (a sibling of
- * the `cloudflare` CONNECTOR in `clients/integrations` that seals the token, and of
+ * R2/KV/D1 over the cloud `apps/cloudflare` surface at `/v1/cloudflare/*` (a sibling
+ * of the `cloudflare` CONNECTOR in `apps/integrations` that seals the token, and of
  * hanzodns which drives the same token for `/v1/dns`).
  *
- * Every call is same-origin, keyless and prefix-free (`originV1Url('integrations/
- * cloudflare/...')` → `<origin>/v1/integrations/cloudflare/...` — NOTHING before
- * `/v1/`), exactly like `integrations.ts`. The console's own `app/v1/[...path]` BFF
+ * Every call is same-origin, keyless and prefix-free (`originV1Url('cloudflare/...')`
+ * → `<origin>/v1/cloudflare/...` — NOTHING before `/v1/`), exactly like
+ * `integrations.ts`. The console's own `app/v1/[...path]` BFF
  * mints a short-lived user bearer from the session and forwards it; cloud resolves
  * the org from the token's `owner` claim and reads THAT org's KMS-sealed Cloudflare
  * token, so no credential ever reaches the browser and an org can only ever address
- * its own Cloudflare account. The `integrations` head is allow-listed in
+ * its own Cloudflare account. The `cloudflare` head is allow-listed in
  * `proxy-allow.ts` (`allowCloudSurface` matches the first segment).
  *
  * AUTHORIZATION (mirrors the backend gate, so the UI can explain a refusal):
@@ -28,7 +27,7 @@
  */
 import { restGet, restPost, restPut, restDelete, originV1Url } from './client'
 
-const BASE = 'integrations/cloudflare'
+const BASE = 'cloudflare'
 const enc = encodeURIComponent
 const url = (path: string): string => originV1Url(`${BASE}/${path}`)
 

@@ -1,12 +1,11 @@
 /**
  * Machines — pure domain logic (no React, fully unit-tested).
  *
- * HONEST DATA CONTRACT. The control plane (platform.hanzo.ai) exposes NO
- * per-machine / per-droplet / per-node REST route — the full `/v1` surface is
- * `apps`, `org/{org}/cluster`, and `org/{org}/.../container`. The real compute
- * inventory reachable by the console is therefore the org's DOKS clusters
- * (`GET /v1/org/{org}/cluster`), each carrying its `nodePools` (a pool = `count`
- * identical droplets of `size`).
+ * HONEST DATA CONTRACT. No surface reports a cluster node on its own, so the
+ * inventory this file projects from is the org's clusters (`GET /v1/visor/clusters`),
+ * each carrying its `nodePools` (a pool = `count` identical droplets of `size`). A
+ * tenant's own VMs are a separate resource with its own surface
+ * (`/v1/visor/machines`) — the two are never folded together here.
  *
  * So a MACHINE here is one node of a real cluster pool. EVERY field on a
  * projected machine is either:

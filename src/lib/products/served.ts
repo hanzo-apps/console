@@ -35,8 +35,10 @@ export type Served = {
 /** Every product the platform serves, by the `/v1` segment that names it. */
 export const SERVED: Readonly<Record<string, Served>> = record.products
 
-/** True when the platform answers operations under this id. The id IS the `/v1`
- *  segment, so this is also the answer to "is there a `/v1/<id>`". */
+/** True when the platform answers operations under this id — the capability exists
+ *  and something upstream can describe it. Nearly every one is reached at `/v1/<id>`,
+ *  but that is the capability's doing and not this predicate's claim: `plugins` and
+ *  `skills` answer only under `/v1/admin` and `/.well-known`. */
 export const serves = (id: string): boolean => id in SERVED
 
 /**

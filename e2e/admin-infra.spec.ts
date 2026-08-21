@@ -27,7 +27,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 // ── the fixture: the fleet's REAL shape ───────────────────────────────────────
 

@@ -22,7 +22,7 @@ const SHOTS = join(process.cwd(), 'e2e-shots')
 
 const ACCOUNT = { owner: 'hanzo', name: 'z', email: 'z@hanzo.ai', displayName: 'Z Admin', isAdmin: true }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 

@@ -88,8 +88,8 @@ describe('403, 405 and 503 each get their own honest copy', () => {
   })
 
   it('carries the surface into the copy, so two surfaces never read identically', () => {
-    expect(runtimeCopy('sessions', LIVE.unavailable).body).toContain('/v1/o11y/sessions')
-    expect(runtimeCopy('scores', LIVE.unavailable).body).toContain('/v1/o11y/scores')
+    expect(runtimeCopy('services', LIVE.unavailable).body).toContain('/v1/o11y/services')
+    expect(runtimeCopy('logs', LIVE.unavailable).body).toContain('/v1/o11y/logs')
   })
 
   it('a reason-less failure degrades to the plain sentence, never a dangling dash', () => {

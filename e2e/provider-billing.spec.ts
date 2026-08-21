@@ -59,7 +59,7 @@ const FUNDING = [
   { provider: 'anthropic', model: 'claude-opus-4.6', funding: 'byo', tokens: 50_000, cost_cents: 0, requests: 80 },
 ]
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()

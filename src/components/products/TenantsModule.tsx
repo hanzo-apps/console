@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Tenants / White-Label — the operator's board for launching, branding,
- * domain-binding, and managing white-label tenants + resold sub-orgs.
+ * Tenants / White-Label — the operator's board for launching, branding, and
+ * managing white-label tenants + resold sub-orgs.
  *
  * GLOBAL-ADMIN / reseller surface (`admin: true` in the registry): a Hanzo global
  * admin sees every tenant; the honest data path today is global-admin only (the
@@ -11,30 +11,26 @@
  * that needs a reseller-scoped org-list endpoint + a real `parentOrgId` column
  * (flagged in the honest banner, never faked).
  *
- * It COMPOSES three real backends (no new backend, no fabrication):
+ * It COMPOSES two real backends (no new backend, no fabrication):
  *   - IAM orgs (`IamAdminApi.organizations`, /admin/iam) → the tenant list + brand.
  *   - Admin cockpit customers (`AdminCockpitApi.customers`, /v1/admin/customers) →
  *     plan / wallet / status / users / owner (real cross-tenant data).
- *   - Platform clusters (`TenantsApi.clusters`, /paas) → the dedicated cluster.
  *
- * Two views + a detail SlideOver:
+ * One view + a detail SlideOver:
  *   - Tenants: a flat list OR the reseller tree (org → sub-orgs), searchable.
- *   - Packages: the preset-bundle catalog (`packages.ts`) a tenant can be granted.
- *   - Detail: `TenantDetail` — brand, cluster, domain, IAM, billing, packages.
+ *   - Detail: `TenantDetail` — brand, IAM, billing.
  *
- * Honest states everywhere: real where the API answers, honest empty / not-connected
- * where a provisioning endpoint isn't bound yet. Reuses the shared primitives.
+ * Honest states everywhere: real where the API answers, honest empty where it does
+ * not. Reuses the shared primitives.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
-import { Boxes, ChevronRight, Building2, Layers, List as ListIcon, RefreshCw, Search } from '@hanzogui/lucide-icons-2'
+import { ChevronRight, Building2, Layers, List as ListIcon, RefreshCw, Search } from '@hanzogui/lucide-icons-2'
 
-import { ApiError, IamAdminApi, TenantsApi } from '~/lib/api'
+import { ApiError, IamAdminApi } from '~/lib/api'
 import { AdminCockpitApi, type CustomerRow } from '~/lib/api/admin-cockpit'
 import type { Organization } from '~/lib/api/admin'
 import { SlideOver } from '~/components/ui/SlideOver'
-import { SERVICE_LABELS, fillPattern, type Package } from './tenants/packages'
-import { PlatformStateCard, interpretPlatformError, type PlatformError } from './platform/state'
 import {
   composeTenants,
   deriveResellerParents,
@@ -43,28 +39,18 @@ import {
   treeIsInferred,
   filterTenants,
   type Tenant,
-  type TenantClusterInput,
 } from './tenants/model'
 import { TenantDetail } from './tenants/TenantDetail'
 import { BackendStateCard, DataTable, EmptyState, FieldText, PageHeader, StatusTag, classifyRead, type BackendState, type Column } from '@hanzo/ui/product'
 import { usd } from '~/lib/money'
 
-
-type Tab = 'tenants' | 'packages'
 type Layout = 'flat' | 'tree'
-
-export function TenantsModule({ params }: { params: Record<string, string> }) {
-  const tab: Tab = params.tab === 'packages' ? 'packages' : 'tenants'
-  return tab === 'packages' ? <PackageCatalog /> : <TenantsBoard />
-}
 
 // ── Tenants board (list + reseller tree + detail) ────────────────────────────
 
-function TenantsBoard() {
+export function TenantsModule(_props: { params: Record<string, string> }) {
   const [orgs, setOrgs] = useState<Organization[]>([])
   const [customers, setCustomers] = useState<CustomerRow[]>([])
-  const [clusters, setClusters] = useState<TenantClusterInput[]>([])
-  const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
   const [state, setState] = useState<BackendState | null>(null)
   const [query, setQuery] = useState('')
@@ -76,24 +62,12 @@ function TenantsBoard() {
     setLoading(true)
     setState(null)
     try {
-      // The org list is the authoritative tenant set (global-admin only). Cockpit +
-      // clusters ENRICH it — each is best-effort so one being down never blanks the
-      // board (honest partial: brand from IAM, "—" for the missing enrichment).
+      // The org list is the authoritative tenant set (global-admin only). The cockpit
+      // ENRICHES it — best-effort, so it being down never blanks the board (honest
+      // partial: brand from IAM, "—" for the missing enrichment).
       const orgPage = await IamAdminApi.organizations({ pageSize: 200 })
       setOrgs(orgPage.rows)
-      const [cust, allClusters, pkgs] = await Promise.all([
-        AdminCockpitApi.customers().catch(() => [] as CustomerRow[]),
-        // Fan out cluster reads per org would be heavy; the cockpit already carries
-        // enough to identify tenants. Clusters are enriched lazily in the detail
-        // panel (per-tenant). Here we keep the list light — no cross-org cluster scan.
-        Promise.resolve([] as TenantClusterInput[]),
-        // Packages are DATA from the platform; best-effort (honest empty when the
-        // catalog route isn't served yet — the detail grant list stays empty).
-        TenantsApi.packages().catch(() => [] as Package[]),
-      ])
-      setCustomers(cust)
-      setClusters(allClusters)
-      setPackages(pkgs)
+      setCustomers(await AdminCockpitApi.customers().catch(() => [] as CustomerRow[]))
     } catch (e) {
       const s = classifyRead(e)
       if (s) setState(s)
@@ -127,10 +101,10 @@ function TenantsBoard() {
         spendCents: c.spendCents,
         mrrCents: c.mrrCents,
       })),
-      clusters,
+      [],
     )
     return deriveResellerParents(composed)
-  }, [orgs, customers, clusters])
+  }, [orgs, customers])
 
   const filtered = useMemo(() => filterTenants(tenants, query), [tenants, query])
   const inferred = useMemo(() => treeIsInferred(tenants), [tenants])
@@ -213,7 +187,7 @@ function TenantsBoard() {
     <>
       <PageHeader
         title="Tenants"
-        subtitle="Launch, brand, domain-bind, and manage white-label tenants and resold sub-orgs."
+        subtitle="Launch, brand, and manage white-label tenants and resold sub-orgs."
         actions={
           <XStack gap="$2">
             <Button theme="light" icon={<Building2 size={16} />} onPress={() => setCreating(true)}>
@@ -273,11 +247,10 @@ function TenantsBoard() {
             <EmptyState
               icon={Building2}
               title="No tenants yet"
-              description="White-label tenants are organizations with packages provisioned — their own brand, IAM scope, and resources."
+              description="White-label tenants are organizations with their own brand, IAM scope, and resources."
               bullets={[
                 'Every existing brand (zoo / lux / pars) is a tenant record in this model.',
-                'Grant a preset package from the Packages tab to provision a tenant’s services.',
-                'A tenant can be a reseller — it provisions packages for its own sub-orgs.',
+                'A tenant can be a reseller — its sub-orgs hang off it in the tree.',
               ]}
             />
           ) : (
@@ -293,7 +266,7 @@ function TenantsBoard() {
 
           <Text fontSize="$1" color="$color9">
             {filtered.length} tenant{filtered.length === 1 ? '' : 's'} · brand from IAM · plan/wallet from the
-            billing cockpit · cluster enriched per-tenant in the detail panel.
+            billing cockpit.
           </Text>
         </>
       )}
@@ -305,9 +278,7 @@ function TenantsBoard() {
         title={selectedTenant ? `Manage · ${selectedTenant.display}` : 'Manage tenant'}
         icon={Building2}
       >
-        {selectedTenant ? (
-          <TenantDetail tenant={selectedTenant} packages={packages} onChanged={() => void load()} />
-        ) : null}
+        {selectedTenant ? <TenantDetail tenant={selectedTenant} onChanged={() => void load()} /> : null}
       </SlideOver>
 
       <SlideOver
@@ -358,7 +329,7 @@ function NewTenantForm({ onCreated }: { onCreated: () => void }) {
         displayName: display.trim() || name,
         ...(logo.trim() ? { logo: logo.trim() } : {}),
       })
-      setMsg({ tone: 'ok', text: `Created tenant "${name}". Manage its packages, cluster, and domain from the list.` })
+      setMsg({ tone: 'ok', text: `Created tenant "${name}". Manage its brand and IAM scope from the list.` })
       onCreated()
     } catch (e) {
       setMsg({ tone: 'err', text: e instanceof ApiError ? e.message : 'Could not create tenant' })
@@ -371,7 +342,7 @@ function NewTenantForm({ onCreated }: { onCreated: () => void }) {
     <YStack gap="$3">
       <Text fontSize="$2" color="$color10">
         A tenant is an organization record. Creating one writes a real IAM org (its brand — logo/favicon/theme — are
-        real org fields). Bind a domain and grant packages from the tenant’s manage panel.
+        real org fields). Edit the brand and its IAM apps from the tenant’s manage panel.
       </Text>
       <YStack gap="$1">
         <Text fontSize="$2" color="$color11">Display name</Text>
@@ -403,128 +374,5 @@ function NewTenantForm({ onCreated }: { onCreated: () => void }) {
         ) : null}
       </XStack>
     </YStack>
-  )
-}
-
-// ── Package catalog (DATA — read from the platform, never hardcoded) ─────────
-
-function PackageCatalog() {
-  const [packages, setPackages] = useState<Package[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<PlatformError | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      setPackages(await TenantsApi.packages())
-    } catch (e) {
-      setError(interpretPlatformError(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  return (
-    <>
-      <PageHeader
-        title="Packages"
-        subtitle="Preset bundles of Hanzo services a tenant can be granted — read from the platform package catalog."
-        actions={
-          <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
-            Refresh
-          </Button>
-        }
-      />
-
-      {error ? (
-        <>
-          <PlatformStateCard error={error} onRetry={() => void load()} />
-          <Card p="$3" borderWidth={1} borderColor="$borderColor" borderStyle="dashed">
-            <Text fontSize="$2" color="$color10">
-              The package catalog is data. The platform serves it at `/v1/packages`, seeded from
-              `platform-seed/packages.json`, so adding a package is a database row rather than a console change. The
-              catalog appears here once the platform serves the `package` table.
-            </Text>
-          </Card>
-        </>
-      ) : loading ? (
-        <Text fontSize="$2" color="$color10">
-          Loading catalog…
-        </Text>
-      ) : packages.length === 0 ? (
-        <EmptyState
-          icon={Boxes}
-          title="No packages yet"
-          description="The package catalog is data served by the platform. Seed the package table from platform-seed/packages.json to populate it."
-        />
-      ) : (
-        <>
-          <YStack gap="$3">
-            {packages.map((pkg) => (
-              <PackageCard key={pkg.id} pkg={pkg} />
-            ))}
-          </YStack>
-          <Card p="$3" borderWidth={1} borderColor="$borderColor" borderStyle="dashed">
-            <Text fontSize="$2" color="$color10">
-              Granting a package to a tenant provisions its services. The cluster + IAM (org/app/brand) pieces are
-              wired to real endpoints today; the composite one-click provision (`provisionPackage`) is the
-              foundation-phase follow-up — until it ships, granting runs the real pieces and honestly marks the rest
-              as not-connected.
-            </Text>
-          </Card>
-        </>
-      )}
-    </>
-  )
-}
-
-function PackageCard({ pkg }: { pkg: Package }) {
-  return (
-    <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
-      <XStack gap="$2" items="center" flexWrap="wrap">
-        <Boxes size={18} color="$color11" />
-        <Text fontSize="$5" fontWeight="800" flex={1} minW={140}>
-          {pkg.name}
-        </Text>
-        {pkg.sovereign ? (
-          <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color5" color="$color12">
-            Sovereign L1
-          </Text>
-        ) : null}
-        <Text fontSize="$1" px="$2" py="$1" rounded="$2" bg="$color3" color="$color11">
-          {pkg.plan}
-        </Text>
-      </XStack>
-      <Text fontSize="$3" color="$color11">
-        {pkg.description}
-      </Text>
-      <XStack gap="$1.5" flexWrap="wrap">
-        {pkg.services.map((s) => (
-          <Text key={s} fontSize="$1" px="$1.5" py="$0.5" rounded="$2" bg="$color3" color="$color11">
-            {SERVICE_LABELS[s]}
-          </Text>
-        ))}
-      </XStack>
-      <XStack gap="$4" flexWrap="wrap" borderTopWidth={1} borderColor="$borderColor" pt="$2.5">
-        <YStack minW={160}>
-          <Text fontSize="$1" color="$color10">Domain pattern</Text>
-          <Text fontSize="$2" color="$color11" style={{ fontFamily: 'monospace' }}>
-            {fillPattern(pkg.domainPattern, '<slug>')}
-          </Text>
-        </YStack>
-        <YStack minW={160}>
-          <Text fontSize="$1" color="$color10">IAM app</Text>
-          <Text fontSize="$2" color="$color11" style={{ fontFamily: 'monospace' }}>
-            {fillPattern(pkg.iamTemplate.appPattern, '<slug>')}
-            {pkg.iamTemplate.ownIssuer ? ' · own issuer' : ''}
-          </Text>
-        </YStack>
-      </XStack>
-    </Card>
   )
 }

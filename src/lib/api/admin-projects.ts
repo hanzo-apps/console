@@ -2,7 +2,7 @@
  * Admin PROJECTS client — the cross-org "what is deployed" board for staff.
  *
  * There is NO `/v1/admin/projects` endpoint: this is a lens over the EXISTING global
- * platform apps inventory (`PlatformApi.apps()` → `/v1/apps`, the same ~100-app,
+ * platform apps inventory (`PlatformApi.apps()` → `/v1/platform/apps`, the same ~100-app,
  * all-cluster, all-org board the Status/Kubernetes modules already read). Each app
  * row already carries its `org`, `cluster`, `releaseUrl`, health, and drift, so the
  * staff Projects view is a pure projection + group-by-org — no new backend surface.

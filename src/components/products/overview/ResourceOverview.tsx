@@ -8,9 +8,9 @@
  * home:
  *  - Apps   → `PlatformAppsApi.listAllApps()` (cloud `/v1/platform` — the same per-org
  *             PaaS the App Platform module renders; deployed container apps like studio).
- *  - GPUs   → `ComputeApi.gpus()` (cloud `/v1/gpus` — the unioned inventory: Hanzo Cloud
- *             DOKS GPUs AND bring-your-own fleet workers, each carrying `provider`).
- *  - Nodes  → `VisorApi.machines()` (cloud `/v1/machines` — the node-level view: DOKS
+ *  - GPUs   → `ComputeApi.gpus()` (cloud `/v1/visor/gpus` — the unioned inventory: Hanzo
+ *             Cloud DOKS GPUs AND bring-your-own fleet workers, each carrying `provider`).
+ *  - Nodes  → `VisorApi.machines()` (cloud `/v1/visor/machines` — the node-level view: DOKS
  *             machines AND BYO/on-prem workers; the union carries `provider` too).
  *
  * Honest by construction: the three sources load INDEPENDENTLY, so a slow/denied/unrouted

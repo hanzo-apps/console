@@ -5,7 +5,7 @@
  *      view-models; every missing/malformed enrichment maps to null/0 (an honest em
  *      dash), never a fabricated value, and the `{ status, data }` envelope unwraps.
  *  (2) the REAL O11yApi methods, with the transport + evals mocked, asserting the
- *      FLIP: traces / observations / sessions read the o11y SPAN plane (`/v1/o11y`),
+ *      FLIP: traces / observations / sessions read the o11y SPAN plane (`/v1/o11y/llm`),
  *      while SCORES + rubrics STAY on `/v1/evals` (the eval artifacts) — the
  *      mission's one-way contract.
  */
@@ -94,37 +94,37 @@ describe('observationOf', () => {
   })
 })
 
-// ── (2) the flip: span plane on /v1/o11y, eval artifacts on /v1/evals ──────────
+// ── (2) the flip: span plane on /v1/o11y/llm, eval artifacts on /v1/evals ──────
 
-describe('O11yApi reads the span plane natively from /v1/o11y', () => {
+describe('O11yApi reads the span plane natively from /v1/o11y/llm', () => {
   beforeEach(() => {
     restGet.mockReset()
     listScoresTyped.mockReset()
     listScoreConfigs.mockReset()
   })
 
-  it('traces hits /v1/o11y/traces (NOT /v1/evals), unwraps { status, data }.items, maps via traceOf', async () => {
+  it('traces hits /v1/o11y/llm/traces (NOT /v1/evals), unwraps { status, data }.items, maps via traceOf', async () => {
     restGet.mockResolvedValueOnce({ status: 'success', data: { items: [{ id: 't1', latencyMs: 1500, totalTokens: 120, totalCost: 0.02 }], offset: 0, limit: 50 } })
     const res = await O11yApi.traces({ limit: 50 })
     const url = restGet.mock.calls[0][0] as string
-    expect(url).toContain('/v1/o11y/traces')
+    expect(url).toContain('/v1/o11y/llm/traces')
     expect(url).not.toContain('evals')
     expect(res.data).toHaveLength(1)
     expect(res.data[0]).toMatchObject({ id: 't1', latency: 1.5, totalTokens: 120, totalCost: 0.02 })
   })
 
-  it('observations hits /v1/o11y/observations and maps the waterfall span', async () => {
+  it('observations hits /v1/o11y/llm/observations and maps the waterfall span', async () => {
     restGet.mockResolvedValueOnce({ status: 'success', data: { items: [{ id: 'o1', traceId: 't1', parentObservationId: 'p1', type: 'span', promptTokens: 10, completionTokens: 5 }] } })
     const res = await O11yApi.observations({ limit: 50 })
-    expect(restGet.mock.calls[0][0] as string).toContain('/v1/o11y/observations')
+    expect(restGet.mock.calls[0][0] as string).toContain('/v1/o11y/llm/observations')
     expect(res.data[0]).toMatchObject({ id: 'o1', traceId: 't1', parentObservationId: 'p1', type: 'SPAN' })
     expect(res.data[0].usage).toEqual({ unit: 'TOKENS', input: 10, output: 5, total: 15 })
   })
 
-  it('sessions hits /v1/o11y/sessions', async () => {
+  it('sessions hits /v1/o11y/llm/sessions', async () => {
     restGet.mockResolvedValueOnce({ status: 'success', data: { items: [{ id: 's1' }] } })
     const res = await O11yApi.sessions()
-    expect(restGet.mock.calls[0][0] as string).toContain('/v1/o11y/sessions')
+    expect(restGet.mock.calls[0][0] as string).toContain('/v1/o11y/llm/sessions')
     expect(res.data[0].id).toBe('s1')
   })
 
@@ -139,8 +139,8 @@ describe('O11yApi reads the span plane natively from /v1/o11y', () => {
     restGet.mockResolvedValueOnce({ status: 'success', data: { items: [{ id: 't1', totalTokens: 999, totalCost: 0.5, latencyMs: 3000 }] } })
     listScoresTyped.mockResolvedValueOnce([{ id: 'sc1', name: 'quality', value: 1, dataType: 'NUMERIC', source: 'EVAL', comment: null, timestamp: '', traceId: 't1', observationId: null, sessionId: null, configId: null }])
     const d = await O11yApi.trace('t1')
-    expect(restGet.mock.calls[0][0] as string).toContain('/v1/o11y/observations')
-    expect(restGet.mock.calls[1][0] as string).toContain('/v1/o11y/traces')
+    expect(restGet.mock.calls[0][0] as string).toContain('/v1/o11y/llm/observations')
+    expect(restGet.mock.calls[1][0] as string).toContain('/v1/o11y/llm/traces')
     expect(d.observations).toHaveLength(1)
     // inline scores come from EVALS, scoped by traceId (scores stay on evals)
     expect(listScoresTyped).toHaveBeenCalledWith({ traceId: 't1', limit: 200 })
@@ -166,7 +166,7 @@ describe('O11yApi reads the span plane natively from /v1/o11y', () => {
     restGet.mockResolvedValueOnce({ status: 'success', data: { items: [{ id: 't1', sessionId: 's1' }] } })
     const d = await O11yApi.session('s1')
     const url = restGet.mock.calls[0][0] as string
-    expect(url).toContain('/v1/o11y/traces')
+    expect(url).toContain('/v1/o11y/llm/traces')
     expect(url).toContain('sessionId=s1')
     expect(d.traces).toHaveLength(1)
   })

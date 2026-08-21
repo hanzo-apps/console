@@ -8,7 +8,7 @@
  *   Access    connection guidance + a connect snippet bound to THIS endpoint
  *   Settings  configuration facts + a real, confirmed delete (danger zone)
  *
- * Every field is the real `GET /v1/<kind>/<name>` response or an honest "—".
+ * Every field is the real `GET /v1/provisioning/<kind>/<name>` response or an honest "—".
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -106,7 +106,7 @@ export function ResourceInstanceView({ kind, productLabel, connectionHint, name,
           <Spinner size="large" color="$color11" />
         </XStack>
       ) : error ? (
-        <BackendStateCard state={error} onRetry={() => void load()} hint={`endpoint · GET /v1/${kind}/${name}`} />
+        <BackendStateCard state={error} onRetry={() => void load()} hint={`endpoint · GET /v1/provisioning/${kind}/${name}`} />
       ) : resource ? (
         <>
           <TabBar tabs={tabs} active={tab} onSelect={setTab} />

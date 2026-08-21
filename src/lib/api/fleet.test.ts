@@ -44,7 +44,7 @@ import { cloudProxyV1Url, ApiError } from './client'
 const job = (over: Partial<FleetJob>): FleetJob => ({ id: 'j', status: 'queued', ...over })
 const unit = (over: Partial<FleetBoardUnit>): FleetBoardUnit => ({ source: 'byo', unit: 'u', running: 0, sessions: 0, ...over })
 
-/** A byoWorker as `GET /v1/fleet/workers` reports a `hanzo gpu connect` box. */
+/** A byoWorker as `GET /v1/visor/fleet/workers` reports a `hanzo gpu connect` box. */
 const raw = {
   id: 'spark',
   hostname: 'spark',
@@ -136,8 +136,8 @@ describe('FleetApi.workers', () => {
       return { status: 200, ok: true, text: async () => JSON.stringify({ workers: [raw] }), json: async () => ({ workers: [raw] }) } as unknown as Response
     }))
     const workers: FleetWorker[] = await FleetApi.workers()
-    expect(seen[0]).toBe(cloudProxyV1Url('fleet/workers'))
-    expect(seen[0]).toContain('/v1/fleet/workers')
+    expect(seen[0]).toBe(cloudProxyV1Url('visor/fleet/workers'))
+    expect(seen[0]).toContain('/v1/visor/fleet/workers')
     expect(workers).toHaveLength(1)
     expect(workers[0].hostname).toBe('spark')
   })
@@ -386,10 +386,10 @@ describe('FleetApi.jobs / board / samples / cancel', () => {
     return seen
   }
 
-  it('jobs() reads /v1/fleet/jobs, forwards gpu/status filters, unwraps { jobs }', async () => {
+  it('jobs() reads /v1/visor/fleet/jobs, forwards gpu/status filters, unwraps { jobs }', async () => {
     const seen = stub({ jobs: [{ workflowId: 'wf1', type: 'studio.render', status: 'running', worker: 'spark' }] })
     const jobs = await FleetApi.jobs({ gpu: 'spark', status: 'running' })
-    expect(seen[0]).toContain('/v1/fleet/jobs?')
+    expect(seen[0]).toContain('/v1/visor/fleet/jobs?')
     expect(seen[0]).toContain('gpu=spark')
     expect(seen[0]).toContain('status=running')
     expect(jobs[0]).toMatchObject({ id: 'wf1', status: 'running', worker: 'spark' })
@@ -398,28 +398,28 @@ describe('FleetApi.jobs / board / samples / cancel', () => {
   it('jobs() forwards a bounded limit (m7 — never an unbounded poll)', async () => {
     const seen = stub({ jobs: [] })
     await FleetApi.jobs({ limit: 200 })
-    expect(seen[0]).toContain('/v1/fleet/jobs?')
+    expect(seen[0]).toContain('/v1/visor/fleet/jobs?')
     expect(seen[0]).toContain('limit=200')
   })
 
-  it('board() reads /v1/fleet and unwraps { units }', async () => {
+  it('board() reads /v1/visor/fleet and unwraps { units }', async () => {
     const seen = stub({ units: [{ source: 'byo', unit: 'spark', metrics: { gpuUtil: 0.5 } }] })
     const units = await FleetApi.board()
-    expect(seen[0]).toContain('/v1/fleet')
+    expect(seen[0]).toContain('/v1/visor/fleet')
     expect(units[0]).toMatchObject({ unit: 'spark', gpuUtil: 50 })
   })
 
-  it('samples() reads /v1/fleet/samples with a range and unwraps { samples }', async () => {
+  it('samples() reads /v1/visor/fleet/samples with a range and unwraps { samples }', async () => {
     const seen = stub({ samples: [{ at: 't', gpuUtil: 0.5, costCents: 100 }] })
     const s = await FleetApi.samples('range=24h')
-    expect(seen[0]).toContain('/v1/fleet/samples?range=24h')
+    expect(seen[0]).toContain('/v1/visor/fleet/samples?range=24h')
     expect(s[0]).toMatchObject({ gpuUtil: 50, costCents: 100 })
   })
 
-  it('cancel() POSTs /v1/fleet/jobs/:id/cancel with { run, reason }', async () => {
+  it('cancel() POSTs /v1/visor/fleet/jobs/:id/cancel with { run, reason }', async () => {
     const seen = stub({ ok: true })
     await FleetApi.cancel('wf1', 'r1', 'user cancel')
-    expect(seen[0]).toContain('/v1/fleet/jobs/wf1/cancel')
+    expect(seen[0]).toContain('/v1/visor/fleet/jobs/wf1/cancel')
     expect(seen[0]).toContain('[POST]')
   })
 })

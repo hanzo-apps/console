@@ -1,6 +1,6 @@
 /**
  * Company formation API — Hanzo Company, the per-org incorporation flow over the
- * REAL cloud `/v1/company` surface (cloud `clients/company`: an 8-stage formation
+ * REAL cloud `/v1/company` surface (cloud `apps/company`: an 8-stage formation
  * state machine on Base/SQLite — structure → founders → payment → documents →
  * esign → genesis → company, plus the already-incorporated import branch).
  *
@@ -18,12 +18,12 @@
  * Normalizers are pure + defensive (snake_case tolerant, honest defaults, never
  * throw) so a partial/renamed payload degrades to a real value, never a crash.
  *
- * The state machine lives in the BACKEND (clients/company/machine.go) — this client
+ * The state machine lives in the BACKEND (apps/company/machine.go) — this client
  * mirrors ONLY the wire shapes + the derived progress the wizard renders; it never
  * reimplements a guard. The KYC / e-sign / state-filing providers are honest stubs
  * today, so their steps report "pending — manual review", never a fabricated
  * "verified"/"filed" (see `isStubStep` + the honest status helpers). Behavior +
- * contract mirror clients/company; the design spec is HIP-0106-adjacent.
+ * contract mirror apps/company; the design spec is HIP-0106-adjacent.
  */
 import { restGet, restPost, restPut, cloudProxyV1Url, ApiError } from './client'
 
@@ -39,7 +39,7 @@ const asRecord = (v: unknown): Record<string, unknown> =>
 const strArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.map(str).filter((s) => s.length > 0) : []
 
-// ── Contract (mirrors clients/company/machine.go JSON tags) ──────────────────
+// ── Contract (mirrors apps/company/machine.go JSON tags) ──────────────────
 
 /** A machine stage — the backend's `Stage` vocabulary. */
 export type Stage =
@@ -425,9 +425,9 @@ export const CompanyApi = {
   /** Start founder KYC (idv seam) → the verification sessions + the formation. */
   startKyc: (): Promise<{ view: FormationView; sessions: KycSession[] }> =>
     restPost<unknown>(url('kyc'), {}).then((p) => ({ view: normalizeView(p), sessions: normalizeKycSessions(p) })),
-  /** Record a KYC result for one founder (the manual/webhook review hook). */
+  /** Record a reviewer's KYC decision for one founder (POST /v1/company/kyc/decision). */
   kycCallback: (email: string, status: string): Promise<FormationView> =>
-    restPost<unknown>(url('kyc/callback'), { email, status }).then(normalizeView),
+    restPost<unknown>(url('kyc/decision'), { email, status }).then(normalizeView),
   /** Charge the one-time $999 formation fee. */
   pay: (): Promise<FormationView> => restPost<unknown>(url('payment'), {}).then(normalizeView),
   /** Generate the formation documents into the data room + submit the state filing. */

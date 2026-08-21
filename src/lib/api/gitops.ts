@@ -18,17 +18,15 @@
  * the FE simply renders whatever rows the API returns per the active org.
  *
  * CONTRACT (cloud clients/deploy; a not-yet-routed/forbidden call renders an
- * honest state, never fabricated rows). The DTOs are mapped INTO the console's
- * `Application`/`ResourceNode` view-models below:
- *   GET  /v1/deploy/applications                → { applications: [{name,namespace,env,role,
+ * honest state, never fabricated rows). The plane keys every per-application
+ * address under `applications/{name}` (HIP-0139). The DTOs are mapped INTO the
+ * console's `Application`/`ResourceNode` view-models below:
+ *   GET  /v1/deploy/applications                        → { applications: [{name,namespace,env,role,
  *          repository,version,runningVersion,health,healthMessage,sync,phase,endpoints}], summary }
- *   GET  /v1/deploy/{name}/tree                 → { application, nodes: [{group,version,kind,
+ *   GET  /v1/deploy/applications/{name}/resource-tree   → { application, nodes: [{group,version,kind,
  *          namespace,name,ref,uid,createdAt,health,healthMessage,sync,version,parentRefs:[{…,ref}]}] }
- *   GET  /v1/deploy/{name}/resource/{ref}       → { ref, health, healthMessage, liveManifest:{…},
- *          desiredSource, diff:{modified,desiredManifest:{…}} }
- *   GET  /v1/deploy/{name}/logs?container&tail  → { application, pod, container, logs:"…", note? }
- *   POST /v1/deploy/{name}/rollback  { tag }    → { rolledBack, target, tag, application } (clean semver)
- *   POST /v1/deploy/{name}/sync                 → { synced, target, requestedAt, note }
+ *   POST /v1/deploy/applications/{name}/rollback {tag}  → { rolledBack, target, tag, application } (clean semver)
+ *   POST /v1/deploy/applications/{name}/sync            → { synced, target, requestedAt, note }
  *
  * Every field is optional-safe: the normalizers tolerate snake_case and
  * camelCase and degrade a missing signal to an honest empty/`Unknown`, never a
@@ -81,7 +79,7 @@ export interface Application {
 
 /** One node in an application's owned-resource tree (the CR + everything it owns). */
 export interface ResourceNode {
-  /** Opaque server token identifying the resource (its uid) — path-safe. */
+  /** Opaque server token identifying the resource (its uid); owner edges cite it. */
   ref: string
   group: string
   version: string
@@ -106,40 +104,6 @@ export interface AppTree {
   nodes: ResourceNode[]
   /** Explicit owner→child edges; when absent they are derived from `ownerRefs`. */
   edges: { from: string; to: string }[]
-}
-
-/** A single k8s Event on a resource. */
-export interface ResourceEvent {
-  type: string
-  reason: string
-  message: string
-  count: number
-  lastSeen: string
-}
-
-/** A resource's drill-in detail: live manifest, desired-vs-live diff, events. */
-export interface ResourceDetail {
-  ref: string
-  /** Live manifest (pretty JSON of the live cluster object). */
-  live: string
-  /** Desired manifest (pretty JSON of the last-applied/git intent); '' when N/A. */
-  desired: string
-  /** Unified diff desired→live; '' when the plane reports a boolean verdict only. */
-  diff: string
-  /** Whether the deploy plane reports live differs from desired (the diff verdict). */
-  modified: boolean
-  /** Where `desired` came from: 'last-applied' | 'git' | 'none'. */
-  desiredSource: string
-  events: ResourceEvent[]
-}
-
-/** One log line for a pod/container. */
-export interface LogLine {
-  ts: string
-  pod: string
-  container: string
-  level: string
-  message: string
 }
 
 export interface RollbackResult {
@@ -209,22 +173,6 @@ function resolveAppImage(r: Record<string, unknown>): ImageRef {
   const tag = str(pick(r, 'version', 'tag'))
   if (repository || tag) return { repository, tag }
   return normalizeImage(pick(r, 'image'))
-}
-
-/**
- * A manifest as text: an object (the live/desired k8s object cloud returns) is
- * rendered as pretty JSON; a string is returned verbatim. Never throws.
- */
-function stringifyManifest(v: unknown): string {
-  if (typeof v === 'string') return v
-  if (v && typeof v === 'object') {
-    try {
-      return JSON.stringify(v, null, 2)
-    } catch {
-      return ''
-    }
-  }
-  return ''
 }
 
 /** The `.ref` tokens of a `parentRefs: [{…, ref}]` array (owner→child edges). */
@@ -298,66 +246,10 @@ function normalizeTree(raw: unknown): AppTree {
   return { nodes, edges }
 }
 
-function normalizeEvent(raw: unknown): ResourceEvent {
-  const r = rec(raw)
-  return {
-    type: str(pick(r, 'type')),
-    reason: str(pick(r, 'reason')),
-    message: str(pick(r, 'message', 'msg', 'note')),
-    count: num(pick(r, 'count')),
-    lastSeen: str(pick(r, 'lastSeen', 'last_seen', 'lastTimestamp', 'eventTime')),
-  }
-}
-
-function normalizeDetail(ref: string, raw: unknown): ResourceDetail {
-  const r = rec(raw)
-  // `ref` may arrive as the token string or as the ResourceRef object carrying it.
-  const refField = pick(r, 'ref')
-  const refToken = typeof refField === 'string' ? refField : str(pick(rec(refField), 'ref')) || ref
-  // The diff verdict + desired manifest are nested under `diff` on the /v1/deploy shape.
-  const diffObj = rec(pick(r, 'diff'))
-  const desiredRaw = pick(r, 'desired', 'target', 'desiredManifest', 'desired_manifest') ?? pick(diffObj, 'desiredManifest', 'desired_manifest', 'desired')
-  return {
-    ref: refToken,
-    live: stringifyManifest(pick(r, 'liveManifest', 'live_manifest', 'live', 'manifest')),
-    desired: stringifyManifest(desiredRaw),
-    // The plane reports a boolean verdict + the two manifests (not a unified string);
-    // a server-computed unified diff is rendered verbatim when one is present.
-    diff: typeof pick(r, 'diff') === 'string' ? str(pick(r, 'diff')) : str(pick(diffObj, 'unified', 'text')),
-    modified: pick(diffObj, 'modified') === true || pick(r, 'modified') === true,
-    desiredSource: str(pick(r, 'desiredSource', 'desired_source')),
-    events: arr(pick(r, 'events')).map(normalizeEvent),
-  }
-}
-
-function normalizeLine(raw: unknown): LogLine {
-  const r = rec(raw)
-  return {
-    ts: str(pick(r, 'ts', 'time', 'timestamp')),
-    pod: str(pick(r, 'pod', 'podName', 'pod_name')),
-    container: str(pick(r, 'container')),
-    level: str(pick(r, 'level', 'severity')),
-    message: str(pick(r, 'message', 'msg', 'log', 'line')),
-  }
-}
-
-/** Split a bare `{ log: "...\n..." }` blob into lines when no structured rows exist. */
-function linesFromBlob(blob: string): LogLine[] {
-  return blob
-    .split('\n')
-    .filter((l) => l.length > 0)
-    .map((message) => ({ ts: '', pod: '', container: '', level: '', message }))
-}
-
 const url = (path: string): string => cloudProxyV1Url(path)
 
-export interface LogQuery {
-  /** The pod resource `ref` to read (from the tree); omit for the app's pods. */
-  ref?: string
-  container?: string
-  /** Tail line count. */
-  tail?: number
-}
+/** The `applications/{name}` stem every per-application address hangs off. */
+const app = (name: string): string => `deploy/applications/${encodeURIComponent(name)}`
 
 export const GitopsApi = {
   /** List every `services.hanzo.ai` CR as a GitOps application. */
@@ -369,47 +261,21 @@ export const GitopsApi = {
 
   /** The owned-resource tree for one application (Service → Deployment → RS → Pods …). */
   tree: async (name: string): Promise<AppTree> => {
-    const data = await restGet<unknown>(url(`deploy/${encodeURIComponent(name)}/tree`))
+    const data = await restGet<unknown>(url(`${app(name)}/resource-tree`))
     return normalizeTree(data)
-  },
-
-  /** One resource's live manifest, desired-vs-live diff, and events. */
-  resource: async (name: string, ref: string): Promise<ResourceDetail> => {
-    const data = await restGet<unknown>(url(`deploy/${encodeURIComponent(name)}/resource/${encodeURIComponent(ref)}`))
-    return normalizeDetail(ref, data)
-  },
-
-  /** Pod logs for the application (optionally scoped to one pod `ref` + container). */
-  logs: async (name: string, q: LogQuery = {}): Promise<LogLine[]> => {
-    const qs = new URLSearchParams()
-    if (q.ref) qs.set('ref', q.ref)
-    if (q.container) qs.set('container', q.container)
-    if (q.tail) qs.set('tail', String(q.tail))
-    const suffix = qs.toString() ? `?${qs}` : ''
-    const data = await restGet<unknown>(url(`deploy/${encodeURIComponent(name)}/logs${suffix}`))
-    const dataRec = rec(data)
-    // Structured rows (future) win; else `/v1/deploy` returns `logs` as a newline
-    // blob from the newest pod — split it and tag each line with the pod name.
-    const structured = pick(dataRec, 'lines')
-    if (Array.isArray(structured)) return structured.map(normalizeLine)
-    const logsField = pick(dataRec, 'logs')
-    if (Array.isArray(logsField)) return logsField.map(normalizeLine)
-    const pod = str(pick(dataRec, 'pod'))
-    const blob = str(logsField) || str(pick(dataRec, 'log', 'output'))
-    return blob ? linesFromBlob(blob).map((l) => ({ ...l, pod: l.pod || pod })) : []
   },
 
   /** Roll an application back to a prior image tag — cloud patches the CR
    *  `spec.image.tag`, the operator reconciles the Deployment. */
   rollback: async (name: string, tag: string): Promise<RollbackResult> => {
-    const data = await restPost<unknown>(url(`deploy/${encodeURIComponent(name)}/rollback`), { tag })
+    const data = await restPost<unknown>(url(`${app(name)}/rollback`), { tag })
     const r = rec(data)
     return { name: str(pick(r, 'name')) || name, tag: str(pick(r, 'tag')) || tag, phase: str(pick(r, 'phase', 'status')) }
   },
 
   /** Force a re-reconcile of the CR to its desired state (ArgoCD "Sync"). */
   sync: async (name: string): Promise<SyncResult> => {
-    const data = await restPost<unknown>(url(`deploy/${encodeURIComponent(name)}/sync`), {})
+    const data = await restPost<unknown>(url(`${app(name)}/sync`), {})
     const r = rec(data)
     return { name: str(pick(r, 'name')) || name, phase: str(pick(r, 'phase', 'status')) }
   },

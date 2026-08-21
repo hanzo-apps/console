@@ -2,8 +2,8 @@
  * Kubernetes / unified fleet — PURE logic (no I/O), unit-tested directly.
  *
  * The fleet is the org's compute in ONE place: managed clusters + attached BYO
- * clusters (both from `GET /v1/clusters`) and dialed-in BYO machines (from
- * `GET /v1/machines`, folded in by the backend with `provider:"byo"`). Every helper
+ * clusters (both from `GET /v1/visor/clusters`) and dialed-in BYO machines (from
+ * `GET /v1/visor/machines`, folded in by the backend with `provider:"byo"`). Every helper
  * here derives a display value from a REAL field — a missing field degrades to 0 /
  * "—" in the caller, never a fabricated number.
  */

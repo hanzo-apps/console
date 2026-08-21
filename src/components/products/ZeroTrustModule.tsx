@@ -4,19 +4,17 @@
  * Zero Trust — the operational landing for private, identity-aware service
  * access, secured end-to-end by post-quantum transport (Hanzo zap).
  *
- * The Overview composes the REAL `/v1/zt/*` mesh into a cloud-console dashboard:
- * KPI cards (routers / services / identities / sessions / policies), the
- * post-quantum posture (S3 ⇄ ZT data plane), and a router→service→identity
- * topology strip. Every number is a real count or an honest em-dash; the
- * topology shows only nodes that came back; the posture is a true statement of
- * the platform transport, not telemetry. When the zt backend isn't mounted on
- * this host, the mesh sections degrade to one honest BackendStateCard while the
- * posture (a platform capability) still shows.
+ * The Overview composes the REAL `/v1/network/*` fabric into a cloud-console
+ * dashboard: KPI cards (routers / services), the post-quantum posture
+ * (S3 ⇄ ZT data plane), and a router→service topology strip. Every number is a
+ * real count or an honest em-dash; the topology shows only nodes that came back;
+ * the posture is a true statement of the platform transport, not telemetry. When
+ * the fabric isn't reachable from this host, the mesh sections degrade to one
+ * honest BackendStateCard while the posture (a platform capability) still shows.
  *
- * The five detail tabs reuse the SAME `zeroTrustSurfaces` + `ForwardSurface`
- * tables as before (DRY) — this module only adds the Overview landing on top and
- * owns the routing. Registry: `''` → Overview, `:tab` → overview|services|
- * identities|routers|policies|sessions.
+ * The detail tabs reuse the SAME `zeroTrustSurfaces` + `ForwardSurface` tables
+ * (DRY) — this module only adds the Overview landing on top and owns the routing.
+ * Registry: `''` → Overview, `:tab` → overview|services|routers.
  */
 import { SubNav } from '~/components/ui/SubNav'
 import { productSubpageSlug } from '~/lib/products/match'
@@ -28,9 +26,6 @@ import {
   ShieldCheck,
   Waypoints,
   Server,
-  Fingerprint,
-  ScrollText,
-  Activity,
   RefreshCw,
   Lock,
   ArrowLeftRight,
@@ -44,6 +39,7 @@ import { ForwardSurface, zeroTrustSurfaces } from '~/components/products/Console
 import {
   ZT_SECTION_IDS,
   ZT_ENDPOINT,
+  POSTURE,
   emptySections,
   type ZtSections,
   type ZtNode,
@@ -54,7 +50,6 @@ import {
   allSectionsDown,
   deriveTopology,
   topologyIsEmpty,
-  derivePosture,
   liveCount,
 } from '~/components/products/zt/logic'
 import { toneVar } from '~/components/ui/tone'
@@ -132,11 +127,6 @@ function PostureCard({ posture }: { posture: ZtPosture }) {
         <PostureRow icon={Lock} label="Signatures" value={posture.sig} />
         <PostureRow icon={ArrowLeftRight} label="Transport" value={posture.transport} />
         <PostureRow icon={HardDrive} label="Data plane" value="S3 ⇄ Zero Trust" />
-        <PostureRow
-          icon={Activity}
-          label="PQ sessions"
-          value={posture.pqSessionsPct === null ? 'reported per session when live' : `${posture.pqSessionsPct}%`}
-        />
       </YStack>
     </Card>
   )
@@ -145,7 +135,6 @@ function PostureCard({ posture }: { posture: ZtPosture }) {
 const TOPOLOGY_COLUMNS: { kind: ZtNodeKind; label: string; icon: LucideIcon }[] = [
   { kind: 'router', label: 'Routers', icon: Waypoints },
   { kind: 'service', label: 'Services', icon: Server },
-  { kind: 'identity', label: 'Identities', icon: Fingerprint },
 ]
 
 function NodeChip({ node }: { node: ZtNode }) {
@@ -202,7 +191,7 @@ function TopologyStrip({ topo }: { topo: Record<ZtNodeKind, ZtNode[]> }) {
   )
 }
 
-/** Fetch all five zt sections in parallel; each errors independently (honest). */
+/** Fetch both fabric sections in parallel; each errors independently (honest). */
 function useZtSections() {
   const [sections, setSections] = useState<ZtSections | null>(null)
   const [error, setError] = useState<BackendState | null>(null)
@@ -230,12 +219,12 @@ function useZtSections() {
   return { sections, error, reload: load }
 }
 
-/** Normalize a `/v1/zt/*` payload to rows: array, or the first array field, or []. */
+/** Normalize a `/v1/network/*` payload to rows: array, or the first array field, or []. */
 function asRows(payload: unknown): Row[] {
   if (Array.isArray(payload)) return payload.filter((x): x is Row => Boolean(x) && typeof x === 'object')
   if (payload && typeof payload === 'object') {
     const obj = payload as Record<string, unknown>
-    for (const k of ['data', 'rows', 'items', 'results', 'services', 'routers', 'identities', 'sessions', 'policies']) {
+    for (const k of ['data', 'rows', 'items', 'results', 'services', 'routers']) {
       const v = obj[k]
       if (Array.isArray(v)) return v.filter((x): x is Row => Boolean(x) && typeof x === 'object')
     }
@@ -248,7 +237,6 @@ function ZtOverview() {
   const loading = sections === null
   const s = sections ?? emptySections
   const topo = deriveTopology(s)
-  const posture = derivePosture(s.sessions)
   const down = !loading && allSectionsDown(s)
 
   const val = (n: number | null): string => (loading ? '…' : n === null ? '—' : String(n))
@@ -258,9 +246,6 @@ function ZtOverview() {
   const kpis: { icon: LucideIcon; label: string; n: number | null; sub?: string }[] = [
     { icon: Waypoints, label: 'Routers', n: sectionCount(s.routers), sub: activeSub(s.routers) },
     { icon: Server, label: 'Services', n: sectionCount(s.services), sub: activeSub(s.services) },
-    { icon: Fingerprint, label: 'Identities', n: sectionCount(s.identities) },
-    { icon: Activity, label: 'Sessions', n: sectionCount(s.sessions), sub: activeSub(s.sessions) },
-    { icon: ScrollText, label: 'Policies', n: sectionCount(s.policies) },
   ]
 
   return (
@@ -272,7 +257,7 @@ function ZtOverview() {
       </XStack>
 
       <XStack flexWrap="wrap" gap="$3" items="stretch">
-        <PostureCard posture={posture} />
+        <PostureCard posture={POSTURE} />
         <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$3" flex={1.6} minW={320}>
           <XStack items="center" gap="$2">
             <Waypoints size={16} />
@@ -286,7 +271,7 @@ function ZtOverview() {
             </Text>
           ) : topologyIsEmpty(topo) ? (
             <Text fontSize="$3" color="$color10">
-              No routers, services, or identities yet. Enroll a router, then define a service for it to reach.
+              No routers or services yet. Enroll a router, then define a service for it to reach.
               Each connection the mesh makes authenticates both ends before it carries anything.
             </Text>
           ) : (
@@ -299,7 +284,7 @@ function ZtOverview() {
         <BackendStateCard
           state={error ?? { kind: 'unavailable', message: '' }}
           onRetry={reload}
-          hint="Zero Trust mesh data arrives when hanzoai/zt is deployed (GET /v1/zt/*). The post-quantum posture above is the platform transport and applies regardless."
+          hint="Zero Trust mesh data arrives when the fabric has routers on it (GET /v1/network/*). The post-quantum posture above is the platform transport and applies regardless."
         />
       ) : null}
     </YStack>

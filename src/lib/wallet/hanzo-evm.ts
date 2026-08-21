@@ -34,11 +34,9 @@ export const HANZO_MAINNET = {
   nativeCurrency: { name: 'AI Token', symbol: 'AI', decimals: 18 },
 } as const
 
-/** HUSD = Hanzo USD stablecoin (ERC-20). Addresses are public; empty ⇒ not yet deployed. */
+/** HUSD = Hanzo USD stablecoin (ERC-20). The address is public; empty ⇒ not yet deployed. */
 export const HUSD = {
   address: (process.env.NEXT_PUBLIC_HANZO_HUSD_ADDRESS ?? '').trim(),
-  /** Treasury that receives top-up transfers (public deposit address). */
-  treasury: (process.env.NEXT_PUBLIC_HANZO_HUSD_TREASURY ?? '').trim(),
   symbol: 'HUSD',
   /** USD-pegged 18-decimal stablecoin (1 HUSD = $1). */
   decimals: 18,
@@ -49,8 +47,6 @@ const ADDR_RE = /^0x[0-9a-fA-F]{40}$/
 /** True when an HUSD ERC-20 address is configured (i.e. HUSD is deployed). */
 export const husdConfigured = (): boolean => ADDR_RE.test(HUSD.address)
 
-/** True when both HUSD and a treasury are set, so top-ups can be sent + recorded. */
-export const topupConfigured = (): boolean => husdConfigured() && ADDR_RE.test(HUSD.treasury)
 
 /** Minimal ERC-20 surface — balance + transfer + metadata. */
 export const ERC20_ABI = [
@@ -75,7 +71,6 @@ export const walletAvailable = (): boolean => injected() !== null
 export const formatHusd = (value: bigint): string => ethers.formatUnits(value, HUSD.decimals)
 
 /** Base units (18 decimals) from a human HUSD string. Throws on a bad amount. */
-export const parseHusd = (amount: string): bigint => ethers.parseUnits(amount.trim(), HUSD.decimals)
 
 /**
  * Ensure the wallet is on Hanzo Mainnet (36963), adding the network if unknown.
@@ -149,30 +144,6 @@ export async function readHusdBalance(address: string): Promise<bigint> {
   return (await husd.balanceOf(ethers.getAddress(address))) as bigint
 }
 
-/**
- * Send HUSD from the connected wallet to `to`. Returns the transaction hash once
- * accepted by the wallet (not yet mined). Throws when HUSD is unconfigured.
- */
-export async function sendHusd(to: string, amount: string): Promise<string> {
-  if (!husdConfigured()) throw new Error('HUSD is not live on Hanzo Mainnet.')
-  const eth = injected()
-  if (!eth) throw new Error('No browser wallet detected.')
-  await ensureHanzoNetwork(eth)
-  const provider = new ethers.BrowserProvider(eth)
-  const signer = await provider.getSigner()
-  const husd = new ethers.Contract(HUSD.address, ERC20_ABI, signer)
-  const tx = await husd.transfer(ethers.getAddress(to), parseHusd(amount))
-  return tx.hash as string
-}
-
-/** Send an HUSD top-up to the configured treasury. Returns the tx hash. */
-export async function sendHusdTopup(amount: string): Promise<string> {
-  if (!topupConfigured()) throw new Error('HUSD top-up is not available yet on Hanzo Mainnet.')
-  return sendHusd(HUSD.treasury, amount)
-}
-
-/** Block-explorer URL for a transaction hash. */
-export const txUrl = (hash: string): string => `${HANZO_MAINNET.blockExplorer}/tx/${hash}`
 
 /** Shorten an address for display (0x1234…abcd). */
 export const shortAddr = (a: string): string => (a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a)

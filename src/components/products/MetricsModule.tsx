@@ -1,38 +1,29 @@
 'use client'
 
 /**
- * Metrics — role-aware, so a customer NEVER sees platform infra health or internal
- * `*.hanzo.svc` topology (an operator concern), and a global admin still gets it.
+ * Metrics — role-aware, so a customer NEVER sees platform fleet health (an operator
+ * concern), and a platform admin still gets it.
  *
  *   - CUSTOMER (incl. a tenant org owner) → their OWN per-org usage: requests,
  *     tokens, spend, latency, per-model — the REAL commerce usage ledger via the
  *     shared LivingOverview (`ai-metrics`). This is what "Metrics" means to them.
- *   - GLOBAL (cross-tenant) admin → the platform INFRASTRUCTURE health board below
- *     (VictoriaMetrics `up{}` service health + up/down breakdown). This exposes
- *     internal service instances and is deliberately gated to admins who run the
- *     cluster — never rendered for a customer, so no false "Down" or leaked
- *     `*.svc` hostnames reach a cold customer.
+ *   - PLATFORM (cross-tenant) admin → the fleet health board below: which services
+ *     are up now, the up/down breakdown, and the trend. This is the whole fleet's
+ *     inventory rather than any one tenant's, so it is deliberately restricted to
+ *     the admins who run it and never rendered for a customer.
  *
- * The infra board's ONE honest source is VictoriaMetrics (Prometheus-compatible)
- * through the same-origin read-only `/telemetry` proxy: the health of every Hanzo
- * platform service (`up{}`), a healthy-services trend (`sum(up)`), and the current
- * up/down breakdown. Every KPI/series/bar is a pure fold over what VictoriaMetrics
- * returned — empty rolls up to honest zeros, never fabricated data; not-configured
- * (501) / unreachable (401/5xx) shows an honest state.
+ * The board's ONE source is the fleet availability read (`/v1/o11y/availability`,
+ * HIP-0139), where every verdict is the prober's own knock on a service's health URL.
+ * Every KPI, series and bar is a pure fold over that read — an empty fleet rolls up to
+ * honest zeros, never fabricated data — and an unreachable store (503) throws, so the
+ * board says it cannot see rather than painting a wall of zeroes that would look
+ * exactly like a fleet that is entirely down.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Activity, CheckCircle2, Gauge, RefreshCw, Server, TriangleAlert, XCircle } from '@hanzogui/lucide-icons-2'
 
-import {
-  ApiError,
-  TelemetryApi,
-  summarizeHealth,
-  toServiceHealth,
-  windowOf,
-  type Series,
-  type ServiceHealth,
-} from '~/lib/api'
+import { ApiError, TelemetryApi, type Availability, type Sample } from '~/lib/api'
 import { useIsSuperAdmin } from '~/lib/auth/admin'
 import { MetricCard } from '~/components/ui/Metric'
 import { Panel } from '~/components/ui/Panel'
@@ -55,53 +46,40 @@ const RANGES: { label: string; seconds: number }[] = [
   { label: '7d', seconds: 604_800 },
 ]
 
-type Data = { health: ServiceHealth[]; healthy: ChartPoint[]; targets: ChartPoint[] }
-type State = { phase: 'loading' } | { phase: 'error'; status: number; message: string } | { phase: 'ready'; data: Data }
+type State =
+  | { phase: 'loading' }
+  | { phase: 'error'; status: number; message: string }
+  | { phase: 'ready'; data: Availability }
 
-/** First aggregation series → chart points labelled by local time. */
-function toPoints(series: Series[], seconds: number): ChartPoint[] {
-  const s = series[0]
-  if (!s) return []
-  const dayScale = seconds > 86_400
-  return s.points.map((p) => {
-    const d = new Date(p.t * 1000)
+/** Trend samples → chart points labelled by local time. `pick` chooses up or reporting. */
+function toPoints(series: Sample[], sinceSec: number, pick: (s: Sample) => number): ChartPoint[] {
+  const dayScale = sinceSec > 86_400
+  return series.map((s) => {
+    const d = new Date(s.t)
     const label = dayScale
       ? `${d.getMonth() + 1}/${d.getDate()}`
       : `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
-    return { label, value: p.v }
+    return { label, value: pick(s) }
   })
 }
 
 export function MetricsModule(props: { params: Record<string, string> }) {
   const isSuperAdmin = useIsSuperAdmin()
   // A customer (or a tenant org owner) sees their own per-org usage — never the
-  // platform infra-health board or internal `*.svc` topology.
+  // fleet-wide health board.
   if (!isSuperAdmin) return <CustomerUsage params={props.params} />
-  return <InfraMetrics />
+  return <FleetMetrics />
 }
 
-/** Global-admin-only platform infrastructure health, from real VictoriaMetrics `up{}`. */
-function InfraMetrics() {
+/** Platform-admin-only fleet health, from the prober's own availability read. */
+function FleetMetrics() {
   const [state, setState] = useState<State>({ phase: 'loading' })
   const [rangeIdx, setRangeIdx] = useState(2) // default 24h
 
   const load = useCallback(async (idx: number) => {
     setState({ phase: 'loading' })
-    const w = windowOf(RANGES[idx].seconds)
     try {
-      const [up, healthy, targets] = await Promise.all([
-        TelemetryApi.instant('up'),
-        TelemetryApi.range('sum(up)', w),
-        TelemetryApi.range('count(up)', w),
-      ])
-      setState({
-        phase: 'ready',
-        data: {
-          health: toServiceHealth(up),
-          healthy: toPoints(healthy, RANGES[idx].seconds),
-          targets: toPoints(targets, RANGES[idx].seconds),
-        },
-      })
+      setState({ phase: 'ready', data: await TelemetryApi.availability(RANGES[idx].seconds) })
     } catch (e) {
       setState({
         phase: 'error',
@@ -136,7 +114,7 @@ function InfraMetrics() {
     <>
       <PageHeader
         title="Metrics"
-        subtitle="Live platform service health and infrastructure metrics."
+        subtitle="Live health of every probed Hanzo service."
         actions={
           <XStack gap="$2" items="center" flexWrap="wrap">
             {rangeSelector}
@@ -161,38 +139,42 @@ function InfraMetrics() {
   )
 }
 
-function Ready({ data }: { data: Data }) {
-  const summary = summarizeHealth(data.health)
-  const uptimePct = summary.total > 0 ? Math.round((summary.healthy / summary.total) * 100) : 0
-  const down = data.health.filter((r) => !r.up)
+function Ready({ data }: { data: Availability }) {
+  const down = data.services.filter((s) => !s.up)
+  const uptimePct = data.total > 0 ? Math.round((data.up / data.total) * 100) : 0
+  // The window the server ACTUALLY used, clamped — not the one the selector asked for.
+  const since = data.range.sinceSec
+  const upTrend = toPoints(data.series, since, (s) => s.up)
+  const reportingTrend = toPoints(data.series, since, (s) => s.total)
   const segments: DonutSegment[] = [
-    { label: 'Healthy', value: summary.healthy, color: toneVar('positive') },
-    { label: 'Down', value: summary.down, color: toneVar('critical') },
+    { label: 'Healthy', value: data.up, color: toneVar('positive') },
+    { label: 'Down', value: down.length, color: toneVar('critical') },
   ]
 
   return (
     <YStack gap="$4">
-      {/* KPI tiles — all folded from real `up` samples. */}
+      {/* KPI tiles — all folded from the one availability read. */}
       <XStack gap="$3" flexWrap="wrap">
-        <MetricCard icon={<Server size={16} />} label="Services" value={String(summary.total)} />
+        <MetricCard icon={<Server size={16} />} label="Services" value={String(data.total)} caption="probed" />
         <MetricCard
           icon={<CheckCircle2 size={16} />}
           label="Healthy"
-          value={String(summary.healthy)}
-          spark={data.healthy.map((p) => p.value)}
+          value={String(data.up)}
+          spark={upTrend.map((p) => p.value)}
           sparkColor={toneVar('positive')}
         />
-        <MetricCard icon={<XCircle size={16} />} label="Down" value={String(summary.down)} />
+        <MetricCard icon={<XCircle size={16} />} label="Down" value={String(down.length)} />
         <MetricCard icon={<Gauge size={16} />} label="Uptime" value={`${uptimePct}%`} caption="services up now" />
       </XStack>
 
-      {/* Real time series (zero-filled by VictoriaMetrics' step). */}
+      {/* The trend, one sample per step. A sample's reporting count sits below today's
+          total when a service was added since — the read says so rather than back-filling. */}
       <XStack gap="$4" flexWrap="wrap">
-        <Panel title="Healthy services over time">
-          <LineChart data={data.healthy} color={toneVar('positive')} formatValue={(v) => String(Math.round(v))} />
+        <Panel title="Services up over time">
+          <LineChart data={upTrend} color={toneVar('positive')} formatValue={(v) => String(Math.round(v))} />
         </Panel>
-        <Panel title="Scrape targets over time">
-          <LineChart data={data.targets} formatValue={(v) => String(Math.round(v))} />
+        <Panel title="Services reporting over time">
+          <LineChart data={reportingTrend} formatValue={(v) => String(Math.round(v))} />
         </Panel>
       </XStack>
 
@@ -220,16 +202,11 @@ function Ready({ data }: { data: Data }) {
         <Panel title={down.length > 0 ? `Down now (${down.length})` : 'All services healthy'} minW={300}>
           {down.length > 0 ? (
             <YStack gap="$1.5">
-              {down.map((r) => (
-                <XStack key={`${r.job}:${r.instance}`} items="center" gap="$2" justify="space-between">
-                  <XStack items="center" gap="$2" minW={0} flex={1}>
-                    <XCircle size={14} color="$red10" />
-                    <Text fontSize="$3" color="$color12" numberOfLines={1}>
-                      {r.service}
-                    </Text>
-                  </XStack>
-                  <Text fontSize="$1" color="$color10" numberOfLines={1}>
-                    {r.instance || '—'}
+              {down.map((s) => (
+                <XStack key={s.name} items="center" gap="$2" minW={0}>
+                  <XCircle size={14} color="$red10" />
+                  <Text fontSize="$3" color="$color12" numberOfLines={1}>
+                    {s.name}
                   </Text>
                 </XStack>
               ))}
@@ -238,7 +215,7 @@ function Ready({ data }: { data: Data }) {
             <XStack items="center" gap="$2">
               <CheckCircle2 size={16} color="$green10" />
               <Text fontSize="$3" color="$color11">
-                Every scraped service is reporting healthy.
+                Every probed service answered on the last cycle.
               </Text>
             </XStack>
           )}
@@ -248,20 +225,29 @@ function Ready({ data }: { data: Data }) {
   )
 }
 
-/** Honest failure card — 501 not-configured, 401 access, else a real error. */
+/**
+ * Honest failure card — 401 sign-in, 403 platform access, 503 the store cannot be
+ * reached, else the real error. The 503 branch is the one that matters: it renders as
+ * "cannot see", never as a wall of zeroes, which would be indistinguishable from a
+ * fleet that is entirely down.
+ */
 function MetricsError({ status, message, onRetry }: { status: number; message: string; onRetry: () => void }) {
   const title =
-    status === 501
-      ? 'Telemetry not configured'
-      : status === 401
-        ? 'Sign in to view metrics'
-        : 'Could not reach the telemetry store'
+    status === 401
+      ? 'Sign in to view metrics'
+      : status === 403
+        ? 'Platform administrators only'
+        : status === 503
+          ? 'Fleet availability is unavailable'
+          : 'Could not read fleet availability'
   const body =
-    status === 501
-      ? 'This console reads metrics from the telemetry store, but its URL (VM_URL) is not set on this deployment yet. Set it and infrastructure metrics appear here.'
-      : status === 401
-        ? 'Platform metrics are available to signed-in users. Please sign in.'
-        : message
+    status === 401
+      ? 'Fleet health is available to signed-in users. Please sign in.'
+      : status === 403
+        ? 'This board covers the whole fleet rather than any one tenant, so it is restricted to platform administrators.'
+        : status === 503
+          ? 'The telemetry store is not answering, so how much of the fleet is up cannot be read right now. This is a gap in the view, not a fleet that is down.'
+          : message
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={640}>
       <XStack gap="$2" items="center">
@@ -273,7 +259,7 @@ function MetricsError({ status, message, onRetry }: { status: number; message: s
       <Text fontSize="$3" color="$color11">
         {body}
       </Text>
-      {status !== 401 ? (
+      {status !== 401 && status !== 403 ? (
         <Button size="$2" self="flex-start" icon={<Activity size={15} />} onPress={onRetry}>
           Retry
         </Button>

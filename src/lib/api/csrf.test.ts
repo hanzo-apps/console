@@ -1,5 +1,5 @@
 // Anti-CSRF token client for the embed ambient-cookie money-write path. Pins: the
-// token is fetched from GET /v1/csrf and echoed as X-CSRF-Token on mutating
+// token is fetched from GET /v1/account/csrf and echoed as X-CSRF-Token on mutating
 // writes only, cached (one fetch across concurrent/sequential writes), re-minted on a
 // 403, and a strict no-op for reads / non-embed hosts (Bearer BFF ⇒ CSRF-immune).
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -22,12 +22,13 @@ describe('csrf (embed ambient-cookie money path)', () => {
 
   it('csrfRequired is SCOPED to the money-write surfaces cloud gates (no spurious pre-auth mint)', async () => {
     const { csrfRequired } = await import('./csrf')
-    // The cloud requireCSRF surfaces (clients/account/account.go) — must require a token.
-    for (const u of ['/v1/iam/keys', '/v1/iam/onboard', '/v1/commerce/topup/wallet', '/v1/billing/alerts', '/v1/commerce/product'])
+    // The cloud requireCSRF surfaces (apps/account/account.go) — must require a token.
+    for (const u of ['/v1/account/keys', '/v1/account/orgs', '/v1/billing/alerts', '/v1/commerce/product'])
       expect(csrfRequired('POST', u)).toBe(true)
     // NON-money mutating writes (login/session/control-plane) must NOT trigger the
-    // /v1/csrf mint — that pre-auth fetch was the SPA's only console error.
-    for (const u of ['/v1/iam/login', '/v1/iam/signin', '/auth/refresh', '/v1/agents', '/v1/tracker/projects'])
+    // /v1/account/csrf mint — that pre-auth fetch was the SPA's only console error.
+    // IAM's own key surface is in the list: cloud gates /v1/account/keys, IAM does not.
+    for (const u of ['/v1/iam/keys', '/v1/iam/login', '/v1/iam/signin', '/auth/refresh', '/v1/agents', '/v1/todo/projects'])
       expect(csrfRequired('POST', u)).toBe(false)
   })
 
@@ -37,7 +38,7 @@ describe('csrf (embed ambient-cookie money path)', () => {
     expect(await csrfToken(fetchImpl)).toBe('tok-1')
     expect(await csrfToken(fetchImpl)).toBe('tok-1') // cache hit
     expect(fetchImpl).toHaveBeenCalledTimes(1)
-    expect(fetchImpl.mock.calls[0][0]).toContain('/v1/csrf')
+    expect(fetchImpl.mock.calls[0][0]).toContain('/v1/account/csrf')
     expect(fetchImpl.mock.calls[0][1].credentials).toBe('include')
   })
 

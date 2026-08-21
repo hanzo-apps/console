@@ -1,5 +1,5 @@
 /**
- * Typed client for the unified USAGE SUMMARY endpoint (cloud `clients/usage`),
+ * Typed client for the unified USAGE SUMMARY endpoint (cloud `apps/usage`),
  * called SAME-ORIGIN with NO prefix (`originV1Url('usage/summary')`). The
  * next.config rewrite terminates it at the console's `/v1` user-bearer proxy,
  * which mints a short-lived user Bearer and forwards to cloud-api; the org is
@@ -12,7 +12,7 @@
  * envelope), so this uses `restGet` and normalizes DEFENSIVELY (a field rename or an
  * absent source degrades to 0 / [] / available:false, never throws).
  *
- * Field names mirror the Go response structs in `clients/usage/query.go` exactly.
+ * Field names mirror the Go response structs in `apps/usage/query.go` exactly.
  */
 import { restGet, originV1Url } from './client'
 
@@ -32,7 +32,7 @@ const asRecord = (v: unknown): Record<string, unknown> =>
 const arrayOf = (v: unknown): Record<string, unknown>[] =>
   Array.isArray(v) ? (v.filter((x) => x && typeof x === 'object') as Record<string, unknown>[]) : []
 
-// ── Response types (mirror clients/usage/query.go) ───────────────────────────
+// ── Response types (mirror apps/usage/query.go) ──────────────────────────────
 
 /** One spend-by-category bucket (cents + how many ledger lines rolled up). */
 export type CategorySpend = { category: string; cents: number; count: number }
@@ -73,7 +73,7 @@ export type Spend = {
   series: SpendPoint[]
 }
 
-/** The LLM usage totals block (per-model detail lives at /v1/analytics/*). */
+/** The LLM usage totals block (per-model detail lives at /v1/event/top). */
 export type LlmTotals = {
   available: boolean
   requests: number

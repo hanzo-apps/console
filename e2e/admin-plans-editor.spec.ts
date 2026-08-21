@@ -1,16 +1,16 @@
 /**
  * Subscription Plans admin editor — render + edit-persists proof (increment 3a-console).
  *
- * Drives the REAL PlansCatalogModule (client + form + metadata editor) against a mock
- * of commerce's `/v1/plans/*` CRUD, seeded with real-shaped subscription/DNS plans. The
- * mock is a live in-memory store: a PUT mutates it, so a save → re-fetch shows the NEW
+ * Drives the REAL PlansCatalogModule (client + form + metadata editor) against a mock of
+ * commerce's `/v1/commerce/plans/*` CRUD, seeded with real-shaped subscription/DNS plans.
+ * The mock is a live in-memory store: a PUT mutates it, so a save → re-fetch shows the NEW
  * price — the exact "edit persists" loop the module drives against commerce (whose CRUD
  * + slug-immutable guard is proven by commerce's own api/plan handler tests).
  *
  * Proves: the table renders every plan with its monthly/annual price + custom/per-seat
  * flags; opening a plan shows the editable form (slug locked, name/price/category/
  * contactSales/popular/metadata) with the LIVE-BILLING warning; changing the price + Save
- * issues `PUT /v1/plans/entries/<slug>` with the new cents; and the table reflects it.
+ * issues `PUT /v1/commerce/plans/entries/<slug>` with the new cents; and the table reflects it.
  * Screenshots the table + the open edit form (admin-plans-editor.png).
  *
  * Run: BASE_URL=http://localhost:4000 npx playwright test admin-plans-editor
@@ -25,7 +25,8 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
-/** Real-shaped platform plans (the raw `plan` shape the admin GET /v1/plans/entries returns). */
+/** Real-shaped platform plans (the raw `plan` shape the admin
+ *  GET /v1/commerce/plans/entries returns). */
 function seedPlans(): Record<string, unknown>[] {
   const base = { sku: '', currency: 'usd', interval: 'month', intervalCount: 1 }
   return [
@@ -37,7 +38,7 @@ function seedPlans(): Record<string, unknown>[] {
   ]
 }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 test('plans editor renders the plans, edits a price, and persists', async ({ page }) => {
   const store = new Map(seedPlans().map((p) => [p.slug as string, p]))
@@ -49,10 +50,10 @@ test('plans editor renders the plans, edits a price, and persists', async ({ pag
     const url = new URL(req.url())
     const path = url.pathname
 
-    if (path === '/v1/plans/entries' && req.method() === 'GET') {
+    if (path === '/v1/commerce/plans/entries' && req.method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...store.values()]) })
     }
-    const m = path.match(/^\/v1\/plans\/entries\/(.+)$/)
+    const m = path.match(/^\/v1\/commerce\/plans\/entries\/(.+)$/)
     if (m && req.method() === 'PUT') {
       const slug = decodeURIComponent(m[1])
       const body = JSON.parse(req.postData() || '{}') as Record<string, unknown>

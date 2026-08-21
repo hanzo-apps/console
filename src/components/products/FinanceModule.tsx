@@ -2,8 +2,9 @@
 
 /**
  * Finance — the signed-in org's per-tenant view of the unified finance ledger
- * (`/v1/finance/*`, hanzoai/finance): balance, metered spend, credits, invoices,
- * payment methods, and the double-entry ledger.
+ * (hanzoai/finance): credits, invoices, payment methods and the double-entry ledger
+ * over `/v1/billing/*`; the reserve position is `/v1/treasury/*`, off this board
+ * (`showTreasury={false}`) because it is a platform view, not the org's own money.
  *
  * The board itself is the SHARED `@hanzo/finance-ui` `FinanceDashboard` — the SAME
  * component finance.hanzo.ai renders — so a spend/usage/credits card looks and behaves

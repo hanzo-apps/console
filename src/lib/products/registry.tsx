@@ -179,7 +179,6 @@ import { SessionsModule } from '~/components/products/SessionsModule'
 import { ScoresModule } from '~/components/products/ScoresModule'
 import { StatusModule } from '~/components/products/StatusModule'
 import { MetricsModule } from '~/components/products/MetricsModule'
-import { LuxNetworkModule } from '~/components/products/LuxNetworkModule'
 import { DnsModule } from '~/components/products/DnsModule'
 import { DomainsModule } from '~/components/products/DomainsModule'
 import { CloudflareModule } from '~/components/products/CloudflareModule'
@@ -215,12 +214,11 @@ import { NetworksModule } from '~/components/products/NetworksModule'
 import { NodesModule } from '~/components/products/NodesModule'
 import { TradingModule } from '~/components/products/TradingModule'
 import { MarketsModule } from '~/components/products/MarketsModule'
-import { TokensModule } from '~/components/products/TokensModule'
 import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
 // Admin operator compute boards (cross-tenant, admin-only) — kind='bot'|'machine'
 // lenses over the datastore. Aliased to avoid the clash with the per-org customer
-// `MachinesModule` (Compute › Machines, over visor-backed `/v1/machines`).
+// `MachinesModule` (Compute › Machines, over visor-backed `/v1/visor/machines`).
 import { BotsModule, MachinesModule as AdminMachinesModule, ClustersModule as AdminClustersModule, FunctionsModule as AdminFunctionsModule } from '~/components/products/ComputeModule'
 import { AnalyticsModule } from '~/components/products/AnalyticsModule'
 import { TagsModule, TagDestinations } from '~/components/products/TagsModule'
@@ -230,13 +228,11 @@ import { ReleasesModule } from '~/components/products/ReleasesModule'
 import { BuildsModule } from '~/components/products/BuildsModule'
 import { EnvironmentsModule } from '~/components/products/EnvironmentsModule'
 import { HsmModule } from '~/components/products/HsmModule'
-import { AuthzModule } from '~/components/products/AuthzModule'
 import { ServiceMeshModule } from '~/components/products/ServiceMeshModule'
 import { ServiceMapModule } from '~/components/products/ServiceMapModule'
 import { ErrorsModule } from '~/components/products/ErrorsModule'
 import { SentryModule, SENTRY_TABS } from '~/components/products/SentryModule'
 import { LoadBalancerModule } from '~/components/products/LoadBalancerModule'
-import { VpcModule } from '~/components/products/VpcModule'
 import { WebhooksModule } from '~/components/products/WebhooksModule'
 import { EdgeModule } from '~/components/products/EdgeModule'
 import { FunctionsModule } from '~/components/products/FunctionsModule'
@@ -649,7 +645,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai CATALOG & PRICING — the CMS editor for the platform product +
     // pricing catalog (commerce `catalog-entry`, the SoT: the 17 infra tiers +
     // every product surface docs/pricing/the console read from). A filterable table
-    // + create/edit form over the SuperAdmin CRUD (/v1/catalog/entries); an edit
+    // + create/edit form over the SuperAdmin CRUD (/v1/commerce/catalog/entries); an edit
     // here flows to the live pricing pages (the pricing service reads the same rows
     // via GET /v1/commerce/catalog). GLOBAL-ADMIN ONLY (`admin: true` hides it from
     // every customer; commerce's requireSuperAdmin (owner=="admin") is the
@@ -667,7 +663,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai SUBSCRIPTION PLANS — the CMS editor for the platform plan authority
     // (commerce `models/plan`, the SoT for subscription/DNS pricing that GET
     // /v1/billing/plans and the internal-ledger renewal charge read). A filterable table
-    // + create/edit form over the SuperAdmin CRUD (/v1/plans/entries). LIVE BILLING
+    // + create/edit form over the SuperAdmin CRUD (/v1/commerce/plans/entries). LIVE BILLING
     // CONTROL: a plan's monthly price is the real renewal charge — the sibling of the
     // Catalog editor. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer;
     // commerce's requireSuperAdmin (owner=="admin") is the authoritative server-side gate).
@@ -685,7 +681,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai LAUNCH CONTROL — the access-governance cockpit: a Services
     // board (per-service waitlist-mode toggle — remove the waitlist one service at
     // a time) + a Pending-Users approval queue (approve/reject off the waitlist,
-    // reusing IAM iam#104). ONE registry (cloud `clients/featuregate`), ONE approval
+    // reusing IAM iam#104). ONE registry (cloud `apps/admission`), ONE approval
     // API — no per-app duplication. GLOBAL-ADMIN ONLY (`admin: true` hides it from
     // every customer's nav/palette; `/v1/admin/services*` is server-gated
     // by getAdminGate and the pending queue rides the global-admin /admin/iam proxy,
@@ -776,7 +772,7 @@ const declared: Declaration[] = [
     // revenue — computed IN commerce (the money system of record) from ONE cross-org
     // walk. The AI panel composes the SAME fleet o11y aggregate (never a fork).
     // GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer; the
-    // `/v1/commerce/metrics/saas` aggregate is server-gated by getAdminGate).
+    // `/v1/admin/{revenue,analytics}` aggregates are server-gated by getAdminGate).
     id: 'saas-metrics',
     label: 'SaaS Metrics',
     icon: TrendingUp,
@@ -853,7 +849,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai PROJECTS board — the cross-org "what is deployed" view: every org's
     // apps across all clusters (health, cluster, live URL, drift). READ-ONLY. GLOBAL-ADMIN
     // ONLY (`admin: true`). A lens over the EXISTING global apps inventory (PlatformApi.apps
-    // → /v1/apps) — no new backend surface, nothing fabricated. Drill by org via the filter.
+    // → /v1/platform/apps) — no new backend surface, nothing fabricated. Drill by org via the filter.
     id: 'fleet-projects',
     label: 'Projects',
     icon: FolderGit2,
@@ -885,6 +881,7 @@ const declared: Declaration[] = [
     // per-org self-service opt-in is the customer Beta-features surface below.
     id: 'enablement',
     icon: SlidersHorizontal,
+    description: 'Set every model, provider, and feature to off, beta, or GA across the fleet, and grant a beta to one org.',
     category: 'Observe',
     stage: 'admin',
     repo: 'hanzoai/console',
@@ -921,6 +918,7 @@ const declared: Declaration[] = [
     // invariant). Honest-empty until the compute-events emitter lands.
     id: 'bots',
     icon: Bot,
+    description: 'Every @hanzo/bot agent booted across the platform, and its spend, grouped org → app → project.',
     category: 'Apps',
     stage: 'admin',
     repo: 'hanzoai/console',
@@ -931,7 +929,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai MACHINES board — the operator view of raw compute (kind='machine')
     // visor opens across EVERY org, and its spend, grouped org → app → project. The
     // CROSS-TENANT operator lens (id `vms` — the per-org customer `machines` entry is a
-    // different, non-admin surface over visor-backed `/v1/machines`). GLOBAL-ADMIN ONLY,
+    // different, non-admin surface over visor-backed `/v1/visor/machines`). GLOBAL-ADMIN ONLY,
     // same datastore aggregate as Bots (`?kind=machine`). Honest-empty until wired.
     id: 'vms',
     label: 'Machines',
@@ -983,6 +981,7 @@ const declared: Declaration[] = [
     // trap (the separate "Model Catalog" entry is gone — this IS it).
     id: 'models',
     icon: Brain,
+    description: 'The live model catalog, the published leaderboard, your org’s blend, and the gateway’s routing policy.',
     category: 'AI',
     repo: 'hanzoai/ai',
     kind: 'module',
@@ -1007,15 +1006,15 @@ const declared: Declaration[] = [
   {
     // The org-user AI Usage & Training surface — the customer face of the virtual
     // `auto`/`zen-router` model, in three tabs:
-    //   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
+    //   Overview — routing observability + TRAINING status over `GET /v1/ai/router/stats`
     //     (org-scoped): cost saved (a blended $/MTok proxy), a quality proxy, the
     //     per-task model mix, the last-retrain gate verdict, and the opt-in
     //     training-contribution toggle (the toggle lives ONLY here).
-    //   Usage    — the org's AI usage: native Hanzo `GET /v1/get-cloud-usages` +
+    //   Usage    — the org's AI usage: native Hanzo `GET /v1/ai/usages/cloud` +
     //     imported connected-provider usage, via the shared `<AiUsagePanels>` that
     //     the `ai-metrics` module also renders (one usage implementation, DRY).
     //   Policy   — the org's own task→model-pool prefer table + cost ceiling over
-    //     `/v1/router/policy` (GET read + PUT write).
+    //     `/v1/ai/router/policy` (GET read + PUT write).
     // All org-admin gated + self-scoped server-side (org > "*" > conf per task key).
     // DISTINCT from the two routing surfaces beside it: `models`' admin "Routing" tab
     // flips PLATFORM ModelRoute config, and `ai-accounts`' Routing tab is the user's
@@ -1023,6 +1022,7 @@ const declared: Declaration[] = [
     id: 'router',
     label: 'AI Usage & Training',
     icon: Waypoints,
+    description: 'Where your requests routed, what they cost, and the task→model policy that steers them.',
     category: 'AI',
     stage: 'beta',
     repo: 'hanzoai/ai',
@@ -1095,7 +1095,7 @@ const declared: Declaration[] = [
   },
   {
     // admin.hanzo.ai GROWTH cockpit — the SuperAdmin operator view of the Zen-of-Hanzo
-    // Guide engine (cloud clients/guide, /v1/guide/*): the authored blueprint (64 archetype
+    // Guide engine (cloud apps/guide, /v1/guide/*): the authored blueprint (64 archetype
     // principles + the launch journey), the strategy corpus (the ~888 modern + 114 heritage
     // tactics), and the org's OWN live growth read (stage · signals · key metrics · ranked
     // next-best moves). Every blueprint item carries a live enable/disable lever (PATCH) +
@@ -1139,7 +1139,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai ROUTING board — the config-as-Base auto-routing editor: the
     // platform-wide default (the reserved "*" OrgSettings row) + per-org overrides,
     // each a three-state control (inherit / enabled / disabled) written as DATA to the
-    // Base/SQLite OrgSettings row via `/v1/{get,update,delete}-org-settings` (all
+    // Base/SQLite OrgSettings row via `/v1/ai/org/settings` (all
     // RequireSuperAdmin upstream). This is where auto-routing (enso) becomes a real
     // admin toggle — set one org to Enabled for the org-first rollout, then flip the
     // global default. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer;
@@ -1199,7 +1199,7 @@ const declared: Declaration[] = [
   },
   {
     // Mission Control — the mobile-first swipeable terminal-per-agent cockpit over the
-    // live agent-session plane (cloud clients/agents, /v1/agents/sessions): see + drive
+    // live agent-session plane (cloud apps/agents, /v1/agents/sessions): see + drive
     // every session (CLI on a laptop, bot in cloud, linked GPU box) + the run-target seam.
     id: 'mission-control',
     icon: Terminal,
@@ -1212,16 +1212,17 @@ const declared: Declaration[] = [
   },
   {
     // Hanzo Automations — the ONE native Connectors + Automations engine
-    // (hanzoai/cloud clients/automations, /v1/automations; HIP-0106 / task #51):
+    // (hanzoai/cloud apps/auto, /v1/auto; HIP-0106 / task #51):
     // an org's flows run durably on the shared hanzoai/tasks engine over the
     // go:embed'd 706-connector catalogue, credentials KMS-sealed per org. Rendered
     // NATIVELY in-console (flows + connector catalogue + runs) over the /v1
     // user-bearer proxy — NO link-out, ONE surface. The retired standalone
-    // auto.hanzo.ai engine + its /v1/auto reverse proxy are gone; `/auto` and
+    // auto.hanzo.ai engine and its reverse proxy are gone; `/auto` and
     // `/automation` alias here (match-core). hanzo-scoped so it never appears on a
     // Lux/Zoo console.
     id: 'automations',
     icon: Workflow,
+    description: 'Flows that run themselves — 706 connectors, durable runs, credentials sealed per org.',
     category: 'AI',
     stage: 'beta',
     brands: ['hanzo'],
@@ -1290,6 +1291,7 @@ const declared: Declaration[] = [
     // Stores admin (StoresModule) is SUPERSEDED by this — one surface, not two.
     id: 'embeddings',
     icon: Boxes,
+    description: 'Generate, store, and search embeddings, with a collection per knowledge store.',
     category: 'AI',
     stage: 'beta',
     repo: 'hanzoai/ai',
@@ -1309,13 +1311,12 @@ const declared: Declaration[] = [
     ],
   },
   {
-    // Knowledge — the org's KB knowledge graph (cloud clients/knowledge). Pages,
+    // Knowledge — the org's knowledge graph (cloud apps/knowledge). Pages,
     // agent memories, and ingested sources as a force-directed graph over
-    // /v1/kb/graph, plus a vault importer (Obsidian/Notion/Roam/Evernote) over
-    // /v1/kb/import. Org-scoped SERVER-SIDE via the /v1 bearer proxy.
+    // /v1/knowledge/graph, plus a vault importer (Obsidian/Notion/Roam/Evernote) over
+    // /v1/knowledge/import. Org-scoped SERVER-SIDE via the /v1 bearer proxy.
     id: 'knowledge',
     icon: Network,
-    description: 'Your wiki, agent memory, and sources as one force-directed graph.',
     category: 'AI',
     stage: 'beta',
     repo: 'hanzoai/cloud',
@@ -1345,7 +1346,7 @@ const declared: Declaration[] = [
     // The "see everything running" view — the org's whole deployment landscape
     // (apps + managed data + domains) as a live, pannable node canvas. Composed
     // from the SAME real reads the lists use (PaasApi /v1/platform + Provisioning
-    // /v1/<kind>); leads Compute because it is the primary at-a-glance surface,
+    // /v1/provisioning/<kind>); leads Compute because it is the primary at-a-glance surface,
     // not a buried subpage. Honest edges only (domain→app routes; app→resource
     // where an env value exposes the link) — see components/products/map/graph.ts.
     id: 'map',
@@ -1362,6 +1363,7 @@ const declared: Declaration[] = [
     id: 'gpus',
     label: 'GPUs',
     icon: Cpu,
+    description: 'Rent a GPU by the hour, watch the queue, and run the clusters and pools behind it.',
     category: 'Compute',
     stage: 'beta',
     repo: 'hanzoai/operator',
@@ -1387,6 +1389,7 @@ const declared: Declaration[] = [
   {
     id: 'machines',
     icon: Server,
+    description: 'Every machine your org has open — droplets, DOKS worker nodes, and what each costs.',
     category: 'Compute',
     stage: 'beta',
     docs: `${DOCS}/machines`,
@@ -1400,21 +1403,8 @@ const declared: Declaration[] = [
     category: 'Compute',
     stage: 'beta',
     kind: 'module',
-    // The module renders its Workloads/Pods/Containers/Images/Namespaces/Events
-    // tabs as REAL sub-routes (`/containers/:tab`); declare the `:tab` route so the
-    // tab bar resolves instead of 404ing.
-    routes: [
-      { path: '', component: ContainersModule },
-      { path: ':tab', component: ContainersModule },
-    ],
+    routes: [{ path: '', component: ContainersModule }],
     indexLabel: 'Workloads',
-    subpages: [
-      { slug: 'pods', label: 'Pods' },
-      { slug: 'containers', label: 'Containers' },
-      { slug: 'images', label: 'Images' },
-      { slug: 'namespaces', label: 'Namespaces' },
-      { slug: 'events', label: 'Events' },
-    ],
   },
   {
     id: 'functions',
@@ -1441,6 +1431,7 @@ const declared: Declaration[] = [
   {
     id: 'edge',
     icon: Radio,
+    description: 'Publish to the edge and see whether it actually reached readers.',
     category: 'Compute',
     stage: 'beta',
     repo: 'hanzoai/edge',
@@ -1465,10 +1456,10 @@ const declared: Declaration[] = [
   },
   {
     // The USER-facing per-org PaaS over cloud's native /v1/platform control plane
-    // (hanzoai/cloud clients/platform): your own container apps — deploy, source-
+    // (hanzoai/cloud apps/platform): your own container apps — deploy, source-
     // tagged logs, KMS-sealed env (secret-masked), and verified custom domains.
     // Org-scoped by the Bearer owner via the /v1 bearer BFF. DISTINCT from the admin
-    // `applications` fleet board (/v1/apps) and internal-admin platform.hanzo.ai.
+    // `applications` fleet board (/v1/platform/apps) and internal-admin platform.hanzo.ai.
     id: 'app-platform',
     icon: Rocket,
     description: 'Deploy and manage your container apps — projects, deploys, logs, secrets, domains.',
@@ -1481,10 +1472,11 @@ const declared: Declaration[] = [
 
   // ── Data — Hanzo Cloud as an open Google Cloud. Each is a ZAP-native Hanzo
   //    fork (NOT vanilla OSS), provisioned through the shared `resourceModule`
-  //    factory over the provisioning contract (POST/GET/DELETE /v1/<kind>).
+  //    factory over the provisioning contract (POST/GET/DELETE /v1/provisioning/<kind>).
   {
     id: 'vector',
     icon: Boxes,
+    description: 'A managed vector database — provision one, then point a client at its connection string.',
     category: 'Data',
     stage: 'beta',
     repo: 'hanzoai/vector',
@@ -1605,16 +1597,6 @@ const declared: Declaration[] = [
     routes: [{ path: '', component: NodesModule }],
   },
   {
-    id: 'vpc',
-    label: 'VPC',
-    icon: Waypoints,
-    description: 'Private networks, subnets, and peering.',
-    category: 'Network',
-    stage: 'beta',
-    kind: 'module',
-    routes: [{ path: '', component: VpcModule }],
-  },
-  {
     id: 'dns',
     label: 'DNS',
     icon: Globe,
@@ -1628,7 +1610,7 @@ const declared: Declaration[] = [
   },
   {
     // Domains — REGISTER names (distinct from DNS, which manages records). Backed by
-    // the Hanzo Domains control plane (cloud clients/domain → name.com reseller):
+    // the Hanzo Domains control plane (cloud apps/domain → name.com reseller):
     // search/price/buy over /v1/domain, billed to the org's prepaid balance, the
     // domain born on Hanzo nameservers with its zone handed to hanzoai/dns.
     id: 'domains',
@@ -1642,7 +1624,7 @@ const declared: Declaration[] = [
   },
   {
     // Cloudflare — the org's OWN connected Cloudflare account, managed in-console
-    // over the asset plane at /v1/integrations/cloudflare/* (cloud clients/cloudflare).
+    // over the asset plane at /v1/cloudflare/* (cloud apps/cloudflare).
     // Sits beside DNS because it drives the SAME per-org KMS-sealed token hanzodns
     // uses for Cloudflare-synced zones. Pages + Workers are wired; R2/KV/D1 are
     // honest Phase-2 tabs. Connecting the account is the generic integrations flow.
@@ -1704,15 +1686,20 @@ const declared: Declaration[] = [
     ],
   },
   {
+    // There is nothing here to manage, and that is the design. The engine is stateless:
+    // POST /v1/authz/check decides one question against the grants the caller presents,
+    // and the grant set itself is issued and signed by Hanzo IAM — one source of truth
+    // for who may do what, never a second writable copy behind this door. So the product
+    // is the native overview (what it decides, the vocabulary it decides in, and the IAM
+    // page that changes it), not a table over a store that does not exist.
     id: 'authz',
     icon: ShieldCheck,
-    description: 'Fine-grained authorization policies and checks.',
     category: 'Security',
     stage: 'beta',
     repo: 'hanzoai/authz',
     docs: `${DOCS}/authz`,
     kind: 'module',
-    routes: [{ path: '', component: AuthzModule }],
+    routes: overviewRoutes('authz'),
   },
   {
     id: 'kms',
@@ -1772,7 +1759,7 @@ const declared: Declaration[] = [
   {
     id: 'zero-trust',
     icon: ShieldCheck,
-    description: 'Private service access: routers, identities, policies, and sessions.',
+    description: 'Private service access: the fabric\u2019s routers and the services published on them.',
     category: 'Security',
     stage: 'beta',
     repo: 'hanzoai/zt',
@@ -1784,10 +1771,7 @@ const declared: Declaration[] = [
     ],
     subpages: [
       { slug: 'services', label: 'Services' },
-      { slug: 'identities', label: 'Identities' },
       { slug: 'routers', label: 'Routers' },
-      { slug: 'policies', label: 'Policies' },
-      { slug: 'sessions', label: 'Sessions' },
     ],
   },
 
@@ -1874,6 +1858,7 @@ const declared: Declaration[] = [
     // on a 404.
     id: 'connectors',
     icon: Cable,
+    description: 'Connect X, GitHub, Google, Slack and the rest of your tools to this org.',
     category: 'Settings',
     stage: 'beta',
     repo: 'hanzoai/cloud',
@@ -1957,7 +1942,7 @@ const declared: Declaration[] = [
   //    the CI/CD pipeline ships incrementally.
   {
     // The project HUB: create an IAM-native project → deploy a static build (drag-drop
-    // zip/tar.gz → /v1/platform/sites) → manage deployments, domains, config → and
+    // zip/tar.gz → /v1/projects/sites) → manage deployments, domains, config → and
     // deep-link the SAME project to hanzo.app (edit) + hanzo.chat (chat) on one shared
     // key. The Infrastructure-category flagship; `projects` stays the thin scope picker.
     id: 'platform',
@@ -1980,6 +1965,7 @@ const declared: Declaration[] = [
     id: 'store',
     label: 'App Store',
     icon: Boxes,
+    description: 'Browse a thousand open-source apps and deploy any of them onto your own platform.',
     category: 'Infrastructure',
     stage: 'beta',
     repo: 'hanzoai/cloud',
@@ -1994,9 +1980,9 @@ const declared: Declaration[] = [
   {
     // Deploy — the front door for shipping. ONE section over the two things an org
     // deploys (container apps via `/v1/platform/projects/:p/apps`, static sites via
-    // `/v1/platform/sites`) plus readings of the three planes a deploy touches:
+    // `/v1/projects/sites`) plus readings of the three planes a deploy touches:
     // CD (`/v1/deploy/applications` — reconciliation of the caller's own App CRs),
-    // CI (`/v1/builds`), and Storage (`/v1/s3/buckets`). Each is the ONE canonical
+    // CI (`/v1/platform/builds`), and Storage (`/v1/s3/buckets`). Each is the ONE canonical
     // head for its subject; there is deliberately no `/v1/platform/cd|ci|s3` alias,
     // which would give the estate two paths to the same data.
     //
@@ -2032,7 +2018,7 @@ const declared: Declaration[] = [
     // per-org) that reads the live operator App CRs through cloud's /v1/deploy/* — the
     // console holds NO cluster credentials; cloud holds the k8s client and enforces
     // authz server-side. Every CR is a live node: its declared image, folded health +
-    // sync, owned-resource topology, CI builds, logs, and confirm-gated Sync/Rollback
+    // sync, owned-resource topology, CI builds, and confirm-gated Sync/Rollback
     // (rollback pins the CR image tag to a prior clean-semver release → the operator
     // reconciles). The map/drawer are the shared @hanzo/canvas primitive.
     // Labelled `Fleet`, not `Deploy`: this is the ESTATE map (every org's App CRs,
@@ -2042,7 +2028,7 @@ const declared: Declaration[] = [
     id: 'gitops',
     label: 'Fleet',
     icon: GitBranch,
-    description: 'The fleet deploy map — every operator App CR as a live node with reconciled health, sync, resource topology, CI builds, logs, and one-click rollback. The Hanzo operator reconciles.',
+    description: 'The fleet deploy map — every operator App CR as a live node with reconciled health, sync, resource topology, CI builds, and one-click rollback. The Hanzo operator reconciles.',
     category: 'Infrastructure',
     stage: 'admin',
     repo: 'hanzoai/console',
@@ -2062,8 +2048,8 @@ const declared: Declaration[] = [
     routes: [{ path: '', component: ProjectsModule }],
   },
   {
-    // Native, Linear-grade @hanzo/gui issue tracker over the real cloud `/v1/tracker`
-    // surface (cloud clients/tracker — native Go, per-(org,team) SQLite). The durable
+    // Native, Linear-grade @hanzo/gui issue tracker over the real cloud `/v1/todo`
+    // surface (cloud apps/todo — native Go, per-(org,team) SQLite). The durable
     // replacement for the retired Huly/Svelte hanzo.team tracker: a unified board across
     // every team AND every mirrored GitHub repo (the App-webhook seam), a grouped List +
     // Board + Cycles + Roadmap, a keyboard-first command palette, and agent-actionable
@@ -2090,30 +2076,24 @@ const declared: Declaration[] = [
     ],
   },
   {
-    // White-label TENANTS board — the operator surface for launching, branding,
-    // domain-binding, and managing white-label tenants + resold sub-orgs. GLOBAL-ADMIN
-    // ONLY (`admin: true` hides it from every customer's nav/palette). It
-    // COMPOSES real backends: the IAM org list (/admin/iam, global-admin gated) is the
-    // tenant set + brand; the admin cockpit (/v1/admin/customers) is plan/wallet/status;
-    // the platform (/paas) provisions clusters + (follow-up) domains/packages. The '' route
-    // is the tenants list + reseller tree; the `:tab` route serves the package catalog
-    // (`/tenants/packages`). Reseller self-scoping + a real `parentOrgId` are the
-    // foundation follow-ups (flagged honestly in the board, never fabricated).
+    // White-label TENANTS board — the operator surface for launching, branding, and
+    // managing white-label tenants + resold sub-orgs. GLOBAL-ADMIN ONLY (`admin: true`
+    // hides it from every customer's nav/palette). It COMPOSES real backends: the IAM
+    // org list (/admin/iam, global-admin gated) is the tenant set + brand, and the admin
+    // cockpit (/v1/admin/customers) is plan/wallet/status. Reseller self-scoping + a real
+    // `parentOrgId` are the foundation follow-ups (flagged honestly in the board, never
+    // fabricated).
     id: 'tenants',
     icon: Building2,
-    description: 'White-label tenants + resold sub-orgs — brand, domain, IAM scope, packages, and billing.',
+    description: 'White-label tenants + resold sub-orgs — brand, IAM scope, and billing.',
     category: 'Infrastructure',
     stage: 'admin',
     repo: 'hanzoai/console',
     kind: 'module',
-    routes: [
-      { path: '', component: TenantsModule },
-      { path: ':tab', component: TenantsModule },
-    ],
-    subpages: [{ slug: 'packages', label: 'Packages', icon: Boxes }],
+    routes: [{ path: '', component: TenantsModule }],
   },
   {
-    // Apps — the org's BUILDABLE SITES (cloud clients/projectsvc, /v1/projects): the
+    // Apps — the org's BUILDABLE SITES (cloud apps/projects, /v1/projects): the
     // projects hanzo.app publishes when a user ships a site from the conversational
     // builder. Closes the console→app round-trip — every published site lists here
     // with its live URL + deploy history, and each row deep-links back into hanzo.app
@@ -2138,6 +2118,7 @@ const declared: Declaration[] = [
   {
     id: 'environments',
     icon: Layers,
+    description: 'Your deploy targets, and what is running on each.',
     category: 'Infrastructure',
     stage: 'beta',
     kind: 'module',
@@ -2146,6 +2127,7 @@ const declared: Declaration[] = [
   {
     id: 'builds',
     icon: Hammer,
+    description: 'Every build the platform ran for your apps — what it produced, and what it logged.',
     category: 'Infrastructure',
     stage: 'beta',
     kind: 'module',
@@ -2164,6 +2146,7 @@ const declared: Declaration[] = [
   {
     id: 'releases',
     icon: Rocket,
+    description: 'The versions that actually reached the cluster.',
     category: 'Infrastructure',
     stage: 'beta',
     kind: 'module',
@@ -2172,6 +2155,7 @@ const declared: Declaration[] = [
   {
     id: 'pipelines',
     icon: GitBranch,
+    description: 'One build-and-deploy pipeline per app, with its latest run.',
     category: 'Infrastructure',
     stage: 'beta',
     docs: `${DOCS}/pipelines`,
@@ -2180,11 +2164,12 @@ const declared: Declaration[] = [
   },
   {
     // CUSTOMER self-service — provision a dedicated DOKS cluster and manage its node
-    // pools (add / scale / delete) over the native cloud `/v1/clusters*` surface,
+    // pools (add / scale / delete) over the native cloud `/v1/visor/clusters*` surface,
     // org-scoped by the Bearer owner. Not admin-gated: a paying customer runs their
     // own clusters. The unified fleet cockpit (see + attach + connect) is Kubernetes.
     id: 'clusters',
     icon: Network,
+    description: 'Provision a dedicated Kubernetes cluster and scale its node pools.',
     category: 'Compute',
     stage: 'beta',
     repo: 'hanzoai/operator',
@@ -2193,9 +2178,9 @@ const declared: Declaration[] = [
   },
   {
     // CUSTOMER self-service — the UNIFIED COMPUTE FLEET: managed + attached BYO
-    // clusters (with GPU inventory) MERGED from `GET /v1/clusters`, plus dialed-in
-    // BYO machines from `GET /v1/machines`, and the three connect actions (attach a
-    // BYO cluster via `POST /v1/clusters`, connect a box via `hanzo gpu connect`,
+    // clusters (with GPU inventory) MERGED from `GET /v1/visor/clusters`, plus dialed-in
+    // BYO machines from `GET /v1/visor/machines`, and the three connect actions (attach a
+    // BYO cluster via `POST /v1/visor/clusters`, connect a box via `hanzo gpu connect`,
     // connect a cloud account — coming). Org-scoped by the Bearer owner; honest states.
     id: 'kubernetes',
     icon: Boxes,
@@ -2239,6 +2224,7 @@ const declared: Declaration[] = [
     // not initialized (503) or unrouted (404); never fabricated issues.
     id: 'errors',
     icon: AlertTriangle,
+    description: 'Crashes grouped by fingerprint, with resolve, ignore, and reopen.',
     category: 'Observe',
     stage: 'beta',
     repo: 'hanzoai/o11y',
@@ -2253,7 +2239,7 @@ const declared: Declaration[] = [
     // Hanzo Sentinel — the full Sentry-parity error/log/trace product FACE, served at
     // sentry.<brand> as a host-branded shell of THIS console (config.shell). It is
     // the Sentry PRODUCT in Hanzo's identity + @hanzo/gui design system (never the
-    // upstream Sentry look), over the `/v1/sentinel` contract. `shell: 'sentry'` scopes
+    // upstream Sentry look), over the `/v1/o11y/sentinel` contract. `shell: 'sentry'` scopes
     // it to that face — HIDDEN from the full console nav (the console already has the
     // o11y `errors`/`logs`/`o11y`(traces) surfaces), shown ONLY inside sentry.<brand>.
     // ONE module, panels routed by `:tab` (+ a `:tab/:id` detail): '' = Issues,
@@ -2332,7 +2318,7 @@ const declared: Declaration[] = [
     docs: `${DOCS}/billing`,
     kind: 'module',
     // The ONE canonical <UsagePanel> (@hanzo/usage/react) over the server-owned
-    // GET /v1/get-cloud-usages overview — no bespoke re-derivation, the same panel
+    // GET /v1/ai/usages/cloud overview — no bespoke re-derivation, the same panel
     // every Hanzo surface renders.
     routes: [{ path: '', component: AiUsageModule }],
   },
@@ -2353,13 +2339,14 @@ const declared: Declaration[] = [
   },
   {
     // Native Analytics — per-org LLM + web + commerce analytics over the unified
-    // Hanzo Datastore warehouse, read through cloud-api /v1/analytics/* via
+    // Hanzo Datastore warehouse, read through cloud-api /v1/event/* via
     // the /v1 bearer proxy (the FOUR real routes: overview/timeseries/top/health).
     // Overview (LLM lens REAL from hanzo.cloud_usage; web/commerce honest-empty until
     // the events collector emits) + LLM (top models) — every metric a real query,
     // never fabricated. See universe/docs/architecture/unified-analytics.md.
     id: 'analytics',
     icon: BarChart3,
+    description: 'Your LLM, web, and commerce numbers, read from the one warehouse every product writes to.',
     category: 'Observe',
     stage: 'beta',
     repo: 'hanzoai/analytics',
@@ -2381,6 +2368,7 @@ const declared: Declaration[] = [
     // literal wins over the parameter and the sub-page is reachable.
     id: 'tags',
     icon: Tags,
+    description: 'The pixels each site injects, and the server-side conversion destinations your org sends to.',
     category: 'Observe',
     stage: 'beta',
     repo: 'hanzoai/cloud',
@@ -2447,9 +2435,10 @@ const declared: Declaration[] = [
   },
   {
     // The signed-in org's per-tenant view of the UNIFIED finance ledger (hanzoai/
-    // finance, embedded in cloud): balance, metered spend, credits, invoices, payment
-    // methods, and the double-entry ledger, over /v1/finance/* scoped to the caller's
-    // org (the `/v1` bearer proxy resolves the org from the token owner). Renders the
+    // finance, embedded in cloud): metered spend, credits, invoices, payment methods,
+    // and the double-entry ledger, over /v1/billing/{credits,invoices,ledger,methods}
+    // scoped to the caller's org (the `/v1` bearer proxy resolves the org from the
+    // token owner). Renders the
     // SHARED @hanzo/finance-ui board — the SAME component finance.hanzo.ai renders — so
     // a spend/usage/credits card is identical across both surfaces (the shared-reuse
     // point). Distinct id from the admin `finance` platform-FinOps board (admin: true)
@@ -2470,11 +2459,10 @@ const declared: Declaration[] = [
     icon: Gauge,
     description: 'Live health of every Hanzo service across your clusters.',
     category: 'Observe',
-    // GLOBAL-ADMIN ONLY (`admin: true`): the board reads the whole platform's
-    // VictoriaMetrics `up{}` inventory through the SuperAdmin-gated cloud VM proxy
-    // (`/v1/o11y/vm/*`, clients/o11y/vmproxy.go), which 403s a non-super caller. So a
-    // customer gets the graceful AdminManagedNotice (no proxy call, no console 403)
-    // instead of an error card, and only a SuperAdmin renders StatusModule + the board.
+    // GLOBAL-ADMIN ONLY (`admin: true`): the board reads the whole fleet's service
+    // inventory from `/v1/o11y/availability`, which is platform sudo and 403s a
+    // non-super caller. So a customer gets the graceful AdminManagedNotice (no call, no
+    // console 403) instead of an error card, and only a SuperAdmin renders StatusModule.
     stage: 'admin',
     repo: 'hanzoai/operator',
     kind: 'module',
@@ -2486,6 +2474,7 @@ const declared: Declaration[] = [
     id: 'plans',
     label: 'Plans & Pricing',
     icon: Tag,
+    description: 'Compare cloud tiers — price, included capacity, limits, features. Paying happens in Billing.',
     category: 'Observe',
     stage: 'beta',
     repo: 'hanzoai/billing',
@@ -2541,12 +2530,13 @@ const declared: Declaration[] = [
     routes: [{ path: '', component: SettlementModule }],
   },
   {
-    // Real, enabled — connect a wallet on Hanzo Mainnet, view HUSD + cloud
-    // credit, and top up credit with HUSD (same-origin verify-and-record seam).
+    // Real, enabled — connect a wallet on Hanzo Mainnet and read its HUSD beside the
+    // org's cloud credit. Credit is ADDED in Billing, which issues a deposit address
+    // for a crypto payment and credits when the transfer confirms.
     id: 'wallet',
     label: 'Wallets',
     icon: Wallet,
-    description: 'Connect a wallet and top up cloud credit with HUSD.',
+    description: 'Connect a wallet and see your HUSD beside your cloud credit.',
     category: 'Web3',
     stage: 'beta',
     repo: 'hanzoai/billing',
@@ -2636,7 +2626,7 @@ const declared: Declaration[] = [
     // Super-admin per-org entitlements editor (hidden from every customer nav/
     // palette). Masquerade into an org, then toggle which products its
     // console shows — the admin half of the out-of-box "assemble your own backend"
-    // flow. Reads/writes /v1/orgs/{org}/entitlements (org-scoped server-side).
+    // flow. Reads/writes /v1/entitlements/orgs/{org} (org-scoped server-side).
     id: 'entitlements',
     icon: ShieldCheck,
     category: 'Settings',
@@ -2649,7 +2639,6 @@ const declared: Declaration[] = [
     // Global-admin reserve-fund board (hidden from every customer nav/palette).
     id: 'treasury',
     icon: Landmark,
-    description: 'Platform reserve fund — revenue-share policy, backed growth-loop payouts, double-entry journal, Hanzo L1 anchor.',
     category: 'Observe',
     stage: 'admin',
     repo: 'hanzoai/cloud',
@@ -2657,20 +2646,12 @@ const declared: Declaration[] = [
     routes: [{ path: '', component: TreasuryAdminModule }],
   },
   {
-    id: 'tokens',
-    icon: Coins,
-    category: 'Web3',
-    stage: 'beta',
-    repo: 'hanzoai/treasury',
-    kind: 'module',
-    routes: [{ path: '', component: TokensModule }],
-  },
-  {
     // Bootnode ("Web3 Backend in a Box") blockchain networks — the core web3
     // provisioning primitive, surfaced in the lux/zoo web3 consoles. Reads the
     // real bootnode control plane via console2's /bootnode proxy (honest states).
     id: 'networks',
     icon: Blocks,
+    description: 'A blockchain network in a box — provision one and see the nodes running it.',
     category: 'Web3',
     stage: 'beta',
     repo: 'hanzoai/bootnode',
@@ -2690,6 +2671,7 @@ const declared: Declaration[] = [
   {
     id: 'oracles',
     icon: Radio,
+    description: 'The on-chain price and data feeds your contracts can read.',
     category: 'Web3',
     stage: 'beta',
     kind: 'module',
@@ -2705,28 +2687,6 @@ const declared: Declaration[] = [
     routes: [{ path: '', component: AttestationsModule }],
   },
 
-  {
-    // console.lux.cloud LUX NETWORK board — the SuperAdmin infrastructure/investor
-    // view of the REAL luxd + lux-k8s fleet: validators (per-network up/height/peers/
-    // bootstrapped, the mainnet primary highlighted with its 2.5B LUX stake), node +
-    // pod memory pressure, and the named-service status grid. In-console `module`
-    // (owns its route), reading the SuperAdmin-gated, allowlisted cloud VM proxy
-    // (lib/api/lux-infra.ts → /v1/o11y/vm/query). SUPERADMIN + LUX ONLY: `admin: true`
-    // hides it from every customer and the module renders SuperAdminRequired for a
-    // non-SuperAdmin; `brands: ['lux']` keeps it OFF every non-Lux console (zero
-    // cross-brand leak). The cloud proxy (admin(c) + fixed allowlist) is the
-    // authoritative server gate. Honest by construction — every value folds real
-    // telemetry, on-chain uptime is labeled a tracker bug, nothing fabricated.
-    id: 'lux-network',
-    icon: Waypoints,
-    description: 'Validators, node and pod memory, and Lux service health across the fleet, as each node reports it.',
-    category: 'Web3',
-    stage: 'admin',
-    brands: ['lux'],
-    repo: 'hanzoai/console',
-    kind: 'module',
-    routes: [{ path: '', component: LuxNetworkModule }],
-  },
   // ── Web3 · Chain apps — launch tiles for the DEPLOYED Lux / Zoo dApp suite.
   //    These are standalone web3 apps that live at their OWN domains (owned by
   //    the Lux / Zoo products, not Hanzo control planes), so they are `external`
@@ -2849,6 +2809,7 @@ const declared: Declaration[] = [
   {
     id: 'chat',
     icon: MessageSquare,
+    description: 'Talk to any model in the catalog, and keep every conversation.',
     category: 'Apps',
     repo: 'hanzoai/chat',
     docs: `${DOCS}/chat`,
@@ -2870,14 +2831,14 @@ const declared: Declaration[] = [
     repo: 'hanzoai/bot',
     kind: 'module',
     // '' = the gateway status/deep-links; 'run' = launch a computer-using bot on a
-    // booted machine and watch it live over VNC (cloud POST /v1/bots/run, metered).
+    // booted machine and watch it live over VNC (cloud POST /v1/bot/runs, metered).
     routes: [
       { path: '', component: BotModule },
       { path: 'run', component: BotsConsole },
     ],
   },
   {
-    // Guide — the Business AI Guide (cloud clients/guide, /v1/guide/*): an interactive
+    // Guide — the Business AI Guide (cloud apps/guide, /v1/guide/*): an interactive
     // launch checklist every org completes on-site. A curriculum drives the steps,
     // per-org progress tracks a state per step, and the Business AI can DO a step for
     // you (streamed). Foundational onboarding — always-on for every org (entitlements).
@@ -2895,7 +2856,7 @@ const declared: Declaration[] = [
   },
   {
     // CRM — the first Hanzo Business-OS brick, over the native-Go cloud `/v1/crm`
-    // surface (cloud clients/crm on Base/SQLite: companies/contacts/opportunities,
+    // surface (cloud apps/crm on Base/SQLite: companies/contacts/opportunities,
     // a port of Twenty's core model). Per-org through the user-bearer /v1 bearer BFF.
     id: 'crm',
     label: 'CRM',
@@ -2944,7 +2905,7 @@ const declared: Declaration[] = [
   },
   {
     // Company — self-service incorporation over the REAL cloud `/v1/company` surface
-    // (native-Go `clients/company`: an 8-stage formation state machine on Base/SQLite).
+    // (native-Go `apps/company`: an 8-stage formation state machine on Base/SQLite).
     // The wizard renders the panel for the formation's CURRENT stage (the backend is the
     // source of truth) and advances through the guarded transition door; KYC/e-sign/filing
     // report honest "pending — manual review" while those providers are stubs. The company
@@ -2959,7 +2920,7 @@ const declared: Declaration[] = [
   },
   {
     // Cap Table — the per-org capitalization ledger over the REAL cloud `/v1/captable`
-    // surface (native-Go `clients/captable`, HIP-0106: the Captable,Inc logic on a goja
+    // surface (native-Go `apps/captable`, HIP-0106: the Captable,Inc logic on a goja
     // bundle over per-tenant Base/SQLite). Tabs: the computed ownership Summary,
     // Stakeholders, Shares (issued certificates), Classes, and Fundraising (SAFEs + rounds);
     // the cap-table math is computed SERVER-SIDE (the `summary` route), never in the client.
@@ -2985,8 +2946,8 @@ const declared: Declaration[] = [
   },
   {
     // Marketing — the in-process fold of github.com/hanzoai/marketing over the REAL
-    // native-Go cloud `/v1/marketing` surface (cloud clients/marketing on Base/SQLite:
-    // a per-org campaign store, twin of clients/crm). The host→mode twin of the Billing
+    // native-Go cloud `/v1/marketing` surface (cloud apps/marketing on Base/SQLite:
+    // a per-org campaign store, twin of apps/crm). The host→mode twin of the Billing
     // Center: marketing.hanzo.ai boots THIS product alone (config.marketingOnly). Per-org,
     // honest-empty by construction — every state is loading / BackendStateCard / empty.
     id: 'marketing',
@@ -2999,8 +2960,8 @@ const declared: Declaration[] = [
   },
   {
     // Ads — the net-new Ads product over the REAL native-Go cloud `/v1/ads` surface
-    // (cloud clients/ads on Base/SQLite: a per-org ad-campaign store, twin of
-    // clients/crm). The host→mode twin of the Billing Center: ads.hanzo.ai boots
+    // (cloud apps/ads on Base/SQLite: a per-org ad-campaign store, twin of
+    // apps/crm). The host→mode twin of the Billing Center: ads.hanzo.ai boots
     // THIS product alone (config.adsOnly). Per-org, honest-empty by construction —
     // every state is loading / BackendStateCard / empty.
     id: 'ads',
@@ -3014,8 +2975,8 @@ const declared: Declaration[] = [
   {
     // Publish (formerly "Social") — the in-process fold of the live social stack
     // (github.com/hanzoai/social: social-backend/frontend/orchestrator, a Postiz-style
-    // scheduler) over the REAL native-Go cloud `/v1/social` surface (cloud clients/social
-    // on Base/SQLite: a per-org accounts+posts store, twin of clients/crm). The host→mode
+    // scheduler) over the REAL native-Go cloud `/v1/social` surface (cloud apps/social
+    // on Base/SQLite: a per-org accounts+posts store, twin of apps/crm). The host→mode
     // twin of the Billing Center: social.hanzo.ai boots THIS product alone
     // (config.socialOnly). Per-org, honest-empty by construction — every state is loading
     // / BackendStateCard / empty. DISPLAY renamed to "Publish"; the internal id 'social',
@@ -3032,7 +2993,7 @@ const declared: Declaration[] = [
   },
   {
     // Startups — the Hanzo Startup Program pipeline, over the native-Go cloud
-    // `/v1/crm/applications` surface (cloud clients/crm on Base/SQLite). Public
+    // `/v1/crm/applications` surface (cloud apps/crm on Base/SQLite). Public
     // marketing form → AI screen → staff pipeline board. Per-org (hanzo).
     id: 'startups',
     icon: Rocket,
@@ -3066,7 +3027,7 @@ const declared: Declaration[] = [
   {
     // ERP — a NATIVE ERP on the Hanzo Framework DocType engine (/v1/framework/*), NOT
     // an iframe. A master/transaction is a framework DocType (module "erp"); posting
-    // (stock ledger, balanced GL) is a native-Go hook on the engine (clients/erp).
+    // (stock ledger, balanced GL) is a native-Go hook on the engine (apps/erp).
     // Rendered by the generic metadata-driven DocType renderer (src/components/doctype/*),
     // per-org — the SAME renderer as CMS, with zero ERP-specific UI code.
     id: 'erp',
@@ -3087,7 +3048,7 @@ const declared: Declaration[] = [
     // Help Center — a NATIVE support desk on the Hanzo Framework DocType engine
     // (/v1/framework/*), NOT an iframe. A ticket is a framework document (module
     // "help"); its lifecycle is a status field; agents/teams/SLAs are DocTypes
-    // (clients/help — pure fixtures, no hooks). Rendered by the generic
+    // (apps/help — pure fixtures, no hooks). Rendered by the generic
     // metadata-driven DocType renderer, per-org — the SAME renderer as CMS/ERP.
     id: 'helpdesk',
     label: 'Help Center',
@@ -3474,11 +3435,12 @@ const declared: Declaration[] = [
   //    work into the one console, on real /v1 backends with honest states.
   {
     // The user's personal memory — what they've asked the assistant to remember.
-    // Per-user, on the /v1/memory backend (hanzoai/ai). `enabled`: the module
+    // Per-user, on the /v1/ai/memory backend (hanzoai/ai). `enabled`: the module
     // renders now and shows an honest "initializing" card until the backend is
     // deployed — never fabricated memories.
     id: 'memory',
     icon: NotebookPen,
+    description: 'What you have asked the assistant to remember about you.',
     category: 'Data',
     stage: 'beta',
     repo: 'hanzoai/ai',
@@ -3696,7 +3658,7 @@ export const visibleCatalog = (viewer: Viewer, enabled?: string[] | null): Catal
     .filter(inBrand)
   // ENTITLEMENT (customer only): what the org's PLAN grants — always-on essentials
   // plus its `enabled` set. A different question from stage and a live one (the
-  // `/v1/orgs/{org}/entitlements` backend answers), so it composes here rather than
+  // `/v1/entitlements/orgs/{org}` backend answers), so it composes here rather than
   // collapsing into the stage predicate. An operator bypasses; a `null` set is
   // ungated. ONE predicate, `filterEntitled`, unchanged.
   return filterEntitled(byStage, enabled, viewer.admin)

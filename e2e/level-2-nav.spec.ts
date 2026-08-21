@@ -39,7 +39,7 @@ const ACCOUNT = {
   isAdmin: true,
 }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 
@@ -196,13 +196,13 @@ test('back returns a level without losing pinned state', async ({ browser }) => 
  * and it is the thing that regresses the moment someone adds a tab bar back.
  */
 const CONVERTED = [
-  'models', 'evals', 'ai-accounts', 'containers', 'analytics', 'finetuning', 'team',
+  'models', 'evals', 'ai-accounts', 'analytics', 'finetuning', 'team',
   'automations', 'embeddings', 'tasks', 'functions', 'profile', 'router', 'settings',
   'zero-trust', 'billing', 'captable', 'crm',
 ] as const
 
 test('no product paints a second level-2 nav at lg+', async ({ browser }) => {
-  // Eighteen full page loads in one test — it lands within a hair of the 60s
+  // Seventeen full page loads in one test — it lands within a hair of the 60s
   // default and fails on the wrong side of it about as often as the right one.
   test.slow()
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })

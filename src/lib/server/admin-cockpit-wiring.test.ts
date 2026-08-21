@@ -5,14 +5,15 @@ import { CLOUD_HEADS, allowCloudSurface } from '~/lib/server/proxy-allow'
 
 /**
  * The operator-cockpit wiring is a trust boundary: the fleet management surfaces
- * (customers/revenue/analytics + the admin enablement set) must ride the GLOBAL-
- * ADMIN-gated aggregate proxy, and the customer self-service enablement (opt-in)
- * must ride the per-tenant /v1 bearer BFF — never the reverse, and never widening the
- * least-privilege allow-lists to reach iam/kms.
+ * (customers/revenue/analytics + the admin pricing set — the catalog and the
+ * enablement registry) must ride the GLOBAL-ADMIN-gated aggregate proxy, and the
+ * customer self-service enablement (opt-in) must ride the per-tenant /v1 bearer BFF —
+ * never the reverse, and never widening the least-privilege allow-lists to reach
+ * iam/kms.
  */
 describe('operator cockpit wiring', () => {
   it('the admin aggregate admits the new cockpit heads (read + :org sub-paths)', () => {
-    for (const h of ['customers', 'revenue', 'analytics', 'enablement']) {
+    for (const h of ['customers', 'revenue', 'analytics', 'pricing']) {
       expect(allowAdminSurface(`v1/admin/${h}`)).toBe(true)
       expect(allowAdminSurface(`v1/admin/${h}/acme`)).toBe(true)
       expect(allowAdminSurface(`v1/admin/${h}/acme/credit`)).toBe(true)
@@ -29,9 +30,13 @@ describe('operator cockpit wiring', () => {
   })
 
   it('the customer self-service enablement rides the per-tenant /v1 bearer BFF', () => {
-    expect(CLOUD_HEADS).toContain('enablement')
-    expect(allowCloudSurface('v1/enablement')).toBe(true)
-    expect(allowCloudSurface('v1/enablement/optin')).toBe(true)
-    expect(allowCloudSurface('v1/enablement/optout')).toBe(true)
+    // The ROUTE, not the `pricing` head: what an org may USE is a read a signed-in user
+    // makes; what anything COSTS is the catalog the admin proxy carries.
+    expect(CLOUD_HEADS).toContain('pricing/enablement')
+    expect(CLOUD_HEADS).not.toContain('pricing')
+    expect(allowCloudSurface('v1/pricing/enablement')).toBe(true)
+    expect(allowCloudSurface('v1/pricing/enablement/optin')).toBe(true)
+    expect(allowCloudSurface('v1/pricing/enablement/optout')).toBe(true)
+    expect(allowCloudSurface('v1/pricing/models')).toBe(false)
   })
 })

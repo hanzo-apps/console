@@ -7,7 +7,7 @@
  * Every `hanzo.ai/v1` App CR is a live service node on one pannable/zoomable
  * `@hanzo/canvas` board, color-coded by its reconciled CD health. Tap a node for
  * the drill-in drawer: the owned-resource TOPOLOGY (Service CR → Deployment → RS →
- * Pods), the CI build timeline, streaming pod logs, and the git source — with
+ * Pods), the CI build timeline, and the git source — with
  * confirm-gated Sync + Rollback. The console holds NO cluster credentials; it
  * reads everything through cloud's `/v1/deploy/*` (authz server-side) and never
  * fabricates a row — a forbidden/not-routed read renders an honest state.
@@ -192,7 +192,7 @@ export function GitOpsModule({ params }: { params: Record<string, string> }) {
     <YStack gap="$4" p="$4">
       <PageHeader
         title="Deploy"
-        subtitle="The fleet on one live map — every operator App CR, its reconciled health, sync, resource topology, logs, and one-click rollback. The Hanzo operator reconciles."
+        subtitle="The fleet on one live map — every operator App CR, its reconciled health, sync, resource topology, and one-click rollback. The Hanzo operator reconciles."
         actions={
           <XStack gap="$2" items="center" flexWrap="wrap">
             {envOptions.length > 1 ? (
@@ -236,7 +236,7 @@ export function GitOpsModule({ params }: { params: Record<string, string> }) {
         <EmptyState
           icon={Boxes}
           title="No applications yet"
-          description="Every operator App CR shows up here as a live service node on the deploy map — its declared image, reconciled health, resource topology, logs, and one-click rollback. Deploy via the native pipeline (git push → image → CR) and it appears here."
+          description="Every operator App CR shows up here as a live service node on the deploy map — its declared image, reconciled health, resource topology, and one-click rollback. Deploy via the native pipeline (git push → image → CR) and it appears here."
           bullets={[
             'Source: the live operator CRs, read server-side by cloud (GET /v1/deploy/applications) — the console holds no cluster credentials.',
             'Rollback pins the CR image tag to a prior clean-semver release; the operator reconciles. No kubectl.',

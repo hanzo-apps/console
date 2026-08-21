@@ -36,7 +36,7 @@ const SNAPSHOT = {
   alerts: [{ volume: 'o11y', pct: 91, level: 'critical' }],
 }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 /** Serve the real snapshot for the storage read; honest-empty for every other API. */
 async function mock(route: Route) {

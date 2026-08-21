@@ -44,7 +44,7 @@ app/                         Next.js app router
   layout.tsx                 html shell, dark default, mounts <Provider>
   globals.css                base resets (Gui CSS injected via plugin)
   signin/page.tsx            sign-in (delegates to IAM)
-  auth/callback/page.tsx     OIDC callback -> /v1/signin -> session
+  auth/callback/page.tsx     OIDC callback -> /v1/ai/signin -> session
   (dashboard)/
     layout.tsx               AuthGate + DashboardShell
     page.tsx                 product overview cards
@@ -91,7 +91,7 @@ keyed by `owner/modelName`, so modelName is form-entered, not generated).
 ## /v1 backend client
 
 One `request()` in `lib/api/client.ts`: always `credentials: 'include'` (the
-backend sets a session cookie at `/v1/signin`), forwards `Accept-Language`,
+backend sets a session cookie at `/v1/ai/signin`), forwards `Accept-Language`,
 unwraps the casibase `{ status, msg, data, total }` envelope (named `total`
 first, legacy `data2` count accepted until the emitters finish renaming), throws typed
 `ApiError` (401/403 carry status). Base URL = `config.cloudUrl` (default
@@ -115,8 +115,8 @@ Endpoint surface ported from `hanzoai/ai` `web/src/backend/*.js`
 (`iss=https://hanzo.id`), the one the cloud `/v1` backend validates. `getSigninUrl()`
 builds the authorize URL (`https://hanzo.id/login/oauth/authorize?...redirect_uri=
 <origin>/auth/callback`). IAM returns `?code&state`; the callback posts them to
-`/v1/signin`, which the cloud backend exchanges and mints the session cookie;
-`useSession` then loads `/v1/get-account`.
+`/v1/ai/signin`, which the cloud backend exchanges and mints the session cookie;
+`useSession` then loads `/v1/ai/account`.
 
 App/client is **`hanzo-cloud`**, org `hanzo` — NOT a console-specific app. console2
 is a front-end OF the shared cloud `/v1` backend, which exchanges the code and
@@ -192,13 +192,13 @@ The nav shell, catalog home, favorites, and router still render from the one
 `PlatformModule.tsx` is the embedded PaaS, wired to the REAL PaaS control plane.
 The browser calls console2's OWN origin under `/paas/*`; the server route
 `app/paas/[...path]/route.ts` forwards to the ONE Hanzo API endpoint at
-`/v1/paas/*` (`CLOUD_API_URL`, default `https://api.hanzo.ai` — in-cluster in
-prod), never a second API host: `platform.hanzo.ai` serves no `/v1/paas/*` route
+`/v1/platform/*` (`CLOUD_API_URL`, default `https://api.hanzo.ai` — in-cluster in
+prod), never a second API host: `platform.hanzo.ai` serves no `/v1/platform/*` route
 and 401s every `/v1/*` path uniformly.
 It carries the service token from **server-only** env `PAAS_SERVICE_TOKEN` (sourced via
 KMS — never `NEXT_PUBLIC_`, never in the browser bundle, no CORS). It lists real
 apps across clusters with **declared vs running tag + drift** and a real
-health-gated **redeploy** (`POST /v1/apps/<id>/redeploy`). The six Deploy
+health-gated **redeploy** (`POST /v1/platform/fleet/<app>/deploy`). The six Deploy
 sub-pages (Projects/Environments/Builds/Registry/Releases/Pipelines) are tabs
 over the same real inventory. States are honest: loading, **not-configured (501
 when `PAAS_SERVICE_TOKEN` is unset)**, error, empty — it never invents rows.
@@ -226,7 +226,7 @@ headless Playwright on console2.hanzo.ai.
 Five "advertised-but-broken" surfaces the live E2E suite flagged, fixed honestly
 in the client (no fabrication):
 
-- **Vector module rendered nothing.** `GET /v1/vector` 200'd but the module
+- **Vector module rendered nothing.** `GET /v1/provisioning/vector` 200'd but the module
   blanked while SQL/KV rendered — the vector provisioning backend 200s a WRAPPED
   body (not a bare `Resource[]`), so the list view's `for…of` threw during render
   behind the error boundary. Fix: `normalizeResourceList` in `lib/api/provisioning.ts`
@@ -274,22 +274,22 @@ Findings + fixes (all in console2; honest states everywhere, no fakes):
   `hanzo-paas/MASTERTOKEN` (`hanzo-master-token`), which platform.hanzo.ai
   **rejects (401)**. The correct token is in secret **`paas-console-token`** key
   `PAAS_SERVICE_TOKEN` (== `platform-service-token`). CR repointed there.
-- **Platform contract was wrong.** The real platform serves `GET /v1/apps` (the
+- **Platform contract was wrong.** The real platform serves `GET /v1/platform/apps` (the
   apps inventory: declared/running/latest tag + drift + health + cluster +
-  namespace, ~100 services) and `GET|POST /v1/org/{org}/cluster` — NOT
-  `/v1/clusters` and NOT any `/k8s/{kind}` passthrough (those 401/404). `lib/api/
+  namespace, ~100 services) and the org's dedicated clusters at
+  `/v1/visor/clusters` — not a `/k8s/{kind}` passthrough (that 401/404s). `lib/api/
   platform.ts` reworked to `PlatformApi.apps()` + org-scoped `listClusters`/
   `provisionCluster`; dead `KubernetesApi`/`CLUSTER_ROUTES` removed.
-  - **Status** now reads `/v1/apps` → REAL health board (Services/Healthy/Clusters).
-  - **Kubernetes** now reads `/v1/apps` → REAL workloads per cluster (picker from
+  - **Status** now reads `/v1/platform/apps` → REAL health board (Services/Healthy/Clusters).
+  - **Kubernetes** now reads `/v1/platform/apps` → REAL workloads per cluster (picker from
     the clusters that actually appear).
-  - **Clusters** lists real dedicated DOKS via `/v1/org/{org}/cluster` (honest
+  - **Clusters** lists real dedicated DOKS via `/v1/visor/clusters` (honest
     empty; provision form wired to the real endpoint). Attach-by-kubeconfig dropped
     (no backend).
   - `interpretPlatformError` maps upstream 401/403 → honest "not configured".
-- **Bot** `/v1/bot/health` 404s on cloud-api (bot-gateway runs behind
-  api.hanzo.ai/hanzo.bot, not this host) → honest "not routed on this host" state
-  (was a red error).
+- **Bot** the liveness probe reads `/v1/bot/runtime/health` — cloud relays the runtime's
+  own ops paths with the prefix stripped rather than reimplementing a probe. Unreachable →
+  honest "not routed on this host" state, never a red error.
 - **Wallet** cloud-credit `/v1/billing/balance` 404s here (billing ships
   separately) → honest "not available on this deployment" (was a scary error).
   HUSD balance/top-up already honest "coming" (token unconfigured).
@@ -322,7 +322,7 @@ call (chat, playground, cmd+K `>`/`?`) failed. Fixed with two server routes that
 keep all credentials server-side (the browser only ever sends its session cookie):
 
 - **`app/ai/[...path]/route.ts`** — keyless AI proxy. Resolves the user from the
-  session cookie (cloud `/v1/get-account`), mints a SHORT-LIVED user-bound IAM
+  session cookie (cloud `/v1/ai/account`), mints a SHORT-LIVED user-bound IAM
   token (`/v1/iam/issue-user-token`, cached per-user until ~60s pre-expiry) as the
   confidential `hanzo-console` client, and forwards to `AI_GATEWAY_URL/v1/<path>`
   with `Bearer <token>`. Allow-listed to `v1/models|chat|chat/completions|
@@ -485,9 +485,9 @@ editor + create; nothing is forked.
   `POST /v1/embeddings` via the keyless `/ai` proxy (already allow-listed).
 - **Jobs** = per-file index status (`get-files`: Pending/Processing/Finished/
   Error — there is no async job entity) + a real upload ingest
-  (`POST /v1/docs/ingest`, source=upload).
+  (`POST /v1/ai/rag/ingest`, source=upload).
 - **Overview** metric cards (vectors/storage/queries/latency/cost) read
-  `GET /v1/get-cloud-usages` — a forward-compatible client coded to the documented
+  `GET /v1/ai/usages/cloud` — a forward-compatible client coded to the documented
   shape that degrades EVERY field to "—" with no sparkline today (the read API
   has no unique commits yet on `feat/cloud-usage-read-api`). The model donut is
   the real collection-by-model mix; dimension bars light up when metering reports
@@ -666,7 +666,7 @@ this pass is small and precise, not padding.
 - **Intentionally NOT built (honest):** Feature Flags / Backups / Support Tickets have NO backend
   anywhere in the Hanzo stack — adding permanent empty-state pages would be fabricated padding.
   Regions/Nodes duplicate `clusters`/`kubernetes`/`machines` (nodes derive from cluster node
-  pools; there is no `/v1/machines` route by design). Jobs is intentionally Tasks (registry's own
+  pools; there is no nodes route by design). Jobs is intentionally Tasks (registry's own
   decision). No `Billing` category exists in `brand-scope.ts` — billing lives under `Observe`.
 - **No cloud changes.** The billing sub-pages ride the existing `/billing/*` proxy (which already
   forwards any path with server-side org scoping); commerce already serves subscriptions +
@@ -792,7 +792,7 @@ backends ARE up; the fixes are about pages that were CONNECTED but READ AS BROKE
   `CheckCircle2`, no Retry — so Containers/Edge/Applications read connected, not error.
 - **Applications** repointed from the casibase IAM **OAuth-application** admin
   (`get-applications`/`deploy-application` — an identity concern, mis-placed under
-  Compute) to the **deployed application services** (`PlatformApi.apps()` → `/v1/apps`):
+  Compute) to the **deployed application services** (`PlatformApi.apps()` → `/v1/platform/apps`):
   real fleet for an admin, the connected "managed by Hanzo" + deploy-via-Functions/Agents
   state for a customer, honest "nothing deployed yet" when empty.
 - **Agents** live 200-empty now shows a "Connected · no agents yet" badge above the
@@ -818,9 +818,9 @@ off `main` (v8.4.4); commit only (CI builds the image).
   ORIGIN (`v1Url` → `cloud.hanzo.ai`). cloud's bearer surfaces resolve the org from a
   VALIDATED JWT owner claim (`SanitizeIdentity` → `tenant(c)`) and 403 a cookie-only
   request ("X-Org-Id required") — the live "Access required · GET /v1/prompts" card,
-  same class as the "models missing" bug. cloud does NOT serve `/v1/get-account`
-  (that's IAM/casibase, a DIFFERENT cookie), which is why get-account works cookie-only
-  but `/v1/prompts` 403s. Agents already used the `/v1` bearer proxy → "Connected".
+  same class as the "models missing" bug. cloud answers the account read at
+  `/v1/ai/account` on the casibase session cookie — a DIFFERENT credential — so it works
+  cookie-only while `/v1/prompts` 403s. Agents already used the `/v1` bearer proxy → "Connected".
 - **ONE-ENDPOINT-FORM — same-origin `/v1/*`, NO prefix (CTO law).** New `originV1Url`
   (`client.ts`) builds `<origin>/v1/<path>`. `next.config.mjs` `rewrites().beforeFiles`
   maps a CLOSED head list to the console's already-hardened server-side bearer proxies:
@@ -1297,7 +1297,7 @@ untouched). Closes the "renders real → every state honest" punch-list. All DRY
 one fix per shared primitive, no per-module snowflakes.
 
 - **P1 — a SIGNED-IN 403 is NEVER "sign in" (3 broken pages + every 403 surface).**
-  Finetuning (`/training`→`/v1/train/jobs`), Dashboards + Annotation Queues
+  Finetuning (`/training`→`/v1/ai/finetune/jobs`), Dashboards + Annotation Queues
   (`/v1/o11y/*`) told a logged-in user to "sign in" on a 403 — reads like a bug
   ("I AM signed in"). Root: the THREE shared error mappers conflated 401 and 403.
   Fixed in ONE place each: `BackendState.classifyBackend` (+`signin` kind),
@@ -1580,8 +1580,8 @@ repos + live probes); no surface fabricates data. Per-app isolation matches each
 backend's real tenancy model (RED-checkable).
 
 - **Analytics — rebound to the FOUR routes the backend actually mounts.** The module
-  had called NINE `/v1/analytics/*` endpoints; `cloud clients/analytics` mounts only
-  `overview | timeseries | top | health` (analytics.go:95-98) with DIFFERENT response
+  had called NINE analytics endpoints; `cloud clients/analytics` mounts only
+  `/v1/event/{overview,timeseries,top,health}` (analytics.go:95-98) with DIFFERENT response
   shapes — so 5 tabs 404'd and 2 mis-parsed. `analytics.ts` + `AnalyticsModule.tsx`
   rewritten to the real structs (`clients/analytics/query.go`): the **LLM lens is REAL
   live per-org data** (`hanzo.cloud_usage`, prod Hanzo Datastore `datastore.hanzo.svc:9000`),
@@ -1877,20 +1877,20 @@ living-overview metrics config (`overview/living/*`) + per-product metadata are 
   <label>. Higher-level products show only their own attributed usage.") + a scope-aware
   subtitle, so the whole-ledger view is TRUTHFULLY LABELED, never masquerading as a narrow
   per-product slice or an org-aggregate leak.
-- **Status/Logs service accuracy (grounded in the live `/v1/apps`).** Probed the real
+- **Status/Logs service accuracy (grounded in the live `/v1/platform/apps`).** Probed the real
   operator inventory (108 apps): the derived service name (`repoBase(repo) ?? id`) was
   WRONG for a few products, so Status/Logs showed a false "not deployed" for services that
   ARE running. Added a verified `SERVICE_OVERRIDE` in `sources.ts` — `models` (repo
   `hanzoai/ai` derived `ai`; the real operator app is `models`), `bot`→`bot-gateway`,
-  `helpdesk`→`help` — each maps to a service that genuinely appears in `/v1/apps`, so
+  `helpdesk`→`help` — each maps to a service that genuinely appears in `/v1/platform/apps`, so
   Status lights up REAL health. Fixed the stale `console` spec health service
   (`console2`→`console`, the canonical operator app). gateway/dns/kms/metrics/s3 are
   raw-deployed (NOT operator apps) → they correctly show an honest "not reporting", and the
   Status/Overview "no service" copy was made neutral+honest ("operator inventory reports no
   running <label>… may be a shared managed service reported elsewhere… no status is
-  fabricated") instead of a misleading "Provision it". Platform `/v1/logs` rejects even the
-  service token, so Logs resolves to a Logs-specific honest "managed by Hanzo" card (never
-  fabricated lines).
+  fabricated") instead of a misleading "Provision it". The platform exposes no org-wide
+  log read — only per-deployment logs — so Logs resolves to a Logs-specific honest
+  "managed by Hanzo" card (never fabricated lines).
 - **Settings is product-specific + REAL (not a dead generic form).** `settingsConfigFor
   (entry)` (`sources.ts`) surfaces each product's real configuration — REUSING the product's
   native-overview spec facts+actions verbatim where one exists (DRY, one content source:
@@ -1935,7 +1935,7 @@ field remains, flagged separately as a cross-console migration/discovery feature
 
 Fills the LAST o11y query gap the console had. o11y (O11y) was already consumed
 by **Service Map** (RED metrics + dependency graph, `ApmApi.services/dependencies/
-topOperations`) and **Alerts** (`o11y/v1/rules`) over the same-origin `/v1`
+topOperations`) and **Alerts** (`o11y/rules`) over the same-origin `/v1`
 bearer proxy (`cloudProxyV1Url('o11y/…')` → cloud reverse-proxies `/v1/o11y/*` →
 the o11y runtime's `/api/*`). The two O11y signals `apm.ts` was MISSING —
 application **LOGS** and **trace search** — are both the composite `POST /api/v3/
@@ -2039,7 +2039,7 @@ this release completes + ships them.
   logic/media-upload/fields project+richText/framework RichText round-trip), `next
   build` ✓ 14/14. Live e2e as Dave post-deploy. Cruft: the old minimal name-only
   "New collection" form + `contentCollection` helper are replaced by the builder;
-  the dead `src/lib/api/cms.ts` (old /v1/cms iframe client) was already removed.
+  the dead `src/lib/api/cms.ts` iframe client was already removed.
   Rebased on origin/main → **v8.4.67**.
 
 ## CMS routing fix — framework/s3 clients use the /cloud proxy (v8.4.70)
@@ -2380,21 +2380,21 @@ cookie-only request, so bearer-scoped heads MUST address the `/v1` user-bearer
 proxy EXPLICITLY" — was applied to framework/s3/machines but NEVER to the OTHER
 header-scoped heads. Their clients still built a bare `/v1/<head>` via `originV1Url`,
 which 403s live, so ~15 customer products rendered an honest error/empty card instead
-of their real per-org data. VERIFIED LIVE: `/v1/{gpus,clusters,functions,platform,
-vpcs,load-balancers,builds,releases,pipelines,environments,indexers,oracles,authz,
-search}` all 403 while their `/v1/*` twins 200.
+of their real per-org data. VERIFIED LIVE: `/v1/{visor/gpus,visor/clusters,functions,
+platform,platform/builds,platform/releases,platform/pipelines,platform/environments,
+explorer/indexers,explorer/oracles,authz,search}` all 403 while their `/v1/*` twins 200.
 
 - **Transport class-fix (`originV1Url`/`v1Url` → `cloudProxyV1Url`)** in every
   bearer-scoped client: `compute.ts` (gpus/alerts/pools), `functions.ts`,
-  `platform.ts` (clusters + org/cluster), `paas.ts` + `platform-apps.ts` (platform
-  head), `embeddings.ts` (the Explore vector `search`/`search/stats` — kept
+  `platform.ts` (clusters), `paas.ts` + `platform-apps.ts` (platform head),
+  `embeddings.ts` (the Explore vector `search`/`search/stats` — kept
   `originV1Url('embeddings')`, an AI head that IS session-scoped), and the inline
-  single-head modules Vpc/LoadBalancer/Builds/Releases/Pipelines/Environments/
-  Indexer/Oracles/Authz. All heads are already in `proxy-allow.ts` `CLOUD_HEADS`, so
+  single-head modules Builds/Releases/Pipelines/Environments/Indexer/Oracles/Authz.
+  All heads are already in `proxy-allow.ts` `CLOUD_HEADS`, so
   the `/v1` proxy admits them; the response shape is identical (same cloud-api
   handler, just a minted bearer). `memory` was LEFT on bare `/v1` — verified live it
-  is session-scoped (`/v1/memory/list` = 200). `canonical-paths.test.ts` MOVED
-  gpus/clusters/functions/paas from the "canonical /v1" block to the "/cloud
+  is session-scoped (`/v1/ai/memory/list` = 200). `canonical-paths.test.ts` MOVED
+  gpus/clusters/functions/platform from the "canonical /v1" block to the "/cloud
   exception" block (it had ENSHRINED the broken bare-path assumption) + `functions.
   test.ts` now asserts `/v1/functions`.
 - **Canonical docs links.** The docs site serves product pages under `/docs/<slug>`
@@ -2598,7 +2598,7 @@ Affiliates, nothing forked.
 - **CTO contract:** ZERO prefix before `/v1/` on ANY cloud API call (same rule as "no
   `/api/`"). The console used to rewrite `/v1/<cloudhead>` → `/cloud/v1/<cloudhead>` (in
   `next.config.mjs`) and `cloudProxyV1Url` built `/cloud/v1/…` directly, so the `/cloud/`
-  prefix leaked to clients and 404'd Automations (`/v1/automations/*` → `/cloud/v1/automations/*`).
+  prefix leaked to clients and 404'd Automations (`/v1/auto/*` → `/cloud/v1/auto/*`).
 - **The BFF moved, the security did NOT change.** The user-bearer proxy that mints a
   short-lived IAM token from the session cookie (cookie NEVER reaches cloud-api; org is
   server-authoritative from the Bearer `owner`; CSRF same-origin guard on mutations;
@@ -2614,7 +2614,7 @@ Affiliates, nothing forked.
   `/vm`, `/v1/billing/*` → `/billing/v1`, `/v1/commerce/*` → `/commerce/v1`. These are
   server-internal (client only ever builds `/v1/…`); `/billing`+`/commerce` use their own
   service-token / different-audience proxies, so they stay namespaced (out of scope).
-- **Acceptance (live, built server):** `GET /v1/automations/connectors` → 401 JSON
+- **Acceptance (live, built server):** `GET /v1/auto/connectors` → 401 JSON
   `{"error":"Sign in to use Hanzo Cloud."}` (reaches the cloud BFF, NOT a 404, NOT the SPA
   shell); `/v1/agents`, `/v1/platform/projects` → 401 JSON (regression OK); `/v1/billing/balance`
   → 401 JSON `"Sign in to view billing."` (the distinct message proves the billing dispatch
@@ -2629,11 +2629,10 @@ VERSION-LESS surface `/v1/o11y/<resource>` — NO nested `v1`/`v3` version, NO `
 Proven live (unauthenticated, against api.hanzo.ai): `GET /v1/o11y/health` → **200**
 `{"service":"o11y","status":"ok"}`; `POST /v1/o11y/services`, `POST /v1/o11y/query_range`,
 `GET /v1/o11y/rules` → **403 `no validated principal`** (IAM-gated — anonymous refused, a
-logged-in bearer required); the deprecated `/v1/o11y/v1/rules` alias still resolves (403,
-not 404). The console's Insights modules were still calling the nested-version SigNoz forms
-(`/v1/o11y/v1/*`, `/v1/o11y/v3/query_range`) over `originV1Url` (a bare `/v1/o11y/*`), which
-on the live console ingress reaches the gateway with NO minted bearer → 403. Fixed both
-axes, one class-fix:
+logged-in bearer required). The console's Insights modules were addressing the upstream
+engine's own nested-version forms rather than the flat surface cloud serves, over
+`originV1Url` (a bare `/v1/o11y/*`), which on the live console ingress reaches the gateway
+with NO minted bearer → 403. Fixed both axes, one class-fix:
 
 - **Version-less paths.** `apm.ts` (`ApmApi` — Service Map RED metrics, dependency graph,
   top-operations, infra hosts/pods/nodes, exceptions/listErrors, dashboards, and the
@@ -2657,10 +2656,10 @@ axes, one class-fix:
   requires `owner==admin`.
 - **Traces/Observations data domain — flagged, NOT ripped.** `TracesModule`/`ObservationsModule`
   read the LLM/agent trace domain via `O11yApi` → `EvalsApi` on `/v1/evals` (cost/tokens/scores
-  that raw OTel spans lack). The rebooted backend also serves `/v1/o11y/traces` +
-  `/v1/o11y/observations` from the `o11y_` tables; repointing those READS off evals is a
-  DATA-DOMAIN change (would drop the eval joins), so it is deliberately left for a CTO call
-  rather than guessed in this path-form pass (documented in `o11y.ts`).
+  that raw OTel spans lack). The backend also serves that domain natively — the LLM-observability
+  family answers under `/v1/o11y/llm/*` — but repointing those READS off evals is a DATA-DOMAIN
+  change (it would drop the eval joins), so it is a decision to take deliberately rather than as
+  a side effect of an address pass (documented in `o11y.ts`).
 - **Playwright proof.** `e2e/insights-o11y.spec.ts` — two layers: (A) an UNAUTHENTICATED gate
   proof that ALWAYS runs and PASSES LIVE today (health 200 + the reads 403 "no validated
   principal" + the alias resolves); (B) an AUTHENTICATED render proof (signs in, enters
@@ -2767,7 +2766,7 @@ the removed billing band, and single-level nav are untouched).
   cross-surface ?project= value` — no `svc` suffix, no second copy of project state.
   `ProjectApi.create` gained an optional `displayName` (friendly label; the slug is the
   id) — additive, backward-compatible.
-- **Deploy = the embedded PaaS static engine** (`/v1/platform/sites/*`, the SAME store
+- **Deploy = the embedded PaaS static engine** (`/v1/projects/sites/*`, the SAME store
   hanzo.app deploys to; cloud `clients/projectsvc`, PR #204). New client
   `lib/api/platform-sites.ts` (`PlatformSitesApi` — list/get/create/ensure/update,
   `deploy` (raw artifact), listDeployments/getDeployment, list/bindDomains) over the
@@ -2835,7 +2834,7 @@ UNROUTED. So:
   cookie-authenticated via SanitizeIdentity) — the Next BFF proxies (`app/v1`,
   `/ai`, …) are pruned by build:embed. So client code must work against cloud's
   native `/v1` (it does; the HUB's deploy upload POSTs the raw artifact straight
-  to cloud's `/v1/platform/sites/:slug/deploy`). The `bearer-proxy` binary-body
+  to cloud's `/v1/projects/:slug/deploy`). The `bearer-proxy` binary-body
   fix only matters for the (unrouted) standalone console — harmless in the embed.
 - Net: the HUB (create/deploy/domains/cross-surface links) goes live on
   console.hanzo.ai on the next `hanzoai/cloud` release from main (CONSOLE_REF=main
@@ -2945,14 +2944,15 @@ contract. The law: a client-facing same-origin API path is `/v1/<head>/…` — 
 - **AI heads (`/ai/v1/` → clean `/v1/*`).** playground images/videos + ai-connections built
   `/ai/v1/*` directly; they now build `/v1/images/generations` · `/v1/videos/generations` ·
   `/v1/ai/connections` (ONE path — drops the ai-connections IS_EMBED split). `next.config.mjs`
-  dispatches the AI heads to the `/ai` bearer proxy WITHOUT a nested version (destination
-  `/ai/<head>`, not `/ai/v1/<head>`); `app/ai/[...path]` re-roots the upstream at `v1/`. New
-  `ai` head so `/v1/ai/connections` dispatches (never shadows a cloud head — `ai` ≠ `ai-accounts`
-  as a segment). This also fixes image/video/connections on the go:embed console (the old
-  `/ai/v1/*` had no cloud route there).
-- **Nested inner-version dropped.** `/v1/websearch/v1/scrape` → `/v1/websearch/scrape` (the
-  scrape descriptor/Fact — the console documents it, never calls it live; the cloud websearch
-  backend should serve the flat form). `/v1/o11y/*` was already version-less (v8.4.124).
+  dispatches the INFERENCE heads to the `/ai` bearer proxy WITHOUT a nested version
+  (destination `/ai/<head>`, not `/ai/v1/<head>`); `app/ai/[...path]` re-roots the upstream
+  at `v1/`. `/v1/ai/*` — the whole hanzoai/ai capability, connections included — falls
+  through to the `/v1` BFF instead: one capability, one address (HIP-0139). This also fixes
+  image/video/connections on the go:embed console (the old `/ai/v1/*` had no cloud route there).
+- **Nested inner-version dropped.** Websearch's scrape descriptor now names the flat
+  `/v1/websearch/scrape` (the console documents it, never calls it live). A version inside a
+  `/v1` path is the upstream engine's vocabulary leaking through; `/v1/o11y/*` was already
+  version-less (v8.4.124).
   `apm.ts` stale SigNoz-upstream `/api/v1/<resource>` doc comments repointed to the
   `/v1/o11y/<resource>` the client actually calls.
 - **Left (external, not ours — full `https://<host>`):** Gatus `status.<brand>/api/v1/
@@ -3008,16 +3008,16 @@ Save/Reset, with honest loading/BackendStateCard/effective-table states. Saving
 an empty prefer + 0 ceiling clears the org override (reverts to "*" then conf) —
 the honest "reset to platform default".
 
-- **Backend (hanzoai/ai, same wave):** `GET /v1/get-router-policy` +
-  `POST /v1/update-router-policy` — org-admin gated, self-scoped to the token
+- **Backend (hanzoai/ai, same wave):** `GET /v1/ai/router/policy` +
+  `PUT /v1/ai/router/policy` — org-admin gated, self-scoped to the token
   org (never another tenant's), resolved org > "*" > conf per task key.
   `OrgSettings` grew `RouterPrefer`/`RouterCostCeiling`; `resolveAutoModel`
   folds the policy per request (caller `X-Max-Cost` still wins).
 - **Transport (v1-first law):** the client (`lib/api/router-policy.ts`) builds
-  `/v1/get-router-policy` / `/v1/update-router-policy` via `originGet`/
-  `originPost` (casibase envelope). Standalone: the two heads are added to
-  `AI_V1_HEADS` (next.config dispatch → the ONE `/ai` user-bearer proxy) + its
-  `ALLOWED` set — no new route handlers. go:embed: the same paths hit cloud
+  `/v1/ai/router/policy` via `originGet`/`originPut` (casibase envelope).
+  Standalone: `/v1/ai/*` falls through to the ONE `/v1` user-bearer BFF (the
+  `ai` prefix is in `proxy-allow.ts` `CLOUD_HEADS`) — no dispatch entry and no
+  new route handlers. go:embed: the same paths hit cloud
   natively (needs cloud to serve/forward the ai-gateway router endpoints; until
   then the module shows the honest BackendStateCard, never fabricated config).
 - **Three routing surfaces, three concerns (not duplicates):** `models`' admin
@@ -3046,9 +3046,9 @@ origin/main did NOT build; the consistency fix is folded in here, no package bum
   and is EMBEDDED as the Policy tab — never a second copy. The `router` id keeps the
   clean `/router` URL (the old `inference-router` id is retired; the feature is fresh
   from v8.4.136).
-- **Overview reads `GET /v1/router/stats`** (org-scoped, RequirePrincipal upstream)
-  via `RouterStatsApi` (`lib/api/router.ts`, `originGet('router/stats', {hours})` —
-  casibase envelope, same transport as `get-router-policy`). A range toggle
+- **Overview reads `GET /v1/ai/router/stats`** (org-scoped, RequirePrincipal upstream)
+  via `RouterStatsApi` (`lib/api/router.ts`, `originGet('ai/router/stats', {hours})` —
+  casibase envelope, same transport as the policy read). A range toggle
   (24h/7d/30d → `?hours=`, within the server's 90d cap). Renders: **(a) Cost saved**
   — `saved_pct` headline + `routed_index` vs `counterfactual_index` (vs the premium
   `baseline_model`) + `cumulative_saved_index`, LABELED a blended `$/MTok` PROXY (the
@@ -3061,7 +3061,7 @@ origin/main did NOT build; the consistency fix is folded in here, no package bum
   (models by share) + a `by_model` Donut + a `throughput` LineChart (24 buckets); the
   **(e) training-contribution toggle** and **(f)** the retrain line below.
 - **Opt-in training contribution** (`TrainingContributionApi`) — a `@hanzo/gui`
-  `FieldSwitch` wired to `GET/POST /v1/{get,update}-training-contribution`
+  `FieldSwitch` wired to `GET/PATCH /v1/ai/training-contribution`
   ("Improve routing with our usage — feature vectors only, never prompt text"),
   optimistic with an honest revert-on-failure toast; honest "not available on this
   deployment yet" when the read fails.
@@ -3078,10 +3078,9 @@ origin/main did NOT build; the consistency fix is folded in here, no package bum
   (`logic.test.ts`). Reuses the dependency-free `ui/Charts` (Donut/LineChart) +
   `ui/Metric` (MetricCard/Panel) + `EmptyState`/`BackendStateCard`/`Loader` — no chart
   dep, honest states everywhere.
-- **Transport wiring (mirrors `get-router-policy` exactly):** three heads added to
-  `next.config.mjs` `AI_V1_HEADS` (`router` + `get-/update-training-contribution` →
-  the `/ai` bearer proxy) and to `app/ai/[...path]` `ALLOWED`
-  (`v1/router/stats`, `v1/{get,update}-training-contribution`) — no new route
+- **Transport wiring (mirrors the policy read exactly):** `/v1/ai/router/stats` and
+  `/v1/ai/training-contribution` ride the same-origin `/v1` user-bearer BFF under the
+  `ai` prefix in `proxy-allow.ts` `CLOUD_HEADS` — no dispatch entry, no new route
   handlers. go:embed: the same `/v1/*` paths hit cloud natively (cloud must serve/
   forward the ai-gateway router endpoints; until then the honest BackendStateCard,
   never fabricated stats) — identical caveat to v8.4.136.
@@ -3254,22 +3253,22 @@ curl + deployed-bundle disassembly + the cloud router + both client call-sites):
   `app/**/route.ts` (the BFF reverse-proxies), so any client still addressing a NON-`/v1/`
   BFF prefix hits the SPA shell and the JSON parse throws.
 - Two client transports were never migrated off the BFF prefixes (unlike `telemetry.ts`,
-  already on `/v1/o11y/vm`): `admin.ts` `makeIamClient('/admin/iam')` (OrgSwitcher +
+  already on cloud's own o11y surface): `admin.ts` `makeIamClient('/admin/iam')` (OrgSwitcher +
   OrgPicker + AdminModule + TenantsModule) and `platform.ts` `/paas/*` (Observe→Status
   apps inventory). In the embed both → 200 SPA HTML → OrgSwitcher/OrgPicker swallow the
   error (empty list → switcher gone) and Status → `interpretPlatformError` → "Could not
   reach the platform / Invalid response from server (HTTP 200)".
 - The genuine `/v1/*` API is HEALTHY (o11y/health 200, o11y/metrics 403-JSON, get-account
-  200, `/v1/iam/get-organizations` 401-JSON, `/v1/paas/apps` 403-JSON). Cloud already
+  200, `/v1/iam/get-organizations` 401-JSON, `/v1/platform/apps` 403-JSON). Cloud already
   serves the correct equivalents natively.
 
 Fix (minimal, `IS_EMBED`-gated — the standalone console2/admin.hanzo.ai `/v1` BFF
-deliberately EXCLUDES `iam/*` and `paas/*`, proxy-allow.ts:7, so it CANNOT be
-unconditional): in the go:embed only, the IAM-admin client uses cloud-native
-`/v1/iam/<segment>` via the existing bearer-scoped `client.ts` `iamList`/`iamOne`/
-`iamMutate`, and the PaaS inventory addresses `/v1/paas/<path>` via `cloudProxyV1Url`.
-Standalone/admin.hanzo.ai are UNCHANGED (keep their gated `/admin/iam` + `/paas`
-proxies). Scoping is unchanged: OrgSwitcher still lists cross-tenant only for a super
+deliberately EXCLUDES `iam/*`, proxy-allow.ts:7, so it CANNOT be unconditional): in
+the go:embed only, the IAM-admin client uses cloud-native `/v1/iam/<segment>` via the
+existing bearer-scoped `client.ts` `iamList`/`iamOne`/`iamMutate`, and the platform
+inventory addresses `/v1/platform/<path>` via `cloudProxyV1Url`.
+Standalone/admin.hanzo.ai are UNCHANGED (keep their gated `/admin/iam`
+proxy). Scoping is unchanged: OrgSwitcher still lists cross-tenant only for a super
 admin (`account.owner === 'admin'`), and cloud/IAM enforces the per-principal org scope.
 z@hanzo.ai IAM verified independently: `admin/z` (global superadmin, owner=admin) +
 `hanzo/z` (admin/owner of hanzo) both exist, un-forbidden, authenticate live — no seed
@@ -3280,7 +3279,7 @@ Verification: `tsc --noEmit` clean for the two files (0 errors; the 4 remaining 
 pre-existing local `@hanzo/ui`/`@hanzo/brand` node_modules drift); `vitest` baseline
 109/109 (admin/platform/canonical-paths — no standalone regression) + new
 `iam-paas-embed.test.ts` 3/3 pinning the embed URLs (`/v1/iam/get-organizations?owner=admin`,
-`/v1/paas/apps`, `/v1/iam/approve-user`; never `/admin/iam/` or `/paas/`). Ships to
+`/v1/platform/apps`, `/v1/iam/approve-user`; never `/admin/iam/` or `/paas/`). Ships to
 console.hanzo.ai/cloud.hanzo.ai on the next `hanzoai/cloud` release embedding
 `console@main` (CONSOLE_REF=main) — a standalone console image bump does NOT reach those
 hosts (the standalone CR is unrouted). Authenticated live re-verify (z logged in →
@@ -3291,8 +3290,8 @@ switcher populates + Status renders) is the post-deploy gate.
 A GLOBAL-ADMIN board (Observe, beside Bots/Machines + Provider Billing) that answers
 "how full is the analytics datastore, and how much DO block storage do we have" — so we
 can scale DO storage BEFORE it runs out. One read: `StorageFleetApi.snapshot()` →
-`GET /v1/admin/storage` (the same global-admin-gated aggregate as every other admin
-board; `storage` added to `ADMIN_AGGREGATE_HEADS` + `next.config.mjs` `ADMIN_V1_HEADS`,
+`GET /v1/admin/volumes` (the same global-admin-gated aggregate as every other admin
+board; `volumes` added to `ADMIN_AGGREGATE_HEADS` + `next.config.mjs` `ADMIN_V1_HEADS`,
 so it rides the `app/admin/aggregate` BFF standalone and cloud-native in the go:embed).
 
 - **`StorageFleetModule`** (`components/products/admin/`, registry `block-storage`,
@@ -3305,7 +3304,7 @@ so it rides the `app/admin/aggregate` BFF standalone and cloud-native in the go:
   volume's used/pct render an em-dash "—" (`usedGiB`/`pct` are nullable, filled only where
   a filesystem source reported), NEVER a fabricated number; the datastore card shows only
   when `system.disks` actually answered.
-- **Backend (paired, hanzoai/cloud `e0466a63b`):** `GET /v1/admin/storage`
+- **Backend (paired, hanzoai/cloud `e0466a63b`):** `GET /v1/admin/volumes`
   (`clients/admin/storage.go`, SuperAdmin `s.guard`) — the DO block-storage inventory
   (count · total · monthly cost · per-volume region + attachment) from a new paginated
   `Volumes()` on the existing `DO_API_TOKEN` client, PLUS the datastore's own fill from
@@ -3323,8 +3322,7 @@ so it rides the `app/admin/aggregate` BFF standalone and cloud-native in the go:
 Upgraded `@hanzo/event` `^0.2.0` → `^0.3.1`, the ONE telemetry client. Every signal
 (pageview · product event · identify · error) rides one batched stream to the ONE Hanzo
 Cloud front door `POST /v1/event`, lensed server-side into web analytics, product
-insights, and error tracking — subsuming @sentry. The old 0.2.0 client posted the
-deprecated `/v1/analytics` + `/v1/tracker`. The console was ALREADY wired at 0.2.0
+insights, and error tracking — subsuming @sentry. The console was ALREADY wired at 0.2.0
 (provider + a pageview/identify bridge + 5 product captures); this makes it canonical
 and completes it.
 
@@ -3344,8 +3342,9 @@ and completes it.
 - **Consent + PII.** PII-free by construction (anon id + the stable `owner/name` actor id,
   never an email; org never sent) and honors an explicit GPC / Do-Not-Track opt-out — the
   consent layer for logged-out/public views. Logged-out pageviews + errors ingest with an
-  optional publishable key `NEXT_PUBLIC_EVENT_INGEST_KEY` (mint per org via
-  `POST /v1/ingest/keys`); unset → logged-in via cookie, logged-out best-effort anonymous.
+  optional publishable key `NEXT_PUBLIC_EVENT_INGEST_KEY` — a site's own publishable
+  `pk-`, carried on its project row (`GET /v1/projects/:slug`); unset → logged-in via
+  cookie, logged-out best-effort anonymous.
   The signin/public surface loads the client (it sits under the root `<Provider>`).
 - **Product moments** (+3, atop PROJECT_CREATED · API_KEY_CREATED · PRICING_VIEWED/
   PLAN_CLICKED/CHECKOUT_STARTED · APP_CREATED/DEPLOY_STARTED · FIRST_ACTION):
@@ -3359,7 +3358,7 @@ and completes it.
 - Verification: `tsc --noEmit` clean; `vitest` 2933/2933 (233 files); `next build` ✓;
   `npm run build:embed` ✓ (go:embed gate; restored 30 route handlers). → v8.4.152.
 
-## Block Storage — endpoint renamed; the REAL admin surface is the operator SPA (v8.4.153)
+## Block Storage — the REAL admin surface is the operator SPA (v8.4.153)
 
 Correction to the v8.4.151 note above (which wrongly said "ships to admin.hanzo.ai via
 console@main"). **admin.hanzo.ai is NOT this console** — it is `hanzoai/admin`
@@ -3369,14 +3368,12 @@ console, SEPARATE from console2. The docs elsewhere in this file claiming "admin
 **console.hanzo.ai / cloud.hanzo.ai** — the customer self-service surface; its `admin:true`
 boards (Block Storage included) are the SUPER-ADMIN TWIN a global admin sees there.
 
-- **Endpoint renamed** `/v1/admin/storage` → **`/v1/admin/block-storage`** (cloud
-  9a51bffbc): DO block-volumes + datastore fill is a DIFFERENT concern from the operator's
-  S3 object-buckets view, which keeps `/v1/admin/storage`. The console client
-  (`storage-fleet.ts`) + the `ADMIN_AGGREGATE_HEADS` / `ADMIN_V1_HEADS` allow-lists + the
-  e2e mock all moved to the `block-storage` head; the registry entry id was already
-  `block-storage`.
+- **The volume fleet answers at `/v1/admin/volumes`.** DO block-volumes + datastore fill
+  is a DIFFERENT concern from the operator's S3 object-buckets view (`/v1/s3/buckets`).
+  The console client (`storage-fleet.ts`), the `ADMIN_AGGREGATE_HEADS` / `ADMIN_V1_HEADS`
+  allow-lists and the e2e mock all address it; the registry entry id is `block-storage`.
 - **The REAL admin.hanzo.ai page** is `hanzoai/admin` `apps/operator/src/pages/
-  BlockStorage.tsx` (commit 30822a0) — same shape over the same `/v1/admin/block-storage`,
+  BlockStorage.tsx` (commit 30822a0) — same shape over the same `/v1/admin/volumes`,
   built on `hanzogui` + `@hanzogui/admin` (SummaryCard/DataTable/Badge), route
   `/infra/block-storage`, Operations nav. Ships on the next `ghcr.io/hanzoai/admin` build
   (unblocked — separate repo). The cloud endpoint (the shared data source) ships on the
@@ -3739,9 +3736,7 @@ re-opened a closed money hole to fix nothing. The trial credit still lands — c
 grants it server-side when a card is vaulted, and signup grants it server-side — and
 that path is untouched. `src/lib/billing/welcome.ts` had no callers left at all.
 
-Scope, checked rather than assumed: `/v1/finance/payment-methods` is still 401 (alive)
-and `/v1/finance/methods` is 404, so the finance ledger keeps the compound name — a
-blanket repo-wide rename would have broken it. The Billing Center's tab slugs
+Scope, checked rather than assumed: the Billing Center's tab slugs
 (`/billing/payment-methods`, `/billing/credits`) are console page URLs, not server
 routes, and are unchanged.
 
@@ -4122,14 +4117,14 @@ secret as "keep the sealed one", which is what makes editing a pixel id on a con
 destination non-destructive when the operator cannot read the token back.
 
 **Transport, unchanged.** Everything is the one same-origin prefix-free form
-(`originV1Url` → `/v1/…`). Two heads added to `CLOUD_HEADS`: `destinations` (the handler
-resolves the org from the Bearer owner and requires the org-admin bit to mutate) and
-`tags` (the PUBLIC door, allow-listed only so the console can PREVIEW through the same
-form as every other read — the ids are SET on the `projects` head).
+(`originV1Url` → `/v1/…`). One head added to `CLOUD_HEADS`: `destinations` (the handler
+resolves the org from the Bearer owner and requires the org-admin bit to mutate). The
+PUBLIC tag door answers under `projects`, at `/v1/projects/tags` — the same head the ids
+are SET on, so the console can PREVIEW through the same form as every other read.
 
 The preview is deliberately a separate read from the form above it. The door drops a
-platform with no browser pixel and any empty id, so `GET /v1/tags?key=` answers "what the
-page will do", which the stored config alone cannot. And the install snippet names
+platform with no browser pixel and any empty id, so `GET /v1/projects/tags?key=` answers
+"what the page will do", which the stored config alone cannot. And the install snippet names
 `api.hanzo.ai` explicitly, NOT `config.cloudUrl` — in the browser that resolves to the
 console's own origin, so the snippet would have told a customer to load `event.js` from
 whichever host the operator happened to be reading the console on.
@@ -4193,7 +4188,7 @@ answered by the site's active release, not by a line in a Dockerfile. The Docker
 says why the old way went: a console CSS fix was a CLOUD release (~22 min) on a
 single-replica `strategy: Recreate`, which took api.hanzo.ai down for a measured 2m15s.
 
-The publish route exists and is org-gated — `GET /v1/sites/hanzo-console/releases`
+The publish route exists and is org-gated — `GET /v1/projects/hanzo-console/releases`
 answers **403 `X-Org-Id required`**, not 404. `apps/sites` pulls no OCI image; a release
 is uploaded bytes.
 
@@ -4270,7 +4265,7 @@ Apps category at all (no `crm`, `tracker`, `social`), so `route-ids.json` — wh
 **Measured, and the reason the module ships its honest state rather than data:**
 
     api.hanzo.ai/v1/tel/summary       -> 404  "404 page not found"   (raw fiber; unrouted)
-    api.hanzo.ai/v1/tracker/projects  -> 403  {"status":403,…,"error":"X-Org-Id required"}
+    api.hanzo.ai/v1/todo/projects     -> 403  {"status":403,…,"error":"X-Org-Id required"}
     console.hanzo.ai/v1/tel/summary   -> 404  "404 page not found"
     console.hanzo.ai/v1/crm/summary   -> 403  {"…":"a validated principal is required"}
 
@@ -4577,36 +4572,22 @@ They are one product now, `base`, with the route shapes Records already had:
 keeps working. `BasesManager`, `base/bases-logic.ts` and `lib/base-data/tenants.ts`
 are deleted.
 
-**The door moved with it, and that is the larger half.** `/v1/collections` was
-cloud reverse-proxying to a SEPARATE Base deployment; `/v1/base/*` is the engine
-cloud hosts itself, per org, on its own encrypted store. Two engines answering
-one question from two disks — a record written through one was invisible through
-the other. Measured before choosing, which is why it was cheap: the orchestrator
-held one org at 404K and a 598K root, cloud held eleven fresh schemas, and
-neither held real records. cloud `c828d7160` deletes the forward.
-
-`BaseDataApi` takes the API ROOT as `baseUrl` and appends `/collections/…`, so
-the whole repoint is `BASE_ROOT = '/v1/base'`. Base is told that prefix at router
-build (`BASE_API_PREFIX`, which REPLACES its `/v1` default), so its collections
-API answers natively underneath it and nothing here rewrites a path.
+**The door is the console's own `/v1/superbase` proxy.** `BaseDataApi` takes the
+API ROOT as `baseUrl` and appends `/collections/…`, so the whole binding is
+`BASE_ROOT = '/v1/superbase'`: the route mints the caller's IAM bearer, stamps
+`X-Org-Id` from the JWT owner, and forwards to base.hanzo.ai under Base's OWN
+`v1/collections/*` contract — the path `allowBaseSurface` admits, and nothing
+here rewrites it. Cloud keeps `/v1/base/health` and nothing else: the records
+plane belongs to Base, and one capability answers at one address (HIP-0139).
 
 **Stale above, and worth knowing before you read it:** every section describing
-the `base` product as a Bases manager, the `superbase` orchestrator, or the
-`/superbase` proxy (v8.4.23's "Base is a Supabase-style content-type dashboard",
-v8.4.42's "Base = the Bases manager (multi-base)") describes a model that no
-longer exists. The `/superbase` BFF route is likewise gone from the data path —
-`/v1/superbase/collections` answers `404 page not found` in production, which is
-what sent Records looking for a door that was not there.
+the `base` product as a Bases MANAGER (v8.4.23's "Base is a Supabase-style
+content-type dashboard", v8.4.42's "Base = the Bases manager (multi-base)")
+describes a model that no longer exists. An org has one Base.
 
-Still on the orchestrator: **base-studio** (base.hanzo.ai/studio). Its reads
-speak the table wire and its writes the collections one, and cloud serves both
-per-org from the one engine — two renderings of a single read, not two doors.
-
-Nothing blocks the move now. Both wires sit under the api prefix, so the whole
-studio reaches cloud by naming where the API is rooted and nothing else:
-
-    BASE_ORIGIN=https://api.hanzo.ai  BASE_API_PREFIX=/v1/base
-
+Still on Base itself: **base-studio** (base.hanzo.ai/studio). Its reads speak
+the table wire and its writes the collections one, and Base serves both per-org
+from the one engine — two renderings of a single read, not two doors.
 `@hanzo/base` ≥ 0.2.4 carries the `prefix` option the writes need and is
 published (0.2.7 at this writing); the npm credential that held it up is the
 `NPM_TOKEN` in `hanzo/shared-credentials`. The table wire moved off its old root
@@ -4799,11 +4780,10 @@ each an acronym — `IAM`, `GPUs`, `DNS` — or a name that is not its segment �
   from the live registry. The overview now states only what no single row states
   (what the cloud is, how it is paid for).
 
-**Where a bad line is fixed: in the owning package.** Four served products
-(`finance`, `authz`, `logs`, `metrics`) publish no synopsis, so those rows keep
-their own — `lineOf` falls back rather than render a blank nav item — and every
-sync prints the gap. Several published lines are the wrong ones (`tags` and `edge`
-both carry the `sites` package's sentence; `models`/`chat`/`embeddings`/`memory`
+**Where a bad line is fixed: in the owning package.** Two served products
+(`authz`, `metrics`) publish no synopsis, so those rows keep their own — `lineOf`
+falls back rather than render a blank nav item — and every sync prints the gap.
+Several published lines are the wrong ones (`models`/`chat`/`embeddings`/`memory`
 share the `ai` package's). That is now visible instead of papered over, and it is
 one Go doc comment away from fixed.
 

@@ -3,11 +3,11 @@
 /**
  * Bot — live status + operator deep-links for the Hanzo Bot gateway.
  *
- * The bot backend (hanzoai/bot → bot-gateway) is a routed service behind the
+ * The bot backend (hanzoai/bot) is a routed service behind the
  * unified gateway at /v1/bot/* — an OpenAI-compatible agent gateway with
  * channels, skills, and a control UI. This console surface reports liveness from
- * /v1/bot/health and links out to the operational surfaces. The bot's own UI is
- * IAM-gated to its own origins, so the console deep-links rather than iframes it.
+ * /v1/bot/runtime/health and links out to the operational surfaces. The bot's own UI
+ * is IAM-gated to its own origins, so the console deep-links rather than iframes it.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -84,7 +84,7 @@ export function BotModule() {
           </Text>
           <StatusTag status={loading ? 'pending' : status} />
           <Text fontSize="$2" color="$color10">
-            /v1/bot/health
+            /v1/bot/runtime/health
           </Text>
         </XStack>
         {err ? (

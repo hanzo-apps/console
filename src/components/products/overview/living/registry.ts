@@ -112,7 +112,7 @@ const platformOverview: LivingOverviewConfig = {
       }
     }
     // Tenant user (or the admin aggregate was unavailable): the org's REAL usage from
-    // cloud's NATIVE `GET /v1/get-cloud-usages` — the SAME source the AI Metrics board
+    // cloud's NATIVE `GET /v1/ai/usages/cloud` — the SAME source the AI Metrics board
     // (`AiUsageModule`) reads. It is org-scoped SERVER-SIDE and cookie-authed, so a
     // non-super-admin (even their OWN org's admin, e.g. `hanzo/z`) gets a 200 for THEIR
     // org and the board renders their real spend — NEVER an "Access required" card. It is
@@ -323,7 +323,7 @@ const financeOverview: LivingOverviewConfig = {
       { tile: 'distribution', key: 'vendorCogs', title: 'COGS by vendor', centerLabel: 'total', unit: 'cents' },
       { tile: 'timeseries', key: 'spendCents', title: 'DigitalOcean credit burn-down', kind: 'bar', unit: 'cents' },
     ],
-    [{ tile: 'health', title: 'Profitability', empty: 'Connect commerce /v1/costs to compute COGS + margin.' }, { tile: 'alerts', title: 'Finance alerts' }],
+    [{ tile: 'health', title: 'Profitability', empty: 'Connect commerce to compute COGS + margin.' }, { tile: 'alerts', title: 'Finance alerts' }],
   ],
   // No try/catch fallback: finance is TRUE-by-construction. A denied (403)/not-routed
   // (404) backend throws a typed ApiError the ONE LivingOverview renders as an honest

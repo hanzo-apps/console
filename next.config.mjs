@@ -64,13 +64,13 @@ function guiPackages() {
  * These `beforeFiles` rewrites exist ONLY to DISPATCH the heads whose backend is NOT
  * cloud-api to their own hardened same-origin proxy, while keeping the client URL a
  * clean `/v1/...`:
- *   - AI gateway heads (models/chat/embeddings/rerank/… + pricing/plans) → `/ai`.
+ *   - AI gateway INFERENCE heads (models/chat/embeddings/rerank/…) + the model
+ *     catalog `/v1/pricing/models` → `/ai`.
  *   - Admin AGGREGATE reads/writes (`/v1/admin/{overview,usage,…}`, the cross-tenant
  *     god view) → the GLOBAL-ADMIN-GATED `/admin/aggregate` proxy, which runs
  *     `getAdminGate` (fail-closed 403) BEFORE forwarding (RED H1). `admin/iam` +
  *     `admin/kms` are deliberately NOT rewritten — they keep their own gated proxies,
  *     reached by the client's explicit `/admin/*` origin path.
- *   - Visor compute CATALOG (regions/sizes, and `gpu-sizes` → visor `gpus`) → `/v1/vm`.
  *
  * (Per-tenant billing + commerce store DATA are NOT dispatched here — they are
  * FILESYSTEM routes `app/v1/{billing,commerce}/[...path]`, more specific than the
@@ -82,26 +82,24 @@ function guiPackages() {
  * cloud surface). Each destination handler STILL enforces its own least-privilege
  * allow-list (`proxy-allow.ts`), so a rewrite can never widen what a proxy admits.
  */
-// `pricing` (the rich model+provider CATALOG at `/v1/pricing/models`) and `plans` (the
-// subscription tiers/entitlements) are AI-gateway-served like models/chat and are in the
-// `/ai` proxy ALLOWED set (app/ai/[...path]), so they route to `/ai` too.
-// `ai` is the AI Login Manager connections head (`/v1/ai/connections[/*]`) — routed to the
-// `/ai` bearer proxy like the rest; it is NOT a cloud-api head (never shadows a cloud surface).
-// `training` is the interactive (Tinker-style) engine head (`/v1/training/clients[/*]`) — the
-// live LoRA client plane, allow-listed in the `/ai` proxy, likewise never a cloud-api head.
-// `router` is the router-config head — `/v1/router/policy` (GET read + PUT write),
-// `/v1/router/stats`, and `/v1/router/{defaults,ledger,rewards,artifact-meta}` — all served
-// by hanzoai/ai; `get-/update-training-contribution` are the org's opt-in flag. The super-admin
-// OrgSettings noun `/v1/org/settings` (GET/PUT/DELETE + `/v1/org/settings/list`) is routed by the
-// TARGETED rewrites below rather than an `org` head, because a broad `org` head would hijack the
-// platform `/v1/org/{org}/cluster` surface. All are in the `/ai` proxy ALLOWED set (app/ai/[...path]).
-const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos', 'pricing', 'plans', 'ai', 'training', 'router', 'get-training-contribution', 'update-training-contribution']
+// The INFERENCE heads — the model call itself, in every modality. These are what the AI
+// gateway serves, and the only reason a `/ai` proxy exists beside the `/v1` one.
+//
+// Everything hanzoai/ai serves BESIDES inference — the login-manager connections, router
+// config, org settings, memory, the stores/files/usages reads, RAG, fine-tuning — now
+// answers at `/v1/ai/*` (HIP-0139: a capability answers at ONE address). It needs no
+// rewrite: `ai` is an allow-listed cloud head, so a clean `/v1/ai/...` falls straight
+// through to the `/v1` BFF. That is why `ai`, `router`, `training`, `org/settings` and the
+// training-contribution verbs are no longer dispatched here.
+const AI_V1_HEADS = ['models', 'chat', 'embeddings', 'rerank', 'audio', 'images', 'videos']
 // The admin aggregate heads rewritten to the GLOBAL-ADMIN-GATED proxy. `providers`
 // is the AI-provider control board — its GET (the list) AND its POST mutations
 // (`providers/toggle`, `providers/primary`) both match the `/:path*` rewrite below,
 // which is method-agnostic (Next matches on the URL), so POST is covered without a
-// second entry. Keep this in sync with `admin-aggregate.ts` ADMIN_AGGREGATE_HEADS.
-const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'caps', 'volumes']
+// second entry. `pricing` carries what things COST — the catalog and the enablement
+// registry, which used to be two admin heads (`catalog`, `enablement`) for one subject.
+// Keep this in sync with `admin-aggregate.ts` ADMIN_AGGREGATE_HEADS.
+const ADMIN_V1_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'pricing', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'caps', 'volumes']
 /**
  * DEV-ONLY: proxy the client's direct-cloud `/v1/{iam,o11y}/*` calls (get-account,
  * reviews/users) to a real cloud backend so `npm run dev` renders the
@@ -119,14 +117,9 @@ const devCloudRewrites = () =>
       ]
     : []
 
-// Public compute CATALOG (regions / CPU sizes) → the same-origin visor proxy
-// (`app/v1/vm/[...path]`). The GPU-accelerator catalog is the DISTINCT head `/v1/gpu-sizes`
-// so it never collides with the cloud-api GPU INVENTORY at `/v1/gpus` (served by `/v1`).
-const VM_V1_HEADS = ['regions', 'sizes']
-
 const aiSurfaceRewrites = () => ({
   beforeFiles: [
-    // Cloud-api heads (prompts/agents/automations/functions/framework/s3/vector/…) are
+    // Cloud-api heads (prompts/agents/auto/functions/framework/s3/provisioning/…) are
     // NOT rewritten: a clean `/v1/<head>` falls through to the `app/v1/[...path]` bearer
     // proxy → cloud-api `/v1/*`. Only the NON-cloud backends are dispatched below.
     // Client builds a clean `/v1/<aihead>`; dispatch to the `/ai` bearer proxy WITHOUT a
@@ -134,12 +127,11 @@ const aiSurfaceRewrites = () => ({
     // (`isAllowedAiPath`/the gateway see `v1/<aihead>`), so no nested version leaks anywhere.
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/ai/${h}` })),
     ...AI_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/ai/${h}/:path*` })),
-    // Super-admin OrgSettings noun → the `/ai` bearer proxy (hanzoai/ai). TARGETED (not an
-    // `org` head) so it never shadows the platform `/v1/org/{org}/cluster|domain|…` surface,
-    // which keeps falling through to the `/v1` cloud BFF. Covers `/v1/org/settings` and
-    // `/v1/org/settings/list` (allow-listed in app/ai/[...path]).
-    { source: `/v1/org/settings`, destination: `/ai/org/settings` },
-    { source: `/v1/org/settings/:path*`, destination: `/ai/org/settings/:path*` },
+    // The rich model+provider CATALOG (context, pricing, specs, tier) is gateway-served
+    // like the inference heads. TARGETED, not a `pricing` head: the rest of `/v1/pricing/*`
+    // — what an org may USE (`/v1/pricing/enablement`), what a resource COSTS — is cloud's,
+    // and a broad head here would shadow it.
+    { source: `/v1/pricing/models`, destination: `/ai/pricing/models` },
     // The SaaS-operations god-view is served by COMMERCE (the money SOT), NOT the
     // cloud aggregate: route /v1/admin/saas to its OWN global-admin-gated commerce
     // proxy (`app/admin/saas`). Placed before the aggregate map so it wins; `saas` is
@@ -147,15 +139,14 @@ const aiSurfaceRewrites = () => ({
     { source: `/v1/admin/saas`, destination: `/admin/saas` },
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}`, destination: `/admin/aggregate/${h}` })),
     ...ADMIN_V1_HEADS.map((h) => ({ source: `/v1/admin/${h}/:path*`, destination: `/admin/aggregate/${h}/:path*` })),
-    // Public compute catalog → the visor `app/v1/vm/[...path]` proxy (a bare `/v1/regions`
-    // dispatches to the /v1-first vm handler; the visor client also builds `/v1/vm/*` directly).
-    ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}`, destination: `/v1/vm/${h}` })),
-    ...VM_V1_HEADS.map((h) => ({ source: `/v1/${h}/:path*`, destination: `/v1/vm/${h}/:path*` })),
-    { source: `/v1/gpu-sizes`, destination: `/v1/vm/gpus` },
-    // Per-tenant billing DATA + commerce store DATA need NO rewrite: they are FILESYSTEM
-    // routes `app/v1/billing/[...path]` (service token) and `app/v1/commerce/[...path]`
-    // (user bearer), each MORE SPECIFIC than the `app/v1/[...path]` cloud BFF, so a clean
-    // `/v1/billing/*` · `/v1/commerce/*` resolves straight to them (the /v1-first law).
+    // The visor compute catalog needs NO rewrite either: the client builds `/v1/vm/<x>`
+    // directly, which is where visor answers. Every bare top-level spelling of it was a
+    // second name for an address that already had one, and nothing builds them.
+    // Per-tenant billing DATA + commerce DATA need NO rewrite: they are FILESYSTEM routes
+    // `app/v1/billing/[...path]` (service token) and `app/v1/commerce/[...path]` (user
+    // bearer, carrying the store, the platform catalog and the plan authority), each MORE
+    // SPECIFIC than the `app/v1/[...path]` cloud BFF, so a clean `/v1/billing/*` ·
+    // `/v1/commerce/*` resolves straight to them (the /v1-first law).
     ...devCloudRewrites(),
   ],
 })

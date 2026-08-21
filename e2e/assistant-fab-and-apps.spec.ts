@@ -28,7 +28,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()

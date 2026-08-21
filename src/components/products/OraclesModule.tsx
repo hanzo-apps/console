@@ -5,7 +5,7 @@
  * aggregated values, source provenance) tracked by the platform.
  *
  * Reads the oracle registry from the cloud API via the same-origin `/v1`
- * user-bearer proxy (`GET /v1/oracles`), which mints + forwards the caller's IAM
+ * user-bearer proxy (`GET /v1/explorer/oracles`), which mints + forwards the caller's IAM
  * bearer server-side. When the oracle feed source isn't reachable the list load
  * fails and the honest not-configured / unavailable card renders instead of an empty
  * grid — matching every other infra module.
@@ -36,7 +36,7 @@ export function OraclesModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ oracles?: Oracle[] }>(cloudProxyV1Url('oracles'))
+      const r = await restGet<{ oracles?: Oracle[] }>(cloudProxyV1Url('explorer/oracles'))
       setRows(r.oracles ?? [])
       setLoadError(null)
     } catch (e) {

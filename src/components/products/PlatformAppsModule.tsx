@@ -9,9 +9,9 @@
  * Variables, Metrics, Logs, Domains, SBOM).
  *
  * All reusable canvas UI lives in `@hanzo/canvas` (brand/white-label aware via the
- * design tokens); this module owns only the DATA — it fetches `/v1/platform` apps
- * + `/v1/<kind>` resources and maps them (`platform-apps/canvas`) into the generic
- * node/edge model. Every state is honest: loading, empty (no apps → the CLI/API),
+ * design tokens); this module owns only the DATA — it fetches `/v1/platform/apps`
+ * + `/v1/provisioning/<kind>` resources and maps them (`platform-apps/canvas`) into
+ * the generic node/edge model. Every state is honest: loading, empty (no apps → the CLI/API),
  * a `BackendStateCard` for a `/v1` failure, and NEVER a fabricated service or
  * metric.
  */
@@ -194,7 +194,7 @@ export function PlatformAppsModule(_props: { params: Record<string, string> }) {
         <BackendStateCard
           state={state.error}
           onRetry={refresh}
-          hint="Apps you create with the Hanzo CLI or POST /v1/platform appear here as service nodes."
+          hint="Apps you create with the Hanzo CLI or POST /v1/platform/apps appear here as service nodes."
         />
       ) : state.phase === 'loading' ? (
         <Loader label="Loading your services…" />
@@ -202,7 +202,7 @@ export function PlatformAppsModule(_props: { params: Record<string, string> }) {
         <EmptyState
           icon={Rocket}
           title="No services yet"
-          description="Create a project and deploy a container app with the Hanzo CLI or the /v1/platform API. Each app shows up here as a live service node — with its domains, connected data, deploys, logs, and SBOM."
+          description="Create a project and deploy a container app with the Hanzo CLI or the /v1/platform/apps API. Each app shows up here as a live service node — with its domains, connected data, deploys, logs, and SBOM."
           bullets={[
             'Deploy from a git repo or a prebuilt image',
             'Set env — secret values are sealed in KMS, never plaintext',

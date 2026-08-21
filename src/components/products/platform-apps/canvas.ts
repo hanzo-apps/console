@@ -1,5 +1,5 @@
 /**
- * Pure fold from the org's live PaaS surface (its `/v1/platform` apps, their
+ * Pure fold from the org's live platform surface (its `/v1/platform/apps`, their
  * domains, and the managed data resources they reference) into the generic
  * `@hanzo/canvas` node/edge model. No React, no I/O — unit-tested in isolation.
  *
@@ -26,7 +26,7 @@ import type { PlatformApp } from '~/lib/api/platform-apps'
 import { appImageRef } from './logic'
 import { capabilityFor, inferAppCapability } from '~/lib/products/subsystems'
 
-/** A managed data resource (one row of `/v1/<kind>`), tagged with its kind. */
+/** A managed data resource (one row of `/v1/provisioning/<kind>`), tagged with its kind. */
 export interface CanvasResource {
   kind: string
   name: string

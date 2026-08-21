@@ -134,8 +134,8 @@ test.describe('Money/usage/o11y surface is fail-closed for anonymous (unauthenti
     '/v1/billing/methods',
     '/v1/billing/alerts',
     '/v1/usage/summary',
-    '/v1/get-cloud-usages',
-    '/v1/o11y/observations',
+    '/v1/ai/usages/cloud',
+    '/v1/o11y/llm/observations',
   ]
 
   test('anonymous never receives 2xx billing/usage/o11y DATA (gated when up, refused while rolling)', async ({
@@ -156,11 +156,15 @@ test.describe('Money/usage/o11y surface is fail-closed for anonymous (unauthenti
       const twoxxData = status >= 200 && status < 300 && /"(data|balance|invoices|records|usage|amount|cents)"/i.test(body)
       expect(twoxxData, `anonymous ${path} leaked a 2xx data payload: ${body}`).toBe(false)
 
-      // When the backend is UP (not a 5xx roll), a sensitive read should be
-      // specifically GATED (401/403) or unrouted (404) — never an open 2xx.
+      // When the backend is UP (not a 5xx roll), a sensitive read must be REFUSED —
+      // never an open 2xx. Every path above is one cloud serves, so a 404 means the
+      // address moved out from under this proof: it still refuses anonymous callers,
+      // but it stops proving anything about the read it was written for. Say so out
+      // loud rather than letting a dead address pass as a pass.
       if (status < 500) {
-        expect(status, `${path} is up but not gated (expected 401/403/404, got ${status})`).toBeGreaterThanOrEqual(400)
+        expect(status, `${path} is up but not refused (expected 401/403, got ${status})`).toBeGreaterThanOrEqual(400)
         if (status === 401 || status === 403) gatedCount++
+        if (status === 404) console.warn(`⚠ ${path} answered 404 — a served address that no longer routes here.`)
       }
     }
     console.log(`✓ anonymous fail-closed matrix:\n  ${matrix.join('\n  ')}`)

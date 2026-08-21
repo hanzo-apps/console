@@ -1,8 +1,8 @@
 /**
  * Managed-resource domain logic — PURE, no UI, no transport (types only, erased).
  *
- * ONE provisioning contract (`POST/GET/DELETE /v1/<kind>`) backs every Hanzo data
- * product (SQL, KV, Datastore, S3, Vector, DocDB). The list/detail API
+ * ONE provisioning contract (`POST/GET/DELETE /v1/provisioning/<kind>`) backs every
+ * Hanzo data product (SQL, KV, Datastore, S3, Vector, DocDB). The list/detail API
  * carries lifecycle facts only — name, status, host/port, the optional username/
  * database, and createdAt. It does NOT carry content/usage metrics (rows, keys,
  * objects, storage bytes, queries, latency, cost): those are the shape of the
@@ -138,8 +138,9 @@ export type ResourceSpec = {
   repo: string
 }
 
-/** The ONE Hanzo API endpoint. Every product's provision call is `api.hanzo.ai/v1/<kind>`
- *  — there is no per-service API host, so a copied snippet works from anywhere. */
+/** The ONE Hanzo API endpoint. Every product's provision call is
+ *  `api.hanzo.ai/v1/provisioning/<kind>` — there is no per-service API host, so a
+ *  copied snippet works from anywhere. */
 const api = 'https://api.hanzo.ai'
 
 /** Public docs URL for a managed kind (matches the registry's `${DOCS}/<kind>`).
@@ -153,7 +154,7 @@ export const repoUrl = (spec: ResourceSpec): string => `https://github.com/${spe
 export function provisionSnippet(kind: ResourceKind, name: string): Snippet {
   return {
     title: 'Provision via API',
-    code: `curl -X POST ${api}/v1/${kind} \\
+    code: `curl -X POST ${api}/v1/provisioning/${kind} \\
   -H 'Content-Type: application/json' \\
   --cookie "$HANZO_SESSION" \\
   -d '{"name":"${name}"}'`,

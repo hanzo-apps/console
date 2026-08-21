@@ -1,32 +1,35 @@
 /**
- * Typed client for the unified analytics data plane (cloud `clients/analytics`),
- * called SAME-ORIGIN with NO prefix (`originV1Url('analytics/...')`). The rewrite in
+ * Typed client for the unified analytics data plane, called SAME-ORIGIN with NO prefix
+ * (`originV1Url('event/...')`). The rewrite in
  * next.config.mjs terminates the request at the console's `/v1` user-bearer proxy,
  * which mints a short-lived user Bearer and forwards to cloud-api; the org is resolved
  * server-authoritatively from the Bearer owner claim, so every metric is scoped to the
  * caller's own org — the browser never holds a datastore credential.
  *
- * ONE warehouse (Hanzo Datastore), TWO lenses, and exactly the FOUR routes the
- * backend actually mounts (`clients/analytics/analytics.go` routes at 95-98) — no more:
- *   - GET /v1/analytics/overview    — headline KPIs (llm + web + commerce blocks)
- *   - GET /v1/analytics/timeseries  — the LLM usage series (requests/tokens/spend)
- *   - GET /v1/analytics/top         — top models (llm) + top products (commerce)
- *   - GET /v1/analytics/health      — datastore connectivity probe
+ * The reads live beside the ingest they lens: one `event` capability owns both the
+ * POST that collects and the GETs that read back (HIP-0139).
+ *
+ * ONE warehouse (Hanzo Datastore), TWO lenses, and exactly the FOUR read routes the
+ * backend mounts — no more:
+ *   - GET /v1/event/overview    — headline KPIs (llm + web + commerce blocks)
+ *   - GET /v1/event/timeseries  — the LLM usage series (requests/tokens/spend)
+ *   - GET /v1/event/top         — top models (llm) + top products (commerce)
+ *   - GET /v1/event/health      — datastore connectivity probe
  *
  * The LLM lens (`hanzo.cloud_usage`) is REAL live per-org data in prod. The web +
  * commerce lenses (`hanzo.events`) are HONEST-empty (`available:false`) until a
- * collector emits — never fabricated zeros. Responses are BARE JSON (the analytics
+ * collector emits — never fabricated zeros. Responses are BARE JSON (the read
  * handler writes the struct directly — NOT the casibase `{status,msg,data}` envelope),
  * so this uses the plain `restGet` transport and normalizes DEFENSIVELY (a field
  * rename/absence degrades to 0 / "—", never throws).
  *
- * Field names mirror the Go response structs in `clients/analytics/query.go` exactly.
+ * Field names mirror the Go response structs in `apps/event/query.go` exactly.
  */
 import { restGet, originV1Url } from './client'
 
-const BASE = 'analytics'
+const BASE = 'event'
 
-/** The window grammar the backend understands (`window()` → ResolveCloudUsageWindow). */
+/** The window grammar the backend understands (ResolveCloudUsageWindow). */
 export type Range = '24h' | '7d' | '30d'
 export const RANGES: readonly Range[] = ['24h', '7d', '30d']
 
@@ -49,7 +52,7 @@ const asRecord = (v: unknown): Record<string, unknown> =>
 const arrayOf = (v: unknown): Record<string, unknown>[] =>
   Array.isArray(v) ? (v.filter((x) => x && typeof x === 'object') as Record<string, unknown>[]) : []
 
-// ── Response types (mirror clients/analytics/query.go) ───────────────────────
+// ── Response types (mirror apps/event/query.go) ──────────────────────────────
 
 /** The flagship LLM lens — REAL per-org KPIs from hanzo.cloud_usage. */
 export type LlmOverview = {
@@ -198,7 +201,7 @@ export function normalizeTop(raw: unknown): Top {
 }
 
 /**
- * AnalyticsApi — one typed method per REAL `/v1/analytics/*` endpoint. Each is a plain
+ * AnalyticsApi — one typed method per REAL `/v1/event/*` read. Each is a plain
  * GET through the same-origin `/v1` bearer proxy; the org is server-side. A 403
  * (cookie-only) or 503 (warehouse unwired) surfaces to the caller's BackendStateCard.
  */

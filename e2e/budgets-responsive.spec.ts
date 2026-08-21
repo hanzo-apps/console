@@ -47,7 +47,7 @@ const BUDGETS = [
   { id: 'b4', title: 'Sandbox throttle', threshold: 0, currency: 'usd', project: 'sandbox', service: '', enforce: false, softPct: 0, rateLimitRpm: 120, periodSpentCents: 8300, over: false, warn: false },
 ]
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()

@@ -17,7 +17,7 @@ import { TYPE } from './_gate'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 const SHOTS = join(process.cwd(), 'e2e-shots')
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|org|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|org|auth\/refresh)(\/|$|\?)/
 
 /** A tenant that HAS uploaded a logo — the case that used to erase the org's name. */
 const LOGO = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Crect width="24" height="24" fill="%237c5cff"/%3E%3C/svg%3E'

@@ -1,15 +1,16 @@
 /**
  * AI catalog — the ONE rich model + provider + plan client behind the Models,
  * Providers, and (later) hanzo.ai / @hanzo/dev / desktop surfaces. One spine,
- * three reads, all through the console's authenticated `/ai` proxy (so the user
- * bearer the gateway requires is attached server-side — never in the browser):
+ * three reads, each on the console's OWN origin at a clean `/v1/…` so the bearer is
+ * attached server-side — never in the browser:
  *
  *   • `/v1/pricing/models` — the rich catalog (name, description, context,
  *     provider, specs, tier, per-Mtok pricing, features). 375+ real models.
  *   • `/v1/models`        — the live routing set; a catalog model is "Available"
  *     iff it is actually servable right now (cross-referenced by stable id).
- *   • `/v1/plans`         — the subscription tiers + entitlements (rpm/tpm/quota),
- *     honest-empty when gated (401/404) — pure enrichment, never page-breaking.
+ *   • `/v1/plan/subscriptions` — the subscription ladder: the personal + team tiers a
+ *     customer buys, with their entitlements (rpm/tpm/quota). Honest-empty when gated
+ *     (401/404) — pure enrichment, never page-breaking.
  *
  * Nothing is fabricated: an unreachable endpoint yields an honest empty/error
  * state at the page, never placeholder rows.
@@ -395,7 +396,7 @@ export function fmtContext(n: number | null | undefined): string {
 
 // ── Plans (subscription tiers + entitlements) ────────────────────────────────
 
-/** Per-tier limits as the live `/v1/plans` surface publishes them (all optional-safe). */
+/** Per-tier limits as the live `/v1/plan/subscriptions` surface publishes them (all optional-safe). */
 export type PlanLimits = {
   requestsPerMinute?: number
   tokensPerMinute?: number
@@ -408,7 +409,7 @@ export type PlanLimits = {
   maxMembers?: number
 }
 
-/** One subscription plan as `/v1/plans` returns it (the rpm/tpm/quota rate card). */
+/** One subscription plan as `/v1/plan/subscriptions` returns it (the rpm/tpm/quota rate card). */
 export type Plan = {
   id: string
   name: string
@@ -427,14 +428,14 @@ export type Plan = {
 }
 
 /**
- * The org's subscription plans (rpm/tpm/quota tiers) through the authenticated
- * `/ai` proxy. Honest-empty (`[]`) when the surface is gated/not-routed
- * (401/403/404) or otherwise unreachable — plans are enrichment, never primary
- * data, so a failed read degrades a tier badge rather than breaking the page.
+ * The subscription ladder the catalog badges a model's `tier` against. Honest-empty
+ * (`[]`) when the surface is gated/not-routed (401/403/404) or otherwise unreachable —
+ * plans are enrichment, never primary data, so a failed read degrades a tier badge
+ * rather than breaking the page.
  */
 export async function fetchPlans(): Promise<Plan[]> {
   try {
-    const r = await restGet<{ plans?: Plan[] } | Plan[]>(originV1Url('plans'))
+    const r = await restGet<{ plans?: Plan[] } | Plan[]>(originV1Url('plan/subscriptions'))
     if (Array.isArray(r)) return r
     return Array.isArray(r?.plans) ? r.plans : []
   } catch {

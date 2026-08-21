@@ -3,12 +3,14 @@
 /**
  * Bots — LAUNCH + WATCH a computer-using bot.
  *
- * This is the CUSTOMER surface over cloud `POST /v1/bots/run` (BotsApi.run): boot a
+ * This is the CUSTOMER surface over cloud `POST /v1/bot/runs` (BotsApi.run): boot a
  * desktop or terminal computer, run a computer-using agent ("bot") on it against a
- * task, and WATCH/ATTACH it live over the VNC session the launch returns. Every
- * launch is GATED + METERED a flat per-run "bot" fee on the org's commerce ledger
- * (server-side, from the minted user bearer) — an unfunded org gets a 402 and the
- * add-funds nudge below.
+ * task, and WATCH/ATTACH it live over the VNC session the launch returns.
+ *
+ * LAUNCHING IS NOT LIVE. The bot runtime exposes no launch operation, so cloud
+ * answers 501 to every POST and nothing is minted, booted, or billed — the form
+ * surfaces that refusal verbatim rather than handing back a run id for a machine
+ * that never started. Listing and stopping are live and org-scoped.
  *
  * Distinct from its two siblings, deliberately: `BotModule` (id `bot`) is the agent
  * GATEWAY status/deep-links; `BotsModule` (id `bots`, admin) is the cross-tenant
@@ -19,17 +21,16 @@
  * IAM-gated to its own origins, the gateway must allow this console origin as a
  * `frame-ancestors` — until it does, the "Open in a new tab" fallback always works.
  *
- * SCOPE: launch + watch + manage. The launch form + VNC attach are unchanged; on top of
- * them the runs list is now the REAL org fleet off `GET /v1/bots` (BotsApi.list) with a
- * refresh control, and each run can be halted with `POST /v1/bots/:runId/stop`
- * (BotsApi.stop). If the list endpoint isn't deployed yet the view degrades to launch-only
- * (this session's launches, held client-side) with a subtle note — never a hard error.
+ * SCOPE: launch + watch + manage. The runs list is the REAL org fleet off
+ * `GET /v1/bot/runs` (BotsApi.list) with a refresh control, and each run can be halted
+ * with `POST /v1/bot/runs/:runId/stop` (BotsApi.stop). If the list endpoint isn't
+ * deployed yet the view degrades to launch-only (this session's launches, held
+ * client-side) with a subtle note — never a hard error.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { Bot, Cpu, ExternalLink, Monitor, Play, RefreshCw, Square, Terminal } from '@hanzogui/lucide-icons-2'
 
-import { ApiError } from '~/lib/api'
 import { BotsApi, type BotRunRow, type BotSurface } from '~/lib/api/bots'
 import { PageHeader, StatusTag } from '@hanzo/ui/product'
 
@@ -55,7 +56,7 @@ export function BotsConsole() {
   const [gpu, setGpu] = useState(false)
   const [timeout, setTimeoutVal] = useState('')
   const [launching, setLaunching] = useState(false)
-  const [err, setErr] = useState<{ message: string; needsFunds: boolean } | null>(null)
+  const [err, setErr] = useState<string | null>(null)
   const [runs, setRuns] = useState<BotRunRow[]>([])
   const [active, setActive] = useState<BotRunRow | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -64,7 +65,7 @@ export function BotsConsole() {
   const [stoppingId, setStoppingId] = useState<string | null>(null)
   const [stopErr, setStopErr] = useState<string | null>(null)
 
-  // Pull the org's real runs off GET /v1/bots. Server rows are the source of truth, but
+  // Pull the org's real runs off GET /v1/bot/runs. Server rows are the source of truth, but
   // a just-launched run may not be listed yet (eventual consistency), so local-only runs
   // are kept ahead of them — a quick refresh never makes a fresh launch vanish. A failure
   // (endpoint not deployed) degrades to launch-only: keep existing runs, flag `listErr`.
@@ -118,16 +119,7 @@ export function BotsConsole() {
       setRuns((prev) => [launched, ...prev])
       setActive(launched)
     } catch (e) {
-      const status = e instanceof ApiError ? e.status : 0
-      setErr({
-        message:
-          status === 402
-            ? 'This launch needs funds. Add credit to your org to run bots.'
-            : e instanceof Error && e.message
-              ? e.message
-              : 'The bot did not launch. Your task is still here — try again.',
-        needsFunds: status === 402,
-      })
+      setErr(e instanceof Error && e.message ? e.message : 'The bot did not launch. Your task is still here — try again.')
     } finally {
       setLaunching(false)
     }
@@ -137,7 +129,7 @@ export function BotsConsole() {
     <>
       <PageHeader
         title="Launch a bot"
-        subtitle="Boot a computer, run a computer-using bot on it, and watch it live — billed a flat per-run fee to your org."
+        subtitle="Boot a computer, run a computer-using bot on it, and watch it live."
       />
 
       <YStack gap="$4" p="$4">
@@ -239,19 +231,12 @@ export function BotsConsole() {
           </XStack>
 
           {err ? (
-            <XStack gap="$2" items="center">
-              <Text fontSize="$2" color="$red10">
-                {err.message}
-              </Text>
-              {err.needsFunds ? (
-                <Button size="$2" theme="light" onPress={() => window.open('/billing', '_self')}>
-                  Add funds
-                </Button>
-              ) : null}
-            </XStack>
+            <Text fontSize="$2" color="$red10">
+              {err}
+            </Text>
           ) : (
             <Text fontSize="$1" color="$color10">
-              A flat per-run fee is billed to your org on launch (set to 0 to make launches free).
+              Launching isn’t available yet — the runtime exposes no launch operation, so nothing boots.
             </Text>
           )}
         </Card>
@@ -302,7 +287,7 @@ export function BotsConsole() {
           </Card>
         ) : null}
 
-        {/* ── Runs — the org's real fleet (GET /v1/bots), with refresh + stop ─── */}
+        {/* ── Runs — the org's real fleet (GET /v1/bot/runs), with refresh + stop ─ */}
         {loaded || runs.length > 0 ? (
           <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
             <XStack items="center" justify="space-between" gap="$2">

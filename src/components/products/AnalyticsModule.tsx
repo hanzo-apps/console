@@ -1,11 +1,11 @@
 /**
  * Native Analytics — the per-org analytics module over the unified Hanzo Datastore
- * warehouse, read through cloud-api `/v1/analytics/*` via the same-origin
+ * warehouse, read through cloud-api `/v1/event/*` via the same-origin
  * `/v1` bearer proxy, so every metric is scoped to the caller's own IAM org
  * (server-authoritative, from the Bearer owner) — the browser holds no datastore
  * credential.
  *
- * Bound to exactly the FOUR routes the backend mounts (overview/timeseries/top/health):
+ * Bound to exactly the FOUR reads the backend mounts (overview/timeseries/top/health):
  *   - Overview — the LLM lens (requests/tokens/spend/models/providers/errors) is REAL
  *     live per-org data (hanzo.cloud_usage), charted over time; the Web + Commerce
  *     lenses (hanzo.events) render HONEST-empty ("no events yet") until a collector
@@ -106,7 +106,7 @@ function OverviewTab() {
     return (
       <YStack gap="$4">
         <XStack justify="flex-end"><RangeBar range={range} onChange={setRange} /></XStack>
-        <BackendStateCard state={state.error} onRetry={() => void load(range)} hint="endpoint · GET /v1/analytics/overview" />
+        <BackendStateCard state={state.error} onRetry={() => void load(range)} hint="endpoint · GET /v1/event/overview" />
       </YStack>
     )
   }
@@ -212,7 +212,7 @@ function LlmTab() {
     return (
       <YStack gap="$4">
         <XStack justify="flex-end"><RangeBar range={range} onChange={setRange} /></XStack>
-        <BackendStateCard state={state.error} onRetry={() => void load(range)} hint="endpoint · GET /v1/analytics/top" />
+        <BackendStateCard state={state.error} onRetry={() => void load(range)} hint="endpoint · GET /v1/event/top" />
       </YStack>
     )
   }

@@ -32,7 +32,7 @@
  *    `infra/nodes/:id/cordon`. `allowAdminSurface` admits `v1/admin/infra[/...]`, so
  *    every sub-path passes and nothing outside `v1/admin/<head>` ever does.
  */
-export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'enablement', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'caps', 'volumes', 'infra'] as const
+export const ADMIN_AGGREGATE_HEADS = ['overview', 'usage', 'orgs', 'audit', 'products', 'finance', 'compute', 'o11y', 'providers', 'customers', 'revenue', 'analytics', 'pricing', 'grants', 'referrals', 'affiliates', 'authors', 'treasury', 'services', 'promos', 'caps', 'volumes', 'infra'] as const
 
 const ALLOWED = new Set<string>(ADMIN_AGGREGATE_HEADS)
 

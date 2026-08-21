@@ -35,7 +35,7 @@ describe('projects', () => {
     expect(list[0].name).toBe('api')
   })
   it('normalizeDsn reads a bare string or {dsn}', () => {
-    expect(normalizeDsn('https://x@h/v1/sentinel/p')).toBe('https://x@h/v1/sentinel/p')
+    expect(normalizeDsn('https://x@h/v1/event/p')).toBe('https://x@h/v1/event/p')
     expect(normalizeDsn({ data: { dsn: 'd1' } })).toBe('d1')
     expect(normalizeDsn(null)).toBe('')
   })

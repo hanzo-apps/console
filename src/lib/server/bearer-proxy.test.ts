@@ -17,14 +17,14 @@ import { cloudAudience } from '~/config'
 
 describe('pathIsClean (traversal / encoded-slash guard — RED HIGH)', () => {
   it('admits real resource paths', () => {
-    expect(pathIsClean('v1/vector')).toBe(true)
+    expect(pathIsClean('v1/provisioning/vector')).toBe(true)
     expect(pathIsClean('v1/functions/foo/logs')).toBe(true)
-    expect(pathIsClean('v1/collections/tenants/records')).toBe(true)
+    expect(pathIsClean('v1/todo/projects/hanzo/issues')).toBe(true)
   })
 
   it('REJECTS dot-segment traversal (the %2f-decoded escape that slips a foreign head past the allow-list)', () => {
     expect(pathIsClean('v1/functions/../../iam')).toBe(false)
-    expect(pathIsClean('v1/collections/tenants/records/../../users/records')).toBe(false)
+    expect(pathIsClean('v1/todo/projects/hanzo/../../iam/users')).toBe(false)
     expect(pathIsClean('v1/tasks/../admin')).toBe(false)
     expect(pathIsClean('v1/./functions')).toBe(false)
   })
@@ -38,16 +38,16 @@ describe('pathIsClean (traversal / encoded-slash guard — RED HIGH)', () => {
 
   it('REJECTS the double-encoded dot-segment (%252e%252e → Next decodes once → %2e%2e → undici normalizes to ../) — RED re-review HIGH', () => {
     // What reaches the handler after Next.js single-decodes the catch-all segment:
-    expect(pathIsClean('v1/functions/%2e%2e/get-account')).toBe(false)
-    expect(pathIsClean('v1/sql/%2e%2e/%2e%2e/admin/overview')).toBe(false)
-    expect(pathIsClean('v1/collections/tenants/records/%2E%2E/_superusers/records')).toBe(false)
+    expect(pathIsClean('v1/functions/%2e%2e/ai/account')).toBe(false)
+    expect(pathIsClean('v1/provisioning/sql/%2e%2e/%2e%2e/admin/overview')).toBe(false)
+    expect(pathIsClean('v1/todo/projects/hanzo/%2E%2E/%2E%2E/iam/users')).toBe(false)
     expect(pathIsClean('v1/%2e%2e/metrics')).toBe(false)
   })
 
   it('REJECTS N≥3 encoding, overlong, and matrix-param traversal — RED final hardening', () => {
-    expect(pathIsClean('v1/functions/%25252e%25252e/get-account')).toBe(false) // triple-encoded
+    expect(pathIsClean('v1/functions/%25252e%25252e/ai/account')).toBe(false) // triple-encoded
     expect(pathIsClean('v1/functions/%c0%ae%c0%ae/x')).toBe(false) // overlong UTF-8
-    expect(pathIsClean('v1/functions/..;/get-account')).toBe(false) // matrix-param `..;`
+    expect(pathIsClean('v1/functions/..;/ai/account')).toBe(false) // matrix-param `..;`
     expect(pathIsClean('v1/functions/%5c%2e%2e/x')).toBe(false) // backslash-escaped
   })
 
@@ -355,7 +355,7 @@ describe('forwardWithUserBearer — rewrite-fed traversal fails closed (RED LOW-
  * A BINARY deploy artifact (a zip/tar.gz static build) must forward through the ONE
  * proxy VERBATIM — its bytes intact and its OWN Content-Type — never text-decoded
  * (which UTF-8-corrupts binary) and never re-stamped `application/json`. This is the
- * deploy-upload path (`POST /v1/platform/sites/:slug/deploy`).
+ * deploy-upload path (`POST /v1/projects/:slug/deploy`).
  */
 describe('forwardWithUserBearer — binary artifact passthrough (deploy upload)', () => {
   // "PK\x03\x04" (zip magic) + a byte (0xFF) that is INVALID UTF-8 — a text read would drop/replace it.
@@ -388,7 +388,7 @@ describe('forwardWithUserBearer — binary artifact passthrough (deploy upload)'
   it('forwards the exact bytes + the artifact Content-Type (not application/json)', async () => {
     const res = await forwardWithUserBearer(req(), {
       target: 'http://cloud-api.hanzo.svc.cluster.local:8000',
-      path: 'v1/platform/sites/my-app/deploy',
+      path: 'v1/projects/my-app/deploy',
       allow: allowCloudSurface,
     })
     expect(res.status).toBe(200)
@@ -521,11 +521,11 @@ describe('forwardWithUserBearer — admin aggregate targets /v1/admin/* (integra
     }
   })
 
-  it('refuses a cross-origin POST (CSRF) to a provider mutation before any fetch', async () => {
+  it('refuses a cross-origin POST (CSRF) to an admin mutation before any fetch', async () => {
     fetchMock.mockClear()
     const res = await forwardWithUserBearer(
       req('POST', { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' }),
-      { target: CLOUD, path: 'v1/admin/providers/toggle', allow: allowAdminSurface, errorShape: 'casibase' },
+      { target: CLOUD, path: 'v1/admin/providers/credit', allow: allowAdminSurface, errorShape: 'casibase' },
     )
     expect(res.status).toBe(403)
     expect(fetchMock).not.toHaveBeenCalled()

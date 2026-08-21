@@ -4,8 +4,8 @@
  * Runs against a LOCAL server (BASE_URL=http://localhost:4000) with the whole
  * network mocked (same pattern as budgets-responsive): `/auth/session` → a global
  * admin so the shell mounts and the admin-only Deploy product renders, the
- * `/v1/deploy/*` CD projection → real-shaped rows (the fleet + one app's tree +
- * logs), `/v1/git/repos` + `/v1/builds` → enrichment, everything else → empty-ok.
+ * `/v1/deploy/*` CD projection → real-shaped rows (the fleet + one app's resource
+ * tree), `/v1/git/repos` + `/v1/platform/builds` → enrichment, everything else → empty-ok.
  *
  * It proves: the fleet renders as canvas NODES, a node OPENS the drawer, the
  * resource TOPOLOGY mounts in the drawer, and — the CTO requirement — at a NARROW
@@ -69,7 +69,7 @@ const REPOS = [
 ]
 const BUILDS = { builds: [{ id: 'b1', repo: 'hanzoai/iam', commit: 'abc1234', status: 'success', startedAt: '2026-07-18T12:00:00Z', duration: '2m' }] }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()
@@ -83,14 +83,12 @@ async function mock(route: Route) {
 
   // The CD projection under test (cloud clients/deploy shapes).
   if (path === '/v1/deploy/applications') return json(FLEET)
-  if (path === '/v1/deploy/iam/tree') return json(IAM_TREE)
-  if (/^\/v1\/deploy\/[^/]+\/tree$/.test(path)) return json({ application: {}, nodes: [] })
-  if (/^\/v1\/deploy\/[^/]+\/logs$/.test(path)) return json({ application: 'hanzo/iam', pod: 'iam-6d8f-abc', logs: 'ready to serve\nlistening on :8080\n' })
-  if (/^\/v1\/deploy\/[^/]+\/resource\//.test(path)) return json({ ref: 'apps:Deployment:hanzo:iam', health: 'healthy', liveManifest: { apiVersion: 'apps/v1', kind: 'Deployment', metadata: { name: 'iam' }, spec: { replicas: 2 } }, desiredSource: 'last-applied', diff: { modified: false } })
+  if (path === '/v1/deploy/applications/iam/resource-tree') return json(IAM_TREE)
+  if (/^\/v1\/deploy\/applications\/[^/]+\/resource-tree$/.test(path)) return json({ application: {}, nodes: [] })
   if (path === '/v1/git/repos') return json(REPOS)
   if (/^\/v1\/git\/repos\/[^/]+\/refs$/.test(path)) return json({ branches: [{ name: 'main', sha: 'abc' }], tags: [{ name: 'v1.4.10', sha: 'a' }, { name: 'v1.4.9', sha: 'b' }], default: 'main' })
   if (/^\/v1\/git\/repos\//.test(path)) return json({ id: 'r1', org: 'hanzoai', name: 'iam', defaultBranch: 'main', branches: ['main'], head: 'abc1234def', cloneUrl: '', sshUrl: '', sizeBytes: 0, createdAt: '2026-01-01T00:00:00Z' })
-  if (path === '/v1/builds') return json(BUILDS)
+  if (path === '/v1/platform/builds') return json(BUILDS)
 
   const sameOrigin = url.origin === new URL(BASE_URL).origin
   if (sameOrigin && !API_RE.test(path)) return route.continue()
@@ -136,11 +134,12 @@ test('renders the fleet as canvas nodes, opens a node → drawer → resource to
   await expect(drawer).toBeVisible({ timeout: 10_000 })
   await expect(drawer.locator('text=Resources').first()).toBeVisible()
   await expect(drawer.locator('text=Deploys').first()).toBeVisible()
-  await expect(drawer.locator('text=Logs').first()).toBeVisible()
   await expect(drawer.locator('text=Source').first()).toBeVisible()
 
   // The Resources tab mounts the owned-resource topology (nested canvas + caption).
-  await expect(drawer.locator('text=/resources · tap a node/i').first()).toBeVisible({ timeout: 10_000 })
+  // The caption renders ONLY when the tree returned nodes, so it also proves the
+  // resource-tree route above actually matched what the client requested.
+  await expect(drawer.getByText(/\d+ resources · health/i).first()).toBeVisible({ timeout: 10_000 })
   await expect(drawer.locator('.react-flow__node').first()).toBeVisible()
   await page.screenshot({ path: join(SHOTS, 'cd-map-drawer.png'), fullPage: true })
   await ctx.close()

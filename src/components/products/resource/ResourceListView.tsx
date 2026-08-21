@@ -16,8 +16,8 @@
  *   │   Settings  configuration facts + danger zone                             │
  *   └───────────────────────────────────────────────────────────────────────────┘
  *
- * Every number is derived from the real `GET /v1/<kind>` list or rendered as an
- * honest "—"; create is the real `POST /v1/<kind>`; nothing is fabricated.
+ * Every number is derived from the real `GET /v1/provisioning/<kind>` list or rendered
+ * as an honest "—"; create is the real `POST /v1/provisioning/<kind>`; nothing is fabricated.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -96,7 +96,7 @@ export function ResourceListView({ kind, productLabel, connectionHint, onOpen }:
   const [error, setError] = useState<BackendState | null>(null)
   const [tab, setTab] = useState<string>('overview')
 
-  // Create flow (the real POST /v1/<kind>) — password surfaced once.
+  // Create flow (the real POST /v1/provisioning/<kind>) — password surfaced once.
   const [showCreate, setShowCreate] = useState(false)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -203,7 +203,7 @@ export function ResourceListView({ kind, productLabel, connectionHint, onOpen }:
       {error && !loading ? (
         // On a load failure we show the honest error card only — no stat row, so
         // we never imply "zero instances" when we simply could not read the fleet.
-        <BackendStateCard state={error} onRetry={() => void load()} hint={`endpoint · GET /v1/${kind}`} />
+        <BackendStateCard state={error} onRetry={() => void load()} hint={`endpoint · GET /v1/provisioning/${kind}`} />
       ) : (
         <>
           {/* ── Stat row — REAL fleet headline + honest usage tiles ──────────── */}
@@ -634,7 +634,7 @@ function MetricsTab({
           <Text fontSize="$3" color="$color11">
             Usage series — {spec.usageTiles.map((t) => t.label.toLowerCase()).join(', ')} — appear here once the metering
             read API ships for {spec.listNoun.toLowerCase()}. The status breakdown above is live from{' '}
-            <Text style={{ fontFamily: 'monospace' }}>GET /v1/{kind}</Text>. We never render placeholder numbers.
+            <Text style={{ fontFamily: 'monospace' }}>GET /v1/provisioning/{kind}</Text>. We never render placeholder numbers.
           </Text>
         </SectionCard>
       </XStack>

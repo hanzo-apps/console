@@ -1,9 +1,9 @@
 /**
- * Hanzo Builds — the typed client for the CI build history (`GET /v1/builds`).
+ * Hanzo Builds — the typed client for the CI build history (`GET /v1/platform/builds`).
  *
  * One canonical reader for the native build records (git push → native Actions →
- * image → registry). Same-origin `/v1/builds` through the user-bearer BFF (the
- * `builds` head is allow-listed in proxy-allow.ts); org is resolved server-side
+ * image → registry). Same-origin `/v1/platform/builds` through the user-bearer BFF (the
+ * `platform` head is allow-listed in proxy-allow.ts); org is resolved server-side
  * from the Bearer owner, so a cookie-only call 403s and the caller renders an
  * honest state. Optional-safe normalizers tolerate snake_case + camelCase and
  * degrade a missing field to '' — never a fabricated build.
@@ -52,9 +52,9 @@ function normalizeBuild(raw: unknown): Build {
 }
 
 export const BuildsApi = {
-  /** Recent CI builds across the org (`GET /v1/builds`). Honest-empty/403 until bound. */
+  /** Recent CI builds across the org (`GET /v1/platform/builds`). Honest-empty/403 until bound. */
   list: async (): Promise<Build[]> => {
-    const data = await restGet<unknown>(cloudProxyV1Url('builds'))
+    const data = await restGet<unknown>(cloudProxyV1Url('platform/builds'))
     const rows = Array.isArray(data) ? data : arr(pick(rec(data), 'builds', 'items', 'results'))
     return rows.map(normalizeBuild).filter((b) => b.id || b.commit || b.repo)
   },

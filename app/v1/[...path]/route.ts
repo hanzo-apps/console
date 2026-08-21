@@ -14,11 +14,11 @@
  * cookie-CSRF surface upstream). This is the EXACT transport the `/ai` proxy proved
  * live; every service proxy shares the ONE `forwardWithUserBearer` implementation.
  *
- * DISPATCH: the AI (`models`/`chat`/…), admin-aggregate (`/v1/admin/*`), visor
- * (`regions`/`sizes`/`gpu-sizes`), billing (`/v1/billing/*`) and commerce
- * (`/v1/commerce/*`) heads are routed to their OWN backends by `next.config.mjs`
- * `beforeFiles` rewrites BEFORE they reach this catch-all — so this handler owns
- * exactly the cloud-api `/v1/<head>` surface.
+ * DISPATCH: the AI inference heads (`models`/`chat`/…) and the admin aggregate
+ * (`/v1/admin/*`) are routed to their OWN backends by `next.config.mjs` `beforeFiles`
+ * rewrites BEFORE they reach this catch-all; visor (`/v1/vm/*`), billing
+ * (`/v1/billing/*`) and commerce (`/v1/commerce/*`) are filesystem routes more specific
+ * than this one. So this handler owns exactly the cloud-api `/v1/*` surface.
  *
  * Least privilege: only the allow-listed cloud HEADS are reachable
  * (`allowCloudSurface`); `v1/iam/*`, `v1/admin/*`, etc. 404 here — this is not a

@@ -1,9 +1,9 @@
 /**
  * Finance API — the SaaS business/finance feed for admin.hanzo.ai.
  *
- * SOURCE: `GET /v1/admin/finance` (the cloud admin aggregate: commerce /v1/costs
- * for the multi-vendor COGS breakdown, DigitalOcean for the promo-credit treasury,
- * and commerce for revenue). Like every other admin read it goes through
+ * SOURCE: `GET /v1/admin/finance` (the cloud admin aggregate: commerce for the
+ * multi-vendor COGS breakdown and for revenue, DigitalOcean for the promo-credit
+ * treasury). Like every other admin read it goes through
  * `originGet` — the console's OWN origin (`<origin>/v1/admin/finance`), which
  * `next.config.mjs` rewrites to the GLOBAL-ADMIN-GATED `app/admin/aggregate` proxy
  * (`getAdminGate`, fail-closed 403, THEN a minted user bearer). Financial data is
@@ -84,10 +84,10 @@ export type FinanceVendorCost = {
 
 /**
  * The platform COGS view — what WE pay our vendors. Its authority is commerce
- * /v1/costs (surfaced by cloud): `totalCents` is the whole-platform COGS (the margin
- * cost) and `vendors` is the per-vendor breakdown (DigitalOcean compute + each LLM
- * provider we resell). `configured` is false (and every number 0) when commerce
- * /v1/costs is unreachable — the board then shows the honest not-configured state.
+ * (surfaced by cloud in the aggregate): `totalCents` is the whole-platform COGS (the
+ * margin cost) and `vendors` is the per-vendor breakdown (DigitalOcean compute + each
+ * LLM provider we resell). `configured` is false (and every number 0) when commerce
+ * is unreachable — the board then shows the honest not-configured state.
  *
  * `digitalocean` is an ORTHOGONAL treasury view (promo-credit remaining + the
  * burn-down series), NOT part of COGS — commerce tracks what we SPEND with DO, not

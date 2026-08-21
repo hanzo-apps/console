@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Issues — the Sentry home: grouped-by-fingerprint issues over `/v1/sentinel/issues`.
+ * Issues — the Sentry home: grouped-by-fingerprint issues over `/v1/o11y/sentinel/issues`.
  * Search (query), status filter, sort, time period + project pickers, a per-issue
  * sparkline, KPI cards, and a by-level donut. Every KPI/slice/row is a fold over
  * what the backend returned — an empty result is an honest empty state, a failed

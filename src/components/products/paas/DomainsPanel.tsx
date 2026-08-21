@@ -2,7 +2,7 @@
 
 /**
  * DomainsPanel — customer self-serve domain management for a PaaS app, over the
- * live `/v1/platform/.../domains` surface (via the `/v1` bearer proxy, org
+ * live `/v1/platform/projects/:project/apps/:app/domains` surface (via the `/v1` bearer proxy, org
  * resolved from the Bearer owner). Lists the app's domains with an HONEST
  * per-domain status derived from the operator CR (live / provisioning / awaiting
  * deploy / unverified — never fabricated), an Add-domain form, per-domain Remove,

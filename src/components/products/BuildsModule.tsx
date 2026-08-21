@@ -4,7 +4,7 @@
  * Builds — image and binary builds and their status.
  *
  * Reads the build list from the unified cloud binary via the same-origin user-bearer
- * `/v1` proxy (`GET /v1/builds`), org resolved from the Bearer owner. This is a
+ * `/v1` proxy (`GET /v1/platform/builds`), org resolved from the Bearer owner. This is a
  * derived, read-only aggregate; when the backend doesn't serve it the load fails and
  * the honest not-configured / unavailable card renders instead of an empty grid.
  */
@@ -33,7 +33,7 @@ export function BuildsModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ builds?: Build[] }>(cloudProxyV1Url('builds'))
+      const r = await restGet<{ builds?: Build[] }>(cloudProxyV1Url('platform/builds'))
       setRows(r.builds ?? [])
       setLoadError(null)
     } catch (e) {

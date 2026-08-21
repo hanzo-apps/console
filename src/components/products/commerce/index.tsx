@@ -9,11 +9,11 @@
  * (server-side; the org can never be widened from the client). An empty store shows the
  * honest empty copy — never a placeholder.
  *
- * Products is a full CRUD surface (create + list + delete over `/v1/product`); Orders /
- * Customers / Inventory / Promotions are real read lists on the shared `CommerceResource`;
- * Store settings reads the org's real storefront config (`/v1/store/current`). Money
- * stays in Billing (Square via commerce `/v1/billing`) — these pages are the catalog/
- * order/customer surface only.
+ * Products is a full CRUD surface (create + list + delete over `/v1/commerce/product`);
+ * Orders / Customers / Inventory / Promotions are real read lists on the shared
+ * `CommerceResource`; Store settings reads the org's real storefront config
+ * (`/v1/commerce/store/current`). Money stays in Billing (Square via commerce
+ * `/v1/billing`) — these pages are the catalog/order/customer surface only.
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
@@ -111,7 +111,7 @@ function ProductForm({ onDone }: { onDone: () => void }) {
 
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor" maxWidth={760} mb="$3">
-      {error ? <BackendStateCard state={error} hint="endpoint · POST /v1/product (Hanzo Commerce)" /> : null}
+      {error ? <BackendStateCard state={error} hint="endpoint · POST /v1/commerce/product (Hanzo Commerce)" /> : null}
       <FieldRow label="Name"><FieldText value={name} onChange={setName} placeholder="MaxPower Logo Tee" /></FieldRow>
       <FieldRow label="SKU"><FieldText value={sku} onChange={setSku} placeholder="MP-TEE-001" /></FieldRow>
       <FieldRow label="Slug"><FieldText value={slug} onChange={setSlug} placeholder="auto from name" /></FieldRow>
@@ -158,7 +158,7 @@ export function StoreProductsModule(_props: { params: Record<string, string> }) 
       />
       {creating ? <ProductForm onDone={() => { setCreating(false); load() }} /> : null}
       {state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/product (Hanzo Commerce)" />
+        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/commerce/product (Hanzo Commerce)" />
       ) : (
         <DataTable
           columns={columns}
@@ -194,7 +194,7 @@ export function StoreOrdersModule(_props: { params: Record<string, string> }) {
       load={() => CommerceApi.orders()}
       columns={orderColumns}
       rowKey={(r) => r.id}
-      hint="endpoint · GET /v1/order (Hanzo Commerce)"
+      hint="endpoint · GET /v1/commerce/order (Hanzo Commerce)"
       empty="No orders yet. Orders customers place appear here as they come in."
     />
   )
@@ -215,7 +215,7 @@ export function StoreCustomersModule(_props: { params: Record<string, string> })
       load={() => CommerceApi.customers()}
       columns={customerColumns}
       rowKey={(r) => r.id}
-      hint="endpoint · GET /v1/user (Hanzo Commerce)"
+      hint="endpoint · GET /v1/commerce/user (Hanzo Commerce)"
       empty="No customers yet. Customers who sign up or order appear here."
     />
   )
@@ -237,7 +237,7 @@ export function StoreInventoryModule(_props: { params: Record<string, string> })
       load={() => CommerceApi.variants()}
       columns={variantColumns}
       rowKey={(r) => r.id}
-      hint="endpoint · GET /v1/variant (Hanzo Commerce)"
+      hint="endpoint · GET /v1/commerce/variant (Hanzo Commerce)"
       empty="No inventory yet. Variants (SKUs) with stock counts appear here."
     />
   )
@@ -265,7 +265,7 @@ export function StorePromotionsModule(_props: { params: Record<string, string> }
       load={() => CommerceApi.discounts()}
       columns={discountColumns}
       rowKey={(r) => r.id}
-      hint="endpoint · GET /v1/discount (Hanzo Commerce)"
+      hint="endpoint · GET /v1/commerce/discount (Hanzo Commerce)"
       empty="No promotions yet. Discount codes and promotions you create appear here."
     />
   )
@@ -300,7 +300,7 @@ export function StoreSettingsModule(_props: { params: Record<string, string> }) 
         <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
           <Text fontSize="$5" fontWeight="700" color="$color12">Storefront</Text>
           {state.phase === 'error' ? (
-            <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/store/current (Hanzo Commerce)" />
+            <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/commerce/store/current (Hanzo Commerce)" />
           ) : state.phase === 'loading' ? (
             <Text fontSize="$3" color="$color10">Loading your storefront…</Text>
           ) : (

@@ -2,7 +2,7 @@
 
 /**
  * The GPU inventory table — the primary surface shared by the Overview and GPUs
- * tabs. Renders ONLY real inventory rows (from `GET /paas/gpus`); telemetry cells
+ * tabs. Renders ONLY real inventory rows (from `GET /v1/visor/gpus`); telemetry cells
  * show `—` when a field is absent (never a fabricated 0). Search + cluster/model/
  * status/location facet filters + pagination are pure (`filterGpus`/`paginate`).
  *

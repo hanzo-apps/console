@@ -27,13 +27,13 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const ENDPOINTS: { label: string; route: string }[] = [
-  { label: 'Collections', route: 'GET /v1/get-stores' },
-  { label: 'Create collection', route: 'POST /v1/add-store' },
+  { label: 'Collections', route: 'GET /v1/ai/stores' },
+  { label: 'Create collection', route: 'POST /v1/ai/stores' },
   { label: 'Search', route: 'POST /v1/search' },
   { label: 'Generate', route: 'POST /v1/embeddings' },
-  { label: 'Ingest', route: 'POST /v1/docs/ingest' },
-  { label: 'Index status', route: 'GET /v1/get-files' },
-  { label: 'Usage metrics', route: 'GET /v1/get-cloud-usages' },
+  { label: 'Ingest', route: 'POST /v1/ai/rag/ingest' },
+  { label: 'Index status', route: 'GET /v1/ai/files' },
+  { label: 'Usage metrics', route: 'GET /v1/ai/usages/cloud' },
 ]
 
 export function SettingsView({ owner }: { owner: string }) {

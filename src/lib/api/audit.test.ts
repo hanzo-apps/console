@@ -25,7 +25,7 @@ describe('normalizeEvent — mirrors audit.Wire', () => {
   it('maps every field', () => {
     const e = normalizeEvent({
       seq: 7, time: '2026-07-04T12:30:00Z', org: 'maxpower', sub: 'dave', email: 'dave@x.ai',
-      action: 'machine.create', resource: 'machine', resourceId: 'm-1', method: 'POST', path: '/v1/machines',
+      action: 'machine.create', resource: 'machine', resourceId: 'm-1', method: 'POST', path: '/v1/visor/machines',
       result: 'success', status: 201, reason: 'ok', sourceIp: '1.2.3.4', userAgent: 'ua', requestId: 'r1',
       isAdmin: true, authMethod: 'jwt', hash: 'bb', prevHash: 'aa',
     })

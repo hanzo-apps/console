@@ -8,7 +8,7 @@
  * cloud coding seam picks it up and opens a linked PR), see the issue↔branch↔PR
  * chain (`linkedPRs`), and jump to the native git.hanzo.ai repo or the upstream
  * GitHub source. Honest states throughout — no fabricated activity, real writes over
- * `/v1/tracker`.
+ * `/v1/todo`.
  */
 import { useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'

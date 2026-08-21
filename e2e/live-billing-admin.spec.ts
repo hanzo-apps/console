@@ -25,7 +25,7 @@ const CONSOLE  = process.env.CONSOLE_URL    ?? 'https://console.hanzo.ai'
 const ADMIN    = process.env.ADMIN_URL      ?? 'https://admin.hanzo.ai'
 const SHOTS    = process.env.SHOT_DIR       ?? 'e2e-shots'
 
-/** Sign in via the console app sign-in form (email/password → cloud /v1/signin). */
+/** Sign in via the console app sign-in form (email/password → cloud /v1/ai/signin). */
 async function signIn(page: Page, base: string) {
   await page.goto(`${base}/signin`)
   await page.waitForSelector('input[placeholder="Email"]', { timeout: 25_000 })
@@ -101,7 +101,7 @@ test.describe('LIVE v8.4.15 — (a) business board + (c) billing dimension', () 
   // fail-closed and matches what the board renders.
   test('(a2) god-view gate matches the account grant (hanzo org-admin → honest 403)', async ({ page }) => {
     await signIn(page, CONSOLE)
-    const acct = await (await page.request.get(`${CONSOLE}/v1/get-account`)).json().catch(() => ({}))
+    const acct = await (await page.request.get(`${CONSOLE}/v1/ai/account`)).json().catch(() => ({}))
     const owner = acct?.data?.owner
     const res = await page.request.get(`${CONSOLE}/v1/admin/overview`)
     if (owner === 'admin') {

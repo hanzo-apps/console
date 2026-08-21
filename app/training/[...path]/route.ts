@@ -1,6 +1,6 @@
 /**
  * Same-origin proxy to the cloud ML/training surface (`/v1/ml/models` and the
- * fine-tuning broker `/v1/finetune/*`).
+ * fine-tuning broker `/v1/ai/finetune/*`).
  *
  * The console's Training page calls its OWN origin (`/training/...`) with just the
  * first-party session cookie; this server handler resolves the signed-in user from
@@ -8,10 +8,10 @@
  * per-user cache shared with the `/v1` bearer proxy), and forwards to the cloud
  * backend's `/v1/...` surface with `Authorization: Bearer <token>` + the active
  * `X-Org-Id`. Training is a TENANT action — any signed-in org user may run it — so
- * this is user-scoped (resolveUser), NOT the control-plane admin gate the `/paas`
- * proxy uses. The cloud backend resolves the org from the token's `owner` claim (and
+ * this is user-scoped (resolveUser), never a service token. The cloud backend resolves
+ * the org from the token's `owner` claim (and
  * the X-Org-Id the plain-REST train sub-service reads), so a caller can only ever
- * touch their own org's jobs. `POST /v1/finetune/jobs` is billing-gated upstream and
+ * touch their own org's jobs. `POST /v1/ai/finetune/jobs` is billing-gated upstream and
  * returns 402 on an unfunded org — that status flows straight back so the UI can
  * surface it honestly.
  *
@@ -46,15 +46,17 @@ const CLOUD_API_URL = trim(process.env.CLOUD_API_URL ?? 'http://cloud.hanzo.svc.
 const ALLOWED = new Set([
   // Model serving — the org's deployed kserve InferenceServices.
   'ml/models',
-  // fine-tuning broker (custom-data runs, HF search) — the ONE training door.
-  'finetune/jobs',
-  'finetune/job',
-  'finetune/cancel',
-  'finetune/deploy',
-  'finetune/presets',
-  'finetune/hf/models',
-  'finetune/hf/datasets',
-  'finetune/hf/repo',
+  // fine-tuning broker (custom-data runs, HF search) — the ONE training door. It is a
+  // route of the ai capability, which answers at /v1/ai (HIP-0139), so each entry names
+  // the route and admits nothing beside it.
+  'ai/finetune/jobs',
+  'ai/finetune/job',
+  'ai/finetune/cancel',
+  'ai/finetune/deploy',
+  'ai/finetune/presets',
+  'ai/finetune/hf/models',
+  'ai/finetune/hf/datasets',
+  'ai/finetune/hf/repo',
 ])
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {
@@ -63,7 +65,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     return NextResponse.json({ status: 'error', msg: 'Not found' }, { status: 404 })
   }
 
-  // CSRF: `POST /finetune/jobs` mutates (and bills) from the auto-sent cookie — refuse a
+  // CSRF: `POST /ai/finetune/jobs` mutates (and bills) from the auto-sent cookie — refuse a
   // cross-origin one before any work (safe reads pass).
   const csrf = csrfRefusal(req, 'casibase')
   if (csrf) return csrf
@@ -101,7 +103,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     // org (?/X-Org-Id) is honored, a non-SuperAdmin caller is PINNED to their own — so a
     // brand admin can't drive another tenant's training jobs even if the backend
     // trusted the forwarded header. For a non-SuperAdmin caller this equals the token
-    // owner (the Bearer's own claim), so header and token agree. Matches the /paas +
+    // owner (the Bearer's own claim), so header and token agree. Matches the
     // /admin/kms orgFor pin. The raw session cookie is NOT forwarded (cloud-api can't
     // validate it as a principal, and cookie + JWT together risks the gateway 431).
     'X-Org-Id': orgFor({ isSuperAdmin: user.isSuperAdmin, orgScope: user.owner }, req.headers.get('X-Org-Id')),

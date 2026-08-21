@@ -11,9 +11,9 @@
  * empty/not-configured/error state — it never ships invented GPUs, clusters, or spend.
  *
  * Real sources (loaded once here, shared to the tabs): the GPU inventory
- * (`GET /paas/gpus`), the org's DOKS clusters (`GET /paas/org/{org}/cluster`, with GPU
- * clusters derived from the node size), GPU alerts (`GET /paas/gpus/alerts`), the cloud
- * usage ledger (`GET /v1/get-cloud-usages`, degrading to the real `/billing/usage`
+ * (`GET /v1/visor/gpus`), the org's DOKS clusters (`GET /v1/visor/clusters`, with GPU
+ * clusters derived from the node size), GPU alerts (`GET /v1/visor/gpus/alerts`), the
+ * cloud usage ledger (`GET /v1/ai/usages/cloud`, degrading to the real `/v1/billing/usage`
  * total). All org-scoped to `currentOrg()`. Tabs map to the registry `:tab` route.
  */
 import { useCallback, useEffect, useState } from 'react'
@@ -80,10 +80,10 @@ function useComputeData(): ComputeData {
 }
 
 /**
- * GPUs — routes by role. A CUSTOMER sees the visor accelerator catalog + their own
- * GPU machines (`CustomerGpus`, over the user-bearer `/v1/vm` proxy) — real per-org data
- * or an honest empty state, never the admin `/paas` fleet view. A GLOBAL ADMIN sees
- * the operator fleet (`AdminGpus`, over the `/paas` control plane), whose
+ * GPUs — routes by role. A CUSTOMER sees the visor accelerator catalog (`/v1/vm/gpus`)
+ * + their own GPU machines (`CustomerGpus`, over `/v1/visor/machines`) — real per-org
+ * data or an honest empty state, never the operator's fleet view. A GLOBAL ADMIN sees
+ * that fleet (`AdminGpus`, over the same `/v1/visor` surfaces), whose
  * not-configured/forbidden state is the right operator signal. One wrapper per route
  * (Overview + tabs), each branch a full component with its own hooks — no
  * rules-of-hooks hazard.
@@ -140,7 +140,7 @@ function AdminGpus({ params }: { params: Record<string, string> }) {
       ) : tab === 'clusters' ? (
         <ClustersTab data={data} />
       ) : tab === 'pools' ? (
-        <PoolsTab />
+        <PoolsTab data={data} />
       ) : tab === 'pricing' ? (
         <PricingTab onNav={onNav} />
       ) : tab === 'alerts' ? (

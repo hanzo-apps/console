@@ -2,7 +2,7 @@
 
 /**
  * AiUsagePanels — the ONE org AI-usage board body: native Hanzo usage (the
- * canonical `<UsagePanel>` over `GET /v1/get-cloud-usages`) AND, right beside it,
+ * canonical `<UsagePanel>` over `GET /v1/ai/usages/cloud`) AND, right beside it,
  * the org's IMPORTED third-party usage from its connected OpenAI / Anthropic /
  * Google accounts (`<ConnectedUsage>` over `GET /v1/ai/connections/:provider/usage`).
  *
@@ -45,7 +45,7 @@ function rangeWindow(range: UsageRange): { from: string; to: string } {
  */
 export function AiUsagePanels({
   title = 'AI Metrics',
-  subtitle = 'Requests, tokens, spend, and per-model usage for your org — native Hanzo usage (GET /v1/get-cloud-usages).',
+  subtitle = 'Requests, tokens, spend, and per-model usage for your org — native Hanzo usage (GET /v1/ai/usages/cloud).',
 }: { title?: string; subtitle?: string } = {}) {
   const router = useRouter()
   const [range, setRange] = useState<UsageRange>('7d')

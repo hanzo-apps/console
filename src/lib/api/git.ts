@@ -1,11 +1,11 @@
 /**
  * Git API — Hanzo Git, the native code-hosting subsystem welded into the unified
- * cloud binary (hanzoai/cloud `clients/git`, `/v1/git`). A REPO is the Git source
+ * cloud binary (hanzoai/cloud `apps/git`, `/v1/git`). A REPO is the Git source
  * layer under an IAM project; it is scoped to the caller's org SERVER-SIDE (the
  * gateway-minted X-Org-Id / the Bearer owner), so one org can never read, clone, or
  * push to another's repos and NO org param ever leaves the browser.
  *
- * Documented contract (cloud clients/git — the READ/browse surface the dashboard
+ * Documented contract (cloud apps/git — the READ/browse surface the dashboard
  * consumes; org resolved server-side on every call). REF + PATH ride as QUERY params
  * (the backend's own `?ref=` UI convention), so a slashed branch (`feature/x`) and a
  * nested file path are always unambiguous — no wildcard %2F ambiguity:

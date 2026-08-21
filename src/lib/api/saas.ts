@@ -2,7 +2,7 @@
  * Admin (GLOBAL) SaaS operations — the whole-business revenue / subscription /
  * customer snapshot behind the admin.hanzo.ai "SaaS Metrics" board. It is computed
  * IN commerce (the system of record for subscriptions + the usage ledger) from ONE
- * cross-org walk and served at `GET /v1/commerce/metrics/saas`; the console only
+ * cross-org walk and served on commerce's own `GET /v1/metrics/saas`; the console only
  * renders it — no client-side billing SDK, no re-aggregation.
  *
  * Transport: `originGet('admin/saas', …)` pins the request to the console's OWN
@@ -196,7 +196,7 @@ const normCustomers = (v: unknown): CustomerRow[] =>
     }
   })
 
-/** Normalize the raw `/v1/commerce/metrics/saas` payload into the typed board model. */
+/** Normalize the raw `/v1/metrics/saas` payload into the typed board model. */
 export function normalizeSaaS(raw: unknown): SaaSMetrics {
   const d = rec(raw)
   return {

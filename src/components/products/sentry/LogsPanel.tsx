@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Logs — a searchable log stream over `/v1/sentinel/logs`. Query + period + level
+ * Logs — a searchable log stream over `/v1/o11y/sentinel/logs`. Query + period + level
  * filter + project scope; a row opens a detail rail with the full attributes and a
  * deep-link to the log's trace. Real lines only — an empty result is an honest
  * empty state, a failed load the shared `ErrorState`, never fabricated log lines.

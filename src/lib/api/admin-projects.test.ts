@@ -5,7 +5,7 @@ import type { PlatformApp } from './platform'
 
 /**
  * The staff Projects board is a pure projection over the global apps inventory
- * (PlatformApi.apps → /v1/apps) — no new backend. These pin the projection (health →
+ * (PlatformApi.apps → /v1/platform/apps) — no new backend. These pin the projection (health →
  * status, releaseUrl → live URL, drift severity) and the drill-by-org grouping, so a
  * missing field degrades to '' rather than throwing (honest, never fabricated).
  */

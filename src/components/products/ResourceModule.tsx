@@ -5,11 +5,11 @@
  *
  * `resourceModule({ kind, productLabel, connectionHint })` returns a route
  * component that drives the provisioning contract for a single kind:
- *   - GET    /v1/<kind>          -> a fleet of resources (name, status, endpoint, created)
- *   - POST   /v1/<kind> {name}   -> create; the 201 carries `connectionString` and a
+ *   - GET    /v1/provisioning/<kind>          -> a fleet of resources (name, status, endpoint, created)
+ *   - POST   /v1/provisioning/<kind> {name}   -> create; the 201 carries `connectionString` and a
  *     `password` returned ONCE — surfaced immediately in a copyable reveal, never re-fetched.
- *   - GET    /v1/<kind>/<name>   -> one resource (no secret) — the detail overview.
- *   - DELETE /v1/<kind>/<name>   -> delete (with confirm).
+ *   - GET    /v1/provisioning/<kind>/<name>   -> one resource (no secret) — the detail overview.
+ *   - DELETE /v1/provisioning/<kind>/<name>   -> delete (with confirm).
  *
  * The surface is a polished console tuned by a per-kind `ResourceSpec` (see
  * `resource/logic.ts`): a list/home view with a real fleet stat row, a tabbed

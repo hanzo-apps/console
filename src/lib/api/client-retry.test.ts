@@ -57,7 +57,7 @@ describe('resilientFetch — transient-retry so backend rolls are invisible', ()
 
   it('retries a NETWORK error (connection refused during a roll) then succeeds', async () => {
     const fetchFn = scriptedFetch(['network', 'network', 200])
-    const res = await resilientFetch('/v1/analytics/overview', { method: 'GET' }, deps(fetchFn))
+    const res = await resilientFetch('/v1/o11y/summary', { method: 'GET' }, deps(fetchFn))
     expect(res.status).toBe(200)
     expect(fetchFn).toHaveBeenCalledTimes(3)
   })

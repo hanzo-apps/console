@@ -1,7 +1,7 @@
 /**
  * e2e: the API Keys page reports what the account actually holds.
  *
- * The measured defect: `GET /v1/keys` answered 200 with three `pk-live-*`
+ * The measured defect: `GET /v1/account/keys` answered 200 with three `pk-live-*`
  * publishable keys, and the page rendered the "create your first key" empty state —
  * because it asked only whether an `sk-` existed and dropped every other row. A true
  * statement about the secret, presented as the whole truth about the account.
@@ -36,7 +36,7 @@ const json = (route: Route, body: unknown) =>
 async function mockKeys(page: Page, body: unknown): Promise<void> {
   await page.route('**/v1/**', (route) => {
     const path = new URL(route.request().url()).pathname
-    if (path.endsWith('/v1/keys')) return json(route, body)
+    if (path.endsWith('/v1/account/keys')) return json(route, body)
     return json(route, {})
   })
   await primeSession(page)

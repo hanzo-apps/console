@@ -1,21 +1,21 @@
 /**
- * Training API — the live cloud mlsvc surface (hanzoai/ai `/v1/train/*`,
- * `/v1/ml/models`), reached through the console's OWN same-origin `/training`
- * proxy (`app/training/[...path]/route.ts`), which forwards the session cookie +
- * active org. The browser holds no key and never calls the backend directly.
+ * Training API — the cloud fine-tuning broker + model serving (hanzoai/ai
+ * `/v1/ai/finetune/*`, `/v1/ml/models`, per HIP-0139), reached through the
+ * console's OWN same-origin `/training` proxy (`app/training/[...path]/route.ts`),
+ * which forwards the session cookie + active org. The browser holds no key and
+ * never calls the backend directly.
  *
- * Endpoints (verified live: `api.hanzo.ai/v1/train/jobs` and `/v1/ml/models`
- * route before auth → real JSON, a fake sibling path 404s):
- *   - GET/POST /v1/train/jobs         — list / create training jobs. POST is
- *     billing-gated by the ResourceMeter → 402 on an unfunded org (surfaced honestly).
- *   - GET      /v1/train/experiments  — runs + their metric series (loss/val/ppl/acc).
+ * Endpoints:
+ *   - GET/POST /v1/ai/finetune/jobs   — list / create training jobs. POST persists
+ *     the job and submits a real TrainJob CR; it is billing-gated by the
+ *     ResourceMeter → 402 on an unfunded org (surfaced honestly).
  *   - GET      /v1/ml/models          — the org's trained/registered models.
  *
  * Tolerant by construction: the exact success envelope isn't pinned, so we accept
- * a casibase `{data}` wrap, a named-key object (`{jobs}`/`{experiments}`/`{models}`),
- * or a bare array — and each field is normalized with fallbacks. A rename upstream
- * degrades a cell, never the page. Nothing is fabricated: an unreachable/empty
- * endpoint yields an honest empty/backend-state, never demo rows.
+ * a casibase `{data}` wrap, a named-key object (`{jobs}`/`{models}`), or a bare
+ * array — and each field is normalized with fallbacks. A rename upstream degrades
+ * a cell, never the page. Nothing is fabricated: an unreachable/empty endpoint
+ * yields an honest empty/backend-state, never demo rows.
  */
 import { restGet, restPost } from './client'
 
@@ -76,20 +76,6 @@ export type TrainJob = {
   createdAt?: string
 }
 
-export type MetricPoint = { step: number; loss?: number; valLoss?: number; ppl?: number; acc?: number }
-
-export type TrainExperiment = {
-  id: string
-  name?: string
-  jobId?: string
-  status?: string
-  createdAt?: string
-  finalValLoss?: number
-  finalPpl?: number
-  finalAcc?: number
-  metrics: MetricPoint[]
-}
-
 export type MlModel = {
   id: string
   name?: string
@@ -129,33 +115,6 @@ function normJob(r: Record<string, unknown>, i: number): TrainJob {
   }
 }
 
-function normMetric(r: Record<string, unknown>, i: number): MetricPoint {
-  return {
-    step: num(r.step) ?? num(r.epoch) ?? num(r.iteration) ?? i,
-    loss: num(r.loss) ?? num(r.trainLoss) ?? num(r.train_loss),
-    valLoss: num(r.valLoss) ?? num(r.val_loss) ?? num(r.validationLoss) ?? num(r.eval_loss),
-    ppl: num(r.ppl) ?? num(r.perplexity),
-    acc: num(r.acc) ?? num(r.accuracy),
-  }
-}
-
-function normExperiment(r: Record<string, unknown>, i: number): TrainExperiment {
-  const rawMetrics = Array.isArray(r.metrics) ? (r.metrics as Record<string, unknown>[]) : Array.isArray(r.history) ? (r.history as Record<string, unknown>[]) : []
-  const metrics = rawMetrics.map(normMetric).sort((a, b) => a.step - b.step)
-  const last = metrics[metrics.length - 1]
-  return {
-    id: str(r.id) ?? str(r.experimentId) ?? str(r.name) ?? `exp-${i}`,
-    name: str(r.name) ?? str(r.displayName),
-    jobId: str(r.jobId) ?? str(r.job_id),
-    status: str(r.status) ?? str(r.state),
-    createdAt: str(r.createdAt) ?? str(r.createdTime),
-    finalValLoss: num(r.valLoss) ?? num(r.finalValLoss) ?? last?.valLoss,
-    finalPpl: num(r.ppl) ?? num(r.finalPpl) ?? last?.ppl,
-    finalAcc: num(r.acc) ?? num(r.finalAcc) ?? last?.acc,
-    metrics,
-  }
-}
-
 function normModel(r: Record<string, unknown>, i: number): MlModel {
   return {
     id: str(r.id) ?? str(r.modelId) ?? str(r.name) ?? `model-${i}`,
@@ -171,19 +130,14 @@ function normModel(r: Record<string, unknown>, i: number): MlModel {
 
 export const TrainApi = {
   listJobs: async (): Promise<TrainJob[]> => {
-    const r = await restGet<unknown>(trainUrl('train/jobs'))
+    const r = await restGet<unknown>(trainUrl('ai/finetune/jobs'))
     return arrayOf(r, ['jobs', 'items']).map(normJob)
   },
 
   /** Create a training job. Throws ApiError(402) when the ResourceMeter gate blocks. */
   createJob: async (input: CreateTrainJobInput): Promise<TrainJob> => {
-    const r = await restPost<unknown>(trainUrl('train/jobs'), input)
+    const r = await restPost<unknown>(trainUrl('ai/finetune/jobs'), input)
     return normJob(objectOf(r), 0)
-  },
-
-  experiments: async (): Promise<TrainExperiment[]> => {
-    const r = await restGet<unknown>(trainUrl('train/experiments'))
-    return arrayOf(r, ['experiments', 'runs', 'items']).map(normExperiment)
   },
 
   models: async (): Promise<MlModel[]> => {

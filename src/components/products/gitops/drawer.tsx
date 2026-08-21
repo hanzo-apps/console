@@ -8,19 +8,19 @@
  * (`ServiceDetailDrawer` renders just the active content). Honest states
  * throughout: loading, an empty note, a message on failure — never invented rows.
  *
- *   Resources — the owned-resource TOPOLOGY (Service CR → Deployment → RS → Pods),
- *               folded by `treeToGraph` and rendered on the shared canvas; a node
- *               opens its live manifest + desired-vs-live verdict + events.
- *   Deploys   — the app's CI build history (`/v1/builds`) as a deploy timeline.
- *   Logs      — the newest pod's logs (`/v1/deploy/:name/logs`).
+ *   Resources — the owned-resource TOPOLOGY (Service CR → Deployment → RS → Pods)
+ *               from `/v1/deploy/applications/:name/resource-tree`, folded by
+ *               `treeToGraph` and rendered on the shared canvas with each node's
+ *               reconciled health.
+ *   Deploys   — the app's CI build history (`/v1/platform/builds`) as a deploy timeline.
  *   Source    — the git repo + branch + HEAD commit and the declared image ref.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, ScrollView, Text, XStack, YStack } from '@hanzo/gui'
-import { GitBranch, GitCommitHorizontal, RefreshCw } from '@hanzogui/lucide-icons-2'
+import { useEffect, useMemo, useState } from 'react'
+import { Text, XStack, YStack } from '@hanzo/gui'
+import { GitBranch, GitCommitHorizontal } from '@hanzogui/lucide-icons-2'
 import { DeployTimeline, type DeployEvent, type DrawerTab } from '@hanzo/canvas'
 
-import { GitopsApi, type Application, type AppTree, type LogLine, type ResourceDetail } from '~/lib/api/gitops'
+import { GitopsApi, type Application, type AppTree } from '~/lib/api/gitops'
 import { GitApi, type Commit, type Repo } from '~/lib/api/git'
 import { BuildsApi } from '~/lib/api/builds'
 import { asApiError } from '~/components/ui/States'
@@ -32,7 +32,7 @@ import { toneColor } from '~/components/ui/tone'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
-/** Build the four fleet-app drawer tabs for `app`. */
+/** Build the three fleet-app drawer tabs for `app`. */
 export function buildFleetTabs(
   app: Application,
   opts: { theme: 'light' | 'dark'; reducedMotion?: boolean },
@@ -41,23 +41,20 @@ export function buildFleetTabs(
   return [
     { id: 'resources', label: 'Resources', content: <ResourcesTab name={app.name} theme={opts.theme} reducedMotion={opts.reducedMotion} /> },
     { id: 'deploys', label: 'Deploys', content: <DeploysTab repo={repo} /> },
-    { id: 'logs', label: 'Logs', content: <LogsTab name={app.name} /> },
     { id: 'source', label: 'Source', content: <SourceTab app={app} repo={repo} /> },
   ]
 }
 
-// ── Resources: the owned-resource topology + per-node drill-in ────────────────
+// ── Resources: the owned-resource topology ────────────────────────────────────
 
 function ResourcesTab({ name, theme, reducedMotion }: { name: string; theme: 'light' | 'dark'; reducedMotion?: boolean }) {
   const [tree, setTree] = useState<AppTree | null | undefined>(undefined)
   const [err, setErr] = useState<string>('')
-  const [selectedRef, setSelectedRef] = useState<string | null>(null)
 
   useEffect(() => {
     let live = true
     setTree(undefined)
     setErr('')
-    setSelectedRef(null)
     GitopsApi.tree(name)
       .then((t) => live && setTree(t))
       .catch((e) => {
@@ -95,92 +92,13 @@ function ResourcesTab({ name, theme, reducedMotion }: { name: string; theme: 'li
               reducedMotion={reducedMotion}
               renderIcon={renderServiceIcon}
               showMiniMap={false}
-              onOpenDetail={(n) => setSelectedRef(n.id)}
             />
           </CanvasFrame>
           <Text fontSize="$1" color="$color9">
-            {graph.nodes.length} resources · tap a node for its manifest, diff, and events.
-          </Text>
-          {selectedRef ? <ResourceDetailCard name={name} refToken={selectedRef} /> : null}
-        </>
-      )}
-    </YStack>
-  )
-}
-
-function ResourceDetailCard({ name, refToken }: { name: string; refToken: string }) {
-  const [detail, setDetail] = useState<ResourceDetail | null | undefined>(undefined)
-  const [err, setErr] = useState<string>('')
-
-  useEffect(() => {
-    let live = true
-    setDetail(undefined)
-    setErr('')
-    GitopsApi.resource(name, refToken)
-      .then((d) => live && setDetail(d))
-      .catch((e) => {
-        if (live) {
-          setDetail(null)
-          setErr(asApiError(e).message)
-        }
-      })
-    return () => {
-      live = false
-    }
-  }, [name, refToken])
-
-  return (
-    <Card borderWidth={1} borderColor="$borderColor" rounded="$4" p="$3" gap="$3" bg="$color1">
-      {detail === undefined ? (
-        <Loader label="Loading resource…" />
-      ) : detail === null ? (
-        <Text fontSize="$2" color="$color10">Could not load the resource: {err}</Text>
-      ) : (
-        <>
-          <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
-            <Text fontSize="$2" color="$color11" style={{ fontFamily: MONO }} numberOfLines={1}>
-              {detail.ref}
-            </Text>
-            <XStack
-              px="$2"
-              py="$0.5"
-              rounded="$2"
-              bg={detail.modified ? '$yellow3' : '$green3'}
-              items="center"
-            >
-              <Text fontSize="$1" color={detail.modified ? '$yellow11' : '$green11'} fontWeight="700">
-                {detail.desiredSource === 'none' ? 'No desired state' : detail.modified ? 'Out of sync' : 'In sync'}
-              </Text>
-            </XStack>
-          </XStack>
-
-          <ManifestBlock label="Live manifest" body={detail.live} empty="No live manifest." />
-          {detail.modified && detail.desired ? (
-            <ManifestBlock label={`Desired (${detail.desiredSource || 'last-applied'})`} body={detail.desired} empty="" />
-          ) : null}
-          <Text fontSize="$1" color="$color9">
-            {detail.events.length > 0
-              ? `${detail.events.length} events`
-              : 'No events reported by the deploy plane for this resource.'}
+            {graph.nodes.length} resources · health as the deploy plane reports it.
           </Text>
         </>
       )}
-    </Card>
-  )
-}
-
-function ManifestBlock({ label, body, empty }: { label: string; body: string; empty: string }) {
-  if (!body) return empty ? <Text fontSize="$2" color="$color10">{empty}</Text> : null
-  return (
-    <YStack gap="$1">
-      <Text fontSize="$1" color="$color10" fontWeight="600">{label}</Text>
-      <ScrollView style={{ maxHeight: 220 }}>
-        <YStack bg="$color2" rounded="$3" p="$2">
-          <Text fontSize="$1" color="$color11" style={{ fontFamily: MONO, whiteSpace: 'pre' }}>
-            {body}
-          </Text>
-        </YStack>
-      </ScrollView>
     </YStack>
   )
 }
@@ -228,58 +146,10 @@ function DeploysTab({ repo }: { repo: string }) {
   if (events === null)
     return (
       <Text fontSize="$2" color="$color10">
-        Build history is not available on this deployment ({err}). It appears here once `/v1/builds` is routed.
+        Build history could not be read ({err}). It appears here once `/v1/platform/builds` answers.
       </Text>
     )
   return <DeployTimeline events={events} emptyLabel={`No recent builds for ${repo || 'this application'}.`} />
-}
-
-// ── Logs: the newest pod's current logs ───────────────────────────────────────
-
-function LogsTab({ name }: { name: string }) {
-  const [lines, setLines] = useState<LogLine[] | null>(null)
-  const [err, setErr] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-
-  const load = useCallback(() => {
-    setLoading(true)
-    setErr('')
-    GitopsApi.logs(name, { tail: 300 })
-      .then(setLines)
-      .catch((e) => setErr(asApiError(e).message))
-      .finally(() => setLoading(false))
-  }, [name])
-  useEffect(() => load(), [load])
-
-  return (
-    <YStack gap="$2">
-      <XStack justify="flex-end">
-        <Button size="$1" chromeless icon={<RefreshCw size={13} />} onPress={load} disabled={loading}>
-          Refresh
-        </Button>
-      </XStack>
-      {loading && !lines ? (
-        <Loader label="Loading logs…" />
-      ) : err ? (
-        <Text fontSize="$2" color="$color10">Could not load logs: {err}</Text>
-      ) : lines && lines.length ? (
-        <ScrollView style={{ maxHeight: 420 }}>
-          <YStack gap="$0.5" p="$2" bg="$color1" rounded="$3">
-            {lines.map((l, i) => (
-              <Text key={i} fontSize="$2" color="$color11" style={{ fontFamily: MONO }}>
-                {l.pod ? `[${l.pod}] ` : ''}
-                {l.message}
-              </Text>
-            ))}
-          </YStack>
-        </ScrollView>
-      ) : (
-        <Text fontSize="$2" color="$color10">
-          No running pod logs yet (the pod may not be scheduled, or the cluster is unreachable).
-        </Text>
-      )}
-    </YStack>
-  )
 }
 
 // ── Source: git repo + branch + HEAD commit + the declared image ref ──────────

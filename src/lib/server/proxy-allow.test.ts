@@ -54,24 +54,86 @@ describe('allowPlansSurface', () => {
 
 describe('v1Head', () => {
   it('extracts the head of a v1 path', () => {
-    expect(v1Head('v1/vector')).toBe('vector')
-    expect(v1Head('v1/vector/mydb')).toBe('vector')
+    expect(v1Head('v1/provisioning')).toBe('provisioning')
+    expect(v1Head('v1/provisioning/vector/mydb')).toBe('provisioning')
     expect(v1Head('v1/functions/foo/logs')).toBe('functions')
-    expect(v1Head('/v1/kv')).toBe('kv') // tolerant of a leading slash
+    expect(v1Head('/v1/product')).toBe('product') // tolerant of a leading slash
   })
 
   it('returns null for a non-v1 path', () => {
-    expect(v1Head('vector')).toBeNull()
+    expect(v1Head('provisioning')).toBeNull()
     expect(v1Head('')).toBeNull()
   })
 })
 
 describe('allowCloudSurface', () => {
-  it('admits every managed data kind and serverless surface', () => {
-    for (const head of CLOUD_HEADS) {
-      expect(allowCloudSurface(`v1/${head}`)).toBe(true)
-      expect(allowCloudSurface(`v1/${head}/some-name`)).toBe(true)
+  it('admits every allow-listed address and its subtree', () => {
+    for (const entry of CLOUD_HEADS) {
+      expect(allowCloudSurface(`v1/${entry}`)).toBe(true)
+      expect(allowCloudSurface(`v1/${entry}/some-name`)).toBe(true)
     }
+  })
+
+  // An entry is the PREFIX of what it admits, matched on segment boundaries. A
+  // multi-segment entry therefore admits ONE route of a capability and nothing beside
+  // it — the only way to stay least-privilege against a backend that answers several
+  // products under a single head.
+  it('a multi-segment entry admits its route and refuses the siblings', () => {
+    expect(CLOUD_HEADS).toContain('pricing/enablement')
+    expect(CLOUD_HEADS).not.toContain('pricing')
+    expect(allowCloudSurface('v1/pricing/enablement')).toBe(true)
+    expect(allowCloudSurface('v1/pricing/enablement/optin')).toBe(true)
+    for (const sibling of ['v1/pricing/models', 'v1/pricing/cloud/regions', 'v1/pricing', 'v1/pricing/enablementfoo']) {
+      expect(allowCloudSurface(sibling)).toBe(false)
+    }
+  })
+
+  // Connecting an account is one flow across two halves: the connector REGISTRY under
+  // /connectors, and the per-provider ACTIONS beside it. One head carries both, and the
+  // INBOUND doors under it — where a provider posts to us — are refused by path.
+  it('admits both halves of an integration, and refuses the doors providers post to', () => {
+    expect(CLOUD_HEADS).toContain('integrations')
+    for (const admitted of [
+      'v1/integrations',
+      'v1/integrations/slack',
+      'v1/integrations/slack/connect',
+      'v1/integrations/slack/disconnect',
+      'v1/integrations/connectors',
+      'v1/integrations/connectors/providers',
+      'v1/integrations/github/repos',
+    ]) {
+      expect(allowCloudSurface(admitted), `${admitted} must be admitted`).toBe(true)
+    }
+    for (const refused of [
+      'v1/integrations/github/webhook',
+      'v1/integrations/openrouter/webhook',
+      'v1/integrations/slack/commands',
+      'v1/integrations/slack/events',
+      'v1/integrations/slack/install',
+      'v1/integrations/discord/interactions',
+      'v1/integrations/teams/events',
+      'v1/integrations/slack/callback',
+    ]) {
+      expect(allowCloudSurface(refused), `${refused} must be refused`).toBe(false)
+    }
+  })
+
+  // Every product entitlement read is org-scoped and PINNED to the Bearer owner, so the
+  // ROUTE is admitted and the capability's other surfaces are not.
+  it('admits the org entitlements route, not the whole entitlements capability', () => {
+    expect(allowCloudSurface('v1/entitlements/orgs/acme')).toBe(true)
+    expect(allowCloudSurface('v1/entitlements')).toBe(false)
+  })
+
+  // Every route under `account` is about the person holding the bearer — their key, their
+  // orgs, their CSRF token, their picture — so the head is the right grain.
+  it('admits the caller’s own account', () => {
+    expect(CLOUD_HEADS).toContain('account')
+    for (const p of ['v1/account/keys', 'v1/account/orgs', 'v1/account/csrf', 'v1/account/appearance']) {
+      expect(allowCloudSurface(p), `${p} must be admitted`).toBe(true)
+    }
+    // …and it is the caller's own, never a route into someone else's identity.
+    expect(allowCloudSurface('v1/iam/get-users')).toBe(false)
   })
 
   it('admits the functions/prompts/agents subtrees', () => {
@@ -172,22 +234,29 @@ describe('allowCloudSurface', () => {
     // surface was namespaced. Granting the `ai` head would have admitted it
     // silently, so the refusal follows the path.
     expect(allowCloudSurface('v1/ai/stores/global')).toBe(false)
-    // The compound routes are gone entirely.
-    expect(allowCloudSurface('v1/get-stores')).toBe(false)
   })
 
-  it('the retired compound heads are gone', () => {
-    expect(CLOUD_HEADS).not.toContain('get-global-stores')
-    expect(CLOUD_HEADS).not.toContain('get-store-names')
-    expect(allowCloudSurface('v1/get-global-stores')).toBe(false)
-    expect(allowCloudSurface('v1/get-store-names')).toBe(false)
+  it('LEAST PRIVILEGE: refuses the ai capability SIGN-IN verbs, but not signing out', () => {
+    // Who the caller is arrives from IAM through the bearer this proxy mints. A second
+    // door onto a second notion of identity, opened by a browser tab, is how the two
+    // disagree — and `signin-sessions` lists them across tenants.
+    expect(allowCloudSurface('v1/ai/signin')).toBe(false)
+    expect(allowCloudSurface('v1/ai/signin-sessions')).toBe(false)
+    expect(allowCloudSurface('v1/ai/signin-sessions/acme/s-1')).toBe(false)
+    // Ending your OWN session is the one session verb the person in the browser owns,
+    // and the account menu drives it.
+    expect(allowCloudSurface('v1/ai/signout')).toBe(true)
+    // …as do the reads.
+    expect(allowCloudSurface('v1/ai/account')).toBe(true)
+    expect(allowCloudSurface('v1/ai/memory/list')).toBe(true)
+    expect(allowCloudSurface('v1/ai/router/policy')).toBe(true)
   })
+
 
   it('REFUSES privileged / unlisted cloud-api surfaces (not a general tunnel)', () => {
     expect(allowCloudSurface('v1/iam/get-users')).toBe(false)
     expect(allowCloudSurface('v1/admin/overview')).toBe(false)
     expect(allowCloudSurface('v1/kms/secrets')).toBe(false)
-    expect(allowCloudSurface('v1/get-account')).toBe(false)
     expect(allowCloudSurface('functions')).toBe(false) // must be a v1 path
   })
 })
@@ -213,6 +282,20 @@ describe('allowCommerceSurface', () => {
       expect(allowCommerceSurface(`v1/${head}`)).toBe(true)
       expect(allowCommerceSurface(`v1/${head}/some-id`)).toBe(true)
     }
+  })
+
+  // Cloud answers the store, the platform catalog and the plan authority under
+  // /v1/commerce/*, so ONE proxy carries all three to the ONE binary that serves them.
+  it('admits the catalog + plan CMS routes it now carries', () => {
+    expect(allowCommerceSurface('v1/catalog/entries')).toBe(true)
+    expect(allowCommerceSurface('v1/catalog/entries/cloud-dev')).toBe(true)
+    expect(allowCommerceSurface('v1/catalog/seed')).toBe(true)
+    expect(allowCommerceSurface('v1/plans/entries')).toBe(true)
+    expect(allowCommerceSurface('v1/plans/entries/pro')).toBe(true)
+    expect(allowCommerceSurface('v1/plans/seed')).toBe(true)
+    // and nothing beside them — the bare heads stay shut
+    expect(allowCommerceSurface('v1/catalog')).toBe(false)
+    expect(allowCommerceSurface('v1/plans')).toBe(false)
   })
 
   it('refuses the money / tenant-admin surfaces that share the commerce binary', () => {

@@ -1,13 +1,15 @@
 /**
- * The Hanzo `/v1/<svc>` capability catalog — a small, HONEST client-side map of
- * the subsystem ids the cloud actually mounts (`hanzoai/cloud subsystems`), used
- * to tag a canvas node with the Hanzo capability it is (e.g. this node is
- * `/v1/vector`, that one `/v1/platform`).
+ * The Hanzo capability catalog — a small, HONEST client-side map of the subsystem
+ * ids the cloud actually mounts, used to tag a canvas node with the Hanzo
+ * capability it is (e.g. this node is `/v1/provisioning/vector`, that one
+ * `/v1/platform`).
  *
- * There is no runtime `/v1/subsystems` endpoint — the ids ARE the mount route
- * names, and human labels live only in the code. So this is a known, curated map
- * (not fabricated data); an id with no entry simply resolves to `null` and the
- * node shows no capability chip rather than a guess.
+ * There is no runtime `/v1/subsystems` endpoint — the ids come off the node, and
+ * the label and address are curated here. Each address is STATED, not derived from
+ * the id: HIP-0139 gives a capability one head, and several ids answer under
+ * another capability's (a SQL/vector/document store is provisioning's). An id with
+ * no entry resolves to `null` and the node shows no capability chip rather than a
+ * guess.
  */
 export interface Capability {
   id: string
@@ -15,52 +17,50 @@ export interface Capability {
   path: string
 }
 
-/** Curated labels for the user-facing `/v1/<id>` capabilities a PaaS node maps to. */
-const LABELS: Record<string, string> = {
-  platform: 'App Platform',
-  functions: 'Functions',
-  agents: 'Agents',
-  prompts: 'Prompts',
-  evals: 'Evals',
-  ml: 'ML',
-  exec: 'Code Interpreter',
-  websearch: 'Web Search',
-  sql: 'SQL',
-  vector: 'Vector',
-  kv: 'KV',
-  search: 'Search',
-  s3: 'Object Storage',
-  datastore: 'Datastore',
-  docdb: 'DocDB',
-  analytics: 'Analytics',
-  crm: 'CRM',
-  cms: 'CMS',
-  team: 'Team',
-  git: 'Git',
-  tasks: 'Tasks',
-  templates: 'Templates',
-  connectors: 'Connectors',
-  automations: 'Automations',
-  notify: 'Notify',
-  bot: 'Bot',
-  security: 'Security',
-  knowledge: 'Knowledge',
+/** Every subsystem id a PaaS node can be, with the label and `/v1` address for it. */
+const CAPABILITIES: Record<string, Omit<Capability, 'id'>> = {
+  platform: { label: 'App Platform', path: '/v1/platform' },
+  functions: { label: 'Functions', path: '/v1/functions' },
+  agents: { label: 'Agents', path: '/v1/agents' },
+  prompts: { label: 'Prompts', path: '/v1/prompts' },
+  evals: { label: 'Evals', path: '/v1/evals' },
+  ml: { label: 'ML', path: '/v1/ml' },
+  exec: { label: 'Code Interpreter', path: '/v1/exec' },
+  websearch: { label: 'Web Search', path: '/v1/websearch' },
+  sql: { label: 'SQL', path: '/v1/provisioning/sql' },
+  vector: { label: 'Vector', path: '/v1/provisioning/vector' },
+  kv: { label: 'KV', path: '/v1/provisioning/kv' },
+  datastore: { label: 'Datastore', path: '/v1/provisioning/datastore' },
+  docdb: { label: 'DocDB', path: '/v1/provisioning/docdb' },
+  search: { label: 'Search', path: '/v1/search' },
+  s3: { label: 'Object Storage', path: '/v1/s3' },
+  crm: { label: 'CRM', path: '/v1/crm' },
+  team: { label: 'Team', path: '/v1/team' },
+  git: { label: 'Git', path: '/v1/git' },
+  tasks: { label: 'Tasks', path: '/v1/tasks' },
+  templates: { label: 'Templates', path: '/v1/templates' },
+  integrations: { label: 'Integrations', path: '/v1/integrations' },
+  auto: { label: 'Automations', path: '/v1/auto' },
+  notify: { label: 'Notify', path: '/v1/notify' },
+  bot: { label: 'Bot', path: '/v1/bot' },
+  security: { label: 'Security', path: '/v1/security' },
+  knowledge: { label: 'Knowledge', path: '/v1/knowledge' },
 }
 
 /** The set of known capability ids (used for honest exact-match inference). */
-export const CAPABILITY_IDS = new Set(Object.keys(LABELS))
+export const CAPABILITY_IDS = new Set(Object.keys(CAPABILITIES))
 
 /** Resolve a capability id → its `{id,label,path}`, or `null` when unknown. */
 export function capabilityFor(id: string | undefined | null): Capability | null {
   if (!id) return null
   const key = id.toLowerCase()
-  const label = LABELS[key]
-  return label ? { id: key, label, path: `/v1/${key}` } : null
+  const c = CAPABILITIES[key]
+  return c ? { id: key, ...c } : null
 }
 
 /**
  * Best-effort, HONEST inference of an app's Hanzo capability from its image repo
- * basename or slug — only an EXACT match to a known `/v1` id counts (so an app
+ * basename or slug — only an EXACT match to a known capability id counts (so an app
  * literally deploying the `vector`/`search`/`functions` service is tagged), else
  * the app is simply the App Platform capability. Never a fuzzy guess.
  */

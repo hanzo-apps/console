@@ -24,7 +24,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4300'
 requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations)(\/|$|\?)/
 
 /** A small real-shaped model catalog, enough for the Models + Marketplace lists. */
 const MODELS = {

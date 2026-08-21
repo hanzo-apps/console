@@ -6,8 +6,8 @@
  * two never mix.
  *
  * Every call is the CANONICAL, prefix-free `/v1/commerce/<resource>` (`cUrl('product')` →
- * `<origin>/v1/commerce/product`); `next.config` rewrites `/v1/commerce/*` to the console's
- * OWN same-origin user-bearer `/commerce` proxy (the billing twin): the server route
+ * `<origin>/v1/commerce/product`); `/v1/commerce/*` resolves to the console's OWN
+ * same-origin user-bearer `app/v1/commerce/[...path]` route (the billing twin): it
  * mints a short-lived user-bound IAM token and commerce resolves the org from the
  * token's `owner` claim, so every read/write is org-scoped SERVER-SIDE — a merchant
  * only ever sees their OWN org's store. No credential reaches the browser and the org
@@ -264,7 +264,7 @@ export const CommerceApi = {
   stores: (p?: ListParams) => fetchList('store', normalizeStore, { limit: 100, ...p }),
 
   /**
-   * The org's default storefront settings (`GET /v1/store/current` — commerce returns the
+   * The org's default storefront settings (`GET /v1/commerce/store/current` — commerce returns the
    * first store, or a synthesized minimal one when none exists). Commerce wraps it as
    * `{ store: {...} }` (verified live), so unwrap `.store` before normalizing (a bare object
    * still works). Org-scoped server-side.

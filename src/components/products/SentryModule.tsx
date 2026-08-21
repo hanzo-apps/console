@@ -8,7 +8,7 @@
  * module composes them and stays self-contained (its own tab strip) so it also
  * works when reached at `/sentry` on any host.
  *
- * Panels are thin views over the real `/v1/sentinel` contract (`SentryApi`), each with
+ * Panels are thin views over the real `/v1/o11y/sentinel` contract (`SentryApi`), each with
  * honest loading / empty / `ErrorState` states — never fabricated data. The projects
  * list (the shared project-filter source) is fetched ONCE here and threaded down.
  */
@@ -105,7 +105,7 @@ export function SentryModule({ params }: { params: Record<string, string> }) {
       {panel}
 
       <Text fontSize="$1" color="$color10" self="center">
-        Hanzo Sentinel · {config.brandName} · errors, logs and traces on /v1/sentinel
+        Hanzo Sentinel · {config.brandName} · errors, logs and traces on /v1/o11y/sentinel
       </Text>
     </YStack>
   )

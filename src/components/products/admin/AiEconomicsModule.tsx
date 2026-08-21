@@ -15,7 +15,7 @@
  *   (c) Training data — the HONEST collection card: the metering ledger holds NO
  *                       prompt/completion content and nothing harvests traffic, so the
  *                       only training data is the user-curated eval dataset registry
- *                       (+ direct `/v1/training` uploads). Live dataset/item counts.
+ *                       (+ direct `/v1/ai/finetune/jobs` runs). Live dataset/item counts.
  *   (d) Evals         — recent dataset runs with their judge model + average score.
  *   (e) Router loop   — how eval scores fold into the enso router (offline ridge +
  *                       online LinUCB), with the honest "no per-request reward yet".
@@ -33,7 +33,6 @@ import {
   Coins,
   Cpu,
   Database,
-  ExternalLink,
   Flame,
   FlaskConical,
   Gauge,
@@ -540,8 +539,8 @@ export function AiEconomicsModule() {
           </Text>
           <Text fontSize="$3" color="$color11">
             The only training data the platform holds is the eval dataset registry below — input/expected pairs a human
-            uploaded — plus whatever an org feeds <Text className="hz-mono">/v1/training</Text> directly. Those are the
-            curated sources the router and fine-tunes learn from, and the numbers above are the registry counts.
+            uploaded — plus the datasets an org points a fine-tune at through <Text className="hz-mono">/v1/ai/finetune/jobs</Text>.
+            Those are the curated sources the router and fine-tunes learn from, and the numbers above are the registry counts.
           </Text>
           {datasetsErr && !datasets ? (
             <Text fontSize="$2" color="$color10">
@@ -549,29 +548,6 @@ export function AiEconomicsModule() {
             </Text>
           ) : null}
         </NoteCard>
-
-        {/* Training plane — not proxied through the console; link to the admin-gated engine. */}
-        <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2">
-          <XStack items="center" gap="$2">
-            <Cpu size={16} color="$color11" />
-            <Text fontSize="$4" fontWeight="600" color="$color12">
-              Training plane
-            </Text>
-          </XStack>
-          <Text fontSize="$3" color="$color11">
-            The live fine-tune / RL plane (forward-backward + optim steps per client) runs on the engine at{' '}
-            <Text className="hz-mono">api.hanzo.ai/v1/training</Text>, admin-gated. It is not proxied through this console,
-            so client counts are read there directly rather than mirrored here.
-          </Text>
-          <a href="https://api.hanzo.ai/v1/training/clients" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-            <XStack items="center" gap="$1.5" self="flex-start">
-              <ExternalLink size={13} color="$color10" />
-              <Text fontSize="$2" style={{ color: 'var(--color10)' }}>
-                api.hanzo.ai/v1/training/clients
-              </Text>
-            </XStack>
-          </a>
-        </Card>
       </YStack>
 
       {/* ── (d) Evals ── */}

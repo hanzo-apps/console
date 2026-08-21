@@ -29,7 +29,7 @@ const empty = (): OverviewData => ({ kpi: {}, series: {}, distribution: {}, acti
 
 /**
  * The usage overview BOTH real sources produce: the canonical `@hanzo/usage`
- * `CloudUsageOverview` (what cloud's `GET /v1/get-cloud-usages` returns), OPTIONALLY
+ * `CloudUsageOverview` (what cloud's `GET /v1/ai/usages/cloud` returns), OPTIONALLY
  * carrying the `byStatus` requests-by-status slice the console's commerce-ledger
  * adapter (`~/lib/api/usage`, over `/billing/usage`) additionally computes. Typing
  * `byStatus` optional lets the ONE `fromCloudUsage` map BOTH — the cloud aggregate
@@ -120,7 +120,7 @@ export function fromAdminOverview(ov: AdminOverview): OverviewData {
  */
 export function financeHealth(fin: Finance): OverviewHealth {
   if (!fin.cost.configured) {
-    return { service: 'Profitability', health: '', detail: 'Connect commerce /v1/costs to compute COGS + margin' }
+    return { service: 'Profitability', health: '', detail: 'Connect commerce to compute COGS + margin' }
   }
   const { profitable, grossMarginPct } = fin.derived
   if (!profitable) {
@@ -143,8 +143,8 @@ export function fromFinance(fin: Finance): OverviewData {
   const doCost = cost.digitalocean
 
   // ── KPI tiles.
-  // COGS (all vendors) is the headline spend AND the margin basis — from commerce
-  // /v1/costs. Only when configured, so an unreachable commerce renders "—".
+  // COGS (all vendors) is the headline spend AND the margin basis — the aggregate's
+  // own `cost` slice. Only when configured, so an unreachable commerce renders "—".
   if (cost.configured) {
     d.kpi.spendCents = { value: cost.totalCents }
   }

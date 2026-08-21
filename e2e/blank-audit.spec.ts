@@ -58,7 +58,7 @@ function payloadFor(mode: typeof MODE): { status: number; body: string } {
 }
 
 /** Path prefixes that are DATA calls (mock them); everything else is a Next asset/page. */
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()

@@ -1,7 +1,7 @@
 /**
  * A product's operations, read from the API describing itself.
  *
- * ONE source: `GET /v1/commands`, cloud's command projection of its own router — every
+ * ONE source: `GET /v1/openapi/commands`, cloud's command projection of its own router — every
  * operation the API answers, reduced to the name it is addressed by, its method, path
  * and prose. Two properties make it the right door and not merely a convenient one:
  * cloud composes it from each subsystem's own registration, so an operation is in it
@@ -64,7 +64,7 @@ let list: Promise<unknown> | null = null
 
 /** Read the projection (once per session) and pull out one product's operations. */
 export async function opsFor(id: string): Promise<Op[]> {
-  list ??= restGet<unknown>(originV1Url('commands')).catch(() => {
+  list ??= restGet<unknown>(originV1Url('openapi/commands')).catch(() => {
     list = null
     // An unreachable projection is not a failed brief: the identity, the console
     // addresses and the projection's own address are all still true and still useful.

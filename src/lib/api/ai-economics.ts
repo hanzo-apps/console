@@ -17,7 +17,8 @@
  * records ONE row per inference call with counts + cost and NO prompt/completion
  * CONTENT: there is no traffic harvesting and no consent flag anywhere, so the only
  * "training data" the platform holds is the user-curated eval dataset registry (plus
- * whatever users feed `/v1/training` directly) — never a fabricated pipeline. Every
+ * the datasets a fine-tune run points at through `/v1/ai/finetune/jobs`) — never a
+ * fabricated pipeline. Every
  * rollup here is a PURE function over real rows; nothing is invented (a missing value
  * degrades to 0 / '' / an em dash at the render site).
  */

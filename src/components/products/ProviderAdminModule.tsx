@@ -3,19 +3,19 @@
 /**
  * AI Providers — the platform-wide provider CONTROL board (admin.hanzo.ai).
  *
- * GLOBAL-ADMIN ONLY. This is the MANAGEMENT dashboard for the shared-gateway
- * provider routing (do-ai, openrouter, fireworks, openai-direct, zen) — one row per
- * upstream provider with a working Enabled toggle, a Primary indicator + "Make
- * primary" action, model count, a Key present/missing pill (NEVER the key), and an
- * honest DERIVED health verdict. It is DISTINCT from the customer-facing
- * `ProvidersModule` (the model-catalog browser + BYOK per-org provider CRUD) — this
- * one flips backend Provider `State`/`IsDefault` that applies to every org.
+ * GLOBAL-ADMIN ONLY. This is the platform-wide view of the shared-gateway provider
+ * routing (do-ai, openrouter, fireworks, openai-direct, zen) — one row per upstream
+ * provider with its enabled state, which one is primary, model count, a Key
+ * present/missing pill (NEVER the key), and an honest DERIVED health verdict. It is
+ * DISTINCT from the customer-facing `ProvidersModule` (the model-catalog browser +
+ * BYOK per-org provider CRUD).
  *
- * DO-first is the BACKEND's state, not a UI assumption: the board renders exactly
- * what `GET /v1/admin/providers` returns (on first light-up do-ai is enabled +
- * primary, the rest disabled). Toggling Enabled → `ProviderAdminApi.toggle` PERSISTS
- * (writes Provider `State`) and refetches; "Make primary" → `setPrimary` refetches so
- * exactly one row is primary.
+ * READ-ONLY. DO-first is the BACKEND's state, not a UI assumption: the board renders
+ * exactly what `GET /v1/ai/providers/global` returns (on first light-up do-ai is
+ * enabled + primary, the rest disabled). Which provider is primary is a single
+ * platform-wide value, and moving it means turning one provider on and another off
+ * together — one write, server-side, or the platform briefly has two primaries or
+ * none. The console reports the state; it does not race it.
  *
  * Health is HONEST — a pure function of (enabled, keyPresent), labeled as derived,
  * not a live probe: disabled ⇒ Off; enabled + keyPresent ⇒ Ready; enabled + no key
@@ -25,8 +25,8 @@
  * the shared `SuperAdminRequired` panel — a signed-in non-admin reads "admin
  * only", NEVER "sign in"), listing-unavailable (404), error (retry), empty.
  *
- * All calls go through the origin-pinned admin client → the global-admin-gated
- * `/admin/aggregate` proxy. The browser holds no credential and never sees a key.
+ * The read goes through the origin-pinned client → the `/v1` bearer proxy. The
+ * browser holds no credential and never sees a key.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
@@ -77,47 +77,6 @@ export function ProviderAdminModule(_props: { params: Record<string, string> }) 
     run()
   }, [run])
 
-  const toggle = useCallback(
-    async (p: AdminProvider) => {
-      setBusy(p.name)
-      // NO optimistic flip: the enabled state changes ONLY when the server confirms
-      // (2xx → the returned row). This board flips SHARED-gateway routing for every
-      // org, so a slow 403 must never briefly render an unauthorized "on" state — the
-      // row stays as-is (its switch disabled via `busy`) until the write is confirmed.
-      try {
-        const updated = await ProviderAdminApi.toggle(p.name, !p.enabled)
-        setState((s) =>
-          s.phase === 'ready'
-            ? { phase: 'ready', rows: s.rows.map((r) => (r.name === updated.name ? updated : r)) }
-            : s,
-        )
-      } catch {
-        run() // authoritative refetch — the board reflects real backend state on any failure
-      } finally {
-        setBusy(null)
-      }
-    },
-    [run],
-  )
-
-  const makePrimary = useCallback(
-    async (p: AdminProvider) => {
-      if (p.primary) return
-      setBusy(p.name)
-      try {
-        // setPrimary returns the FULL updated list (old primary flipped off), so one
-        // round-trip re-renders with exactly one primary.
-        const rows = await ProviderAdminApi.setPrimary(p.name)
-        setState({ phase: 'ready', rows })
-      } catch {
-        run()
-      } finally {
-        setBusy(null)
-      }
-    },
-    [run],
-  )
-
   const columns: Column<AdminProvider>[] = [
     {
       key: 'provider',
@@ -141,7 +100,9 @@ export function ProviderAdminModule(_props: { params: Record<string, string> }) 
       header: 'Enabled',
       width: 96,
       render: (p) => (
-        <FieldSwitch checked={p.enabled} onChange={() => void toggle(p)} disabled={busy === p.name} />
+        <Text fontSize="$3" color={p.enabled ? '$color12' : '$color10'}>
+          {p.enabled ? 'On' : 'Off'}
+        </Text>
       ),
     },
     {
@@ -157,15 +118,9 @@ export function ProviderAdminModule(_props: { params: Record<string, string> }) 
             </Text>
           </XStack>
         ) : (
-          <Button
-            size="$1"
-            chromeless
-            icon={<Star size={13} />}
-            disabled={busy === p.name || !p.enabled}
-            onPress={() => void makePrimary(p)}
-          >
-            Make primary
-          </Button>
+          <Text fontSize="$3" color="$color10">
+            —
+          </Text>
         ),
     },
     {

@@ -387,8 +387,8 @@ export const zeroTrustSurfaces: Surface[] = [
   {
     id: 'services',
     label: 'Services',
-    endpoint: 'zt/services',
-    empty: 'No zero-trust services returned.',
+    endpoint: 'network/services',
+    empty: 'No services published on the fabric.',
     columns: [
       { key: 'name', header: 'Service' },
       { key: 'host', header: 'Host' },
@@ -397,51 +397,15 @@ export const zeroTrustSurfaces: Surface[] = [
     ],
   },
   {
-    id: 'identities',
-    label: 'Identities',
-    endpoint: 'zt/identities',
-    empty: 'No zero-trust identities returned.',
-    columns: [
-      { key: 'name', header: 'Identity' },
-      { key: 'type', header: 'Type', width: 140 },
-      { key: 'status', header: 'Status', width: 120 },
-      { key: 'updatedAt', header: 'Updated', width: 190 },
-    ],
-  },
-  {
     id: 'routers',
     label: 'Routers',
-    endpoint: 'zt/routers',
-    empty: 'No zero-trust routers returned.',
+    endpoint: 'network/routers',
+    empty: 'No routers enrolled on the fabric.',
     columns: [
       { key: 'name', header: 'Router' },
       { key: 'endpoint', header: 'Endpoint' },
       { key: 'status', header: 'Status', width: 120 },
       { key: 'updatedAt', header: 'Updated', width: 190 },
-    ],
-  },
-  {
-    id: 'policies',
-    label: 'Policies',
-    endpoint: 'zt/service-policies',
-    empty: 'No zero-trust policies returned.',
-    columns: [
-      { key: 'name', header: 'Policy' },
-      { key: 'service', header: 'Service', width: 180 },
-      { key: 'identity', header: 'Identity', width: 180 },
-      { key: 'updatedAt', header: 'Updated', width: 190 },
-    ],
-  },
-  {
-    id: 'sessions',
-    label: 'Sessions',
-    endpoint: 'zt/sessions',
-    empty: 'No zero-trust sessions returned.',
-    columns: [
-      { key: 'id', header: 'Session' },
-      { key: 'service', header: 'Service', width: 180 },
-      { key: 'identity', header: 'Identity', width: 180 },
-      { key: 'createdAt', header: 'Created', width: 190 },
     ],
   },
 ]

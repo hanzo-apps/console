@@ -1,22 +1,17 @@
 'use client'
 
 /**
- * Containers — the workload console for a cluster, over the Hanzo PaaS control
- * plane via the same-origin `/paas` proxy (admin-gated; service token injected
- * server-side). Tabs are REAL sub-routes (the registry `:tab` pattern, like
- * Models/GPUs): Workloads / Pods / Containers / Images / Namespaces / Events.
+ * Containers — the workload console for a cluster.
  *
- *  - Workloads reads the canonical apps inventory (`GET /v1/apps`), scoped to the
- *    picked cluster — real declared/running tag, drift, health.
- *  - Pods/Containers/Images/Namespaces/Events each list their platform resource
- *    kind through the shared, tolerant `PaasResourceTab` (honest states when a
- *    kind isn't served on this deployment yet).
+ *  - The board reads the canonical apps inventory (`GET /v1/platform/apps`), scoped
+ *    to the picked cluster — real declared/running tag, drift, health. A workload IS
+ *    a Service CR + its Deployment, which is the level cloud reports; pod-, image-
+ *    and event-level listings are not addresses cloud serves (HIP-0139), so this
+ *    console does not draw them.
  *  - The right rail is the picked cluster's detail (k8s version, region, nodes,
  *    PROVISIONED CPU/RAM from its node pools) + Quick Actions (real routes — Create
  *    Deployment → /pipelines, View Logs). Nothing is fabricated.
  */
-import { SubNav } from '~/components/ui/SubNav'
-import { productSubpageSlug } from '~/lib/products/match'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from '~/lib/router'
@@ -28,14 +23,6 @@ import { clusterCapacity, fmtVcpu, fmtRam } from '~/lib/api/nodes'
 import { HintButton } from '~/components/ui/Metric'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import { WorkloadsTab } from './containers/WorkloadsTab'
-import {
-  PaasResourceTab,
-  PODS_COLUMNS,
-  CONTAINERS_COLUMNS,
-  IMAGES_COLUMNS,
-  NAMESPACES_COLUMNS,
-  EVENTS_COLUMNS,
-} from './containers/resource'
 import { FieldSelect, PageHeader, StatusTag } from '@hanzo/ui/product'
 
 function SidebarRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -72,7 +59,6 @@ function ClusterSidebar({
           <SidebarRow label="Nodes" value={cap?.nodes ? String(cap.nodes) : '—'} />
           <SidebarRow label="CPU" value={cap ? fmtVcpu(cap.vcpu) : '—'} />
           <SidebarRow label="Memory" value={cap ? fmtRam(cap.ramGb) : '—'} />
-          <SidebarRow label="Pods" value="—" />
           <SidebarRow label="Workloads" value={String(workloads)} />
         </YStack>
       </Card>
@@ -88,10 +74,9 @@ function ClusterSidebar({
   )
 }
 
-export function ContainersModule({ params }: { params: Record<string, string> }) {
+export function ContainersModule(_props: { params: Record<string, string> }) {
   const router = useRouter()
   const search = useSearchParams() ?? new URLSearchParams()
-  const tab = productSubpageSlug('containers', params.tab)
 
   const [apps, setApps] = useState<PlatformApp[]>([])
   const [clusters, setClusters] = useState<Cluster[]>([])
@@ -127,19 +112,13 @@ export function ContainersModule({ params }: { params: Record<string, string> })
   const scopedApps = useMemo(() => apps.filter((a) => a.cluster === active), [apps, active])
   const doks = useMemo(() => clusters.find((c) => c.name === active) ?? null, [clusters, active])
 
-  // Every tab keeps the selected cluster — SubNav renders the registry's nav, this
-  // builds its hrefs.
-  const go = (id: string): string => `/containers${id ? `/${id}` : ''}${active ? `?cluster=${encodeURIComponent(active)}` : ''}`
-
   return (
     <>
       <PageHeader
         title="Containers"
-        subtitle="Workloads, pods, and images across your clusters."
+        subtitle="The workloads running across your clusters."
         actions={<Button icon={<RefreshCw size={16} />} onPress={load}>Refresh</Button>}
       />
-
-      <SubNav id="containers" href={go} />
 
       <XStack width={260} items="center" gap="$2">
         <Text fontSize="$2" color="$color11">Cluster</Text>
@@ -150,23 +129,7 @@ export function ContainersModule({ params }: { params: Record<string, string> })
 
       <XStack gap="$4" flexWrap="wrap" items="flex-start">
         <YStack flex={1} minW={320} gap="$2">
-          {tab === '' ? (
-            error ? (
-              <PlatformStateCard error={error} onRetry={load} />
-            ) : (
-              <WorkloadsTab apps={scopedApps} />
-            )
-          ) : tab === 'pods' ? (
-            <PaasResourceTab path="pods" arrayKeys={['pods']} columns={PODS_COLUMNS} empty="No pods reported for this deployment." hint="Pods appear here once the platform serves that endpoint." />
-          ) : tab === 'containers' ? (
-            <PaasResourceTab path="containers" arrayKeys={['containers']} columns={CONTAINERS_COLUMNS} empty="No containers reported." />
-          ) : tab === 'images' ? (
-            <PaasResourceTab path="images" arrayKeys={['images']} columns={IMAGES_COLUMNS} empty="No images reported." />
-          ) : tab === 'namespaces' ? (
-            <PaasResourceTab path="namespaces" arrayKeys={['namespaces']} columns={NAMESPACES_COLUMNS} empty="No namespaces reported." />
-          ) : (
-            <PaasResourceTab path="events" arrayKeys={['events']} columns={EVENTS_COLUMNS} empty="No recent events." />
-          )}
+          {error ? <PlatformStateCard error={error} onRetry={load} /> : <WorkloadsTab apps={scopedApps} />}
         </YStack>
 
         <ClusterSidebar

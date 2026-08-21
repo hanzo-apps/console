@@ -148,7 +148,7 @@ function ResourceStat({ icon, label, value, caption }: { icon: ReactNode; label:
  * `/v1/projects/:slug/*` store. Every figure is real or an honest em-dash: Storage is
  * the live deployment's actual bytes/files; Domains is the project-scoped bound-host
  * list; Compute is `—` because a buildable site is edge-served and cloud exposes no
- * project-scoped machine/GPU attribution (org compute lives at `/v1/gpus` + `/vm`).
+ * project-scoped machine/GPU attribution (org compute lives at `/v1/visor/gpus` + `/vm`).
  */
 function AppDetailBody({ app, deployments, domains }: { app: App; deployments: AppDeployment[]; domains: string[] }) {
   const liveDep = liveDeployment(app, deployments)

@@ -106,7 +106,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 }
 
 /**
- * PUT — the GLOBAL-admin upserts on the same god-view gate (`PUT /v1/admin/enablement`
+ * PUT — the GLOBAL-admin upserts on the same god-view gate (`PUT /v1/admin/pricing/enablement`
  * flip an item off|beta|ga + grant orgs; `PUT /v1/admin/promos` upsert the single
  * platform plan promo). Same gate + same CSRF/traversal hardening as POST;
  * `allowAdminSurface` admits only the declared heads, nothing else.

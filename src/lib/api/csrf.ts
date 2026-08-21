@@ -7,13 +7,13 @@
  * same-origin session bridge: the go:embed console writes with its first-party
  * httpOnly cookie (ambient — a cross-site page's request to our origin carries it
  * too), so the cloud binary guards those writes with `requireCSRF`
- * (clients/account/csrf.go): POST/DELETE `/v1/iam/{keys,onboard} + /v1/commerce/topup/wallet`,
+ * (apps/account/csrf.go): POST/DELETE `/v1/account/keys`, POST `/v1/account/orgs`,
  * POST `/v1/billing/*`, and POST|PUT|PATCH|DELETE `/v1/commerce/*`. A NON-embed host
  * (console2/admin/brand) writes through the Next user-bearer BFF, which carries an
  * `Authorization` header ⇒ CSRF-immune (`ambientCookieAuth` is false there), so we
  * mint/echo the token ONLY when `IS_EMBED`. Bearer/API callers are always exempt.
  *
- * The token is minted at `GET /v1/csrf` (its response body is unreadable to a
+ * The token is minted at `GET /v1/account/csrf` (its response body is unreadable to a
  * cross-site page by the Same-Origin Policy), bound to the caller's validated
  * (uid, org), and lives `expiresIn` seconds (12h). We cache it until ~1 min before
  * expiry, share one in-flight fetch across concurrent writes, and re-mint on a 403
@@ -29,22 +29,22 @@ const REFRESH_SKEW_MS = 60_000 // re-mint a minute before the server would rejec
 // Same builder as client.ts `originV1Url` (a pure one-liner) — inlined here to keep
 // this module free of an import cycle with client.ts (which imports `applyCsrfToInit`).
 const csrfEndpoint = (): string =>
-  typeof window !== 'undefined' ? `${window.location.origin}/v1/csrf` : '/v1/csrf'
+  typeof window !== 'undefined' ? `${window.location.origin}/v1/account/csrf` : '/v1/account/csrf'
 
 let cached: { token: string; expiresAt: number } | null = null
 let inflight: Promise<string | null> | null = null
 
 /**
- * The write surfaces cloud's `requireCSRF` actually gates (clients/account/console.go):
- * POST/DELETE /v1/iam/{keys,onboard} + /v1/commerce/topup/wallet, POST /v1/billing/*, and
+ * The write surfaces cloud's `requireCSRF` actually gates (apps/account/account.go):
+ * POST/DELETE /v1/account/keys, POST /v1/account/orgs, POST /v1/billing/*, and
  * POST/PUT/PATCH/DELETE /v1/commerce/*. Every OTHER mutating request (login, session,
- * agents/tracker/… control-plane) is NOT csrf-gated server-side, so it must NOT trigger
- * a `GET /v1/csrf` — that fetch fires the SPA's ONE console error: a mutating
+ * agents/todo/… control-plane) is NOT csrf-gated server-side, so it must NOT trigger
+ * a `GET /v1/account/csrf` — that fetch fires the SPA's ONE console error: a mutating
  * bootstrap request (e.g. the pre-login session POST) minting a token before any session
  * cookie exists → 403. Scoping to these prefixes both matches the server and kills that
  * spurious pre-auth mint. When a url isn't supplied (legacy call), fall back to method-only.
  */
-const CSRF_WRITE_PREFIXES = ['/v1/iam/keys', '/v1/iam/onboard', '/v1/billing/', '/v1/commerce/']
+const CSRF_WRITE_PREFIXES = ['/v1/account/keys', '/v1/account/orgs', '/v1/billing/', '/v1/commerce/']
 
 /** True when a request must carry a CSRF token: the embed ambient-cookie money-write path + a mutating verb. */
 export const csrfRequired = (method?: string, url?: string): boolean =>
@@ -59,7 +59,7 @@ export const clearCsrfToken = (): void => {
 }
 
 /**
- * The current CSRF token, minted on demand from the same-origin `GET /v1/csrf`.
+ * The current CSRF token, minted on demand from the same-origin `GET /v1/account/csrf`.
  * Cached until just before expiry; concurrent callers share one in-flight fetch.
  * Returns `null` when unobtainable (non-embed, unauthenticated, or the endpoint is
  * unreachable) — the caller then proceeds without the header and the server

@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Issue detail — the sampled occurrence for one issue over `/v1/sentinel/issues/:id`:
+ * Issue detail — the sampled occurrence for one issue over `/v1/o11y/sentinel/issues/:id`:
  * stack trace (frames + source context), breadcrumbs, tags, environment/release,
  * a deep-link to the linked trace (Traces), resolve/ignore/reopen actions, and the
- * occurrence timeline from `/v1/sentinel/issues/:id/events`. Honest states throughout
+ * occurrence timeline from `/v1/o11y/sentinel/issues/:id/events`. Honest states throughout
  * (loading / shared `ErrorState` / honest empties) — never a fabricated frame.
  */
 import { useCallback, useEffect, useState } from 'react'

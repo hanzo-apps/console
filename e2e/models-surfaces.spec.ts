@@ -63,7 +63,7 @@ const LIVE_MODELS = {
   data: CATALOG.models.map((m) => ({ id: m.name, object: 'model', created: 0, owned_by: m.provider })),
 }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -82,7 +82,7 @@ async function mock(route: Route) {
   if (path.endsWith('/v1/models')) return json(route, LIVE_MODELS)
 
   // The org has no stored blend — the honest "not persisted yet" path.
-  if (path.endsWith('/v1/org/settings')) return json(route, { status: 'ok', msg: '', data: null })
+  if (path.endsWith('/v1/ai/org/settings')) return json(route, { status: 'ok', msg: '', data: null })
 
   const sameOrigin = url.origin === new URL(BASE_URL).origin
   if (sameOrigin && !API_RE.test(path)) return route.continue()

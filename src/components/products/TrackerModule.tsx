@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Tracker — a NATIVE, Linear-grade issue tracker over the REAL cloud `/v1/tracker`
- * surface (cloud clients/tracker — native Go, per-(org,team) SQLite). The durable
+ * Tracker — a NATIVE, Linear-grade issue tracker over the REAL cloud `/v1/todo`
+ * surface (cloud apps/todo — native Go, per-(org,team) SQLite). The durable
  * replacement for the retired Huly/Svelte hanzo.team tracker: ONE unified board across
  * every team AND every mirrored GitHub repo (the App-webhook seam files GitHub issues
  * under the org's GH team, Source:"git", ExtRef "github:owner/repo#123"), a grouped
@@ -23,7 +23,7 @@
  * and — in the standalone shell only — ⌘K opens the tracker command palette (a
  * capture-phase listener so it never fights the console's global ⌘K).
  *
- * Honest by construction: every row is the real `/v1/tracker` payload, org-scoped
+ * Honest by construction: every row is the real `/v1/todo` payload, org-scoped
  * SERVER-SIDE; a failed load surfaces ErrorState, an empty org shows EmptyState —
  * never a fabricated project or issue.
  */

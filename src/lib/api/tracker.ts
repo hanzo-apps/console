@@ -1,16 +1,16 @@
 /**
  * Tracker API — a NATIVE, Linear-grade issue tracker over the REAL cloud
- * `/v1/tracker` surface (cloud `clients/tracker`, a per-(org,project) tracker on
+ * `/v1/todo` surface (cloud `apps/todo`, a per-(org,project) tracker on
  * Base/SQLite). It is the durable replacement for the retired Huly/Svelte
  * hanzo.team tracker, whose reactive-batching render race could not render issue
  * ROWS GROUPED BY STATUS. Native @hanzo/gui over plain JSON renders deterministically.
  *
- * Every call is same-origin, keyless and prefix-free (`originV1Url('tracker/...')`
- * → `<origin>/v1/tracker/...`, the CTO one-endpoint form). On the standalone SPA the
- * ingress routes /v1/tracker straight to cloud; on the admin host the console's own
- * `app/v1` user-bearer BFF serves the `tracker` head (mints a short-lived user token
+ * Every call is same-origin, keyless and prefix-free (`originV1Url('todo/...')`
+ * → `<origin>/v1/todo/...`, the CTO one-endpoint form). On the standalone SPA the
+ * ingress routes /v1/todo straight to cloud; on the admin host the console's own
+ * `app/v1` user-bearer BFF serves the `todo` head (mints a short-lived user token
  * server-side, injects `X-Org-Id` from the token owner) — so every read/write is
- * org-scoped SERVER-SIDE and no credential reaches the browser. The `tracker` head is
+ * org-scoped SERVER-SIDE and no credential reaches the browser. The `todo` head is
  * allow-listed in `proxy-allow.ts` and admits every sub-path.
  *
  * The Issue is POLYMORPHIC by Kind (issue | pr | epic) and tagged by Source
@@ -34,7 +34,7 @@
  */
 import { restGet, restPost, restPatch, restDelete, originV1Url } from './client'
 
-const BASE = 'tracker'
+const BASE = 'todo'
 const enc = encodeURIComponent
 
 // ── Coercion helpers (defensive; crm.ts style) ──────────────────────────────
@@ -60,7 +60,7 @@ function oneOf<T extends string>(v: unknown, allowed: readonly T[], dflt: T): T 
 const asLabels = (v: unknown): string[] =>
   Array.isArray(v) ? v.map(str).filter((s) => s !== '') : []
 
-// ── Domain types (mirror cloud clients/tracker store JSON tags) ──────────────
+// ── Domain types (mirror cloud apps/todo store JSON tags) ───────────────────
 
 /** Issue lifecycle — the fixed board-column axis (default 'backlog'). */
 export const STATUSES = ['backlog', 'todo', 'in_progress', 'done', 'canceled'] as const
@@ -237,7 +237,7 @@ export const TrackerApi = {
 
   /**
    * Hand an issue to a coding agent: mark it (assignee + the `agent` label) so the
-   * coding run (cloud clients/coding) picks it up, does the work on a native
+   * coding run (cloud apps/coding) picks it up, does the work on a native
    * git.hanzo.ai branch, and opens a linked PR row (Kind:"pr", Source:"agent", same
    * Repo, the branch as ExtRef) — the tracker's own agent-PR seam. Honest: this is
    * the PATCH the console owns; the run + PR are the backend seam. Idempotent.

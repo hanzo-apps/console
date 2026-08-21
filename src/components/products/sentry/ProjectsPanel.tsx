@@ -2,7 +2,7 @@
 
 /**
  * Projects — the client identities errors/logs/traces ingest under
- * (`/v1/sentinel/projects`). List, create (returns a DSN — shown with the paste-ready
+ * (`/v1/o11y/sentinel/projects`). List, create (returns a DSN — shown with the paste-ready
  * SDK snippet), and rotate the ingest key. The DSN is the CLEAN path
  * `https://<key>@api.hanzo.ai/v1/event/<project>` (NO `/api/` segment); the SDK
  * derives its ingest endpoint as `/v1/event/<project>/envelope/`. Honest states —

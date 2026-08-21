@@ -24,7 +24,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:4000'
 
 requireFixtureServer()
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 /** Every backend answers 401 — these specs are about ROUTING, not data, and an
  *  unauthorized read is a state every module already handles honestly. */

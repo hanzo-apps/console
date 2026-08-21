@@ -25,7 +25,7 @@ import { primeSession } from './_session'
 
 requireFixtureServer()
 
-const API_RE = /\/(v1|cloud|ai|auth|billing|commerce|telemetry|vm|superbase|admin|paas|integrations)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|auth|billing|commerce|telemetry|vm|superbase|admin|integrations)(\/|$|\?)/
 
 /** Everything the shell asks for answers an empty-ok envelope — this spec measures TYPE, not data. */
 async function stub(route: Route) {

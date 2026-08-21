@@ -3,34 +3,30 @@
  *
  * This is the ADMIN management surface, distinct from the customer-facing
  * `ProviderApi` (BYOK per-org provider CRUD) and from `ProvidersModule` (the model
- * catalog browser). It reads and flips the SHARED-GATEWAY provider routing that
- * applies to every org: which upstream providers are enabled (do-ai, openrouter,
- * fireworks, openai-direct, zen) and which one is primary. DO-first is the backend's
- * state, not a UI assumption — the board renders whatever `GET /v1/admin/providers`
- * returns (on first light-up do-ai is enabled+primary, the rest disabled).
+ * catalog browser). It reads the SHARED-GATEWAY provider routing that applies to every
+ * org: which upstream providers are enabled (do-ai, openrouter, fireworks,
+ * openai-direct, zen) and which one is primary. DO-first is the backend's state, not a
+ * UI assumption — the board renders whatever the cross-tenant list returns.
  *
- * SOURCE: the unified `/v1/admin/*` surface (hanzoai/ai), via `originGet`/`originPost`
- * — the console's OWN origin (`<origin>/v1/admin/providers`), which `next.config.mjs`
- * rewrites to the GLOBAL-ADMIN-GATED `app/admin/aggregate` proxy (`getAdminGate`,
- * fail-closed 403, THEN a minted user bearer + same-origin CSRF check on the POSTs).
- * This is a CONSOLE-SIDE server gate for the shared-gateway config, so a tenant
- * customer can never read or flip it even if the cloud-side gate were absent (RED
- * H1); pinning the ORIGIN (not `config.cloudUrl`) means a split-origin
- * `NEXT_PUBLIC_CLOUD_URL` cannot bypass it. The browser holds no admin credential and
- * NEVER sees a provider key — `keyPresent` is a boolean, never the secret.
+ * SOURCE: `GET /v1/ai/providers/global` — the ai capability's cross-tenant provider
+ * list, over the console's OWN origin and its `/v1` bearer proxy. It is READ-ONLY here.
+ * Flipping a provider's routing state is not a console action: the primary is a single
+ * platform-wide value and moving it means turning one provider on and another off
+ * together, which no per-row write can promise. The browser holds no admin credential
+ * and NEVER sees a provider key — `keyPresent` is a boolean, never the secret.
  *
  * Coded to the documented shape and OPTIONAL-SAFE: `normalizeProvider` maps whatever
  * the endpoint returns onto `AdminProvider`, and every missing field degrades to a
  * real default — a deployment where the admin backend isn't yet routed (`ApiError
  * 404`) renders an honest state, NEVER fabricated rows or a fabricated health.
  *
- * INTEGRATION FLAG (do NOT lose this): flipping OpenRouter's `enabled` here ALSO
- * gates it out of the pricing catalog — the DO-first `ENABLE_OPENROUTER` integration.
- * The pricing sync reads the provider-enabled state, so disabling `openrouter` on
- * this board removes its models from `/v1/pricing/models` (and thus the customer
- * model catalog / marketplace). One provider-enabled state, two consumers.
+ * INTEGRATION FLAG (do NOT lose this): a provider's `enabled` state ALSO gates it out
+ * of the pricing catalog — the DO-first `ENABLE_OPENROUTER` integration. The pricing
+ * sync reads the provider-enabled state, so a disabled `openrouter` has no models in
+ * `/v1/pricing/models` (and thus none in the customer model catalog / marketplace).
+ * One provider-enabled state, two consumers — which is why the board reports it.
  */
-import { originGet, originPost } from './client'
+import { originGet } from './client'
 
 /**
  * One provider row on the admin control board. The KEY is NEVER on this shape —
@@ -44,9 +40,9 @@ export interface AdminProvider {
   displayName: string
   /** Provider kind — `DigitalOcean` | `OpenAI` | `Fireworks` | `OpenRouter` | … */
   type: string
-  /** Enabled routing (backend `State == "Active"`). Flipped by `toggle`. */
+  /** Enabled routing (backend `State == "Active"`). */
   enabled: boolean
-  /** The single primary/default provider (backend `IsDefault`). Set by `setPrimary`. */
+  /** The single primary/default provider (backend `IsDefault`). */
   primary: boolean
   /** Whether the KMS-backed provider secret resolves. NEVER the key itself. */
   keyPresent: boolean
@@ -114,32 +110,14 @@ function normalizeList(data: unknown): AdminProvider[] {
   return list.map(normalizeProvider)
 }
 
-// Endpoint mapping (client → server): `originGet/originPost('admin/<p>')` builds the
-// same-origin `<origin>/v1/admin/<p>`, which `next.config.mjs` (ADMIN_V1_HEADS incl.
-// `providers`) rewrites to `app/admin/aggregate/<p>` → `getAdminGate` (global-admin,
-// fail-closed 403) → `forwardWithUserBearer` → cloud-api `/v1/admin/providers[/...]`.
-// Never `/api/`, never a direct cloud-origin call (the console gate would be bypassed).
+// Endpoint mapping (client → server): `originGet('ai/providers/global')` builds the
+// same-origin `<origin>/v1/ai/providers/global`, which falls through to the console's
+// `/v1` bearer proxy → cloud-api. Never `/api/`, never a direct cloud-origin call.
 export const ProviderAdminApi = {
   /**
-   * The platform-wide provider list. Throws a typed `ApiError` (403 when the caller
-   * isn't a global admin, 404 when the admin backend isn't routed) the caller
-   * renders as an honest state.
+   * The platform-wide provider list, across tenants. Throws a typed `ApiError` (403
+   * when the caller isn't a global admin, 404 when the ai backend isn't routed) the
+   * caller renders as an honest state.
    */
-  list: async (): Promise<AdminProvider[]> => normalizeList(await originGet<unknown>('admin/providers')),
-
-  /**
-   * Enable/disable a provider's shared-gateway routing (persists the backend Provider
-   * `State`). Returns the updated row. Disabling `openrouter` ALSO removes it from the
-   * pricing catalog (the `ENABLE_OPENROUTER` DO-first integration).
-   */
-  toggle: async (name: string, enabled: boolean): Promise<AdminProvider> =>
-    normalizeProvider(await originPost<unknown>('admin/providers/toggle', { name, enabled })),
-
-  /**
-   * Make a provider the single primary/default. Returns the FULL updated list (the
-   * backend flips the old primary off), so the board can re-render with exactly one
-   * primary in one round-trip.
-   */
-  setPrimary: async (name: string): Promise<AdminProvider[]> =>
-    normalizeList(await originPost<unknown>('admin/providers/primary', { name })),
+  list: async (): Promise<AdminProvider[]> => normalizeList(await originGet<unknown>('ai/providers/global')),
 }

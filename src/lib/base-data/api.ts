@@ -10,13 +10,14 @@
  * the same honest-state UI (`classifyBackend` / `BackendStateCard`). Transport
  * stays its own concern; only the error value type is shared.
  *
- * Auth: the caller's PKCE access token is attached as `Authorization: Bearer` (the
- * ONE credential, same as the cloud client) plus the active `X-Org-Id`. The
- * same-origin base URL is `/v1`, so calls hit cloud's `/v1/collections/*` Base
- * data-plane forward (clients/base/collections.go) directly — the go:embed console
- * has no BFF to inject a token server-side, so the client carries it. cloud
- * validates the Bearer and forwards it to the managed Base, which authorizes each
- * read/write per-user + per-collection. An explicit `token` (a BYO Base) still wins.
+ * Auth: the same-origin base URL is `/v1/superbase`, the console's own proxy to the
+ * managed Base. It resolves the caller from the first-party session cookie, mints a
+ * short-lived user-bound IAM token, stamps `X-Org-Id` from that token's owner, and
+ * forwards to base.hanzo.ai under Base's own `v1/collections/*` contract — so the
+ * browser holds no credential and the org is server-authoritative. Base still
+ * authorizes each read/write per-user + per-collection itself. A BYO Base (a direct
+ * `https://x.base.hanzo.ai/v1` origin) has no proxy in front of it, so there the
+ * caller's `token` — else its PKCE access token — travels as the Bearer.
  */
 import { ApiError } from '~/lib/api/client'
 import { iamAccessToken } from '~/lib/auth/iam'
@@ -26,7 +27,7 @@ import type { BaseCollection } from './fields'
 /** A Base record — a flat map of field name → value (`id` always present). */
 export type BaseRecord = Record<string, unknown> & { id?: string }
 
-/** PocketBase-style paginated list result. */
+/** Base's paginated list result. */
 export interface BaseListResult<T> {
   page: number
   perPage: number
@@ -48,7 +49,7 @@ export interface ListRecordsParams {
 
 /**
  * One field in a NEW content type, in Base's modern flat shape (`POST
- * /v1/collections`). Type-specific options are flat (`values`/`maxSelect`/
+ * /v1/superbase/collections`). Type-specific options are flat (`values`/`maxSelect`/
  * `collectionId`/`mimeTypes`), never nested under legacy `options`.
  */
 export interface CollectionFieldInput {
@@ -69,7 +70,7 @@ export interface CollectionFieldInput {
   mimeTypes?: string[]
 }
 
-/** A NEW content type — `POST /v1/collections` body. Base injects the `id` field. */
+/** A NEW content type — `POST /v1/superbase/collections` body. Base injects the `id` field. */
 export interface CollectionInput {
   name: string
   /** `base` (default) | `auth` | `view`. */
@@ -78,15 +79,15 @@ export interface CollectionInput {
 }
 
 export interface BaseDataApiOptions {
-  /** Base API-version root. Same-origin `/v1` (→ cloud's `/v1/collections/*` Base
-   *  data-plane forward), or a direct versioned origin `https://x.base.hanzo.ai/v1`. */
+  /** Base API root. Same-origin `/v1/superbase` (the console's proxy to the managed
+   *  Base), or a direct versioned origin `https://x.base.hanzo.ai/v1`. */
   baseUrl: string
   /** Optional Base auth token; sent as `Authorization: Bearer <token>` (else the
    *  caller's own PKCE access token is attached). */
   token?: string
 }
 
-/** Resolve a same-origin base URL (`/v1`) against the page origin. */
+/** Resolve a same-origin base URL (`/v1/superbase`) against the page origin. */
 const pageOrigin = (): string => (typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
 
 /** Pull a list out of `{ items }` (paginated) or a bare array. */
@@ -140,7 +141,7 @@ export class BaseDataApi {
     this.token = opts.token
   }
 
-  /** List every collection schema — `GET /v1/collections`. */
+  /** List every collection schema — `GET /v1/superbase/collections`. */
   async listCollections(): Promise<BaseCollection[]> {
     return asItems<BaseCollection>(await this.request('GET', 'collections'))
   }
@@ -152,7 +153,7 @@ export class BaseDataApi {
   }
 
   /**
-   * Create a content type — `POST /v1/collections`. Base gates this behind its
+   * Create a content type — `POST /v1/superbase/collections`. Base gates this behind its
    * superuser check (an org admin's minted token qualifies) and scopes it to the
    * caller's org (the proxy stamps `X-Org-Id` from the JWT owner), so the new
    * collection persists to THIS org's Base only. Base injects the `id` primary key.
@@ -166,32 +167,32 @@ export class BaseDataApi {
     return (await this.request('POST', 'collections', { body })) as BaseCollection
   }
 
-  /** Delete a content type — `DELETE /v1/collections/<name>` (superuser-gated, 204). */
+  /** Delete a content type — `DELETE /v1/superbase/collections/<name>` (superuser-gated, 204). */
   async deleteCollection(name: string): Promise<void> {
     await this.request('DELETE', `collections/${encodeURIComponent(name)}`)
   }
 
-  /** List one collection's records — `GET /v1/collections/<name>/records`. */
+  /** List one collection's records — `GET /v1/superbase/collections/<name>/records`. */
   async listRecords(collection: string, params?: ListRecordsParams): Promise<BaseListResult<BaseRecord>> {
     return asListResult<BaseRecord>(await this.request('GET', this.records(collection), { query: params }))
   }
 
-  /** One record — `GET /v1/collections/<name>/records/<id>`. */
+  /** One record — `GET /v1/superbase/collections/<name>/records/<id>`. */
   async getRecord(collection: string, id: string): Promise<BaseRecord> {
     return (await this.request('GET', this.records(collection, id))) as BaseRecord
   }
 
-  /** Create a record — `POST /v1/collections/<name>/records`. */
+  /** Create a record — `POST /v1/superbase/collections/<name>/records`. */
   async createRecord(collection: string, body: Record<string, unknown>): Promise<BaseRecord> {
     return (await this.request('POST', this.records(collection), { body })) as BaseRecord
   }
 
-  /** Update a record — `PATCH /v1/collections/<name>/records/<id>`. */
+  /** Update a record — `PATCH /v1/superbase/collections/<name>/records/<id>`. */
   async updateRecord(collection: string, id: string, body: Record<string, unknown>): Promise<BaseRecord> {
     return (await this.request('PATCH', this.records(collection, id), { body })) as BaseRecord
   }
 
-  /** Delete a record — `DELETE /v1/collections/<name>/records/<id>` (204, no body). */
+  /** Delete a record — `DELETE /v1/superbase/collections/<name>/records/<id>` (204, no body). */
   async deleteRecord(collection: string, id: string): Promise<void> {
     await this.request('DELETE', this.records(collection, id))
   }
@@ -207,8 +208,8 @@ export class BaseDataApi {
     path: string,
     opts?: { query?: ListRecordsParams; body?: Record<string, unknown> },
   ): Promise<unknown> {
-    // `baseUrl` carries the API-version root: same-origin `/v1` (→ cloud's
-    // `/v1/collections/*` forward) or a direct `https://x.base.hanzo.ai/v1`.
+    // `baseUrl` carries the API root: same-origin `/v1/superbase` (the console's
+    // proxy to the managed Base) or a direct `https://x.base.hanzo.ai/v1`.
     const url = new URL(`${this.baseUrl}/${path}`, pageOrigin())
     if (opts?.query) {
       for (const [k, v] of Object.entries(opts.query)) {
@@ -217,14 +218,14 @@ export class BaseDataApi {
     }
 
     const headers: Record<string, string> = { Accept: 'application/json' }
-    // The ONE credential: the caller's PKCE access token as a Bearer (identical to the
-    // cloud client). cloud validates it, then FORWARDS it to the managed Base, which
-    // authorizes per-user + per-collection itself — so the go:embed console (no BFF)
-    // reaches Base natively. An explicit `token` (BYO Base instance) still wins.
+    // The credential a BYO Base needs, since nothing stands in front of it: an explicit
+    // `token`, else the caller's own PKCE access token. On the same-origin
+    // `/v1/superbase` root the proxy mints its own user-bound token from the session
+    // cookie and forwards that instead, so these two headers are only a hint there.
     const bearer = this.token ?? iamAccessToken()
     if (bearer) headers.Authorization = `Bearer ${bearer}`
-    // Active org scope (org-switch aware), like every cloud call. cloud re-derives the
-    // TRUSTED org from the Bearer owner and may override this, so it is only a hint.
+    // Active org scope (org-switch aware), like every cloud call. The trusted org is
+    // re-derived from the Bearer owner server-side and may override this.
     headers['X-Org-Id'] = currentOrg()
     const init: RequestInit = { method, credentials: 'include', headers }
     if (opts?.body !== undefined) {

@@ -5,7 +5,7 @@
  * own content rather than merely existing in the DOM; that the primary control is
  * keyboard-reachable and shows a focus ring; that pressing it puts real, derived text on
  * the system clipboard — the product's identity, its console address, and the operations
- * read from `/v1/commands`, which is mocked here so the assertion is about derivation and
+ * read from `/v1/openapi/commands`, which is mocked here so the assertion is about derivation and
  * not about what the fleet happens to publish today. And that a page which is not a
  * product (the console home) shows no row at all.
  *
@@ -21,7 +21,7 @@ requireFixtureServer()
 
 const ACCOUNT = { owner: 'hanzo', name: 'z', email: 'z@hanzo.ai', displayName: 'Z Admin', isAdmin: true }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 
@@ -50,7 +50,7 @@ async function mock(route: Route) {
   const req = route.request()
   if (req.resourceType() === 'document') return route.continue()
   const url = new URL(req.url())
-  if (url.pathname === '/v1/commands') return json(route, COMMANDS)
+  if (url.pathname === '/v1/openapi/commands') return json(route, COMMANDS)
   if (url.pathname.startsWith('/auth/')) return json(route, { ok: true })
   const sameOrigin = url.origin === new URL(BASE_URL).origin
   if (sameOrigin && !API_RE.test(url.pathname)) return route.continue()
@@ -99,7 +99,7 @@ test('copying puts the derived brief on the clipboard', async ({ browser }) => {
 
   const text = await page.evaluate(() => navigator.clipboard.readText())
   expect(text.length, 'the clipboard is not empty').toBeGreaterThan(200)
-  // Identity + console address come from the catalog; the operations from /v1/commands.
+  // Identity + console address come from the catalog; the operations from /v1/openapi/commands.
   expect(text).toContain('- Console: `/dns`')
   expect(text).toContain('- Base: `https://api.hanzo.ai/v1`')
   expect(text).toContain('Authorization: Bearer <your token>')

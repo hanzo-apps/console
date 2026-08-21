@@ -1,9 +1,9 @@
 /**
  * Web Search + Crawl API — the console client for the LIVE self-hosted web-search
- * product (SearXNG + Crawl4AI), served by cloud `clients/websearch` at
+ * product (SearXNG + Crawl4AI), served by cloud `apps/websearch` at
  * `/v1/websearch/*`. Self-hosted, no third-party keys.
  *
- * ENDPOINTS (verified against `hanzoai/cloud/clients/websearch/websearch.go`):
+ * ENDPOINTS (verified against `hanzoai/cloud/apps/websearch/websearch.go`):
  *   - `GET  /v1/websearch/search`     — SearXNG meta-search proxy. Query passthrough
  *     (`?q=&format=json&engines=&language=&safesearch=`). Response is the SearXNG
  *     JSON: `{ results: [{ url, title, content, img_src?, engine? }] }`. The optional

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Discover — the query/search builder over events (`POST /v1/sentinel/discover`).
+ * Discover — the query/search builder over events (`POST /v1/o11y/sentinel/discover`).
  * Compose field filters + aggregations + group-by over a time range, Run, and read
  * a real results table (columns derived from the response) plus a time-series chart.
  * Every row/point is the backend's own result — an empty query is an honest empty

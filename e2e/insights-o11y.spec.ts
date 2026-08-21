@@ -1,19 +1,18 @@
 /**
  * PROOF: Insights (o11y observability) is live, IAM-gated, and renders on
- * admin.hanzo.ai for the SuperAdmin — wired to the VERSION-LESS `/v1/o11y/<resource>`
- * surface (cloud embedded o11y v1.5.4).
+ * admin.hanzo.ai for the SuperAdmin — wired to the `/v1/o11y/<resource>` surface
+ * (cloud embedded o11y v1.5.4).
  *
  * Two layers, so the spec is ALWAYS runnable and honest:
  *
- *  A. UNAUTHENTICATED gate proof (always runs, no creds). Proves the version-less
- *     surface is LIVE and IAM-gated against the real backend:
+ *  A. UNAUTHENTICATED gate proof (always runs, no creds). Proves the surface is
+ *     LIVE and IAM-gated against the real backend:
  *       - GET  /v1/o11y/health          → 200 {"service":"o11y","status":"ok"}
  *       - POST /v1/o11y/services         → 403 "no validated principal"  (gated)
  *       - POST /v1/o11y/query_range      → 403 "no validated principal"  (gated)
  *       - GET  /v1/o11y/rules            → 403 "no validated principal"  (gated)
  *     i.e. anonymous is refused (403), so a logged-in bearer is REQUIRED — which is
  *     exactly why the console routes o11y through the `/v1` user-bearer BFF.
- *     (The deprecated `/v1/o11y/v1/rules` alias also still resolves — 403, not 404.)
  *
  *  B. AUTHENTICATED render proof (runs when a SuperAdmin password is provided). Signs
  *     in, establishes the shared `.hanzo.ai` session, enters admin.hanzo.ai (or falls
@@ -98,16 +97,16 @@ async function body(res: { text(): Promise<string> }): Promise<string> {
 // ════════════════════════════════════════════════════════════════════════════════
 // A. Unauthenticated gate proof — ALWAYS runs (no credentials required).
 // ════════════════════════════════════════════════════════════════════════════════
-test.describe('Insights o11y — version-less surface is LIVE + IAM-gated (unauthenticated)', () => {
+test.describe('Insights o11y — the surface is LIVE + IAM-gated (unauthenticated)', () => {
   test('GET /v1/o11y/health is 200; the reads are 403 "no validated principal"', async ({ request }: { request: APIRequestContext }) => {
-    // Liveness — the version-less health endpoint the reboot ships (public).
+    // Liveness — the public health endpoint the runtime ships.
     const health = await request.get(`${CLOUD_API}/v1/o11y/health`)
-    expect(health.status(), 'version-less /v1/o11y/health must be live').toBe(200)
+    expect(health.status(), '/v1/o11y/health must be live').toBe(200)
     const healthBody = await body(health)
     expect(healthBody, 'health should report the o11y service ok').toMatch(/o11y|ok|status|healthy/i)
     console.log(`✓ GET /v1/o11y/health → 200 :: ${healthBody}`)
 
-    // Every VERSION-LESS read is IAM-gated: anonymous → 403 "no validated principal".
+    // Every read is IAM-gated: anonymous → 403 "no validated principal".
     // This is the proof that a logged-in bearer is REQUIRED (attached by the /v1 bearer BFF).
     const gated: { name: string; res: Awaited<ReturnType<APIRequestContext['get']>> }[] = [
       { name: 'services', res: await request.post(`${CLOUD_API}/v1/o11y/services`, { data: servicesBody }) },
@@ -115,16 +114,10 @@ test.describe('Insights o11y — version-less surface is LIVE + IAM-gated (unaut
       { name: 'rules', res: await request.get(`${CLOUD_API}/v1/o11y/rules`) },
     ]
     for (const g of gated) {
-      expect(g.res.status(), `version-less /v1/o11y/${g.name} must be IAM-gated (403) for an anonymous caller`).toBe(403)
+      expect(g.res.status(), `/v1/o11y/${g.name} must be IAM-gated (403) for an anonymous caller`).toBe(403)
       expect(await body(g.res)).toMatch(/no validated principal|principal|unauthor/i)
       console.log(`✓ /v1/o11y/${g.name} → 403 (IAM-gated, anonymous refused)`)
     }
-
-    // The deprecated nested-version alias still RESOLVES (gated, not a 404) — canonical
-    // is version-less, but the old form remains addressable during migration.
-    const alias = await request.get(`${CLOUD_API}/v1/o11y/v1/rules`)
-    expect(alias.status(), 'deprecated /v1/o11y/v1/rules alias should resolve (403), not 404').toBe(403)
-    console.log('✓ deprecated /v1/o11y/v1/rules alias resolves (403, not 404) — version-less is canonical')
   })
 })
 

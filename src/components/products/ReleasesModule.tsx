@@ -4,7 +4,7 @@
  * Releases — versioned deploys recorded per environment.
  *
  * Reads the release history from the unified cloud binary via the same-origin
- * user-bearer `/v1` proxy (`GET /v1/releases`), org resolved from the Bearer
+ * user-bearer `/v1` proxy (`GET /v1/platform/releases`), org resolved from the Bearer
  * owner. This is a derived, read-only aggregate; when the backend doesn't serve it
  * the load fails and the honest not-configured / unavailable card renders instead of
  * an empty grid.
@@ -34,7 +34,7 @@ export function ReleasesModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ releases?: Release[] }>(cloudProxyV1Url('releases'))
+      const r = await restGet<{ releases?: Release[] }>(cloudProxyV1Url('platform/releases'))
       setRows(r.releases ?? [])
       setLoadError(null)
     } catch (e) {

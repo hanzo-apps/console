@@ -129,7 +129,7 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
     facts: [
       { label: 'Edge locations', value: 'Global' },
       { label: 'Cache control', value: 'Origin headers honored' },
-      { label: 'Purge', value: 'On-demand / by tag' },
+      { label: 'Purge', value: 'On demand, per project' },
     ],
     actions: [{ label: 'Configure at the edge', to: '/edge', icon: 'arrow', secondary: true }],
     docs: [
@@ -139,13 +139,38 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
       },
       {
         heading: 'Purge cached content',
-        body: 'Invalidate by path or by surrogate-key tag when you ship new content; the edge re-fetches from origin on the next request.',
-        code: 'POST /v1/cdn/purge { "tags": ["release-2026-06-30"] }',
+        body: 'Flush a project’s edge cache when you ship new content. The origin is never written or deleted — only the stale copies held at the edge drop, so the next request re-fetches the current build.',
+        code: 'POST /v1/projects/my-site/purge',
       },
     ],
   },
 
   // ── Security ───────────────────────────────────────────────────────────────
+  authz: {
+    summary:
+      'The policy engine. It answers one question — may this subject read or write at this path — and answers it with a bare allow or deny. It holds no policy of its own: a check carries the grants it is decided against, and grants are issued and signed in Hanzo IAM, so there is exactly one source of truth for who may do what. The org comes from the validated principal, and both the target and every grant scope must sit inside it, so one tenant is never decided by another tenant’s grants.',
+    health: { kind: 'platform-app', service: 'authz' },
+    facts: [
+      { label: 'Answer', value: 'allow · deny' },
+      { label: 'Verbs', value: 'read · write' },
+      { label: 'Roles', value: 'owner · admin · member' },
+    ],
+    actions: [
+      { label: 'Manage roles in IAM', to: '/iam/roles', icon: 'shield' },
+      { label: 'API reference', to: '/api', icon: 'book', secondary: true },
+    ],
+    docs: [
+      {
+        heading: 'Ask whether a subject may act',
+        body: 'Send the subject, the verb, the path it targets, and the grants to decide against. A grant admits when its scope is an ancestor of (or equal to) the target, its role admits the verb, and it has not expired. The reply echoes the question beside the verdict, so a logged decision carries what it answered.',
+        code: 'POST /v1/authz/check\n{ "subject": "antje", "verb": "write", "path": "hanzo/vector/prod",\n  "grants": [{ "subject": "antje", "scope": "hanzo/vector", "role": "admin" }] }',
+      },
+      {
+        heading: 'Where the grants live',
+        body: 'Nothing is stored here and nothing is written here. Membership and roles are issued in IAM and travel with each check, so a second writable copy can never drift from the first. Change who may do what on the IAM Roles page.',
+      },
+    ],
+  },
   mpc: {
     summary:
       'Threshold signing and multi-party computation. Hanzo MPC splits a private key into shares held by independent parties; a signature is produced only when a threshold of them cooperate, so no single machine ever holds the whole key. It backs custody, validator signing, and policy-gated approvals.',
@@ -166,8 +191,8 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
       },
       {
         heading: 'Request a signature',
-        body: 'Submit a signing request referencing a key id; the coordinator gathers the threshold of partial signatures and returns the combined signature.',
-        code: 'POST /v1/mpc/sign { "keyId": "...", "digest": "0x..." }',
+        body: 'Threshold signing is reached through a wallet whose custody is MPC. Provision one, then submit a 32-byte digest against it: the ring gathers the threshold of partial signatures and answers the combined signature beside the digest it signed.',
+        code: 'POST /v1/wallets { "accountId": "acct_9f8c1d", "custody": "mpc" }\nPOST /v1/wallets/wal_4b1e77/sign { "digest": "0x..." }',
       },
     ],
   },
@@ -330,8 +355,8 @@ export const OVERVIEW_SPECS: Record<string, OverviewSpec> = {
     docs: [
       {
         heading: 'Send events',
-        body: 'Instrument your app with the Insights SDK or POST events to the ingest endpoint; they become queryable immediately.',
-        code: 'POST /v1/insights/events { "event": "signup", "props": { ... } }',
+        body: 'Instrument your app with the Insights SDK or POST events to the one capture door — a single event, an array of them, or a batch envelope all land there. They become queryable immediately.',
+        code: 'POST /v1/event { "event": "signup", "properties": { ... } }',
       },
     ],
   },

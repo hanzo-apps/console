@@ -1,5 +1,5 @@
 /**
- * Guide API — the Business AI Guide (cloud `clients/guide`, `/v1/guide/*`): an
+ * Guide API — the Business AI Guide (cloud `apps/guide`, `/v1/guide/*`): an
  * interactive launch checklist every org completes on-site. A machine-readable
  * curriculum drives the steps (id · title · why · how-on-hanzo · done · deps ·
  * signal · tool); per-org progress tracks a state per step; auto-detect completes a
@@ -13,7 +13,7 @@
  * go:embed console calls cloud's `/v1/guide` directly under the session cookie. Both
  * work off the same client URL. `guide` is allow-listed in `proxy-allow.ts` CLOUD_HEADS.
  *
- * Routes (from cloud `clients/guide/guide.go`):
+ * Routes (from cloud `apps/guide/guide.go`):
  *   GET                 /v1/guide                     overview (curriculum + progress + steps)
  *   GET/PUT/DELETE      /v1/guide/curriculum          get / replace (org-custom) / revert to default
  *   POST                /v1/guide/steps/:id/start     mark in_progress
@@ -54,7 +54,7 @@ const arrayUnder = (payload: unknown, keys: string[]): Record<string, unknown>[]
   return []
 }
 
-// ── Domain types (mirror cloud clients/guide JSON tags) ─────────────────────
+// ── Domain types (mirror cloud apps/guide JSON tags) ─────────────────────
 
 /** A step's per-org lifecycle state. */
 export type StepState = 'todo' | 'in_progress' | 'done' | 'skipped'

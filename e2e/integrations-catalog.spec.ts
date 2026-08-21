@@ -46,7 +46,7 @@ const mock = (providers: unknown[]) => async (route: Route) => {
   if (url.pathname === '/v1/integrations') return json({ providers })
   if (url.pathname.startsWith('/auth/')) return json({ ok: true })
   const sameOrigin = url.origin === new URL(BASE_URL).origin
-  if (sameOrigin && !/\/(v1|cloud|ai|billing|commerce|telemetry|admin|paas|org)(\/|$|\?)/.test(url.pathname)) {
+  if (sameOrigin && !/\/(v1|cloud|ai|billing|commerce|telemetry|admin|org)(\/|$|\?)/.test(url.pathname)) {
     return route.continue()
   }
   return json({ status: 'ok', msg: '', data: [], data2: 0 })

@@ -1,29 +1,22 @@
 /**
- * Platform API — Hanzo cluster inventory + PaaS control plane.
+ * Platform API — Hanzo app declarations + cluster inventory.
  *
- * TWO transports, cleanly split by authority:
- *   - Cluster INVENTORY + node-pool lifecycle (list / get / add-pool / scale-pool /
- *     delete-pool) go through the unified cloud binary at `/v1/clusters*`, via the
- *     same-origin user-bearer `/v1` proxy (app/v1/[...path]/route.ts → cloud-api,
- *     org resolved from the Bearer owner). This is the native, per-org surface every
- *     cluster consumer reads — one source of truth.
- *   - The apps inventory and cluster PROVISIONING (spin up a whole new DOKS cluster)
- *     stay on the `/paas` control plane (app/paas/[...path]/route.ts), which injects the
- *     platform SERVICE token from server-only env (KMS) and is brand-admin gated — the
- *     right authority for a god-mode, multi-tenant operation. When the token is unset the
- *     proxy returns an honest 501 the UI renders as "not configured"; nothing is fabricated.
+ * ONE transport: the same-origin user-bearer `/v1` proxy (app/v1/[...path]/route.ts →
+ * cloud-api), org resolved from the Bearer `owner` claim. Both deployment topologies —
+ * standalone console and the go:embed console — address the same cloud paths, so there
+ * is no second client and no service token in this path.
  *
- * REAL surfaces:
- *   - GET /v1/apps                 → the apps inventory (Status + Kubernetes modules).
- *   - GET /v1/clusters[/:id]       → the org's DEDICATED Hanzo K8S (DOKS) clusters, with
+ * REAL surfaces (HIP-0139):
+ *   - GET /v1/platform/apps        → what the org declared, and what CD did with it
+ *     (Status + Kubernetes modules).
+ *   - GET /v1/visor/clusters[/:id] → the org's DEDICATED Hanzo K8S (DOKS) clusters, with
  *     their node pools. Honest empty when the org has none (shared Hanzo Cloud is default).
- *   - POST   /v1/clusters/:cid/pools            → add a node pool.
- *   - POST   /v1/clusters/:cid/pools/:pid/scale → scale a pool's node count.
- *   - DELETE /v1/clusters/:cid/pools/:pid       → remove a node pool.
- *   - POST /v1/org/{org}/cluster   → provision a fresh dedicated cluster (`/paas`).
+ *   - POST   /v1/visor/clusters/:cid/pools            → add a node pool.
+ *   - POST   /v1/visor/clusters/:cid/pools/:pid/scale → scale a pool's node count.
+ *   - DELETE /v1/visor/clusters/:cid/pools/:pid       → remove a node pool.
+ *   - POST /v1/visor/k8s/clusters  → provision a fresh dedicated cluster for the org.
  */
 import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
-import { IS_EMBED } from '~/lib/embed'
 
 /** Where a cluster lives: shared multi-tenant Hanzo Cloud, or a BYO/managed DOKS. */
 export type ClusterKind = 'shared' | 'byo' | (string & {})
@@ -49,8 +42,8 @@ export type NodePool = {
 }
 
 /**
- * A dedicated Kubernetes cluster as the platform lists it
- * (`GET /v1/org/{org}/cluster` → `DoksClusterWithPools`, kubeconfig redacted).
+ * A dedicated Kubernetes cluster as the fleet lists it
+ * (`GET /v1/visor/clusters` → `clusterView`, kubeconfig redacted).
  * The REAL fields below come straight from the `doks_cluster` row + its
  * `nodePools`; the trailing legacy fields are kept optional only so the simple
  * Clusters list keeps compiling — the authoritative node inventory is `nodePools`.
@@ -97,12 +90,11 @@ export type ProvisionClusterInput = {
   region: string
   nodeSize: string
   nodeCount: number
-  ha?: boolean
 }
 
 /**
  * Attach a BYO ("bring your own") Kubernetes cluster to the org's fleet
- * (`POST /v1/clusters`). The kubeconfig is validated by REACHING the cluster (its
+ * (`POST /v1/visor/clusters`). The kubeconfig is validated by REACHING the cluster (its
  * node + GPU inventory), sealed in the org's KMS server-side, and never stored or
  * returned by the console. `provider` is a free label (byo | k3s | …); `default`
  * makes it the org's default workload target. Returns the attached cluster
@@ -115,7 +107,7 @@ export type AttachClusterInput = {
   default?: boolean
 }
 
-/** Add a node pool to an existing cluster (`POST /v1/clusters/:cid/pools`). */
+/** Add a node pool to an existing cluster (`POST /v1/visor/clusters/:cid/pools`). */
 export type AddPoolInput = {
   /** DigitalOcean size slug (e.g. `s-4vcpu-8gb`, `gpu-h100x1-80gb`). */
   size: string
@@ -134,7 +126,7 @@ export type AppHealth = 'green' | 'yellow' | 'red' | (string & {})
 export type AppDriftFlag = { kind: string; severity: string; message: string }
 
 /**
- * One row of the apps inventory (`GET /v1/apps`) — an operator-managed service
+ * One row of the apps inventory (`GET /v1/platform/apps`) — an operator-managed service
  * (a `Service` CR + its Deployment) observed on a cluster. Fields the platform
  * may omit are optional; the UI renders what is present and never invents the rest.
  */
@@ -234,23 +226,6 @@ export type AppsQuery = {
   drift?: boolean
 }
 
-/**
- * Same-origin PaaS inventory path, split by DEPLOYMENT topology:
- *  - STANDALONE console (console2/admin.hanzo.ai): the `/paas/*` server proxy, which
- *    injects the platform SERVICE token (KMS) and is brand-admin gated.
- *  - go:embed console (IS_EMBED, console.hanzo.ai / cloud.hanzo.ai): the static export
- *    has NO server routes — `/paas/*` is pruned and cloud's catch-all serves the SPA
- *    index (HTTP 200 HTML) for any non-`/v1/` path, so the old `/paas` client parsed the
- *    SPA and errored "Invalid response from server (HTTP 200)" → "Could not reach the
- *    platform" (the broken Observe→Status). Cloud serves the SAME fleet inventory
- *    natively at `/v1/paas/<path>` (bearer-scoped from the validated principal), so in
- *    the embed we address it directly. The `/v1` BFF deliberately EXCLUDES `paas/*`
- *    (proxy-allow.ts), which is why this is embed-gated rather than unconditional.
- */
-const url = (path: string) =>
-  IS_EMBED
-    ? cloudProxyV1Url(`paas/${path.replace(/^\/+/, '')}`)
-    : `/paas/${path.replace(/^\/+/, '')}`
 const enc = encodeURIComponent
 
 const qs = (q: AppsQuery): string => {
@@ -274,20 +249,20 @@ const clustersOf = (payload: unknown): Cluster[] => {
   return []
 }
 
-/** Canonical path for the clusters surface (`/v1/clusters…`); `next.config` rewrites
- *  it to the same-origin user-bearer `/v1` proxy. */
-const clustersUrl = (path = ''): string => cloudProxyV1Url(`clusters${path}`)
+/** Canonical path for the clusters surface (`/v1/visor/clusters…`) over the
+ *  same-origin user-bearer `/v1` proxy. */
+const clustersUrl = (path = ''): string => cloudProxyV1Url(`visor/clusters${path}`)
 
 export const PlatformApi = {
-  /** The apps inventory — the real "what is running" board across all clusters (`/paas`). */
+  /** The apps inventory — the real "what is running" board across all clusters. */
   apps: async (query: AppsQuery = {}): Promise<PlatformApp[]> => {
-    const r = await restGet<{ apps?: PlatformApp[] }>(url(`apps${qs(query)}`))
+    const r = await restGet<{ apps?: PlatformApp[] }>(cloudProxyV1Url(`platform/apps${qs(query)}`))
     return r?.apps ?? []
   },
 
   /**
-   * The signed-in org's dedicated DOKS clusters (`GET /v1/clusters`, org-scoped by the
-   * Bearer owner; honest empty when none provisioned). Each cluster carries its
+   * The signed-in org's dedicated DOKS clusters (`GET /v1/visor/clusters`, org-scoped by
+   * the Bearer owner; honest empty when none provisioned). Each cluster carries its
    * `nodePools` (size + count) — the real source of the org's compute MACHINES (the
    * Machines page projects nodes from these pools).
    */
@@ -301,7 +276,7 @@ export const PlatformApi = {
   },
 
   /**
-   * Attach a BYO cluster by kubeconfig (`POST /v1/clusters`). The backend validates
+   * Attach a BYO cluster by kubeconfig (`POST /v1/visor/clusters`). The backend validates
    * it by reaching the cluster (node + GPU inventory), seals the kubeconfig in the
    * org's KMS, and returns the attached cluster (`kind:"byo"`, `status:"attached"`).
    * Honest failures propagate as `ApiError`: 503 (BYO attach not configured — KMS
@@ -311,32 +286,38 @@ export const PlatformApi = {
   attachCluster: async (input: AttachClusterInput): Promise<Cluster> =>
     (await restPost<Cluster>(clustersUrl(), input)) ?? ({} as Cluster),
 
-  /** Detach a BYO cluster from the org's fleet (`DELETE /v1/clusters/:id`, id = its
+  /** Detach a BYO cluster from the org's fleet (`DELETE /v1/visor/clusters/:id`, id = its
    *  name). Only touches BYO clusters; managed pools use the node-pool routes. */
   detachCluster: (id: string): Promise<void> => restDelete(clustersUrl(`/${enc(id)}`)),
 
-  /** Add a node pool to a cluster (`POST /v1/clusters/:cid/pools`). */
+  /** Add a node pool to a cluster (`POST /v1/visor/clusters/:cid/pools`). */
   addPool: (clusterId: string, input: AddPoolInput): Promise<void> =>
     restPost<unknown>(clustersUrl(`/${enc(clusterId)}/pools`), input).then(() => undefined),
 
-  /** Scale a node pool's count (`POST /v1/clusters/:cid/pools/:pid/scale`). */
+  /** Scale a node pool's count (`POST /v1/visor/clusters/:cid/pools/:pid/scale`). */
   scalePool: (clusterId: string, poolId: string, count: number): Promise<void> =>
     restPost<unknown>(clustersUrl(`/${enc(clusterId)}/pools/${enc(poolId)}/scale`), { count }).then(() => undefined),
 
-  /** Remove a node pool (`DELETE /v1/clusters/:cid/pools/:pid`). */
+  /** Remove a node pool (`DELETE /v1/visor/clusters/:cid/pools/:pid`). */
   deletePool: (clusterId: string, poolId: string): Promise<void> =>
     restDelete(clustersUrl(`/${enc(clusterId)}/pools/${enc(poolId)}`)),
 
   /**
    * Provision a fresh dedicated DOKS cluster for the org
-   * (`POST /v1/org/{org}/cluster`). Served by Hanzo Cloud's EMBEDDED platform via
-   * the same-origin user-bearer `/v1` proxy — org-scoped by the Bearer owner,
-   * the DigitalOcean credential lives server-side IN cloud, NOT a console `/paas`
-   * service token. (Same native-`/v1` path as `listClusters`.)
+   * (`POST /v1/visor/k8s/clusters`). Admin-gated upstream — provisioning spends real
+   * infrastructure — and org-scoped by the Bearer owner, so the cluster always lands in
+   * the caller's own tenant. The DigitalOcean credential lives server-side in cloud.
+   * `name` names the cluster; the org's own slug is the conventional choice. It is born
+   * with ONE node pool (a cluster with no nodes runs nothing); more are added with
+   * `addPool`.
    */
-  provisionCluster: async (org: string, input: ProvisionClusterInput): Promise<Cluster> => {
-    const r = await restPost<{ cluster: Cluster }>(cloudProxyV1Url(`org/${enc(org)}/cluster`), input)
-    return r.cluster
+  provisionCluster: async (name: string, input: ProvisionClusterInput): Promise<Cluster> => {
+    const r = await restPost<Cluster>(cloudProxyV1Url('visor/k8s/clusters'), {
+      name,
+      region: input.region,
+      nodePool: { name: 'default', size: input.nodeSize, count: input.nodeCount },
+    })
+    return r ?? ({} as Cluster)
   },
 }
 

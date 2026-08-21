@@ -48,7 +48,7 @@ describe('normalizeResourceList', () => {
 
 /**
  * Transport contract — every provisioning call MUST address the console's OWN-origin
- * `/v1` user-bearer proxy (`<origin>/v1/<kind>`), never a bare `/v1/<kind>`.
+ * `/v1` user-bearer proxy (`<origin>/v1/provisioning/<kind>`), never a bare `/v1/*`.
  * A bare `/v1/*` is routed straight to hanzoai/gateway on the live ingress (no minted
  * Bearer) and 403s "X-Org-Id required", surfacing as a FALSE "Not enabled for your
  * account". These pin the fix so the class-bug can never silently return.
@@ -76,18 +76,18 @@ describe('ProvisioningApi transport → /v1 bearer BFF', () => {
 
   const kinds: ResourceKind[] = ['sql', 'vector', 'datastore', 'kv', 'search', 's3', 'docdb']
 
-  it.each(kinds)('list(%s) hits <origin>/v1/<kind> (prefix-free, ZERO /cloud)', async (kind) => {
+  it.each(kinds)('list(%s) hits <origin>/v1/provisioning/<kind> (prefix-free, ZERO /cloud)', async (kind) => {
     await ProvisioningApi.list(kind)
-    expect(lastUrl).toBe(`${ORIGIN}/v1/${kind}`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/${kind}`)
     expect(lastUrl).not.toMatch(new RegExp(`^${ORIGIN}/(cloud|vm|ai|billing|commerce)/v1/`))
   })
 
   it('get/create/remove address the same /v1 bearer BFF', async () => {
     await ProvisioningApi.get('vector', 'gooo')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/vector/gooo`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/vector/gooo`)
     await ProvisioningApi.create('vector', 'gooo')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/vector`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/vector`)
     await ProvisioningApi.remove('vector', 'gooo')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/vector/gooo`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/vector/gooo`)
   })
 })

@@ -1,7 +1,7 @@
 /**
  * Embeddings domain logic — PURE, no UI, no transport (types only, erased).
  *
- * Collections ARE the per-org knowledge stores (`/v1/get-stores`); a store maps
+ * Collections ARE the per-org knowledge stores (`/v1/ai/stores`); a store maps
  * to a vector collection named `{owner}-{store}-docs` (object/search_docs.go
  * `GetSearchIndexName`). The store object does NOT carry live vector stats
  * (count / dimension / index bytes) or an `updatedTime`, and the distance metric
@@ -10,7 +10,7 @@
  *
  * The richer per-product series (vector count, storage, queries, latency, cost,
  * per-model + per-dimension breakdowns) is the shape of the forthcoming
- * `GET /v1/get-cloud-usages` read API. We model that shape here and normalize it
+ * `GET /v1/ai/usages/cloud` read API. We model that shape here and normalize it
  * defensively, so the page lights up automatically when the endpoint ships and
  * degrades to "—" until then.
  */
@@ -123,7 +123,7 @@ export function modelShares(collections: Collection[]): Slice[] {
     .sort((a, b) => b.value - a.value)
 }
 
-// ── Cloud-usage read API (GET /v1/get-cloud-usages) — modeled, normalized ──────
+// ── Cloud-usage read API (GET /v1/ai/usages/cloud) — modeled, normalized ──────
 
 /** One headline metric with an optional sparkline series and vs-prior delta. */
 export type UsageMetric = {

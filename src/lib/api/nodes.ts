@@ -2,7 +2,7 @@
  * Cluster capacity derivation — REAL provisioned compute from a cluster's node
  * pools, PURE (no I/O).
  *
- * The PaaS control plane exposes a cluster's node POOLS (a DigitalOcean size slug
+ * The clusters surface exposes a cluster's node POOLS (a DigitalOcean size slug
  * + a count), not live per-node telemetry. So "CPU" / "Memory" on the Kubernetes
  * page are the PROVISIONED capacity we can derive deterministically from the slug
  * (`s-4vcpu-8gb` → 4 vCPU / 8 GB) × node count — never a fabricated live

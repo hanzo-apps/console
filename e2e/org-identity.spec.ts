@@ -31,7 +31,7 @@ test.beforeAll(() => mkdirSync(SHOTS, { recursive: true }))
 /** A tenant whose id carries a separator — its monogram must read AL, not A. */
 const ORG = 'acme-labs'
 const LOGO = 'https://cdn.example.test/acme-labs.png'
-const API_RE = /\/(v1|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 const envelope = (data: unknown) => JSON.stringify({ status: 'ok', msg: '', data, data2: 0 })
 

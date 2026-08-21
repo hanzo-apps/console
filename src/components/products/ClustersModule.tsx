@@ -3,25 +3,24 @@
 /**
  * Clusters admin — the control-plane surface for your DEDICATED Hanzo K8S.
  *
- * The platform can provision an org its OWN DigitalOcean Kubernetes cluster,
- * install the hanzo-operator + per-tenant baseline, and make it the org's deploy
- * target (the DO token is read from KMS server-side; the kubeconfig is never
- * stored or returned). Workloads otherwise run on the shared Hanzo Cloud — which
- * is the default target, not a row here, so an org with no dedicated cluster sees
- * an honest empty list.
+ * The platform can provision an org its OWN DigitalOcean Kubernetes cluster on the
+ * house account and make it the org's deploy target (the DO credential lives in
+ * cloud, server-side; the kubeconfig is never stored or returned). Workloads
+ * otherwise run on the shared Hanzo Cloud — which is the default target, not a row
+ * here, so an org with no dedicated cluster sees an honest empty list.
  *
  * Cluster inventory + node-pool lifecycle (list, add-pool, scale-pool, delete-pool)
- * read/write the native cloud `/v1/clusters*` surface (org-scoped by the Bearer
- * owner); provisioning a brand-new dedicated cluster stays on the `/paas` control
- * plane (`POST /v1/org/{org}/cluster`, brand-admin gated). Tenancy is the brand org
- * (`config.iamOrgName`). Built on the shared GUI primitives, matching every module.
+ * read/write the native cloud `/v1/visor/clusters*` surface; provisioning a
+ * brand-new dedicated cluster is `POST /v1/visor/k8s/clusters` (admin-gated upstream
+ * — it spends real infrastructure). Both are org-scoped by the Bearer owner. Built
+ * on the shared GUI primitives, matching every module.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Text, XStack, YStack } from '@hanzo/gui'
 import { Plus, RefreshCw, Trash2 } from '@hanzogui/lucide-icons-2'
 
 import { ApiError, PlatformApi, DOKS_REGIONS, DOKS_NODE_SIZES, type Cluster, type NodePool } from '~/lib/api'
-import { config } from '~/config'
+import { currentOrg } from '~/lib/org-scope'
 import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
 import { DataTable, FieldRow, FieldSelect, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
 
@@ -45,7 +44,6 @@ const clusterId = (c: Cluster): string => c.doksClusterId ?? c.id ?? c.name
 const poolId = (p: NodePool): string => p.poolId ?? p.doPoolId ?? p.name ?? ''
 
 export function ClustersModule(_props: { params: Record<string, string> }) {
-  const org = config.iamOrgName
   const [rows, setRows] = useState<Cluster[]>([])
   const [loading, setLoading] = useState(true)
   // List-load failure (separate from action errors) — drives the honest
@@ -53,7 +51,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
   const [loadError, setLoadError] = useState<PlatformError | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Provision form (the platform generates the cluster name).
+  // Provision form. The cluster is born with one node pool; more are added below.
   const [pRegion, setPRegion] = useState<string>(DOKS_REGIONS[2]) // sfo3
   const [pNodeSize, setPNodeSize] = useState<string>(DOKS_NODE_SIZES[1])
   const [pCount, setPCount] = useState(3)
@@ -80,11 +78,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     setProvisioning(true)
     setError(null)
     try {
-      await PlatformApi.provisionCluster(org, {
-        region: pRegion,
-        nodeSize: pNodeSize,
-        nodeCount: pCount,
-      })
+      await PlatformApi.provisionCluster(currentOrg(), { region: pRegion, nodeSize: pNodeSize, nodeCount: pCount })
       await load()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'The cluster was not provisioned. Check the region and node size, then try again.')
@@ -93,7 +87,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     }
   }
 
-  // ── Node-pool management (add / scale / delete against /v1/clusters/:cid/pools) ──
+  // ── Node pools (add / scale / delete against /v1/visor/clusters/:cid/pools) ──
   const [poolClusterId, setPoolClusterId] = useState<string>('')
   const [addSize, setAddSize] = useState<string>(DOKS_NODE_SIZES[0])
   const [addCount, setAddCount] = useState(1)
@@ -192,7 +186,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
             <FieldRow label="Node count">
               <FieldSelect
                 value={String(pCount)}
-                options={['1', '2', '3', '4', '5', '6', '8', '10']}
+                options={COUNT_OPTIONS}
                 onChange={(v) => setPCount(clampCount(v))}
               />
             </FieldRow>

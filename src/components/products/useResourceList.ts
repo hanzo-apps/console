@@ -7,14 +7,14 @@ import { interpretPlatformError, type PlatformError } from './platform/state'
  * a `/v1/<path>` collection into a table: `{ <key>: T[] }`.
  *
  * It folds the loading / error / rows boilerplate every module was hand-rolling
- * (Edge, ServiceMesh, …) into one composable hook over the canonical REST client
- * (`restGet` + `originV1Url`, so every reader shares auth, no-store, and error
- * shaping) and the canonical `PlatformError` model (rendered by PlatformStateCard).
- * A read NEVER throws to the component — a failure degrades to an empty list plus
- * a typed `error`, so a page never blanks or error-toasts on load.
+ * into one composable hook over the canonical REST client (`restGet` +
+ * `originV1Url`, so every reader shares auth, no-store, and error shaping) and the
+ * canonical `PlatformError` model (rendered by PlatformStateCard). A read NEVER
+ * throws to the component — a failure degrades to an empty list plus a typed
+ * `error`, so a page never blanks or error-toasts on load.
  *
- * @param path the `/v1` collection path, e.g. `'edge/nodes'`
- * @param key  the array field in the response object, e.g. `'nodes'`
+ * @param path the `/v1` collection path, e.g. `'network/services'`
+ * @param key  the array field in the response object, e.g. `'services'`
  */
 export function useResourceList<T>(
   path: string,

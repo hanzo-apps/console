@@ -2,7 +2,7 @@
 
 /**
  * Workloads — the operator-managed services running on a cluster, from the REAL
- * apps inventory (`GET /v1/apps`, the canonical "what is running" board: a
+ * apps inventory (`GET /v1/platform/apps`, the canonical "what is running" board: a
  * workload IS a Service CR + its Deployment). Rows carry the declared/running
  * tag, drift, and health the control plane reports — never fabricated pods or
  * fake CPU bars. Pod-level ready/restarts/CPU/memory are POD-level facts, so they

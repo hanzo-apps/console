@@ -14,7 +14,7 @@ export type Owned = {
   displayName?: string
 }
 
-/** A model or storage provider (`/v1/*-provider`). */
+/** A model or storage provider (`/v1/ai/providers`). */
 export type Provider = Owned & {
   category: 'Model' | 'Storage' | 'Embedding' | 'Blockchain' | (string & {})
   type: string
@@ -43,7 +43,7 @@ export type Provider = Owned & {
 }
 
 /**
- * A model route (`/v1/*-model-route`).
+ * A model route (`/v1/ai/routes`).
  *
  * Keyed by `owner`/`modelName` (NOT `owner/name` — the backend uses modelName as
  * the identity). Maps a user-facing model name to a primary provider + upstream
@@ -69,7 +69,7 @@ export type ModelRoute = Owned & {
 }
 
 /**
- * A knowledge store (`/v1/*-store`).
+ * A knowledge store (`/v1/ai/stores`).
  *
  * The RAG/chat surface config: storage + model + embedding providers, chunking
  * and search strategy, chat welcome copy, and limits. Keyed by `owner/name`.
@@ -101,7 +101,7 @@ export type Store = Owned & {
   [key: string]: unknown
 }
 
-/** A chat session (`/v1/*-chat`). Keyed by `owner/name`. */
+/** A chat session (`/v1/ai/chats`). Keyed by `owner/name`. */
 export type Chat = Owned & {
   type?: string
   user?: string

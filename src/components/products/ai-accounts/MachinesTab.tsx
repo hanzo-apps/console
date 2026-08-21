@@ -9,7 +9,7 @@
  * the account and stops its running sessions. Plus the redundancy route plan — the
  * order across your accounts (two Claude Max, then the metered API) a run fails over.
  *
- * Every number is REAL from `/v1/links` (fed by the @hanzo/usage collector on each
+ * Every number is REAL from `/v1/link` (fed by the @hanzo/usage collector on each
  * machine) or an honest "—"; nothing is fabricated.
  */
 import { useCallback, useEffect, useState } from 'react'

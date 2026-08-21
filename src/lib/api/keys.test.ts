@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { partitionKeys } from './keys'
 
 /**
- * The wire shape, copied from a live `GET /v1/keys` against an account that holds
+ * The wire shape, copied from a live `GET /v1/account/keys` against an account that holds
  * three publishable keys and no secret. THIS is the body the page rendered "create
  * your first key" over: `canonical-paths.test.ts` pinned the URL and never the body,
  * so nothing noticed that the read dropped every row it found.

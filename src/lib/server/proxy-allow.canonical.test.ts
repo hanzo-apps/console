@@ -7,8 +7,8 @@ import { CLOUD_HEADS, COMMERCE_HEADS } from './proxy-allow'
  *
  * The capability manifest (hanzoai/openapi · CAPABILITIES.md) is authoritative:
  * one canonical name per capability, and a fixed set of INTERNAL trust boundaries
- * that have NO public API surface. A same-origin `/v1/<head>` proxy must never
- * become a tunnel to either the platform's internal infra or its privileged
+ * that have NO public API surface. A same-origin `/v1` proxy must never become a
+ * tunnel to either the platform's internal infra or its privileged
  * identity/admin/secrets surfaces — those reach the console (if at all) only
  * through their OWN scoped, gated proxies, never the generic user-bearer `/v1`.
  *
@@ -39,13 +39,28 @@ describe('proxy allow-lists · canonical alignment', () => {
     }
   })
 
-  it('every allow-listed head is a non-empty, lowercase, single URL segment', () => {
-    for (const head of [...CLOUD_HEADS, ...COMMERCE_HEADS]) {
+  // A cloud entry is the PREFIX of what it admits, matched on segment boundaries, so a
+  // capability that answers under a namespace (`account/keys`, `integrations/connectors`)
+  // is ONE entry of several segments. Commerce entries are still single REST-model heads.
+  it('every allow-listed entry is a clean, lowercase, slash-separated path', () => {
+    for (const entry of CLOUD_HEADS) {
+      expect(entry, `"${entry}" must be clean path segments`).toMatch(/^[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*$/)
+    }
+    for (const head of COMMERCE_HEADS) {
       expect(head, `"${head}" must be a clean single path segment`).toMatch(/^[a-z0-9][a-z0-9-]*$/)
     }
   })
 
-  it('allow-lists are duplicate-free (one entry per head)', () => {
+  // A prefix that already contains another entry grants nothing new, and hides which
+  // one is doing the work when a surface has to be revoked.
+  it('no cloud entry is contained by another (no redundant grant)', () => {
+    for (const entry of CLOUD_HEADS) {
+      const covered = CLOUD_HEADS.filter((other) => other !== entry && entry.startsWith(`${other}/`))
+      expect(covered, `"${entry}" is already admitted by ${covered.join(', ')}`).toEqual([])
+    }
+  })
+
+  it('allow-lists are duplicate-free (one entry per address)', () => {
     expect(new Set(CLOUD_HEADS).size).toBe(CLOUD_HEADS.length)
     expect(new Set(COMMERCE_HEADS).size).toBe(COMMERCE_HEADS.length)
   })

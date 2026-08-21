@@ -2,9 +2,9 @@
 
 /**
  * Cloudflare — an org's Cloudflare Pages + Workers managed from the console, over
- * the cloud asset plane at `/v1/connectors/cloudflare/*` (cloud `clients/cloudflare`,
- * a sibling of the `cloudflare` CONNECTOR that seals the token and of hanzodns which
- * drives the same token for `/v1/dns`).
+ * the cloud asset plane at `/v1/cloudflare/*` (cloud `apps/cloudflare`, a sibling of
+ * the `cloudflare` CONNECTOR in `apps/integrations` that seals the token and of
+ * hanzodns which drives the same token for `/v1/dns`).
  *
  * Tabs: Pages (projects → deployments + custom domains), Workers (scripts, the
  * account workers.dev subdomain, zone routes), and R2 / KV / D1 which are Phase 2 —

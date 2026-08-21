@@ -1,8 +1,8 @@
 /**
  * Shared async/state contract for the GPU tabs. The router module loads the real
  * sources ONCE and hands each tab the typed state; tabs are presentational and stay
- * orthogonal. Two honest error types by transport: `/paas` calls classify to
- * `PlatformError`, the `/v1` usage ledger to `BackendState`.
+ * orthogonal. Two honest error types by transport: the visor inventory calls classify
+ * to `PlatformError`, the usage ledger to `BackendState`.
  */
 import type { PlatformError } from '../platform/state'
 import type { Cluster } from '~/lib/api'
@@ -17,15 +17,15 @@ export type Async<T, E = PlatformError> =
 
 /** Everything the GPU surface loads, shared across tabs (loaded once in the module). */
 export type ComputeData = {
-  /** Per-GPU inventory + telemetry (`GET /paas/gpus`). */
+  /** Per-GPU inventory + telemetry (`GET /v1/visor/gpus`). */
   gpus: Async<Gpu[]>
   /** The org's DOKS clusters — GPU clusters derived from the node size. */
   clusters: Async<Cluster[]>
-  /** GPU alerts (`GET /paas/gpus/alerts`). */
+  /** GPU alerts (`GET /v1/visor/gpus/alerts`). */
   alerts: Async<GpuAlert[]>
-  /** Metered usage over 7 days from the cloud usage ledger (`/v1/get-cloud-usages`). */
+  /** Metered usage over 7 days from the cloud usage ledger (`/v1/ai/usages/cloud`). */
   ledger: Async<UsageLedger, BackendState>
-  /** Real commerce usage total (`/billing/usage`) — the honest cost fallback today. */
+  /** Real commerce usage total (`/v1/billing/usage`) — the honest cost fallback today. */
   accountUsage: Async<Usage, BackendState>
   /** Refetch every source. */
   reload: () => void

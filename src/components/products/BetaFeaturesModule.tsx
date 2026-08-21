@@ -3,7 +3,7 @@
 /**
  * Beta features — the CUSTOMER self-service surface (NOT admin). Any signed-in user
  * sees the betas their org can opt into and the ones they've enabled, and can opt
- * in / out. It hits `/v1/enablement` through the per-tenant `/v1` proxy, which
+ * in / out. It hits `/v1/pricing/enablement` through the per-tenant `/v1` proxy, which
  * scopes to the caller's OWN validated org — a customer can only ever enable their
  * own org, only for a beta item, and can never bypass an admin `off` or flip global
  * state (all enforced server-side).

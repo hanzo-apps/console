@@ -3,12 +3,12 @@
 /**
  * GPUs · Overview — the at-a-glance board. Every metric/panel is a REAL backend
  * value or an honest empty/not-configured/error state:
- *  - Total/Online/Util/Mem/distribution: from the GPU inventory (`/paas/gpus`), or
+ *  - Total/Online/Util/Mem/distribution: from the GPU inventory (`/v1/visor/gpus`), or
  *    real GPU COUNTS derived from the org's GPU clusters when inventory is absent.
  *  - GPU hours: no source yet → honest `—`.
- *  - Est. cost (card): the cloud usage ledger (`/v1/get-cloud-usages`) → `—` (never
+ *  - Est. cost (card): the cloud usage ledger (`/v1/ai/usages/cloud`) → `—` (never
  *    relabels total account spend as GPU cost). Cost trend: same ledger, with the real
- *    commerce usage total (`/billing/usage`) as a clearly-labelled fallback.
+ *    commerce usage total (`/v1/billing/usage`) as a clearly-labelled fallback.
  *  - Utilization-over-time: no telemetry stream yet → honest panel (NEVER fake lines).
  *  - Top clusters / Alerts: real cluster + alert data, honest-empty otherwise.
  */
@@ -252,7 +252,7 @@ export function OverviewTab({
             <Text fontSize="$2" color="$color10">Metered account usage this period. Per-day GPU cost trend appears when the usage-ledger reader ships.</Text>
           </YStack>
         ) : ledger.phase === 'error' ? (
-          <BackendStateCard state={ledger.error} onRetry={data.reload} hint="endpoint · GET /v1/get-cloud-usages" />
+          <BackendStateCard state={ledger.error} onRetry={data.reload} hint="endpoint · GET /v1/ai/usages/cloud" />
         ) : null}
       </Panel>
     </YStack>

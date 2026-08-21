@@ -3,15 +3,15 @@
  * `hanzo gpu connect`, with LIVE heartbeat.
  *
  * Distinct from the two neighbouring surfaces, and the reason this client exists:
- *  - `/v1/machines` folds these boxes in (provider="byo") but drops the heartbeat.
- *  - `/v1/gpus` expands them to one row per accelerator, also without a heartbeat.
- *  - `GET /v1/fleet/workers` is the ONLY surface carrying the per-box `lastHeartbeat`
+ *  - `/v1/visor/machines` folds these boxes in (provider="byo") but drops the heartbeat.
+ *  - `/v1/visor/gpus` expands them to one row per accelerator, also without a heartbeat.
+ *  - `GET /v1/visor/fleet/workers` is the ONLY surface carrying the per-box `lastHeartbeat`
  *    (+ capabilities + the hanzo-engine advert), so it is the source of truth for
  *    "which of my machines are online right now".
  *
- * Read over the same-origin `/v1` user-bearer BFF (`fleet` allow-listed in
+ * Read over the same-origin `/v1` user-bearer BFF (`visor` allow-listed in
  * proxy-allow.ts; org resolved from the Bearer owner); on the go:embed console it hits
- * cloud's `/v1/fleet/workers` directly under the first-party session. The backend
+ * cloud's `/v1/visor/fleet/workers` directly under the first-party session. The backend
  * derives online/offline itself (online iff the last heartbeat is ≤ 90s old — ~1.5×
  * the CLI's 30s beat), so the console renders that verdict rather than recomputing it;
  * every field the backend omits degrades to "—", nothing is fabricated.
@@ -38,7 +38,7 @@ export type FleetEngine = {
   status?: string
 }
 
-/** One connected BYO machine, as `GET /v1/fleet/workers` reports it. */
+/** One connected BYO machine, as `GET /v1/visor/fleet/workers` reports it. */
 export type FleetWorker = {
   id: string
   hostname?: string
@@ -163,14 +163,14 @@ export function fmtHeartbeat(iso?: string, now: number = Date.now()): string {
 // ── Jobs (the gpu-jobs queue) ─────────────────────────────────────────────────
 //
 // The connect fleet CLAIMS work from the org's `gpu-jobs` tasks namespace (presence
-// is a SEPARATE `fleet` namespace). `GET /v1/fleet/jobs` lists that queue + history:
+// is a SEPARATE `fleet` namespace). `GET /v1/visor/fleet/jobs` lists that queue + history:
 // one row per activity, carrying the target GPU (`gpu`, ''=shared pool), the claiming
 // GPU (`worker`, set once running), status, timings and any failure. This is what makes
 // the per-GPU queue VISIBLE (depth + running workflow + history) and MANAGEABLE (cancel).
 
 export type FleetJobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'canceled'
 
-/** One gpu-jobs activity as `GET /v1/fleet/jobs` reports it. Missing fields render `—`. */
+/** One gpu-jobs activity as `GET /v1/visor/fleet/jobs` reports it. Missing fields render `—`. */
 export type FleetJob = {
   /** Workflow id — the job's stable identity (the cancel target). */
   id: string
@@ -226,7 +226,7 @@ export function normalizeJob(raw: unknown, i = 0): FleetJob {
 
 // ── Board + samples (live utilization; already served, previously unread) ─────
 
-/** One compute unit on the `GET /v1/fleet` board — its live util + running/sessions. */
+/** One compute unit on the `GET /v1/visor/fleet` board — its live util + running/sessions. */
 export type FleetBoardUnit = {
   source: string
   unit: string
@@ -242,7 +242,7 @@ export type FleetBoardUnit = {
   gpuModel?: string
 }
 
-/** One row of the `GET /v1/fleet/samples` util+cost time series. */
+/** One row of the `GET /v1/visor/fleet/samples` util+cost time series. */
 export type FleetSample = {
   unit?: string
   source?: string
@@ -457,14 +457,14 @@ export function reconcilePending(pending: string[], freshJobs: FleetJob[]): stri
 // ── API ──────────────────────────────────────────────────────────────────────
 
 export const FleetApi = {
-  /** The org's connected BYO fleet with live heartbeat (`GET /v1/fleet/workers`). */
+  /** The org's connected BYO fleet with live heartbeat (`GET /v1/visor/fleet/workers`). */
   workers: async (): Promise<FleetWorker[]> => {
-    const r = await restGet<unknown>(cloudProxyV1Url('fleet/workers'))
+    const r = await restGet<unknown>(cloudProxyV1Url('visor/fleet/workers'))
     const arr = Array.isArray(r) ? r : rec(r).workers
     return (Array.isArray(arr) ? arr : []).map((w, i) => normalizeWorker(w, i))
   },
 
-  /** The org's gpu-jobs queue + history (`GET /v1/fleet/jobs?gpu=&status=&limit=`). `limit`
+  /** The org's gpu-jobs queue + history (`GET /v1/visor/fleet/jobs?gpu=&status=&limit=`). `limit`
    *  bounds the poll to the backend's recency read so a long-lived org never streams an
    *  unbounded history every few seconds; the response is rendered as-returned (the backend
    *  owns the recency/pagination bound). */
@@ -474,26 +474,26 @@ export const FleetApi = {
     if (opts.status) q.set('status', opts.status)
     if (opts.limit) q.set('limit', String(opts.limit))
     const qs = q.toString()
-    const r = await restGet<unknown>(cloudProxyV1Url(`fleet/jobs${qs ? `?${qs}` : ''}`))
+    const r = await restGet<unknown>(cloudProxyV1Url(`visor/fleet/jobs${qs ? `?${qs}` : ''}`))
     const arr = Array.isArray(r) ? r : rec(r).jobs
     return (Array.isArray(arr) ? arr : []).map((j, i) => normalizeJob(j, i))
   },
 
-  /** The unified compute board (`GET /v1/fleet`) — per-unit live util + running/sessions. */
+  /** The unified compute board (`GET /v1/visor/fleet`) — per-unit live util + running/sessions. */
   board: async (): Promise<FleetBoardUnit[]> => {
-    const r = await restGet<unknown>(cloudProxyV1Url('fleet'))
+    const r = await restGet<unknown>(cloudProxyV1Url('visor/fleet'))
     const arr = Array.isArray(r) ? r : rec(r).units
     return (Array.isArray(arr) ? arr : []).map(normalizeUnit)
   },
 
-  /** The org's util+cost time series (`GET /v1/fleet/samples?range=…`). */
+  /** The org's util+cost time series (`GET /v1/visor/fleet/samples?range=…`). */
   samples: async (query = 'range=24h'): Promise<FleetSample[]> => {
-    const r = await restGet<unknown>(cloudProxyV1Url(`fleet/samples${query ? `?${query}` : ''}`))
+    const r = await restGet<unknown>(cloudProxyV1Url(`visor/fleet/samples${query ? `?${query}` : ''}`))
     const arr = Array.isArray(r) ? r : rec(r).samples
     return (Array.isArray(arr) ? arr : []).map(normalizeSample)
   },
 
-  /** Cancel a queued/running job (`POST /v1/fleet/jobs/:id/cancel`). */
+  /** Cancel a queued/running job (`POST /v1/visor/fleet/jobs/:id/cancel`). */
   cancel: (id: string, run?: string, reason?: string): Promise<unknown> =>
-    restPost(cloudProxyV1Url(`fleet/jobs/${encodeURIComponent(id)}/cancel`), { run, reason }),
+    restPost(cloudProxyV1Url(`visor/fleet/jobs/${encodeURIComponent(id)}/cancel`), { run, reason }),
 }

@@ -4,19 +4,18 @@
  * TWO transports, one file, cleanly split — each addresses the RIGHT backend:
  *  - Machines INVENTORY + lifecycle (list / launch / quote / terminate) authorize on the
  *    Bearer owner and 403 a cookie-only call, so they go through the canonical, prefix-free
- *    same-origin `/v1/machines*` — the `app/v1/[...path]/route.ts` bearer BFF mints a
+ *    same-origin `/v1/visor/machines*` — the `app/v1/[...path]/route.ts` bearer BFF mints a
  *    short-lived user token and forwards to cloud-api (org resolved from the Bearer
  *    owner). This is the visor-backed native cloud surface.
  *  - The public compute CATALOG (regions / CPU sizes / GPU accelerators, un-scoped)
  *    reads visor DIRECTLY through the `/v1/vm` proxy (`app/v1/vm/[...path]/route.ts` → visor)
  *    at `/v1/vm/{regions,sizes,gpus}`. Visor's `/v1/gpus` is the accelerator CATALOG
- *    (models + VRAM + price); the cloud-api `/v1/gpus` is the GPU INVENTORY surface (a
+ *    (models + VRAM + price); cloud-api's `/v1/visor/gpus` is the GPU INVENTORY surface (a
  *    different, per-org shape) — so the catalog MUST read visor, never cloud-api.
  *
- * This is deliberately NOT the `/paas` platform control plane (a god-mode SERVICE
- * token, admin-only). Compute is a TENANT action: any signed-in org user may list +
- * launch their OWN machines with just their session cookie — never the infra token,
- * never the infra "not configured" message.
+ * Compute is a TENANT action: any signed-in org user may list + launch their OWN
+ * machines with just their session cookie — never an infra credential, never the infra
+ * "not configured" message.
  *
  * Honest by construction: every field is normalized defensively (an upstream field
  * rename degrades a cell to `—`, never throws), an empty list is a real "no
@@ -121,7 +120,7 @@ export function interpretVisorError(e: unknown): VisorError {
 
 // ── Compute catalog (regions / sizes / GPUs) — the REAL DO offer, per visor ────
 //
-// These are the PUBLIC catalog endpoints (`GET /v1/regions|sizes|gpus`, 200 for any
+// These are the PUBLIC catalog endpoints (`GET /v1/vm/{regions,sizes,gpus}`, 200 for any
 // signed-in user; visor's authz allows them un-scoped). They power the customer
 // "launch" surface: real regions, real machine sizes with pricing, and the real GPU
 // accelerator catalog with hourly/monthly price — so Machines/GPUs render the actual
@@ -241,9 +240,9 @@ function unwrapEnvelope(r: unknown): Record<string, unknown> {
 }
 
 export const VisorApi = {
-  /** The signed-in org's own machines (`/v1/machines`, org-scoped by the Bearer owner). */
+  /** The signed-in org's own machines (`/v1/visor/machines`, org-scoped by the Bearer owner). */
   machines: async (): Promise<VisorMachine[]> => {
-    const r = await restGet<unknown>(cloudProxyV1Url('machines'))
+    const r = await restGet<unknown>(cloudProxyV1Url('visor/machines'))
     return arrayUnder(r, ['machines', 'instances', 'data', 'items', 'rows', 'droplets']).map((m, i) => normalizeMachine(m, i))
   },
 
@@ -266,12 +265,12 @@ export const VisorApi = {
   },
 
   /**
-   * The authoritative launch QUOTE for a size in a region (`/v1/machines/launch`
+   * The authoritative launch QUOTE for a size in a region (`POST /v1/visor/machines`
    * with `dryRun:true` — NO spend). Returns OUR market price (visor `HanzoPrice`), the
    * SAME figure the real launch charges and the catalog shows (one pricing source).
    */
   quote: async (input: LaunchInput): Promise<LaunchQuote> => {
-    const r = await restPost<unknown>(cloudProxyV1Url('machines/launch'), {
+    const r = await restPost<unknown>(cloudProxyV1Url('visor/machines'), {
       size: input.size, instanceType: input.size, region: input.region, name: input.name || 'quote', dryRun: true,
     })
     const d = unwrapEnvelope(r)
@@ -286,21 +285,21 @@ export const VisorApi = {
     }
   },
 
-  /** Launch a metered, per-org machine (`/v1/machines/launch`, dryRun:false).
+  /** Launch a metered, per-org machine (`POST /v1/visor/machines`, dryRun:false).
    *  A CPU machine is metered to the org's Hanzo balance; a GPU launch is prepay-only,
    *  card-funded, with a 24-hour minimum charged upfront (see `LaunchDrawer` — the GPU
    *  gate is card-on-file + sufficient prepaid balance). A 402 (or "insufficient
    *  balance"/"payment method required") surfaces honestly — never a fabricated success. */
   launch: async (input: LaunchInput): Promise<VisorMachine> => {
-    const r = await restPost<unknown>(cloudProxyV1Url('machines/launch'), {
+    const r = await restPost<unknown>(cloudProxyV1Url('visor/machines'), {
       size: input.size, instanceType: input.size, region: input.region, name: input.name, dryRun: false,
     })
     return normalizeMachine(unwrapEnvelope(r))
   },
 
-  /** Terminate (destroy) a machine (`DELETE /v1/machines/:id`). Stops metering; the
+  /** Terminate (destroy) a machine (`DELETE /v1/visor/machines/:id`). Stops metering; the
    *  backend authorizes the delete against the Bearer owner's org. Resolves on 2xx/204. */
-  terminate: (id: string): Promise<void> => restDelete(cloudProxyV1Url(`machines/${enc(id)}`)),
+  terminate: (id: string): Promise<void> => restDelete(cloudProxyV1Url(`visor/machines/${enc(id)}`)),
 }
 
 // ── Formatters (cells) ───────────────────────────────────────────────────────

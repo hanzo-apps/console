@@ -7,9 +7,9 @@
  *
  * This is the Compute "Applications" surface: real deployed apps with their
  * project, status, source, and live URL — NOT the IAM/OAuth "application"
- * registry (an identity concern), and no longer the admin-only apps-inventory
- * board (that stays under Status/Kubernetes). Per-org by construction: cloud
- * resolves the org from the Bearer owner, so a caller only sees their own apps.
+ * registry (an identity concern), and NOT the apps-inventory board (that lives
+ * under Status/Kubernetes). Per-org by construction: cloud resolves the org from
+ * the Bearer owner, so a caller only sees their own apps.
  */
 import { PaasApplications } from './paas/PaasApplications'
 

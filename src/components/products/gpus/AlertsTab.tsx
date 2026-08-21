@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * GPUs · Alerts — GPU alerts from the platform (`GET /paas/gpus/alerts`, shared via
+ * GPUs · Alerts — GPU alerts from the platform (`GET /v1/visor/gpus/alerts`, shared via
  * `data.alerts`). High-temp / offline / driver-update / backup events when a provider
  * streams them; honest not-configured / empty otherwise — never fabricated alerts.
  */

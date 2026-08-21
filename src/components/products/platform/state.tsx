@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * Honest platform states — ONE place that maps a `/paas` proxy / platform error
- * to a truthful explanation, shared by every platform module (Clusters,
- * Kubernetes, Edge). No fabricated data: a 501 means the proxy has no service
- * token yet, a 503 means the route is mounted but its runtime/dependency isn't
- * configured on this deployment, a 404 means the backend doesn't serve that
- * surface yet, anything else is the real (transient) reach error.
+ * Honest platform states — ONE place that maps a platform error to a truthful
+ * explanation, shared by every platform module (Clusters, Kubernetes, Edge). No
+ * fabricated data: a 501 means the surface's server-side credential isn't set on this
+ * deployment, a 503 means the route is mounted but its runtime/dependency isn't
+ * configured, a 404 means the backend doesn't serve that surface, anything else is the
+ * real (transient) reach error.
  */
 import { Button, Card, Text, XStack } from '@hanzo/gui'
 import { CheckCircle2, TriangleAlert } from '@hanzogui/lucide-icons-2'
@@ -17,14 +17,15 @@ export type PlatformErrorKind = 'not-configured' | 'forbidden' | 'payment' | 'un
 
 export type PlatformError = { kind: PlatformErrorKind; message: string }
 
-/** Classify a thrown error from a `/paas` call into an honest kind + message. */
+/** Classify a thrown error from a platform call into an honest kind + message. */
 export function interpretPlatformError(e: unknown): PlatformError {
   const status = e instanceof ApiError ? e.status : 0
   const message = e instanceof Error ? e.message : String(e)
-  // 501 = the console's PaaS service token is not set (an ADMIN infra concern).
+  // 501 = the surface's server-side credential is not set on this deployment (an ADMIN
+  // infra concern — e.g. the commerce token behind the billing bridge).
   // 401/403 = the CALLER can't read the control plane — a customer (not a workspace
-  // admin), NOT a token problem: show a graceful "managed control plane" state, never
-  // the infra PAAS_SERVICE_TOKEN message (that would be a false claim to a customer).
+  // admin), NOT a credential problem: show a graceful "managed control plane" state,
+  // never the infra message (that would be a false claim to a customer).
   if (status === 501) return { kind: 'not-configured', message }
   if (status === 401 || status === 403) return { kind: 'forbidden', message }
   // 402 = the spend gate refused: no active subscription and no prepaid credit, or
@@ -44,7 +45,7 @@ export function interpretPlatformError(e: unknown): PlatformError {
 }
 
 const TITLES: Record<PlatformErrorKind, string> = {
-  'not-configured': 'PaaS control plane not configured',
+  'not-configured': 'Not configured on this deployment',
   forbidden: 'Connected · managed by Hanzo',
   payment: 'Billing required',
   unavailable: 'Endpoint not served here',
@@ -53,7 +54,7 @@ const TITLES: Record<PlatformErrorKind, string> = {
 
 const BODIES: Record<PlatformErrorKind, string> = {
   'not-configured':
-    'This console is wired to platform.hanzo.ai, but the server-side service token (PAAS_SERVICE_TOKEN, from KMS) is not set on this deployment yet. Set it and this page fills in.',
+    'The server-side credential this surface reads with is not set on this deployment yet. It is sealed in KMS and injected server-side; set it and this page fills in.',
   forbidden:
     'Your workloads run on managed Hanzo Cloud — no cluster to operate. The full control-plane fleet view (clusters, nodes, raw workloads) is an admin surface; deploy and scale through Functions, Agents, and the platform.',
   unavailable:

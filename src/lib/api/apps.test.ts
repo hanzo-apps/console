@@ -251,13 +251,13 @@ describe('Browser tag door — the RESOLVED set, defensively', () => {
 describe('installTag — the one-line install', () => {
   it('names the PUBLIC api host, not the console origin the operator happens to be on', () => {
     expect(installTag('pk-abc')).toBe(
-      '<script defer src="https://api.hanzo.ai/v1/event.js" data-key="pk-abc"></script>',
+      '<script defer src="https://api.hanzo.ai/v1/event/tag.js" data-key="pk-abc"></script>',
     )
   })
 
   it('is prefix-free /v1 and carries the key as data-key, with no trailing-slash artifact', () => {
     const s = installTag('pk-abc', 'https://api.hanzo.ai/')
-    expect(s).toContain('/v1/event.js')
+    expect(s).toContain('/v1/event/tag.js')
     expect(s).not.toContain('//v1/')
     expect(s).not.toContain('/api/v1/')
   })
@@ -273,7 +273,7 @@ describe('AppsApi tag routes — same-origin, prefix-free', () => {
     }
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
       fetched.push({ url, method: init?.method ?? 'GET', body: init?.body as string | undefined })
-      const body = url.includes('/v1/tags')
+      const body = url.includes('/v1/projects/tags')
         ? { tags: [{ platform: 'ga4', type: 'ga', id: 'G-ABC' }] }
         : { slug: 'landing', key: 'pk-abc', tags: { ga4: 'G-ABC' } }
       return Promise.resolve(
@@ -306,7 +306,7 @@ describe('AppsApi tag routes — same-origin, prefix-free', () => {
 
   it('previews through the public door, url-encoding the key', async () => {
     const out = await AppsApi.browserTags('pk-a b&c')
-    expect(fetched[0].url).toBe(`${ORIGIN}/v1/tags?key=pk-a%20b%26c`)
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/projects/tags?key=pk-a%20b%26c`)
     expect(fetched[0].url).not.toContain('/api/')
     expect(out).toEqual([{ platform: 'ga4', type: 'ga', id: 'G-ABC' }])
   })

@@ -60,7 +60,7 @@ const USAGE = {
 
 const MODELS = { object: 'list', data: [{ id: 'zen5', owned_by: 'hanzo' }, { id: 'glm-5.2', owned_by: 'hanzo' }] }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()

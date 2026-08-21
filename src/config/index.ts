@@ -192,7 +192,7 @@ const ADMIN_ORG = 'admin'
 // BRANDS + HOST_BRANDS map is the "add a brand = edit code + redeploy" hardcode the
 // white-label system removes. The canonical source of a brand is the TENANT RECORD
 // (organization + webServerSettings.{host,logoUrl,faviconUrl} + domain bindings),
-// resolved at RUNTIME by host via GET /v1/brand?host=. New brands = a tenant record
+// resolved at RUNTIME by host. New brands = a tenant record
 // (the Tenants board creates it), NOT a row here. NOT swapped yet: NEXT_PUBLIC_IAM_*
 // + the OAuth issuer bake in at build time, so a blind swap breaks sign-in. Treat
 // these rows as the SEED for the tenant records until every host has one, then delete.
@@ -445,7 +445,7 @@ export function isPlatformHost(host?: string | null): boolean {
  * teams, cycles, roadmap, agent-actionable work). Strict `tracker.` prefix — no false
  * positives. tracker.hanzo.ai boots straight into the tracker with the catalog chrome
  * stripped, while console.hanzo.ai keeps Tracker as one product among many — one shared
- * surface (cloud `/v1/tracker`), two entry points.
+ * surface (cloud `/v1/todo`), two entry points.
  */
 export function isTrackerHost(host?: string | null): boolean {
   return normHost(host).startsWith('tracker.')

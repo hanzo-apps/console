@@ -1,6 +1,6 @@
 /**
  * Mission Control API — the live agent-session control plane + run-targets over the
- * cloud `/v1/agents/*` surface (cloud `clients/agents`: sessions + events + control +
+ * cloud `/v1/agents/*` surface (cloud `apps/agents`: sessions + events + control +
  * targets). Same-origin, keyless, prefix-free (`originV1Url('agents/…')` →
  * `<origin>/v1/agents/…`, the ONE endpoint form); the `agents` head is already
  * allow-listed in `proxy-allow.ts`, so a signed-in call is org-scoped SERVER-SIDE

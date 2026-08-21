@@ -3,38 +3,34 @@
 /**
  * Status — the live health of every Hanzo platform service, from REAL data only.
  *
- * Source: VictoriaMetrics (`up{}`) through the same-origin read-only `/telemetry`
- * proxy. VictoriaMetrics scrapes a health target per service (`up{job="iam-health"}`,
- * `up{job="cloud-api-health"}`, …); `up == 1` is a real, live "healthy" verdict and
- * `up == 0` is a real "down". Nothing is fabricated — there are no fake green dots,
- * only what the TSDB actually reports.
+ * Source: the fleet availability read (`/v1/o11y/availability`, HIP-0139). The prober
+ * asks each service its OWN health URL every 30 seconds, so "Healthy" means a server
+ * answered and "Down" means it did not — nothing is fabricated, and a collection
+ * failure is never scored as a service being down. It reports a service and a verdict:
+ * there is no per-replica identity under it, because a Service address is not a pod.
  *
- * Why not `/v1/platform/fleet` (the old source): the fleet inventory reports ZERO
- * apps on this deployment, so that board was empty for admins and "managed by Hanzo"
- * for customers — it showed no health at all. VictoriaMetrics is where the live
- * signal is, and platform status is a status-page concern appropriate for any
- * signed-in user (read-only, no control-plane token). Every other condition is
- * honest: loading, not-configured (proxy 501), access (401), and error.
+ * Every other condition is honest too: loading, access (401/403), an unreachable store
+ * (503, which says it cannot see rather than showing an all-down fleet), and error.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { CheckCircle2, RefreshCw, TriangleAlert, XCircle } from '@hanzogui/lucide-icons-2'
 
-import { ApiError, TelemetryApi, summarizeHealth, type ServiceHealth } from '~/lib/api'
+import { ApiError, TelemetryApi, type Availability, type ServiceHealth } from '~/lib/api'
 import { DataTable, PageHeader, type Column } from '@hanzo/ui/product'
 
 type State =
   | { phase: 'loading' }
   | { phase: 'error'; status: number; message: string }
-  | { phase: 'ready'; rows: ServiceHealth[] }
+  | { phase: 'ready'; fleet: Availability }
 
 export function StatusModule(_props: { params: Record<string, string> }) {
   const [state, setState] = useState<State>({ phase: 'loading' })
 
   const load = useCallback(() => {
     setState({ phase: 'loading' })
-    TelemetryApi.serviceHealth()
-      .then((rows) => setState({ phase: 'ready', rows }))
+    TelemetryApi.availability()
+      .then((fleet) => setState({ phase: 'ready', fleet }))
       .catch((e) =>
         setState({
           phase: 'error',
@@ -50,35 +46,15 @@ export function StatusModule(_props: { params: Record<string, string> }) {
 
   const columns: Column<ServiceHealth>[] = [
     {
-      key: 'service',
+      key: 'name',
       header: 'Service',
       render: (r) => (
         <XStack items="center" gap="$2" minW={0}>
           {r.up ? <CheckCircle2 size={15} color="$green10" /> : <XCircle size={15} color="$red10" />}
           <Text fontSize="$3" fontWeight="600" numberOfLines={1}>
-            {r.service}
+            {r.name}
           </Text>
         </XStack>
-      ),
-    },
-    {
-      key: 'instance',
-      header: 'Endpoint',
-      width: 260,
-      render: (r) => (
-        <Text fontSize="$2" color="$color11" numberOfLines={1}>
-          {r.instance || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'brand',
-      header: 'Brand',
-      width: 100,
-      render: (r) => (
-        <Text fontSize="$2" color="$color11">
-          {r.brand ?? '—'}
-        </Text>
       ),
     },
     {
@@ -95,8 +71,6 @@ export function StatusModule(_props: { params: Record<string, string> }) {
       ),
     },
   ]
-
-  const summary = state.phase === 'ready' ? summarizeHealth(state.rows) : null
 
   return (
     <>
@@ -119,19 +93,21 @@ export function StatusModule(_props: { params: Record<string, string> }) {
         <StatusError status={state.status} message={state.message} onRetry={load} />
       ) : (
         <YStack gap="$3">
-          {summary ? (
-            <XStack gap="$3" flexWrap="wrap">
-              <Stat label="Services" value={summary.total} />
-              <Stat label="Healthy" value={summary.healthy} tone="$green10" />
-              <Stat label="Down" value={summary.down} tone={summary.down > 0 ? '$red10' : undefined} />
-            </XStack>
-          ) : null}
+          <XStack gap="$3" flexWrap="wrap">
+            <Stat label="Services" value={state.fleet.total} />
+            <Stat label="Healthy" value={state.fleet.up} tone="$green10" />
+            <Stat
+              label="Down"
+              value={state.fleet.total - state.fleet.up}
+              tone={state.fleet.total > state.fleet.up ? '$red10' : undefined}
+            />
+          </XStack>
 
           <DataTable
             columns={columns}
-            rows={state.rows}
-            rowKey={(r) => `${r.job}:${r.instance}`}
-            empty="No services observed — the telemetry store has not reported any scrape targets yet."
+            rows={state.fleet.services}
+            rowKey={(r) => r.name}
+            empty="No services observed — the prober is not watching any targets yet."
           />
         </YStack>
       )}
@@ -153,20 +129,28 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: '$g
   )
 }
 
-/** Honest failure card — 501 not-configured, 401 access, else a real error. */
+/**
+ * Honest failure card — 401 sign-in, 403 platform access, 503 the store cannot be
+ * reached, else the real error. The 503 branch says the fleet cannot be SEEN rather
+ * than showing every service down, which is what an empty read would look like.
+ */
 function StatusError({ status, message, onRetry }: { status: number; message: string; onRetry: () => void }) {
   const title =
-    status === 501
-      ? 'Telemetry not configured'
-      : status === 401
-        ? 'Sign in to view platform status'
-        : 'Could not reach the telemetry store'
+    status === 401
+      ? 'Sign in to view platform status'
+      : status === 403
+        ? 'Platform administrators only'
+        : status === 503
+          ? 'Service health is unavailable'
+          : 'Could not read service health'
   const body =
-    status === 501
-      ? 'This console is wired to the telemetry store, but its URL (VM_URL) is not set on this deployment yet. Set it and service health appears here.'
-      : status === 401
-        ? 'Platform status is available to signed-in users. Please sign in.'
-        : message
+    status === 401
+      ? 'Platform status is available to signed-in users. Please sign in.'
+      : status === 403
+        ? 'Fleet status covers every service rather than any one tenant, so it is restricted to platform administrators.'
+        : status === 503
+          ? 'The telemetry store is not answering, so which services are up cannot be read right now. This is a gap in the view, not a fleet that is down.'
+          : message
   return (
     <Card borderWidth={1} borderColor="$borderColor" p="$4" gap="$2" maxWidth={640}>
       <XStack gap="$2" items="center">
@@ -178,7 +162,7 @@ function StatusError({ status, message, onRetry }: { status: number; message: st
       <Text fontSize="$3" color="$color11">
         {body}
       </Text>
-      {status !== 401 ? (
+      {status !== 401 && status !== 403 ? (
         <Button size="$2" self="flex-start" onPress={onRetry}>
           Retry
         </Button>

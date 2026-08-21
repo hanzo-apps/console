@@ -5,10 +5,9 @@ import { ProviderAdminApi, deriveHealth, normalizeProvider } from './provider-ad
 /**
  * The provider control board is the platform-wide shared-gateway routing surface
  * (GLOBAL-ADMIN only). Two invariants under test:
- *   1. Its client hits the console's OWN same-origin `/v1/admin/providers` (which
- *      `next.config.mjs` rewrites to the global-admin-gated `/admin/aggregate`
- *      proxy) — NEVER a direct cookie-only call to the cloud host (which would
- *      bypass the console gate), for BOTH the GET list and the POST mutations.
+ *   1. Its client hits the console's OWN same-origin `/v1/ai/providers/global` — the
+ *      ai capability's cross-tenant list, over the `/v1` bearer proxy — NEVER a direct
+ *      cookie-only call to the cloud host, which would bypass the console gate.
  *   2. A provider KEY is never modeled or surfaced — `keyPresent` is a boolean;
  *      even if the backend leaks a raw key field, it never reaches `AdminProvider`.
  */
@@ -82,7 +81,7 @@ describe('normalizeProvider — optional-safe, key-leak-proof', () => {
   })
 })
 
-describe('ProviderAdminApi — same-origin /v1/admin/providers, never the cloud host', () => {
+describe('ProviderAdminApi — same-origin /v1/ai/providers/global, never the cloud host', () => {
   const calls: { url: string; method: string; body?: string }[] = []
 
   beforeEach(() => {
@@ -94,10 +93,8 @@ describe('ProviderAdminApi — same-origin /v1/admin/providers, never the cloud 
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
       calls.push({ url, method: init?.method ?? 'GET', body: init?.body as string | undefined })
       const one = { name: 'do-ai', displayName: 'DigitalOcean', type: 'DigitalOcean', enabled: true, primary: true, keyPresent: true, modelCount: 3, providerUrl: 'https://do-ai' }
-      const isPrimary = url.includes('/primary')
-      // The casibase envelope: list/primary → array, toggle → single row.
-      const data = url.endsWith('/providers') || isPrimary ? [one] : one
-      return Promise.resolve(new Response(JSON.stringify({ status: 'ok', msg: '', data }), { status: 200, headers: { 'content-type': 'application/json' } }))
+      // The casibase envelope; the cross-tenant list answers with an array.
+      return Promise.resolve(new Response(JSON.stringify({ status: 'ok', msg: '', data: [one] }), { status: 200, headers: { 'content-type': 'application/json' } }))
     })
   })
   afterEach(() => {
@@ -105,37 +102,18 @@ describe('ProviderAdminApi — same-origin /v1/admin/providers, never the cloud 
     delete (globalThis as { window?: unknown }).window
   })
 
-  it('list() GETs the same-origin <origin>/v1/admin/providers (no /cloud, no /ai prefix)', async () => {
+  it('list() GETs the same-origin <origin>/v1/ai/providers/global (no /cloud prefix)', async () => {
     const rows = await ProviderAdminApi.list()
     expect(calls).toHaveLength(1)
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/admin/providers`)
+    expect(calls[0].url).toBe(`${ORIGIN}/v1/ai/providers/global`)
     expect(calls[0].method).toBe('GET')
     expect(rows.map((r) => r.name)).toEqual(['do-ai'])
   })
 
-  it('never calls the cloud API host directly (would bypass the console admin gate)', async () => {
+  it('never calls the cloud API host directly (would bypass the console gate)', async () => {
     await ProviderAdminApi.list()
     expect(calls[0].url.startsWith(ORIGIN)).toBe(true)
     expect(calls[0].url).not.toContain('cloud.hanzo.ai')
     expect(calls[0].url).not.toContain('/cloud/')
-    expect(calls[0].url).not.toContain('/ai/')
-  })
-
-  it('toggle() POSTs the {name,enabled} body to same-origin /v1/admin/providers/toggle', async () => {
-    const updated = await ProviderAdminApi.toggle('openrouter', false)
-    expect(calls).toHaveLength(1)
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/admin/providers/toggle`)
-    expect(calls[0].method).toBe('POST')
-    expect(JSON.parse(calls[0].body ?? '{}')).toEqual({ name: 'openrouter', enabled: false })
-    expect(updated.name).toBe('do-ai')
-  })
-
-  it('setPrimary() POSTs {name} to same-origin /v1/admin/providers/primary and returns the list', async () => {
-    const rows = await ProviderAdminApi.setPrimary('fireworks')
-    expect(calls).toHaveLength(1)
-    expect(calls[0].url).toBe(`${ORIGIN}/v1/admin/providers/primary`)
-    expect(calls[0].method).toBe('POST')
-    expect(JSON.parse(calls[0].body ?? '{}')).toEqual({ name: 'fireworks' })
-    expect(rows.map((r) => r.name)).toEqual(['do-ai'])
   })
 })

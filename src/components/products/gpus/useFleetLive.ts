@@ -2,11 +2,11 @@
 
 /**
  * useFleetLive — the org's LIVE compute fleet, polled together while mounted:
- *  - connected workers (`/v1/fleet/workers`) — presence + heartbeat,
- *  - the gpu-jobs queue + recent history (`/v1/fleet/jobs`, recency-BOUNDED) — what's
- *    queued/running per GPU,
- *  - the board (`/v1/fleet`) — per-unit live GPU utilization + running/sessions,
- *  - the util/cost series (`/v1/fleet/samples`) — the usage sparkline.
+ *  - connected workers (`/v1/visor/fleet/workers`) — presence + heartbeat,
+ *  - the gpu-jobs queue + recent history (`/v1/visor/fleet/jobs`, recency-BOUNDED) —
+ *    what's queued/running per GPU,
+ *  - the board (`/v1/visor/fleet`) — per-unit live GPU utilization + running/sessions,
+ *  - the util/cost series (`/v1/visor/fleet/samples`) — the usage sparkline.
  *
  * ONE hook so the whole connected-GPU picture refreshes on ONE cadence (the catalog /
  * clusters, which barely change, stay in `useCustomerGpuData`). Callers pass `enabled`

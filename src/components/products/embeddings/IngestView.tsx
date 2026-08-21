@@ -5,7 +5,7 @@
  * bespoke "jobs" system: a short source (pasted text / upload) indexes inline; a long
  * source (GitHub repo, web crawl) is enqueued as a durable hanzoai/tasks workflow (the
  * one async system) and tracked in the Tasks product by its workflow id. The lower
- * panel is the store's REAL indexed files (`GET /v1/get-files`) — what's actually in
+ * panel is the store's REAL indexed files (`GET /v1/ai/files`) — what's actually in
  * the collection, not a fabricated job log.
  */
 import { useCallback, useEffect, useState } from 'react'
@@ -91,7 +91,7 @@ export function IngestView({ owner }: { owner: string }) {
     if (!canIngest) return
     setIngest({ phase: 'loading' })
     try {
-      // One trigger, three real sources → the ONE /v1/docs/ingest endpoint. github/crawl
+      // One trigger, three real sources → the ONE /v1/ai/rag/ingest endpoint. github/crawl
       // return a durable tasks workflow id (async); upload indexes inline. No bespoke job.
       const stats =
         source === 'github'
@@ -242,13 +242,13 @@ export function IngestView({ owner }: { owner: string }) {
         </XStack>
       </Card>
 
-      {/* ── Indexed files (real collection contents from GET /v1/get-files) ─── */}
+      {/* ── Indexed files (real collection contents from GET /v1/ai/files) ─── */}
       <YStack gap="$2">
         <Text fontSize="$5" fontWeight="800" color="$color12">
           Indexed files
         </Text>
         {error ? (
-          <BackendStateCard state={error} onRetry={() => void load()} hint="endpoint · GET /v1/get-files" />
+          <BackendStateCard state={error} onRetry={() => void load()} hint="endpoint · GET /v1/ai/files" />
         ) : !loading && files.length === 0 ? (
           <EmptyState
             icon={FileStack}

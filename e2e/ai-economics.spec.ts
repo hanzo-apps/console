@@ -88,7 +88,7 @@ const RUNS = { data: [
 /** GET /v1/evals/evaluators. */
 const EVALUATORS = { data: [{ name: 'quality-judge', model: 'claude-opus-4.6', criteria: 'routing quality', scoreName: 'quality' }] }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()

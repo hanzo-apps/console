@@ -30,7 +30,7 @@ const CURRENCY = process.env.CREDIT_CURRENCY ?? 'usd'
 
 const ADMIN = process.env.ADMIN_URL ?? 'https://admin.hanzo.ai'
 
-/** Sign in via the console app sign-in form (email/password → cloud /v1/signin).
+/** Sign in via the console app sign-in form (email/password → cloud /v1/ai/signin).
  *  Resolves to the user's OWN org (e.g. hanzo/z, maxpower/dave) — a normal member,
  *  NOT SuperAdmin (per the privilege-separation: superadmin is admin.hanzo.ai only). */
 async function signIn(page: Page, email: string, password: string) {

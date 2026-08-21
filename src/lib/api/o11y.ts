@@ -184,7 +184,7 @@ export type AnnotationQueueDetail = AnnotationQueue & { items?: AnnotationQueueI
 
 /**
  * A user — the per-user analytics rollup the backend aggregates from traces
- * carrying a `userId`. Mirrors `/v1/o11y/users`.
+ * carrying a `userId`. Mirrors `/v1/o11y/llm/users`.
  */
 export type O11yUser = {
   userId: string
@@ -200,7 +200,7 @@ export type O11yUser = {
 // alias of originV1Url since v8.4.120): a cookie-only call is refused, so
 // `app/v1/[...path]` mints the caller's IAM bearer and o11y scopes by the token
 // owner (the `o11y` head is allow-listed in proxy-allow.ts). cloud maps
-// `/v1/o11y/<resource>` → the embedded o11y runtime, which org-scopes the span
+// `/v1/o11y/llm/<resource>` → the embedded o11y runtime, which org-scopes the span
 // views on the validated X-Org-Id and wraps every success as `{ status, data }`
 // over a `{ items, offset, limit }` list — so we unwrap both. Until spans flow /
 // the reverse-proxy resolves the reads surface honest states (a typed ApiError →
@@ -404,20 +404,22 @@ const scoreConfigOf = (c: EvalScoreConfig): ScoreConfig => ({
 })
 
 /**
- * The Observe READ client. traces / observations / sessions (+ their trace/session
- * DETAIL) read NATIVELY from the o11y gen_ai span plane (`/v1/o11y`, the declared
- * observation-of-record). trace + session DETAIL are composed from the list views
+ * The Observe READ client. traces / observations / sessions / users (+ the trace and
+ * session DETAIL) read NATIVELY from the o11y gen_ai span plane (`/v1/o11y/llm`, the declared
+ * observation-of-record — the bare `/v1/o11y` siblings are the APM traces and the org's
+ * members, a different subject). trace + session DETAIL are composed from the list views
  * filtered by traceId/sessionId (o11y exposes no detail endpoint — the real
  * waterfall without a backend change). SCORES + rubrics + every eval artifact
  * (datasets/evaluators/runs) STAY the eval-orchestration read on `/v1/evals`; the
  * trace detail's inline scores are the eval scores FOR that trace (listScoresTyped by
- * traceId), so nothing is lost. users / reviews / health read the same
- * `/v1/o11y` surface. Every read surfaces honest states (ApiError → RuntimeNotice /
- * empty) until spans flow and the reverse-proxy resolves — never fabricated rows.
+ * traceId), so nothing is lost. reviews / health read the bare `/v1/o11y` surface —
+ * the review queue and the runtime's own liveness. Every read surfaces honest states
+ * (ApiError → RuntimeNotice / empty) until spans flow and the reverse-proxy resolves —
+ * never fabricated rows.
  */
 export const O11yApi = {
   traces: async (q: O11yListQuery = {}): Promise<O11yList<Trace>> =>
-    asList((await o11yList<O11yTraceWire>('traces', { limit: q.limit, offset: offsetOf(q) })).map(traceOf), q),
+    asList((await o11yList<O11yTraceWire>('llm/traces', { limit: q.limit, offset: offsetOf(q) })).map(traceOf), q),
 
   // Composed from the trace's spans (o11y, by traceId) + its eval scores (evals, by
   // traceId): the real observation waterfall, without an o11y trace-detail endpoint.
@@ -429,8 +431,8 @@ export const O11yApi = {
   // when the aggregation row is absent.
   trace: async (id: string): Promise<TraceDetail> => {
     const [obs, aggRows, scores] = await Promise.all([
-      o11yList<O11yObservationWire>('observations', { traceId: id, limit: DETAIL_LIMIT }),
-      o11yList<O11yTraceWire>('traces', { traceId: id, limit: 1 }),
+      o11yList<O11yObservationWire>('llm/observations', { traceId: id, limit: DETAIL_LIMIT }),
+      o11yList<O11yTraceWire>('llm/traces', { traceId: id, limit: 1 }),
       EvalsApi.listScoresTyped({ traceId: id, limit: DETAIL_LIMIT }),
     ])
     const observations = obs.map(observationOf)
@@ -450,16 +452,16 @@ export const O11yApi = {
   },
 
   sessions: async (q: O11yListQuery = {}): Promise<O11yList<Session>> =>
-    asList((await o11yList<O11ySessionWire>('sessions', { limit: q.limit, offset: offsetOf(q) })).map(sessionOf), q),
+    asList((await o11yList<O11ySessionWire>('llm/sessions', { limit: q.limit, offset: offsetOf(q) })).map(sessionOf), q),
 
   // Composed from the session's traces (o11y, by sessionId).
   session: async (id: string): Promise<SessionDetail> => {
-    const traces = (await o11yList<O11yTraceWire>('traces', { sessionId: id, limit: DETAIL_LIMIT })).map(traceOf)
+    const traces = (await o11yList<O11yTraceWire>('llm/traces', { sessionId: id, limit: DETAIL_LIMIT })).map(traceOf)
     return { ...sessionOf({ id }), traces }
   },
 
   observations: async (q: O11yListQuery = {}): Promise<O11yList<Observation>> =>
-    asList((await o11yList<O11yObservationWire>('observations', { limit: q.limit, offset: offsetOf(q) })).map(observationOf), q),
+    asList((await o11yList<O11yObservationWire>('llm/observations', { limit: q.limit, offset: offsetOf(q) })).map(observationOf), q),
 
   // SCORES + rubrics STAY on /v1/evals (the eval artifacts) — only the span
   // plane (traces/observations/sessions) moved to o11y.
@@ -470,7 +472,7 @@ export const O11yApi = {
     asList((await EvalsApi.listScoreConfigs()).map(scoreConfigOf), q),
 
   users: async (q: O11yListQuery = {}): Promise<O11yList<O11yUser>> =>
-    asList((await o11yList<O11yUserWire>('users', { limit: q.limit, offset: offsetOf(q) })).map(userOf), q),
+    asList((await o11yList<O11yUserWire>('llm/users', { limit: q.limit, offset: offsetOf(q) })).map(userOf), q),
 
   // ── annotation QUEUES have no o11y llmobs equivalent (flat annotations only) —
   //    honest states over the same /v1/o11y surface until a queue runtime exists ──

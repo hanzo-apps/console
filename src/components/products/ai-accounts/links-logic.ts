@@ -1,7 +1,7 @@
 /**
  * Pure presentation logic for the login-manager (Machines) tab — labels, usage
  * tones, formatting, and the roll-up summary. No React, no network: unit-tested in
- * isolation so the dashboard stays a thin renderer over real `/v1/links` data.
+ * isolation so the dashboard stays a thin renderer over real `/v1/link` data.
  */
 import type { Device, Link, LinkKind, BillingMode } from '~/lib/api/links'
 import { toneVar } from '~/components/ui/tone'

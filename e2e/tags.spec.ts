@@ -97,7 +97,7 @@ const DESTINATIONS = {
   ],
 }
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 /** Every write the page makes, so a body can be asserted rather than assumed. */
 type Sent = { method: string; path: string; body: string }
@@ -113,8 +113,9 @@ function mocker(sent: Sent[]) {
 
     if (req.method() !== 'GET') sent.push({ method: req.method(), path: p, body: req.postData() ?? '' })
 
-    // The public tag door — the RESOLVED set, keyed by the site's pk-.
-    if (p === '/v1/tags') {
+    // The public tag door — the RESOLVED set, keyed by the site's pk-. It reads beside
+    // its writer, so it must answer BEFORE the `:slug` match below would swallow `tags`.
+    if (p === '/v1/projects/tags') {
       return json(url.searchParams.get('key') === 'pk-landing123' ? DOOR : { tags: [] })
     }
     // The org's destinations, and one platform's connect.

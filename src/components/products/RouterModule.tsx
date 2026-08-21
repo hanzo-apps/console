@@ -4,13 +4,13 @@
  * Router — the per-org AI Usage & Training surface (registry `''` + `:tab`, AI
  * category). The customer face of the virtual `auto`/`zen-router` model, in three
  * tabs:
- *   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
+ *   Overview — routing observability + TRAINING status over `GET /v1/ai/router/stats`
  *     (org-scoped): (a) cost saved (a blended $/MTok PROXY, not billed dollars),
  *     (b) a quality proxy (learned reward / learned share / confidence / shadow
  *     agreement), (c) the per-task routed-model distribution, the last-retrain gate
  *     verdict when present, and the opt-in training-contribution toggle (kept in
  *     THIS one place — the toggle lives nowhere else in the console).
- *   Usage    — the org's AI usage (native Hanzo `GET /v1/get-cloud-usages` +
+ *   Usage    — the org's AI usage (native Hanzo `GET /v1/ai/usages/cloud` +
  *     imported connected-provider usage), rendered by the shared `<AiUsagePanels>`
  *     that `AiUsageModule` also uses. ONE usage implementation — never a second copy.
  *   Policy   — the reused λ/µ editor (`RouterPolicyEditor`): task pools + cost
@@ -79,7 +79,7 @@ export function RouterModule({ params }: { params: Record<string, string> }) {
       ) : tab === 'usage' ? (
         <AiUsagePanels
           title="AI usage"
-          subtitle="Requests, tokens, spend, and per-model usage for your org — native Hanzo usage (GET /v1/get-cloud-usages), beside your connected-provider usage."
+          subtitle="Requests, tokens, spend, and per-model usage for your org — native Hanzo usage (GET /v1/ai/usages/cloud), beside your connected-provider usage."
         />
       ) : (
         <RouterOverview />
@@ -129,7 +129,7 @@ function RouterOverview() {
       {state.phase === 'loading' ? (
         <Loader label="Loading routing stats…" />
       ) : state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={() => load(range)} hint="GET /v1/router/stats" />
+        <BackendStateCard state={state.error} onRetry={() => load(range)} hint="GET /v1/ai/router/stats" />
       ) : (
         <RouterBoard stats={state.data} />
       )}

@@ -5,10 +5,7 @@
  * console's OWN per-tenant `/v1/billing/*` proxy (`app/v1/billing/[...path]/route.ts`),
  * which injects the commerce service token server-side and scopes every request
  * to the caller's own org/billing-subject — the SAME subject the gateway debits
- * and the Cost page reads. This deliberately does NOT use cloud `get-cloud-usages`
- * anymore: that endpoint returns 200 with `{"status":"error","msg":"usage ledger
- * unavailable: datastore peer not connected"}` (its o11y/datastore peer is down),
- * so the customer saw no spend. "Billing IS commerce" — the Overview reads the one
+ * and the Cost page reads. "Billing IS commerce" — the Overview reads the one
  * real, charged source, and `usage-adapter.ts` rolls the raw records up into the
  * rich `CloudUsageOverview` the dashboard renders (reusing the aimetrics parse, so
  * Overview and Cost agree to the cent).

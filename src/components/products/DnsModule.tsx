@@ -12,7 +12,7 @@
  * DNSSEC · status) drills into a zone's records TABLE with add / edit / delete, the
  * Cloudflare orange-cloud Proxied toggle (only on a proxyable record of a Cloudflare
  * zone), TTL and type. "Connect Cloudflare" kicks the existing
- * `/v1/connectors/cloudflare/connect` OAuth flow (reusing `ConnectorsApi`, DRY).
+ * `/v1/integrations/cloudflare/connect` OAuth flow (reusing `ConnectorsApi`, DRY).
  *
  * Every read/write is same-origin, keyless and org-scoped SERVER-SIDE (the `/v1`
  * bearer BFF mints a short-lived user token; the cloud `dns` head resolves the org

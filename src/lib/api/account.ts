@@ -228,7 +228,7 @@ export const AccountApi = {
   setAvatar: async (file: File): Promise<string> => {
     const form = new FormData()
     form.append('file', file, file.name)
-    const r = await postForm<{ avatar?: string }>('avatar', form)
+    const r = await postForm<{ avatar?: string }>('account/avatar', form)
     if (!r.avatar) throw new ApiError('The server accepted the photo but returned no URL')
     return r.avatar
   },

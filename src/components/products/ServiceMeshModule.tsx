@@ -1,14 +1,13 @@
 'use client'
 
 /**
- * Service Mesh — inter-service routing, mutual-TLS, and traffic policy for the
- * platform's workloads (the sidecar/mesh data plane).
+ * Service Mesh — inter-service routing and mutual TLS across the org's workloads.
  *
- * Reads the mesh service registry from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/mesh/services`), which injects the service token server-side. When the
- * mesh isn't provisioned for the org the list load fails and the honest
- * not-configured / unavailable card renders instead of an empty grid — matching
- * every other infra module.
+ * A mesh row IS an edge service of the org's Zero Trust overlay, so it is read where
+ * its parent lives: `GET /v1/network/services` (HIP-0139). Unlike the overlay read
+ * this one does not degrade — an unconfigured deployment answers 503 and the honest
+ * not-configured / unavailable card renders, so the page never shows "no services"
+ * for a fabric it simply could not read.
  */
 import { Button, Text } from '@hanzo/gui'
 import { RefreshCw } from '@hanzogui/lucide-icons-2'
@@ -20,15 +19,13 @@ import { DataTable, PageHeader, StatusTag, type Column } from '@hanzo/ui/product
 type MeshService = {
   id: string
   service?: string
-  namespace?: string
   mtls?: string
-  requests?: number
   status?: string
 }
 
 export function ServiceMeshModule(_props: { params: Record<string, string> }) {
   const { rows, loading, error: loadError, reload: load } =
-    useResourceList<MeshService>('mesh/services', 'services')
+    useResourceList<MeshService>('network/services', 'services')
 
   const columns: Column<MeshService>[] = [
     {
@@ -41,32 +38,12 @@ export function ServiceMeshModule(_props: { params: Record<string, string> }) {
       ),
     },
     {
-      key: 'namespace',
-      header: 'Namespace',
-      width: 160,
-      render: (m) => (
-        <Text fontSize="$3" color="$color11">
-          {m.namespace || '—'}
-        </Text>
-      ),
-    },
-    {
       key: 'mtls',
       header: 'mTLS',
       width: 90,
       render: (m) => (
         <Text fontSize="$3" color="$color11">
           {m.mtls || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'requests',
-      header: 'Requests',
-      width: 120,
-      render: (m) => (
-        <Text fontSize="$3" color="$color11">
-          {m.requests ?? '—'}
         </Text>
       ),
     },
@@ -82,7 +59,7 @@ export function ServiceMeshModule(_props: { params: Record<string, string> }) {
     <>
       <PageHeader
         title="Service Mesh"
-        subtitle="Inter-service routing, mTLS, and traffic."
+        subtitle="Inter-service routing and mTLS."
         actions={
           <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
             Refresh
@@ -98,7 +75,7 @@ export function ServiceMeshModule(_props: { params: Record<string, string> }) {
           rows={rows}
           loading={loading}
           rowKey={(m) => m.id}
-          empty="No mesh services yet. Workloads appear here once they route through the mesh, each with its namespace, mTLS mode, and request count."
+          empty="No mesh services yet. Workloads appear here once they route through the mesh, each with its mTLS mode."
         />
       )}
     </>

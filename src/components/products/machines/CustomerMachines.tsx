@@ -1,11 +1,11 @@
 'use client'
 
 /**
- * Customer machines — a tenant's OWN compute, read from the native `/v1/machines`
+ * Customer machines — a tenant's OWN compute, read from the native `/v1/visor/machines`
  * surface via the user-bearer `/v1` proxy (`VisorApi.machines()`, visor-backed,
  * org resolved from the Bearer owner). This is what a non-admin (a customer like a
  * demo user) sees under Compute › Machines: their real machines with a launch flow
- * (`LaunchDrawer`) and a terminate action (`DELETE /v1/machines/:id`), or a graceful
+ * (`LaunchDrawer`) and a terminate action (`DELETE /v1/visor/machines/:id`), or a graceful
  * "launch one" / "managed compute" state — NEVER an infra "not configured" message
  * (that is only ever an admin concern; the admin fleet view lives in `MachinesModule`).
  *
@@ -117,7 +117,7 @@ export function CustomerMachines() {
 
   const machineColor = productColorHex('machines')
 
-  // Terminate (destroy) a machine — real DELETE /v1/machines/:id, stops metering. Honest
+  // Terminate (destroy) a machine — real DELETE /v1/visor/machines/:id, stops metering. Honest
   // confirm; on success the row is dropped and the list reloaded; a failure surfaces the
   // real backend message (no fabricated success).
   const terminate = async (m: VisorMachine) => {

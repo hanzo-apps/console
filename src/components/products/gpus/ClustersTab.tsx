@@ -3,10 +3,11 @@
 /**
  * GPUs · Clusters — the org's DOKS clusters with GPU columns derived from the node
  * size, plus a REAL provision form. Listing reuses the shared `data.clusters`
- * (`GET /paas/org/{org}/cluster`); provisioning calls the REAL
- * `PlatformApi.provisionCluster` (`POST` same path). Honest not-configured card when
- * the PaaS token is unset; the node-size picker includes real DO GPU Droplet slugs so
- * "Create cluster" genuinely provisions GPU capacity once the token is wired.
+ * (`GET /v1/visor/clusters`); provisioning calls the REAL
+ * `PlatformApi.provisionCluster` (`POST /v1/visor/k8s/clusters`). Both are org-scoped
+ * by the caller's own bearer, so a cluster lands in the caller's tenant and nowhere
+ * else; the node-size picker carries real DO GPU Droplet slugs, so "Create cluster"
+ * genuinely provisions GPU capacity.
  */
 import { useState } from 'react'
 import { Button, Card, Spinner, Text, XStack, YStack } from '@hanzo/gui'

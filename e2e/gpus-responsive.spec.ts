@@ -3,11 +3,11 @@
  *
  * Runs against a LOCAL server (BASE_URL=http://localhost:4000) with the whole network
  * mocked (same pattern as budgets-responsive): `/auth/session` → a NON-admin customer so
- * the customer GPUs surface (CustomerGpus) mounts, `/v1/fleet/workers` → the home-lab
- * fleet (dbc / evo / spark, the exact byoWorker shape), and every other data call → an
- * honest empty-ok envelope. It proves the "Connected machines" section renders the real
- * fleet with live heartbeat, that the body never scrolls horizontally on a phone (390)
- * OR a tablet (768), and screenshots each width.
+ * the customer GPUs surface (CustomerGpus) mounts, `/v1/visor/fleet/workers` → the
+ * home-lab fleet (dbc / evo / spark, the exact byoWorker shape), and every other data
+ * call → an honest empty-ok envelope. It proves the "Connected machines" section renders
+ * the real fleet with live heartbeat, that the body never scrolls horizontally on a
+ * phone (390) OR a tablet (768), and screenshots each width.
  *
  * Run: BASE_URL=http://localhost:4000 npx playwright test gpus-responsive
  */
@@ -24,7 +24,8 @@ requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
 // A NON-admin customer (owner is a normal org, not the reserved `admin`) → the customer
-// GPUs surface, which reads /v1/fleet/workers. (An admin would see the /paas fleet.)
+// GPUs surface, which reads /v1/visor/fleet/workers. (An admin would see the platform
+// fleet board instead.)
 const ACCOUNT = {
   owner: 'hanzo',
   name: 'a',
@@ -37,14 +38,14 @@ const ACCOUNT = {
   signupApplication: 'hanzo-cloud',
 }
 
-/** The org's connect fleet, exactly as `GET /v1/fleet/workers` reports it. */
+/** The org's connect fleet, exactly as `GET /v1/visor/fleet/workers` reports it. */
 const WORKERS = [
   { id: 'dbc', hostname: 'dbc', provider: 'byo', location: 'on-prem', status: 'online', os: 'darwin', version: '1.4.0', lastHeartbeat: new Date().toISOString(), gpus: [{ name: 'Apple M3 Max', memoryTotal: '131072 MiB' }], capabilities: ['studio.render'] },
   { id: 'evo', hostname: 'evo', provider: 'byo', location: 'on-prem', status: 'online', os: 'linux', version: '1.4.0', lastHeartbeat: new Date().toISOString(), gpus: [{ name: 'NVIDIA RTX 4090', memoryTotal: '131072 MiB' }], capabilities: ['engine.serve'], engine: { url: 'http://evo:8080', apis: ['openai'], models: ['zen5'], status: 'ready' } },
   { id: 'spark', hostname: 'spark', provider: 'byo', location: 'on-prem', status: 'offline', os: 'linux', version: '1.4.0', lastHeartbeat: new Date(Date.now() - 10 * 60_000).toISOString(), gpus: [{ name: 'NVIDIA GB10', memoryTotal: '131072 MiB' }], capabilities: [] },
 ]
 
-const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|paas|integrations|auth\/refresh)(\/|$|\?)/
+const API_RE = /\/(v1|cloud|ai|billing|commerce|telemetry|vm|superbase|admin|integrations|auth\/refresh)(\/|$|\?)/
 
 async function mock(route: Route) {
   const req = route.request()
@@ -59,7 +60,7 @@ async function mock(route: Route) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
   }
   // The page under test — the real connect-fleet contract.
-  if (path === '/v1/fleet/workers') {
+  if (path === '/v1/visor/fleet/workers') {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ workers: WORKERS }) })
   }
   // Wallet chip balance (sidebar) — a real {balance,holds,available} shape.

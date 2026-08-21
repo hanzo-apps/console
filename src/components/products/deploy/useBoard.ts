@@ -5,7 +5,7 @@
  * folded into a single `DeployRow` list.
  *
  * Two independent backends answer here (`/v1/platform/projects/:p/apps` and
- * `/v1/platform/sites`), so they are read with `allSettled` and reported
+ * `/v1/projects`), so they are read with `allSettled` and reported
  * separately. A partial read stays a partial read: the rows that loaded render,
  * and `incomplete` names the source that did not, so a caller can say which
  * number on the screen is now a lie. Collapsing that into one error would hide

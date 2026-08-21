@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { normalizeSaaS } from './saas'
 
-describe('normalizeSaaS — /v1/commerce/metrics/saas → SaaSMetrics', () => {
+describe('normalizeSaaS — /v1/metrics/saas → SaaSMetrics', () => {
   it('maps a full real payload field-for-field', () => {
     const raw = {
       asOf: '2026-07-08T21:00:00Z',

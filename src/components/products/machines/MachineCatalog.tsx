@@ -2,8 +2,8 @@
 
 /**
  * Machine catalog — the REAL, COMPLETE compute offer (all regions + every available
- * standard size, with OUR market price) read from visor's catalog (`GET /v1/regions`,
- * `GET /v1/sizes` via the `/v1/vm` proxy). Rendered under the "launch your first machine"
+ * standard size, with OUR market price) read from visor's catalog (`GET /v1/vm/regions`,
+ * `GET /v1/vm/sizes`). Rendered under the "launch your first machine"
  * empty state so a customer with zero machines still sees the actual regions and the
  * full size list they can launch — searchable, with real $/hr AND $/mo per entry (the
  * same visor `HanzoPrice` the launch drawer quotes and the launch charges). Proves the

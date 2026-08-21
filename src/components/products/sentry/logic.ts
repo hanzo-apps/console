@@ -1,7 +1,7 @@
 // Pure presentation logic for the Hanzo Sentinel panels — summaries, formatters,
 // the Discover builder catalogs, and the project SDK snippet. NO React / gui / I/O
 // imports (types are erased), so every helper unit-tests in a plain-node suite
-// (logic.test.ts) and the panels stay thin views over real `/v1/sentinel` data.
+// (logic.test.ts) and the panels stay thin views over real `/v1/o11y/sentinel` data.
 import type { SentryIssue, StatPoint, Period } from '~/lib/api/sentry'
 import type { Slice, ChartPoint } from '~/components/ui/Charts'
 import { toneVar, type Tone } from '~/components/ui/tone'

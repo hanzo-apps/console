@@ -19,7 +19,7 @@ import {
 } from './logic'
 
 /**
- * The Router Overview renders ONLY real `/v1/router/stats` numbers. These pin the
+ * The Router Overview renders ONLY real `/v1/ai/router/stats` numbers. These pin the
  * honest contract: a partial payload never throws, nullable/absent metrics read
  * "—" (never a fabricated 0), the cost is a $/MTok PROXY only when priced,
  * shadow-agreement is null → "not available", and the distributions are exact

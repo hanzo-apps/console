@@ -200,7 +200,7 @@ export function OverviewView({
     )
   }
   if (error) {
-    return <BackendStateCard state={error} onRetry={() => void load()} hint="endpoint · GET /v1/get-stores" />
+    return <BackendStateCard state={error} onRetry={() => void load()} hint="endpoint · GET /v1/ai/stores" />
   }
 
   return (

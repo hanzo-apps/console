@@ -366,7 +366,7 @@ export function DatasetRunsModule(_props: { params: Record<string, string> }) {
         }
       />
       {list.phase === 'error' ? (
-        <BackendStateCard state={list.error} onRetry={load} hint="endpoint · GET /v1/evals/dataset-runs" />
+        <BackendStateCard state={list.error} onRetry={load} hint="endpoint · GET /v1/evals/runs" />
       ) : (
         <DataTable
           columns={runColumns}

@@ -3,7 +3,7 @@
 /**
  * Observations — the spans/generations/events inside traces. The flat,
  * cross-trace view of every observation (the leaves a trace is built from),
- * paged from the cloud o11y backend (`GET /v1/o11y/observations`). Honest
+ * paged from the cloud o11y backend (`GET /v1/o11y/llm/observations`). Honest
  * runtime-not-initialized state when o11y isn't provisioned for the deployment.
  */
 import { useCallback, useEffect, useState } from 'react'

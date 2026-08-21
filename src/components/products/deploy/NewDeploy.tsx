@@ -8,9 +8,9 @@
  *           then `POST …/apps/:app/deploy` (202). Creating an app does NOT start
  *           it, so a form that stopped at 201 would report success over a thing
  *           that never ran. Both calls are made, and a failure names its step.
- *  - SITE → `POST /v1/platform/sites` (201). A static build is published by an
- *           upload or a git deploy afterwards, so this creates the target and the
- *           board shows it as `draft` until something is published to it.
+ *  - SITE → `POST /v1/projects` (201). A static build is published by an upload or
+ *           a git deploy afterwards, so this creates the target and the board shows
+ *           it as `draft` until something is published to it.
  *
  * Env values are typed here and POSTed straight to cloud. They are never logged,
  * never persisted by the browser, and never read back into this form — cloud

@@ -33,7 +33,7 @@ const SHOTS = join(process.cwd(), 'e2e-shots')
 // A local render spec — skip cleanly when the target origin isn't up.
 requireFixtureServer()
 
-const API_RE = /\/(v1|ai|auth|billing|commerce|telemetry|vm|superbase|admin|paas|integrations)(\/|$|\?)/
+const API_RE = /\/(v1|ai|auth|billing|commerce|telemetry|vm|superbase|admin|integrations)(\/|$|\?)/
 
 /**
  * Anonymous by construction: every API call answers 401, so the session resolves to

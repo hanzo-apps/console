@@ -3,7 +3,7 @@
  * browser reach a backend that authorizes on a user-bound Bearer JWT.
  *
  * The trust boundary: the browser holds NO credential. It calls console2's OWN
- * origin (e.g. `/v1/vector`, `/v1/vm/regions`) with just its first-party
+ * origin (e.g. `/v1/provisioning/vector`, `/v1/vm/regions`) with just its first-party
  * session cookie. This handler resolves WHO the caller is from that cookie
  * (`resolveUser` → cloud `/v1/ai/account`), mints a SHORT-LIVED, user-bound IAM
  * token as the confidential `hanzo-console` client (`adminBearer`, cached per user
@@ -57,7 +57,7 @@ export function errorBody(shape: ErrorShape, message: string, code?: string): Re
 export type BearerProxyOpts = {
   /** Upstream base URL, e.g. `CLOUD_API_URL` / `VISOR_URL` (trailing slash ok). */
   target: string
-  /** Upstream path, already joined from the catch-all (e.g. `v1/vector`, no leading `/`). */
+  /** Upstream path, already joined from the catch-all (e.g. `v1/provisioning/vector`, no leading `/`). */
   path: string
   /** Least-privilege gate: return true iff `path` is reachable. Omit = allow any. */
   allow?: (path: string) => boolean

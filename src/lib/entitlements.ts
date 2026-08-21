@@ -7,13 +7,13 @@
  * "Add product" flow enables more. A super admin bypasses this entirely (sees the
  * whole catalog — the gating is a customer concern).
  *
- * TRANSPORT (single change-point): the real endpoint is being built in parallel —
- *   GET  /v1/orgs/{org}/entitlements  → { enabled: string[] }   (product ids)
- *   POST /v1/orgs/{org}/entitlements  { add?: string[]; remove?: string[] }
+ * TRANSPORT (single change-point):
+ *   GET  /v1/entitlements/orgs/{org}  → { enabled: string[] }   (product ids)
+ *   POST /v1/entitlements/orgs/{org}  { add?: string[]; remove?: string[] }
  * routed through the console's hardened `/v1` user-bearer proxy (org resolved
- * server-side from the Bearer owner). Swapping the mock for the real backend is
- * this file alone. Until it lands the GET 404s and the caller treats the set as
- * `null` = UNGATED (show everything) — so there is zero regression pre-launch.
+ * server-side from the Bearer owner). A deployment that does not route the surface
+ * 404s and the caller treats the set as `null` = UNGATED (show everything) — an
+ * honest degradation, never a fabricated entitlement.
  *
  * The pure helpers (ALWAYS_ON_PRODUCTS, entitledSet, filterEntitled, nextEnabled)
  * carry no React/I/O and are unit-tested in isolation; `EntitlementsApi` is the
@@ -112,11 +112,11 @@ function normalize(raw: unknown): Entitlements {
 }
 
 const url = (org: string): string =>
-  cloudProxyV1Url(`orgs/${encodeURIComponent(org)}/entitlements`)
+  cloudProxyV1Url(`entitlements/orgs/${encodeURIComponent(org)}`)
 
-/** The `/v1/orgs/{org}/entitlements` client (the ONE swap point for the real API). */
+/** The `/v1/entitlements/orgs/{org}` client (the ONE swap point for the real API). */
 export const EntitlementsApi = {
-  /** The org's enabled product ids. Throws `ApiError` (status 404) until the endpoint lands. */
+  /** The org's enabled product ids. Throws `ApiError` (404 when the surface isn't routed here). */
   async get(org: string): Promise<Entitlements> {
     return normalize(await restGet<unknown>(url(org)))
   },

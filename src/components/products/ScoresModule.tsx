@@ -3,7 +3,7 @@
 /**
  * Scores — list for evaluation scores (HIP-0106), native on @hanzo/gui.
  *
- * List at `/scores`. Reads the REAL `/v1/o11y/scores` surface; when the runtime
+ * List at `/scores`. Reads the REAL `/v1/evals/scores` surface; when the runtime
  * is not initialized (503) or unrouted (404) it shows an honest RuntimeNotice —
  * never fabricated scores or charts. A score links to its trace.
  */

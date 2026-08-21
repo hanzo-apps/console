@@ -6,7 +6,7 @@
  * category), the subscription mix (per plan, trials, seats, a recent create/cancel
  * feed), metered pay-as-you-go revenue, and the top customers by revenue — all
  * computed IN commerce (the money system of record) and read through
- * `SaasApi.metrics` (the server-gated `/v1/commerce/metrics/saas` aggregate;
+ * `SaasApi.metrics` (the server-gated `/v1/metrics/saas` commerce aggregate;
  * `getAdminGate` fail-closes a non-global-admin BEFORE any cross-tenant row is read).
  *
  * The AI panel is NOT re-derived here: it composes the SAME fleet LLM-observability

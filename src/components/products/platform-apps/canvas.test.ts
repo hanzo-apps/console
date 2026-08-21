@@ -38,12 +38,12 @@ describe('buildProjectCanvas', () => {
     expect(n.replicas).toBe(2)
     expect(n.source).toEqual({ kind: 'image', ref: 'hanzoai/api:v1' })
     expect(n.deployedAt).toBe(1_700_000_000_000) // seconds → ms
-    expect(n.capability?.path).toBe('/v1/platform')
+    expect(n.capability?.id).toBe('platform')
   })
 
-  it('infers a known /v1 capability from an exact image/slug match', () => {
+  it('infers a known capability from an exact image/slug match', () => {
     const { nodes } = buildProjectCanvas({ apps: [app({ slug: 'vector', image: { repository: 'hanzoai/vector', tag: 'v2' } })], resources: [] })
-    expect(nodes[0].capability?.path).toBe('/v1/vector')
+    expect(nodes[0].capability?.id).toBe('vector')
   })
 
   it('draws a domain→app route edge from the app own domains', () => {

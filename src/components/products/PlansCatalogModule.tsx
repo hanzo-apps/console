@@ -7,7 +7,7 @@
  * truth (`models/plan`): the tiers `GET /v1/billing/plans` and the internal-ledger
  * renewal charge derive from. This is the CMS write surface for it — a filterable table
  * of plans and a create/edit form. The sibling of the Catalog editor, over the SAME
- * SuperAdmin CRUD pattern (`/v1/plans/entries`), reusing its tested money + metadata
+ * SuperAdmin CRUD pattern (`/v1/commerce/plans/entries`), reusing its tested money + metadata
  * logic.
  *
  * LIVE BILLING CONTROL: a plan's monthly PRICE is the real renewal charge — editing it
@@ -35,7 +35,7 @@ import { ConfirmDelete, DataTable, FieldRow, FieldSelect, FieldSwitch, FieldText
 
 const PLANS_COPY: HonestCopy = {
   notFound:
-    'The plans editor requires the commerce plan surface (GET/POST/PUT/DELETE /v1/plans/entries). Plans appear once the plan backend is routed on this deployment.',
+    'The plans editor requires the commerce plan surface (GET/POST/PUT/DELETE /v1/commerce/plans/entries). Plans appear once the plan backend is routed on this deployment.',
   unauthorized:
     'This is the platform subscription/DNS plan authority — cross-tenant PRICING data (a plan price is the real renewal charge). Access is enforced server-side by commerce (SuperAdmin, owner=="admin"); sign in with an @hanzo.ai admin account.',
 }
@@ -224,7 +224,7 @@ export function PlansCatalogModule(_props: { params: Record<string, string> }) {
       )}
 
       <Text fontSize="$2" color="$color10">
-        endpoint · /v1/plans/entries · {config.brandName}
+        endpoint · /v1/commerce/plans/entries · {config.brandName}
       </Text>
 
       {/* Create / edit form (SlideOver). */}

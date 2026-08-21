@@ -211,7 +211,7 @@ function PreviewCard({ appKey, nonce }: { appKey: string; nonce: number }) {
           <Spinner size="small" color="$color11" />
         </XStack>
       ) : state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/tags" />
+        <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/projects/tags" />
       ) : state.data.length === 0 ? (
         <Text fontSize="$2" color="$color10">
           Nothing yet — the tag will load and send events, but inject no pixels.

@@ -67,14 +67,14 @@ describe('compose', () => {
     expect(text).toContain('answers no operations under `/v1/widget`')
     expect(text).not.toContain('### Operations')
     expect(text).not.toContain('### Example')
-    expect(text).toContain('https://api.hanzo.ai/v1/commands (service `widget`)')
+    expect(text).toContain('https://api.hanzo.ai/v1/openapi/commands (service `widget`)')
   })
 
   it('summarizes honestly past the cap instead of dumping every line', () => {
     const many = Array.from({ length: CAP + 7 }, (_, i) => op(`get_widget_${i}`, 'GET', `/v1/widget/${i}`))
     const text = compose(subject({ ops: many }))
     expect(text).toContain(`### Operations (${CAP + 7})`)
-    expect(text).toContain('… 7 more at https://api.hanzo.ai/v1/commands')
+    expect(text).toContain('… 7 more at https://api.hanzo.ai/v1/openapi/commands')
     expect(text.split('\n').filter((l) => l.startsWith('- `get_widget_'))).toHaveLength(CAP)
   })
 

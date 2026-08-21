@@ -143,7 +143,7 @@ const NO_SERVICE = new Set<string>([
 /**
  * Explicit product → operator-service overrides, for the handful of products whose
  * real service in the apps inventory differs from the derived name. Verified against
- * the live `GET /v1/apps` inventory — each maps to a service that genuinely appears,
+ * the live `GET /v1/platform/apps` inventory — each maps to a service that genuinely appears,
  * so Status/Logs light up REAL health instead of a false "not deployed". A product
  * NOT here uses the spec service, then the repo basename, then its id.
  */
