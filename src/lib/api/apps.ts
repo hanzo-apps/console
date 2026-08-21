@@ -116,12 +116,6 @@ export type BrowserTag = { platform: string; type: string; id: string }
  * page for it, so offering an input here would promise an injection that never
  * happens. `example` shows the shape of a real id, never a working one.
  */
-export const BROWSER_PLATFORMS: readonly { platform: string; label: string; example: string }[] = [
-  { platform: 'ga4', label: 'Google Analytics 4', example: 'G-XXXXXXXXXX' },
-  { platform: 'meta', label: 'Meta', example: '1234567890123456' },
-  { platform: 'tiktok', label: 'TikTok', example: 'CXXXXXXXXXXXXXXXXXXX' },
-  { platform: 'x', label: 'X (Twitter)', example: 'oxxxx' },
-]
 
 /** One deploy attempt of a site (projectsvc `deploymentView`, versioned per app). */
 export type AppDeployment = {
@@ -204,9 +198,10 @@ export function normalizeApp(raw: unknown): App {
 export function mergeTags(
   current: Record<string, string>,
   draft: Record<string, string>,
+  rendered: readonly string[],
 ): Record<string, string> {
   const out = { ...current }
-  for (const { platform } of BROWSER_PLATFORMS) {
+  for (const platform of rendered) {
     const id = (draft[platform] ?? '').trim()
     if (id) out[platform] = id
     else delete out[platform]

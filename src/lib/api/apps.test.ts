@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
   AppsApi,
-  BROWSER_PLATFORMS,
   builderEditUrl,
   installTag,
   normalizeApp,
@@ -185,9 +184,6 @@ describe('Site tag config — normalized like cloud sanitizes it', () => {
     expect(a.key).toBe('')
   })
 
-  it('offers exactly the four platforms cloud injects a browser pixel for', () => {
-    expect(BROWSER_PLATFORMS.map((p) => p.platform)).toEqual(['ga4', 'meta', 'tiktok', 'x'])
-  })
 })
 
 /**
@@ -195,31 +191,36 @@ describe('Site tag config — normalized like cloud sanitizes it', () => {
  * it never rendered. These pin that it cannot.
  */
 describe('mergeTags — a replacing write must not delete what the form never showed', () => {
+  // `insights` is a real destination with no browser pixel, so the form never renders
+  // it — and the stored map is also what the server CAPI reads, so the write must
+  // carry it through untouched.
   it('KEEPS a platform the console does not render (the server CAPI reads it too)', () => {
-    expect(mergeTags({ ga4: 'G-OLD', reddit: 'rd-1' }, { ga4: 'G-NEW' })).toEqual({
+    expect(mergeTags({ ga4: 'G-OLD', insights: 'hi-1' }, { ga4: 'G-NEW' }, ['ga4'])).toEqual({
       ga4: 'G-NEW',
-      reddit: 'rd-1',
+      insights: 'hi-1',
     })
   })
 
   it('removes a rendered platform whose id was cleared — that is how a pixel comes off', () => {
-    expect(mergeTags({ ga4: 'G-OLD', meta: '179' }, { ga4: 'G-OLD', meta: '' })).toEqual({ ga4: 'G-OLD' })
-    expect(mergeTags({ meta: '179' }, { meta: '   ' })).toEqual({})
+    expect(mergeTags({ ga4: 'G-OLD', meta: '179' }, { ga4: 'G-OLD', meta: '' }, ['ga4', 'meta'])).toEqual({
+      ga4: 'G-OLD',
+    })
+    expect(mergeTags({ meta: '179' }, { meta: '   ' }, ['meta'])).toEqual({})
   })
 
   it('adds a newly-typed platform and trims it', () => {
-    expect(mergeTags({}, { tiktok: ' C4 ' })).toEqual({ tiktok: 'C4' })
+    expect(mergeTags({}, { tiktok: ' C4 ' }, ['tiktok'])).toEqual({ tiktok: 'C4' })
   })
 
   it('does not mutate the site it was given', () => {
     const current = { ga4: 'G-OLD' }
-    mergeTags(current, { ga4: '' })
+    mergeTags(current, { ga4: '' }, ['ga4'])
     expect(current).toEqual({ ga4: 'G-OLD' })
   })
 
   it('an untouched draft round-trips the stored set unchanged', () => {
     const current = { ga4: 'G-1', meta: '2', reddit: 'rd' }
-    expect(mergeTags(current, current)).toEqual(current)
+    expect(mergeTags(current, current, ['ga4', 'meta', 'reddit'])).toEqual(current)
   })
 })
 

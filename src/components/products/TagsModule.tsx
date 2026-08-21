@@ -44,7 +44,6 @@ import {
 
 import {
   AppsApi,
-  BROWSER_PLATFORMS,
   installTag,
   mergeTags,
   type App,
@@ -52,6 +51,7 @@ import {
 } from '~/lib/api/apps'
 import {
   DestinationsApi,
+  pixelPlatforms,
   connectBody,
   destinationState,
   missingField,
@@ -250,8 +250,17 @@ function SiteTags({ slug, onClose, onSaved }: { slug: string; onClose: () => voi
   const [saving, setSaving] = useState(false)
   const [nonce, setNonce] = useState(0)
 
+  // Which platforms a site can carry a pixel for is the SERVER's answer, read off the
+  // same map the hosted tag dispatches on. The console keeps no list: one that said
+  // four while the tag injected eight is exactly how four platforms became
+  // unconfigurable.
+  const [platforms, setPlatforms] = useState<{ platform: string; label: string; example: string }[]>([])
+
   const load = useCallback(() => {
     setState({ phase: 'loading' })
+    DestinationsApi.list()
+      .then((rows) => setPlatforms(pixelPlatforms(rows)))
+      .catch(() => setPlatforms([]))
     AppsApi.get(slug)
       .then((app) => {
         setState({ phase: 'ready', app })
@@ -269,7 +278,8 @@ function SiteTags({ slug, onClose, onSaved }: { slug: string; onClose: () => voi
     if (!app) return
     setSaving(true)
     try {
-      const updated = await AppsApi.setTags(app.slug, mergeTags(app.tags, draft))
+      const rendered = platforms.map((p) => p.platform)
+      const updated = await AppsApi.setTags(app.slug, mergeTags(app.tags, draft, rendered))
       setState({ phase: 'ready', app: updated })
       setDraft(updated.tags)
       setNonce((n) => n + 1)
@@ -284,10 +294,10 @@ function SiteTags({ slug, onClose, onSaved }: { slug: string; onClose: () => voi
 
   const dirty = useMemo(() => {
     if (!app) return false
-    return BROWSER_PLATFORMS.some(
+    return platforms.some(
       ({ platform }) => (draft[platform] ?? '').trim() !== (app.tags[platform] ?? ''),
     )
-  }, [app, draft])
+  }, [app, draft, platforms])
 
   return (
     <Card p="$4" gap="$3" borderWidth={1} borderColor="$borderColor">
@@ -321,7 +331,7 @@ function SiteTags({ slug, onClose, onSaved }: { slug: string; onClose: () => voi
               </Text>
             </YStack>
 
-            {BROWSER_PLATFORMS.map(({ platform, label, example }) => (
+            {platforms.map(({ platform, label, example }) => (
               <FieldRow key={platform} label={label}>
                 <FieldText
                   value={draft[platform] ?? ''}
@@ -393,14 +403,14 @@ export function TagsModule({ params }: { params: Record<string, string> }) {
         header: 'Pixels',
         width: 240,
         render: (a) => {
-          const on = BROWSER_PLATFORMS.filter(({ platform }) => a.tags[platform])
+          const on = Object.keys(a.tags).filter((platform) => a.tags[platform])
           return on.length === 0 ? (
             <Text fontSize="$2" color="$color10">
               None
             </Text>
           ) : (
             <XStack gap="$1" flexWrap="wrap">
-              {on.map(({ platform }) => (
+              {on.map((platform) => (
                 <Chip key={platform} label={platform} />
               ))}
             </XStack>
