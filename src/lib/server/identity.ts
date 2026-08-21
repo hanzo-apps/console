@@ -102,7 +102,7 @@ type AccountClaims = UserClaims & { User?: UserClaims }
 
 /**
  * Resolve the signed-in user from the request's first-party cloud session cookie
- * by asking the cloud backend `/v1/iam/get-account` (which itself refreshes the user
+ * by asking the cloud backend `/v1/iam/account` (which itself refreshes the user
  * from IAM). Returns null when there is no real session (no cookie, anonymous
  * casibase session, or a backend error) so callers fail CLOSED with 401.
  */
@@ -166,7 +166,7 @@ async function resolveSessionUser(
 
   let res: Response
   try {
-    res = await fetchWithTimeout(`${CLOUD_API_URL}/v1/iam/get-account`, {
+    res = await fetchWithTimeout(`${CLOUD_API_URL}/v1/iam/account`, {
       headers: { cookie, Accept: 'application/json' },
       cache: 'no-store',
     })
@@ -326,12 +326,12 @@ async function iamGetOrAbsent<T>(path: string, query: Record<string, string>): P
  * authorize a write.
  */
 async function iamGetUser(id: string): Promise<UserClaims | null> {
-  return iam<UserClaims>('GET', '/v1/iam/get-user', { id }).catch(() => null)
+  return iam<UserClaims>('GET', '/v1/iam/users/get', { id }).catch(() => null)
 }
 
 /** (Re)generate the user's `sk-` Cloud API key; returns the new key (shown once). */
 export async function mintUserKey(user: SessionUser): Promise<string> {
-  const data = await iam<{ accessKey?: string } | null>('POST', '/v1/iam/mint-user-keys', {
+  const data = await iam<{ accessKey?: string } | null>('POST', '/v1/iam/keys/mint', {
     id: user.id,
   })
   const key = data?.accessKey ?? ''
@@ -341,7 +341,7 @@ export async function mintUserKey(user: SessionUser): Promise<string> {
 
 /** Clear the user's `sk-` Cloud API key (immediate revoke; gateway cache ~5m). */
 export async function revokeUserKey(user: SessionUser): Promise<void> {
-  await iam('POST', '/v1/iam/revoke-user-keys', { id: user.id })
+  await iam('POST', '/v1/iam/keys/revoke', { id: user.id })
 }
 
 /**
@@ -365,7 +365,7 @@ export async function revokeUserKey(user: SessionUser): Promise<void> {
  */
 export async function getUserKey(user: SessionUser): Promise<{ accessKey: string; updatedAt: string }> {
   const u = await iamGetOrAbsent<{ accessKey?: string; updatedTime?: string }>(
-    '/v1/iam/get-user',
+    '/v1/iam/users/get',
     { id: user.id },
   )
   return { accessKey: u?.accessKey ?? '', updatedAt: u?.updatedTime ?? '' }
@@ -391,7 +391,7 @@ export async function issueUserToken(
   if (audience) query.aud = audience
   const data = await iam<{ accessToken?: string; expiresIn?: number } | null>(
     'POST',
-    '/v1/iam/issue-user-token',
+    '/v1/iam/tokens/issue',
     query,
   )
   if (!data?.accessToken) throw new Error('IAM did not return a token')
@@ -427,7 +427,7 @@ export type IamMember = {
  * `null` the activation guard reads.
  */
 export async function getMember(id: string): Promise<IamMember | null> {
-  return iamGetOrAbsent<IamMember>('/v1/iam/get-user', { id })
+  return iamGetOrAbsent<IamMember>('/v1/iam/users/get', { id })
 }
 
 /**
@@ -455,7 +455,7 @@ export async function activateMember(
   id: string,
   opts: { password: string; displayName?: string; signupApplication?: string },
 ): Promise<void> {
-  const current = await iam<IamMember | null>('GET', '/v1/iam/get-user', { id })
+  const current = await iam<IamMember | null>('GET', '/v1/iam/users/get', { id })
   if (!current) throw new Error('Could not read the member from IAM')
   const updated: IamMember = {
     ...current,
@@ -478,7 +478,7 @@ export async function activateMember(
     updated.signupApplication = opts.signupApplication
     columns.push('signup_application')
   }
-  await iam('POST', '/v1/iam/update-user', { id, columns: columns.join(',') }, updated)
+  await iam('POST', '/v1/iam/users/update', { id, columns: columns.join(',') }, updated)
 }
 
 // ── Admin gate ───────────────────────────────────────────────────────────────

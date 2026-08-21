@@ -109,7 +109,7 @@ describe('issueUserToken / adminBearer — RFC 8707 audience', () => {
     const t = await issueUserToken(user('admin/z'), 'hanzo-cloud')
     expect(t.accessToken).toBe('jwt')
     const q = new URL(urls[0])
-    expect(q.pathname).toBe('/v1/iam/issue-user-token')
+    expect(q.pathname).toBe('/v1/iam/tokens/issue')
     expect(q.searchParams.get('id')).toBe('admin/z')
     expect(q.searchParams.get('aud')).toBe('hanzo-cloud')
   })

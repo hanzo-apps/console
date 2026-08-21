@@ -320,7 +320,7 @@ keep all credentials server-side (the browser only ever sends its session cookie
 
 - **`app/ai/[...path]/route.ts`** — keyless AI proxy. Resolves the user from the
   session cookie (cloud `/v1/get-account`), mints a SHORT-LIVED user-bound IAM
-  token (`/v1/iam/issue-user-token`, cached per-user until ~60s pre-expiry) as the
+  token (`/v1/iam/tokens/issue`, cached per-user until ~60s pre-expiry) as the
   confidential `hanzo-console` client, and forwards to `AI_GATEWAY_URL/v1/<path>`
   with `Bearer <token>`. Allow-listed to `v1/models|chat|chat/completions|
   embeddings|rerank` (not a general tunnel). `playground.ts` now points at this
@@ -328,7 +328,7 @@ keep all credentials server-side (the browser only ever sends its session cookie
   the browser and no rotation on a chat turn.
 - **`app/keys/route.ts`** — per-user `sk-` Cloud API key. POST mint/rotate, DELETE
   revoke, GET status (no secret). Same app-on-behalf pattern via
-  `/v1/iam/mint-user-keys` + `/v1/iam/revoke-user-keys`. The `sk-` secret is shown
+  `/v1/iam/keys/mint` + `/v1/iam/keys/revoke`. The `sk-` secret is shown
   ONCE (POST). `ApiKeysModule` is now create/copy/rotate/revoke.
 - Shared trust boundary: `src/lib/server/identity.ts` (server-only) — `resolveUser`
   + `mintUserKey`/`revokeUserKey`/`issueUserToken`. The `hanzo-console` client is
@@ -3255,7 +3255,7 @@ curl + deployed-bundle disassembly + the cloud router + both client call-sites):
   error (empty list → switcher gone) and Status → `interpretPlatformError` → "Could not
   reach the platform / Invalid response from server (HTTP 200)".
 - The genuine `/v1/*` API is HEALTHY (o11y/health 200, o11y/metrics 403-JSON, get-account
-  200, `/v1/iam/get-organizations` 401-JSON, `/v1/paas/apps` 403-JSON). Cloud already
+  200, `/v1/iam/organizations` 401-JSON, `/v1/paas/apps` 403-JSON). Cloud already
   serves the correct equivalents natively.
 
 Fix (minimal, `IS_EMBED`-gated — the standalone console2/admin.hanzo.ai `/v1` BFF
@@ -3274,7 +3274,7 @@ not `admin-console` — a distinct admin.hanzo.ai SSO risk, not this bug.)
 Verification: `tsc --noEmit` clean for the two files (0 errors; the 4 remaining are
 pre-existing local `@hanzo/ui`/`@hanzo/brand` node_modules drift); `vitest` baseline
 109/109 (admin/platform/canonical-paths — no standalone regression) + new
-`iam-paas-embed.test.ts` 3/3 pinning the embed URLs (`/v1/iam/get-organizations?owner=admin`,
+`iam-paas-embed.test.ts` 3/3 pinning the embed URLs (`/v1/iam/organizations?owner=admin`,
 `/v1/paas/apps`, `/v1/iam/approve-user`; never `/admin/iam/` or `/paas/`). Ships to
 console.hanzo.ai/cloud.hanzo.ai on the next `hanzoai/cloud` release embedding
 `console@main` (CONSOLE_REF=main) — a standalone console image bump does NOT reach those

@@ -46,7 +46,7 @@ const ACTIONS: Record<string, { path: string; params: (u: { owner: string; name:
     params: (u, b) => ({ owner: u.owner, name: u.name, mfaType: TOTP, secret: b.secret ?? '', recoveryCodes: b.recoveryCodes ?? '' }),
   },
   disable: {
-    path: '/v1/iam/delete-mfa',
+    path: '/v1/iam/mfa/disable',
     params: (u) => ({ owner: u.owner, name: u.name }),
   },
 }

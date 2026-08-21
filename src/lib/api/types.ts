@@ -128,7 +128,7 @@ export type Message = Owned & {
   [key: string]: unknown
 }
 
-/** The signed-in account (`/v1/iam/get-account`). */
+/** The signed-in account (`/v1/iam/account`). */
 export type Account = {
   owner: string
   name: string
