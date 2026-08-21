@@ -114,7 +114,7 @@ function mocker(sent: Sent[]) {
     if (req.method() !== 'GET') sent.push({ method: req.method(), path: p, body: req.postData() ?? '' })
 
     // The public tag door — the RESOLVED set, keyed by the site's pk-.
-    if (p === '/v1/tags') {
+    if (p === '/v1/projects/tags') {
       return json(url.searchParams.get('key') === 'pk-landing123' ? DOOR : { tags: [] })
     }
     // The org's destinations, and one platform's connect.

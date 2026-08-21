@@ -4,7 +4,7 @@
  *
  * ┌─ ENDPOINT STATUS ──────────────────────────────────────────────────────────┐
  * │ TODO(hanzoai/ai): the OrgSettings row does not yet PERSIST the three blend  │
- * │ columns. Required, on the existing `/v1/org/settings` GET + PUT noun         │
+ * │ columns. Required, on the existing `/v1/ai/org/settings` GET + PUT noun         │
  * │ (no new endpoint — the row is the natural                                   │
  * │ home, beside routerPrefer/routerCostCeiling):                               │
  * │                                                                             │
@@ -96,7 +96,7 @@ export const OrgBlendApi = {
    * backend cannot hold it yet" state, never an invented allowlist.
    */
   get: async (owner: string): Promise<BlendState> => {
-    const raw = await originGet<unknown>('org/settings', { owner })
+    const raw = await originGet<unknown>('ai/org/settings', { owner })
     return { spec: specFromRow(raw), persisted: rowHasBlend(raw) }
   },
 
@@ -106,10 +106,10 @@ export const OrgBlendApi = {
    * dropped — the caller must say so rather than claim success.
    */
   save: async (owner: string, spec: BlendSpec): Promise<BlendState> => {
-    const current = await originGet<unknown>('org/settings', { owner })
+    const current = await originGet<unknown>('ai/org/settings', { owner })
     const row = { ...asRecord(current), owner, ...rowFromSpec(spec) }
-    await originPut('org/settings', row, { owner })
-    const after = await originGet<unknown>('org/settings', { owner })
+    await originPut('ai/org/settings', row, { owner })
+    const after = await originGet<unknown>('ai/org/settings', { owner })
     return { spec: specFromRow(after), persisted: rowHasBlend(after) }
   },
 

@@ -10,7 +10,7 @@
  * live pricing pages (the pricing service reads `GET /v1/commerce/catalog`, which
  * projects these same rows), so this is the ONE place a price or spec is edited.
  *
- * Every call goes through the console's OWN same-origin `/v1/catalog/*` user-bearer
+ * Every call goes through the console's OWN same-origin `/v1/commerce/catalog/*` user-bearer
  * proxy → commerce, whose `requireSuperAdmin` (owner=="admin") is the AUTHORITATIVE
  * gate: a signed-in non-admin gets an honest 403 (the SuperAdminRequired panel),
  * never catalog write access. The browser holds no credential.
@@ -48,7 +48,7 @@ import { ConfirmDelete, DataTable, FieldRow, FieldSelect, FieldSwitch, FieldText
 
 const CATALOG_COPY: HonestCopy = {
   notFound:
-    'The catalog editor requires the commerce catalog surface (GET/POST/PUT/DELETE /v1/catalog/entries). Entries appear once the catalog backend is routed on this deployment.',
+    'The catalog editor requires the commerce catalog surface (GET/POST/PUT/DELETE /v1/commerce/catalog/entries). Entries appear once the catalog backend is routed on this deployment.',
   unauthorized:
     'This is the platform product/pricing catalog — cross-tenant data. Access is enforced server-side by commerce (SuperAdmin, owner=="admin"); sign in with an @hanzo.ai admin account.',
 }
@@ -239,7 +239,7 @@ export function CatalogModule(_props: { params: Record<string, string> }) {
       )}
 
       <Text fontSize="$2" color="$color10">
-        endpoint · /v1/catalog/entries · {config.brandName}
+        endpoint · /v1/commerce/catalog/entries · {config.brandName}
       </Text>
 
       {/* Create / edit form (SlideOver). */}

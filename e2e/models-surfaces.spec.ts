@@ -82,7 +82,7 @@ async function mock(route: Route) {
   if (path.endsWith('/v1/models')) return json(route, LIVE_MODELS)
 
   // The org has no stored blend — the honest "not persisted yet" path.
-  if (path.endsWith('/v1/org/settings')) return json(route, { status: 'ok', msg: '', data: null })
+  if (path.endsWith('/v1/ai/org/settings')) return json(route, { status: 'ok', msg: '', data: null })
 
   const sameOrigin = url.origin === new URL(BASE_URL).origin
   if (sameOrigin && !API_RE.test(path)) return route.continue()

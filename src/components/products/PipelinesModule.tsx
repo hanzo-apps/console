@@ -4,7 +4,7 @@
  * Pipelines — CI pipelines (build, test, deploy) tracked per repository.
  *
  * Reads the pipeline list from the unified cloud binary via the same-origin
- * user-bearer `/v1` proxy (`GET /v1/pipelines`), org resolved from the Bearer
+ * user-bearer `/v1` proxy (`GET /v1/platform/pipelines`), org resolved from the Bearer
  * owner. This is a derived, read-only aggregate; when the backend doesn't serve it
  * the load fails and the honest not-configured / unavailable card renders instead of
  * an empty grid.
@@ -34,7 +34,7 @@ export function PipelinesModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ pipelines?: Pipeline[] }>(cloudProxyV1Url('pipelines'))
+      const r = await restGet<{ pipelines?: Pipeline[] }>(cloudProxyV1Url('platform/pipelines'))
       setRows(r.pipelines ?? [])
       setLoadError(null)
     } catch (e) {

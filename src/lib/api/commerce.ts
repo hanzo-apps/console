@@ -264,7 +264,7 @@ export const CommerceApi = {
   stores: (p?: ListParams) => fetchList('store', normalizeStore, { limit: 100, ...p }),
 
   /**
-   * The org's default storefront settings (`GET /v1/store/current` — commerce returns the
+   * The org's default storefront settings (`GET /v1/commerce/store/current` — commerce returns the
    * first store, or a synthesized minimal one when none exists). Commerce wraps it as
    * `{ store: {...} }` (verified live), so unwrap `.store` before normalizing (a bare object
    * still works). Org-scoped server-side.

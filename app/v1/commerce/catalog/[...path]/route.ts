@@ -1,10 +1,10 @@
 /**
  * Same-origin user-bearer proxy to commerce for the PLATFORM CATALOG admin surface
- * (`/v1/catalog/entries` + `/v1/catalog/seed`) — the SuperAdmin CMS for the product
+ * (`/v1/commerce/catalog/entries` + `/v1/commerce/catalog/seed`) — the SuperAdmin CMS for the product
  * + pricing catalog (the 17 infra tiers increment 1 seeded, plus every product
  * surface docs/pricing/the console read from).
  *
- * The browser calls this OWN-origin route (`/v1/catalog/...`) with just its session
+ * The browser calls this OWN-origin route (`/v1/commerce/catalog/...`) with just its session
  * cookie; `forwardWithUserBearer` resolves the user, mints a short-lived user-bound
  * IAM token, and forwards to commerce with that Bearer. Commerce's `requireSuperAdmin`
  * (owner=="admin", the `IsSuperAdmin()` home-org predicate) is the AUTHORITATIVE gate:
@@ -16,11 +16,9 @@
  * least-privilege boundary (`allowCatalogSurface`) that admits ONLY the catalog
  * entries + seed paths, so it can never tunnel commerce's `/v1/billing`, `/v1/checkout`,
  * `/_/commerce/tenants`, or the merchant store models. It lives at
- * `app/v1/catalog/[...path]` — MORE SPECIFIC than the `app/v1/[...path]` cloud BFF
- * catch-all, so Next resolves `/v1/catalog/*` here (the same precedence as
- * `app/v1/commerce/[...path]`). The path is `/v1/catalog/*` (the REAL commerce mount),
- * so the go:embed console (where the BFF is pruned) reaches the SAME path on the cloud
- * binary's embedded commerce directly.
+ * `app/v1/commerce/catalog/[...path]` — MORE SPECIFIC than the `app/v1/commerce/[...path]`
+ * store proxy, so Next resolves `/v1/commerce/catalog/*` here. Commerce's own mount is
+ * `/v1/catalog/*`, which is what the upstream path below re-roots at.
  */
 import { type NextRequest } from 'next/server'
 
@@ -38,10 +36,10 @@ type Ctx = { params: Promise<{ path: string[] }> }
 
 function handle(req: NextRequest, ctx: Ctx) {
   return (async () => {
-    // This handler lives under `app/v1/catalog/[...path]`, so the catch-all captures
-    // ONLY the sub-path after `/v1/catalog/` (e.g. `entries`, `entries/cloud-dev`,
-    // `seed`). Commerce serves the catalog admin CRUD at `/v1/catalog/*`, so re-root
-    // the upstream path at `v1/catalog/` — the same path `allowCatalogSurface` and
+    // This handler lives under `app/v1/commerce/catalog/[...path]`, so the catch-all captures
+    // ONLY the sub-path after `/v1/commerce/catalog/` (e.g. `entries`, `entries/cloud-dev`,
+    // `seed`). Commerce serves the catalog admin CRUD at `/v1/catalog/*`, so re-root the
+    // upstream path at `v1/catalog/` — the same path `allowCatalogSurface` and
     // `forwardWithUserBearer` see (`v1/catalog/entries`).
     const path = `v1/catalog/${(await ctx.params).path.join('/')}`
     return forwardWithUserBearer(req, {

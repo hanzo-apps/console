@@ -2,7 +2,7 @@
 
 /**
  * Automations — the ONE native Connectors + Automations surface, rendered
- * IN-CONSOLE over cloud `/v1/automations/*` (`hanzoai/cloud` clients/automations)
+ * IN-CONSOLE over cloud `/v1/auto/*` (`hanzoai/cloud` clients/automations)
  * through the `/v1` user-bearer proxy. This replaces the retired external
  * auto.hanzo.ai engine + its `/v1/auto` reverse proxy — one engine, one surface,
  * no link-out. `/auto` and `/automation` alias here (match-core).
@@ -170,7 +170,7 @@ function FlowsView({ onBrowse }: { onBrowse: () => void }) {
       {createErr ? <Text fontSize="$2" color={toneColor('critical')}>{createErr}</Text> : null}
 
       {error ? (
-        <BackendStateCard state={error} onRetry={() => void refresh()} hint="Flows you create here run on the native /v1/automations engine." />
+        <BackendStateCard state={error} onRetry={() => void refresh()} hint="Flows you create here run on the native /v1/auto engine." />
       ) : loading ? (
         <Loader label="Loading your flows…" />
       ) : flows.length === 0 ? (
@@ -396,11 +396,11 @@ function ConnectorsView() {
       </XStack>
 
       {error ? (
-        <BackendStateCard state={error} onRetry={() => void refresh()} hint="The connector catalogue is served by the native /v1/automations engine." />
+        <BackendStateCard state={error} onRetry={() => void refresh()} hint="The connector catalogue is served by the native /v1/auto engine." />
       ) : loading ? (
         <Loader label="Loading the connector catalogue…" />
       ) : pieces.length === 0 ? (
-        <EmptyState icon={Blocks} title="No connectors reported" description="Connectors appear here once the /v1/automations engine reports its pieces." />
+        <EmptyState icon={Blocks} title="No connectors reported" description="Connectors appear here once the /v1/auto engine reports its pieces." />
       ) : (
         <>
           <Text fontSize="$2" color="$color11">

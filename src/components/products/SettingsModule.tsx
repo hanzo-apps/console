@@ -269,7 +269,7 @@ function GeneralTab() {
  * worse than a small one, so someone who wants beta comes looking and everyone
  * else never learns it exists.
  *
- * ORG-WIDE, not per-person. It rides `/v1/enablement`, which keys on the caller's
+ * ORG-WIDE, not per-person. It rides `/v1/pricing/enablement`, which keys on the caller's
  * validated org, so two members of one org can never see different products —
  * which is what makes a bug report mean something.
  *

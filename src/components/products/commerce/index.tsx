@@ -11,7 +11,7 @@
  *
  * Products is a full CRUD surface (create + list + delete over `/v1/product`); Orders /
  * Customers / Inventory / Promotions are real read lists on the shared `CommerceResource`;
- * Store settings reads the org's real storefront config (`/v1/store/current`). Money
+ * Store settings reads the org's real storefront config (`/v1/commerce/store/current`). Money
  * stays in Billing (Square via commerce `/v1/billing`) — these pages are the catalog/
  * order/customer surface only.
  */
@@ -300,7 +300,7 @@ export function StoreSettingsModule(_props: { params: Record<string, string> }) 
         <Card p="$4" gap="$2" borderWidth={1} borderColor="$borderColor">
           <Text fontSize="$5" fontWeight="700" color="$color12">Storefront</Text>
           {state.phase === 'error' ? (
-            <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/store/current (Hanzo Commerce)" />
+            <BackendStateCard state={state.error} onRetry={load} hint="endpoint · GET /v1/commerce/store/current (Hanzo Commerce)" />
           ) : state.phase === 'loading' ? (
             <Text fontSize="$3" color="$color10">Loading your storefront…</Text>
           ) : (

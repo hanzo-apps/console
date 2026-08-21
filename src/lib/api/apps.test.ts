@@ -274,7 +274,7 @@ describe('AppsApi tag routes — same-origin, prefix-free', () => {
     }
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
       fetched.push({ url, method: init?.method ?? 'GET', body: init?.body as string | undefined })
-      const body = url.includes('/v1/tags')
+      const body = url.includes('/v1/projects/tags')
         ? { tags: [{ platform: 'ga4', type: 'ga', id: 'G-ABC' }] }
         : { slug: 'landing', key: 'pk-abc', tags: { ga4: 'G-ABC' } }
       return Promise.resolve(
@@ -307,7 +307,7 @@ describe('AppsApi tag routes — same-origin, prefix-free', () => {
 
   it('previews through the public door, url-encoding the key', async () => {
     const out = await AppsApi.browserTags('pk-a b&c')
-    expect(fetched[0].url).toBe(`${ORIGIN}/v1/tags?key=pk-a%20b%26c`)
+    expect(fetched[0].url).toBe(`${ORIGIN}/v1/projects/tags?key=pk-a%20b%26c`)
     expect(fetched[0].url).not.toContain('/api/')
     expect(out).toEqual([{ platform: 'ga4', type: 'ga', id: 'G-ABC' }])
   })

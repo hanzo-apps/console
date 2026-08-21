@@ -62,7 +62,7 @@ export function accountsCookie(store: AiAccountsStore): CookieDirective {
  * preference today is `routingEnabled`, a tri-state user OVERRIDE of the org's
  * `model: "auto"` smart-routing default (which the Hanzo surfaces read): `true` =
  * forced on, `false` = forced off, `null` = never touched → follow the org default
- * (`GET /v1/router/defaults`). "Never touched" is the ABSENT cookie, so the
+ * (`GET /v1/ai/router/defaults`). "Never touched" is the ABSENT cookie, so the
  * toggle only ever WRITES a concrete boolean; `null` is a read-side default only.
  */
 export type AiAccountsSettings = { routingEnabled: boolean | null }

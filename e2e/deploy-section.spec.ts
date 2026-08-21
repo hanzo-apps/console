@@ -67,7 +67,7 @@ const APPS = [
   },
 ]
 
-/** `GET /v1/platform/sites` — bare `projectsProjects`. */
+/** `GET /v1/projects/sites` — bare `projectsProjects`. */
 const SITES = [
   {
     id: 's1',
@@ -111,7 +111,7 @@ const CD = {
   ],
 }
 
-/** `GET /v1/builds`. */
+/** `GET /v1/platform/builds`. */
 const BUILDS = {
   builds: [
     { id: 'b1', repo: 'hanzoai/api', commit: '9f2c1ab77d10', tag: 'v1.4.2', status: 'succeeded', startedAt: '2026-08-05T18:04:00Z', duration: '2m14s' },
@@ -136,9 +136,9 @@ async function mockNetwork(page: Page): Promise<void> {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/v1/platform/projects')) return json(route, PROJECTS)
     if (path.includes('/v1/platform/projects/') && path.endsWith('/apps')) return json(route, APPS)
-    if (path.endsWith('/v1/platform/sites')) return json(route, SITES)
+    if (path.endsWith('/v1/projects/sites')) return json(route, SITES)
     if (path.endsWith('/v1/deploy/applications')) return json(route, CD)
-    if (path.endsWith('/v1/builds')) return json(route, BUILDS)
+    if (path.endsWith('/v1/platform/builds')) return json(route, BUILDS)
     if (path.endsWith('/v1/s3/buckets')) return json(route, BUCKETS)
     return json(route, {})
   })
@@ -329,7 +329,7 @@ test('a half-loaded board names the gap and shows no count it cannot know', asyn
     if (path.includes('/v1/platform/projects/') && path.endsWith('/apps')) {
       return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"boom"}' })
     }
-    if (path.endsWith('/v1/platform/sites')) return json(route, SITES)
+    if (path.endsWith('/v1/projects/sites')) return json(route, SITES)
     return json(route, {})
   })
   await primeSession(page)

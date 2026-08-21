@@ -31,7 +31,7 @@ const ENDPOINTS: { label: string; route: string }[] = [
   { label: 'Create collection', route: 'POST /v1/add-store' },
   { label: 'Search', route: 'POST /v1/search' },
   { label: 'Generate', route: 'POST /v1/embeddings' },
-  { label: 'Ingest', route: 'POST /v1/docs/ingest' },
+  { label: 'Ingest', route: 'POST /v1/ai/rag/ingest' },
   { label: 'Index status', route: 'GET /v1/get-files' },
   { label: 'Usage metrics', route: 'GET /v1/get-cloud-usages' },
 ]

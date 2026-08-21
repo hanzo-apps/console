@@ -81,7 +81,7 @@ export const CAP = 40
 const KEYS = '/api-keys'
 
 /** Where the API describes itself — the brief's own source, named so it can be re-read. */
-const PROJECTION = '/v1/commands'
+const PROJECTION = '/v1/openapi/commands'
 
 /** True when a path addresses a specific thing the brief has no value for. */
 const parameterized = (path: string): boolean => /[:{]/.test(path)

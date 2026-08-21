@@ -5,14 +5,14 @@ import { CLOUD_HEADS, allowCloudSurface } from '~/lib/server/proxy-allow'
 
 /**
  * The operator-cockpit wiring is a trust boundary: the fleet management surfaces
- * (customers/revenue/analytics + the admin enablement set) must ride the GLOBAL-
+ * (customers/revenue/analytics + the admin pricing set) must ride the GLOBAL-
  * ADMIN-gated aggregate proxy, and the customer self-service enablement (opt-in)
  * must ride the per-tenant /v1 bearer BFF — never the reverse, and never widening the
  * least-privilege allow-lists to reach iam/kms.
  */
 describe('operator cockpit wiring', () => {
   it('the admin aggregate admits the new cockpit heads (read + :org sub-paths)', () => {
-    for (const h of ['customers', 'revenue', 'analytics', 'enablement']) {
+    for (const h of ['customers', 'revenue', 'analytics', 'pricing']) {
       expect(allowAdminSurface(`v1/admin/${h}`)).toBe(true)
       expect(allowAdminSurface(`v1/admin/${h}/acme`)).toBe(true)
       expect(allowAdminSurface(`v1/admin/${h}/acme/credit`)).toBe(true)
@@ -29,9 +29,12 @@ describe('operator cockpit wiring', () => {
   })
 
   it('the customer self-service enablement rides the per-tenant /v1 bearer BFF', () => {
-    expect(CLOUD_HEADS).toContain('enablement')
-    expect(allowCloudSurface('v1/enablement')).toBe(true)
-    expect(allowCloudSurface('v1/enablement/optin')).toBe(true)
-    expect(allowCloudSurface('v1/enablement/optout')).toBe(true)
+    // Enablement is the pricing registry's, on both sides: the operator's view at
+    // /v1/admin/pricing/enablement and the customer's at /v1/pricing/enablement.
+    expect(CLOUD_HEADS).toContain('pricing')
+    expect(allowCloudSurface('v1/pricing/enablement')).toBe(true)
+    expect(allowCloudSurface('v1/pricing/enablement/optin')).toBe(true)
+    expect(allowCloudSurface('v1/pricing/enablement/optout')).toBe(true)
+    expect(allowAdminSurface('v1/admin/pricing/enablement')).toBe(true)
   })
 })

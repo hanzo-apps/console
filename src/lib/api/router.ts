@@ -3,13 +3,13 @@
  * over the canonical same-origin `/v1` surface (v1-first: no service prefix, no
  * nested version).
  *
- *   GET  /v1/router/policy              → the effective policy resolved for the
- *                                         caller's org (org > "*" > conf)
- *   PUT  /v1/router/policy              → upsert the caller's OWN org policy
- *   GET  /v1/router/stats               → the org-scoped routing aggregate (cost
- *                                         saved, quality proxy, distributions)
- *   GET  /v1/get-training-contribution  → the org's opt-in flag
- *   POST /v1/update-training-contribution → set the org's opt-in flag
+ *   GET   /v1/ai/router/policy        → the effective policy resolved for the
+ *                                       caller's org (org > "*" > conf)
+ *   PUT   /v1/ai/router/policy        → upsert the caller's OWN org policy
+ *   GET   /v1/ai/router/stats         → the org-scoped routing aggregate (cost
+ *                                       saved, quality proxy, distributions)
+ *   GET   /v1/ai/training-contribution  → the org's opt-in flag
+ *   PATCH /v1/ai/training-contribution  → set the org's opt-in flag
  *
  * Standalone console: the `next.config` AI-head dispatch terminates these at the
  * `/ai` user-bearer proxy (session cookie → short-lived minted bearer → the
@@ -43,13 +43,13 @@ export type RouterPolicy = {
 
 export const RouterPolicyApi = {
   /** The effective policy resolved for the caller's own org (org > "*" > conf). */
-  get: (): Promise<RouterPolicy> => originGet('router/policy'),
+  get: (): Promise<RouterPolicy> => originGet('ai/router/policy'),
   /** Upsert the caller's OWN org policy (prefer + costCeiling + enabledModels + qualityBias)
    *  via PUT — empty prefer + 0 ceiling + empty allowlist clears the override. */
-  save: (body: RouterPolicy): Promise<RouterPolicy> => originPut('router/policy', body),
+  save: (body: RouterPolicy): Promise<RouterPolicy> => originPut('ai/router/policy', body),
 }
 
-// ── Routing observability (GET /v1/router/stats) ─────────────────────────────
+// ── Routing observability (GET /v1/ai/router/stats) ──────────────────────────
 // The wire contract mirrors the Go `routerStats` struct (hanzoai/ai
 // controllers/router_stats.go). Every field the console reads is OPTIONAL-safe:
 // `cost` is absent when no priced events land in the window; `routed_index` /
@@ -107,7 +107,7 @@ export type RetrainMeta = {
   note: string
 }
 
-/** The `/v1/router/stats` aggregate (org scope carries the real ids + $ indices). */
+/** The `/v1/ai/router/stats` aggregate (org scope carries the real ids + $ indices). */
 export type RouterStats = {
   scope: string
   org?: string
@@ -126,7 +126,7 @@ export type StatsWindowParams = { hours?: number; since?: string }
 export const RouterStatsApi = {
   /** The org-scoped routing aggregate for the caller's own org (RequirePrincipal). */
   get: (params: StatsWindowParams = {}): Promise<RouterStats> =>
-    originGet('router/stats', {
+    originGet('ai/router/stats', {
       ...(params.since ? { since: params.since } : {}),
       ...(params.hours != null ? { hours: params.hours } : {}),
     }),

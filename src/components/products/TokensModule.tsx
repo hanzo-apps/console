@@ -5,7 +5,7 @@
  * across chains, tracked by the platform.
  *
  * Reads the token registry from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/tokens`), which injects the service token server-side. When the
+ * (`GET /paas/tokens`), which injects the service token server-side. When the
  * token service isn't provisioned for the org the list load fails and the
  * honest not-configured / unavailable card renders instead of an empty grid —
  * matching every other infra module.

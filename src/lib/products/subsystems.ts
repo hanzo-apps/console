@@ -2,7 +2,7 @@
  * The Hanzo `/v1/<svc>` capability catalog — a small, HONEST client-side map of
  * the subsystem ids the cloud actually mounts (`hanzoai/cloud subsystems`), used
  * to tag a canvas node with the Hanzo capability it is (e.g. this node is
- * `/v1/vector`, that one `/v1/platform`).
+ * `/v1/provisioning/vector`, that one `/v1/platform`).
  *
  * There is no runtime `/v1/subsystems` endpoint — the ids ARE the mount route
  * names, and human labels live only in the code. So this is a known, curated map
@@ -47,6 +47,22 @@ const LABELS: Record<string, string> = {
   knowledge: 'Knowledge',
 }
 
+/**
+ * Where a capability answers, when that is not simply `/v1/<id>`. A node's id is the
+ * app SLUG; its address is the capability's, and the fold moved several of them a
+ * segment down under the owner that serves them. Two facts, so two entries — a derived
+ * `/v1/<id>` would print an address cloud does not serve.
+ */
+const ADDRESS: Record<string, string> = {
+  sql: 'provisioning/sql',
+  vector: 'provisioning/vector',
+  kv: 'provisioning/kv',
+  datastore: 'provisioning/datastore',
+  docdb: 'provisioning/docdb',
+  connectors: 'integrations/connectors',
+  automations: 'auto',
+}
+
 /** The set of known capability ids (used for honest exact-match inference). */
 export const CAPABILITY_IDS = new Set(Object.keys(LABELS))
 
@@ -55,7 +71,7 @@ export function capabilityFor(id: string | undefined | null): Capability | null 
   if (!id) return null
   const key = id.toLowerCase()
   const label = LABELS[key]
-  return label ? { id: key, label, path: `/v1/${key}` } : null
+  return label ? { id: key, label, path: `/v1/${ADDRESS[key] ?? key}` } : null
 }
 
 /**

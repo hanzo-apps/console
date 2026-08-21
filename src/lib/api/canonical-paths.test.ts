@@ -69,15 +69,15 @@ afterEach(() => {
 // forwards to cloud-api `/v1/*` with the org resolved from the token owner. This block
 // PINS the prefix-free contract so a regression can't re-introduce a `/cloud/` prefix.
 describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /cloud)', () => {
-  it('ComputeApi.gpus (inventory) -> /v1/gpus', async () => {
+  it('ComputeApi.gpus (inventory) -> /v1/visor/gpus', async () => {
     stub({ gpus: [] })
     await ComputeApi.gpus()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/gpus`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/visor/gpus`)
   })
-  it('PlatformApi.listClusters -> /v1/clusters', async () => {
+  it('PlatformApi.listClusters -> /v1/visor/clusters', async () => {
     stub({ clusters: [] })
     await PlatformApi.listClusters()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/clusters`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/visor/clusters`)
   })
   it('FunctionsApi.list -> /v1/functions', async () => {
     stub({ functions: [] })
@@ -99,31 +99,31 @@ describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /clo
   // request meant for cloud, and every suite around it stayed green because each one
   // stubbed a response and asserted the normalization. A key page that cannot be
   // read is the same class of defect the billing routes hit.
-  it('KeysApi.status -> /v1/keys (never IAM prefix)', async () => {
+  it('KeysApi.status -> /v1/account/keys (never IAM prefix)', async () => {
     stub({ keys: [] })
     await KeysApi.status()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/keys`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/account/keys`)
     expect(lastUrl).not.toContain('/v1/iam/')
   })
-  it('KeysApi.create -> /v1/keys', async () => {
+  it('KeysApi.create -> /v1/account/keys', async () => {
     stub({ accessKey: 'sk-x' })
     await KeysApi.create()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/keys`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/account/keys`)
   })
   it('FrameworkApi.doctypes.list -> /v1/framework/doctypes', async () => {
     stub({ data: [] })
     await FrameworkApi.doctypes.list()
     expect(lastUrl).toBe(`${ORIGIN}/v1/framework/doctypes`)
   })
-  it('ProvisioningApi.list(vector) -> /v1/vector', async () => {
+  it('ProvisioningApi.list(vector) -> /v1/provisioning/vector', async () => {
     stub([])
     await ProvisioningApi.list('vector')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/vector`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/vector`)
   })
-  it('ProvisioningApi.list(sql) -> /v1/sql', async () => {
+  it('ProvisioningApi.list(sql) -> /v1/provisioning/sql', async () => {
     stub([])
     await ProvisioningApi.list('sql')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/sql`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/sql`)
   })
   it('StoreApi.list (embeddings collections) -> /v1/ai/stores', async () => {
     stub({ status: 'ok', msg: '', data: [] })
@@ -138,10 +138,10 @@ describe('cloud heads → the same-origin /v1 bearer BFF (prefix-free, ZERO /clo
     // single segment would never match its route.
     expect(lastUrl).toBe(`${ORIGIN}/v1/ai/stores/acme/my%20store`)
   })
-  it('VisorApi.machines -> /v1/machines (bearer-scoped)', async () => {
+  it('VisorApi.machines -> /v1/visor/machines (bearer-scoped)', async () => {
     stub({ machines: [] })
     await VisorApi.machines()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/machines`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/visor/machines`)
   })
   it('CompanyApi.get -> /v1/company (formation state machine)', async () => {
     stub({ formation: { org: 'acme', stage: 'structure' }, nextStages: [] })
@@ -217,10 +217,10 @@ describe('baseHeaders — org + project + actor on every call', () => {
 // (functions + paas + apm/o11y are pinned in the /v1 bearer BFF block above — they are
 // header/IAM-scoped and 403 on the bare path. o11y is additionally VERSION-LESS.)
 describe('canonical /v1 — session-scoped data-product clients (no prefix before /v1/)', () => {
-  it('aicatalog fetchPlans -> /v1/plans (AI catalog head -> /ai)', async () => {
+  it('aicatalog fetchPlans -> /v1/plan (AI catalog head -> /ai)', async () => {
     stub({ plans: [] })
     await fetchPlans()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/plans`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/plan`)
   })
   it('embeddings EmbeddingsApi.generate -> /v1/embeddings (AI head -> /ai)', async () => {
     stub({})
@@ -250,7 +250,7 @@ describe('canonical /v1 — session-scoped data-product clients (no prefix befor
 // the visor compute CATALOG (regions/sizes/accelerators) rides `/v1/vm/*` (→ `app/v1/vm/
 // [...path]`). Each is a FILESYSTEM route MORE SPECIFIC than the `/v1/[...path]` cloud BFF,
 // so it wins without a rewrite. Visor is a DIFFERENT backend — its `/v1/vm/gpus` catalog is
-// DISTINCT from the cloud GPU INVENTORY at `/v1/gpus`; this block PINS each at its own proxy
+// DISTINCT from the cloud GPU INVENTORY at `/v1/visor/gpus`; this block PINS each at its own proxy
 // so a regression can't repoint one at a cloud-api `/v1/<head>` that would 404 (wrong backend).
 describe('money + store + visor-catalog proxies (all /v1-first): /v1/billing, /v1/commerce, /v1/vm', () => {
   it('BillingApi.balance -> /v1/billing/balance', async () => {

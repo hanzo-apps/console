@@ -1,9 +1,11 @@
 'use client'
 
 /**
- * Finance — the signed-in org's per-tenant view of the unified finance ledger
- * (`/v1/finance/*`, hanzoai/finance): balance, metered spend, credits, invoices,
- * payment methods, and the double-entry ledger.
+ * Finance — the signed-in org's per-tenant view of its own money: balance, metered spend,
+ * credits, invoices, payment methods, and the double-entry ledger. There is no `finance`
+ * address behind it any more; each read goes to the capability that owns it (see
+ * `financeUrl`), which is what makes the six of them one wallet rather than a seventh
+ * spelling of it.
  *
  * The board itself is the SHARED `@hanzo/finance-ui` `FinanceDashboard` — the SAME
  * component finance.hanzo.ai renders — so a spend/usage/credits card looks and behaves

@@ -5,14 +5,14 @@
  *
  * ONE surface reads the two live, tenant-scoped cloud sources (org resolved from
  * the Bearer owner by the same-origin `/v1` proxy):
- *   - `GET /v1/clusters` — the org's clusters, managed (Visor-provisioned DOKS) and
+ *   - `GET /v1/visor/clusters` — the org's clusters, managed (Visor-provisioned DOKS) and
  *     attached BYO ones MERGED, each with its kind, node count, status, and the GPU
  *     inventory a BYO cluster reported at attach (`nvidiaGpu`/`amdGpu`).
- *   - `GET /v1/machines` — the org's machines; the dialed-in BYO boxes (folded in by
+ *   - `GET /v1/visor/machines` — the org's machines; the dialed-in BYO boxes (folded in by
  *     the backend as `provider:"byo"`) are the fleet's connected machines.
  *
  * It is also where a customer DOES the three connect actions: attach a BYO cluster
- * (`POST /v1/clusters`, validated + KMS-sealed server-side), connect a BYO box
+ * (`POST /v1/visor/clusters`, validated + KMS-sealed server-side), connect a BYO box
  * (`hanzo gpu connect`), and — honestly "coming" — connect a cloud account (BYOC).
  *
  * Honest by construction: loading / empty ("no compute yet") / error render truthful
@@ -69,7 +69,7 @@ function KindTag({ c }: { c: Cluster }) {
   )
 }
 
-/** Attach an existing cluster by kubeconfig → `POST /v1/clusters`. */
+/** Attach an existing cluster by kubeconfig → `POST /v1/visor/clusters`. */
 function AttachClusterForm({ onAttached, onClose }: { onAttached: (c: Cluster) => void; onClose: () => void }) {
   const [name, setName] = useState('')
   const [kubeconfig, setKubeconfig] = useState('')

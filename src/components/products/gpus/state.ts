@@ -17,11 +17,11 @@ export type Async<T, E = PlatformError> =
 
 /** Everything the GPU surface loads, shared across tabs (loaded once in the module). */
 export type ComputeData = {
-  /** Per-GPU inventory + telemetry (`GET /paas/gpus`). */
+  /** Per-GPU inventory + telemetry (`GET /v1/visor/gpus`). */
   gpus: Async<Gpu[]>
   /** The org's DOKS clusters — GPU clusters derived from the node size. */
   clusters: Async<Cluster[]>
-  /** GPU alerts (`GET /paas/gpus/alerts`). */
+  /** GPU alerts (`GET /v1/visor/gpus/alerts`). */
   alerts: Async<GpuAlert[]>
   /** Metered usage over 7 days from the cloud usage ledger (`/v1/get-cloud-usages`). */
   ledger: Async<UsageLedger, BackendState>

@@ -3,7 +3,7 @@
  * that actually gets charged), read through the console's OWN per-tenant billing
  * proxy at the canonical GET /v1/billing/plans -> commerce api/billing.ListPlans.
  *
- * Why the billing proxy, not /v1/pricing or /v1/plans: the billing proxy injects the
+ * Why the billing proxy, not /v1/pricing or /v1/plan: the billing proxy injects the
  * commerce SERVICE token server-side (the SAME proxy every working billing call uses —
  * balance, usage, subscriptions), whereas the old /v1/pricing read rendered "Not
  * authorized" and NO tiers — nobody could see or buy Pro. So the catalog loads for a

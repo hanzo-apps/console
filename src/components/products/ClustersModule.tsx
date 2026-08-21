@@ -11,7 +11,7 @@
  * an honest empty list.
  *
  * Cluster inventory + node-pool lifecycle (list, add-pool, scale-pool, delete-pool)
- * read/write the native cloud `/v1/clusters*` surface (org-scoped by the Bearer
+ * read/write the native cloud `/v1/visor/clusters*` surface (org-scoped by the Bearer
  * owner); provisioning a brand-new dedicated cluster stays on the `/paas` control
  * plane (`POST /v1/org/{org}/cluster`, brand-admin gated). Tenancy is the brand org
  * (`config.iamOrgName`). Built on the shared GUI primitives, matching every module.
@@ -93,7 +93,7 @@ export function ClustersModule(_props: { params: Record<string, string> }) {
     }
   }
 
-  // ── Node-pool management (add / scale / delete against /v1/clusters/:cid/pools) ──
+  // ── Node-pool management (add / scale / delete against /v1/visor/clusters/:cid/pools) ──
   const [poolClusterId, setPoolClusterId] = useState<string>('')
   const [addSize, setAddSize] = useState<string>(DOKS_NODE_SIZES[0])
   const [addCount, setAddCount] = useState(1)

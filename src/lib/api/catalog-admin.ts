@@ -5,15 +5,15 @@
  * namespace): the 17 infra tiers increment 1 seeded (11 cloud + 3 gpu + 3
  * datastore), plus every product surface docs/pricing/the console read from. This
  * client drives its SuperAdmin CRUD:
- *   GET    /v1/catalog/entries          — list (incl. unpublished + cost/margin)
- *   POST   /v1/catalog/entries          — create (unique slug)
- *   PUT    /v1/catalog/entries/:slug     — update (slug identity is immutable)
- *   DELETE /v1/catalog/entries/:slug     — delete
- *   POST   /v1/catalog/seed             — upsert the embedded seed (non-destructive)
+ *   GET    /v1/commerce/catalog/entries          — list (incl. unpublished + cost/margin)
+ *   POST   /v1/commerce/catalog/entries          — create (unique slug)
+ *   PUT    /v1/commerce/catalog/entries/:slug     — update (slug identity is immutable)
+ *   DELETE /v1/commerce/catalog/entries/:slug     — delete
+ *   POST   /v1/commerce/catalog/seed             — upsert the embedded seed (non-destructive)
  *
- * SOURCE + AUTH: the console's OWN same-origin `/v1/catalog/*` (`cloudProxyV1Url`).
+ * SOURCE + AUTH: the console's OWN same-origin `/v1/commerce/catalog/*` (`cloudProxyV1Url`).
  * On the standalone console (admin.hanzo.ai / dev) this terminates at the console's
- * `app/v1/catalog/[...path]` user-bearer proxy → commerce; on the go:embed console
+ * `app/v1/commerce/catalog/[...path]` user-bearer proxy → commerce; on the go:embed console
  * (console.hanzo.ai) the SAME path hits the cloud binary's embedded commerce mount
  * directly. Either way the org is server-authoritative (the Bearer/session owner),
  * and commerce's `requireSuperAdmin` (owner=="admin") is the authoritative gate —
@@ -167,20 +167,20 @@ export type CatalogEntryInput = {
   metadata: Record<string, unknown>
 }
 
-const entryUrl = (slug: string): string => cloudProxyV1Url(`catalog/entries/${encodeURIComponent(slug)}`)
+const entryUrl = (slug: string): string => cloudProxyV1Url(`commerce/catalog/entries/${encodeURIComponent(slug)}`)
 
 export const CatalogAdminApi = {
   /** List every catalog entry (admin view — includes unpublished + cost/margin).
    *  Optional `?brand=` filter (e.g. `infra` for the 17 infra tiers). Throws a
    *  typed `ApiError` (403 non-admin, 404 not routed) the caller renders honestly. */
   list: async (brand?: string): Promise<CatalogEntry[]> => {
-    const url = cloudProxyV1Url('catalog/entries') + (brand ? `?brand=${encodeURIComponent(brand)}` : '')
+    const url = cloudProxyV1Url('commerce/catalog/entries') + (brand ? `?brand=${encodeURIComponent(brand)}` : '')
     return normalizeList(await restGet<unknown>(url))
   },
 
   /** Create a catalog entry (unique slug required). Returns the created entry. */
   create: async (input: CatalogEntryInput): Promise<CatalogEntry> =>
-    normalizeEntry(await restPost<unknown>(cloudProxyV1Url('catalog/entries'), input)),
+    normalizeEntry(await restPost<unknown>(cloudProxyV1Url('commerce/catalog/entries'), input)),
 
   /** Update a catalog entry by slug (the slug identity is preserved server-side). */
   update: async (slug: string, input: CatalogEntryInput): Promise<CatalogEntry> =>
@@ -194,7 +194,7 @@ export const CatalogAdminApi = {
   /** Upsert the embedded catalog seed (idempotent, non-destructive). Returns the
    *  number of entries created (0 once the catalog is populated). */
   seed: async (): Promise<number> => {
-    const r = (await restPost<{ created?: number }>(cloudProxyV1Url('catalog/seed'))) ?? {}
+    const r = (await restPost<{ created?: number }>(cloudProxyV1Url('commerce/catalog/seed'))) ?? {}
     return typeof r.created === 'number' ? r.created : 0
   },
 }

@@ -1,6 +1,6 @@
 /**
  * Same-origin proxy to the cloud ML/training surface (`/v1/ml/models` and the
- * fine-tuning broker `/v1/finetune/*`).
+ * fine-tuning broker `/v1/ai/finetune/*`).
  *
  * The console's Training page calls its OWN origin (`/training/...`) with just the
  * first-party session cookie; this server handler resolves the signed-in user from
@@ -11,7 +11,7 @@
  * this is user-scoped (resolveUser), NOT the control-plane admin gate the `/paas`
  * proxy uses. The cloud backend resolves the org from the token's `owner` claim (and
  * the X-Org-Id the plain-REST train sub-service reads), so a caller can only ever
- * touch their own org's jobs. `POST /v1/finetune/jobs` is billing-gated upstream and
+ * touch their own org's jobs. `POST /v1/ai/finetune/jobs` is billing-gated upstream and
  * returns 402 on an unfunded org — that status flows straight back so the UI can
  * surface it honestly.
  *
@@ -47,14 +47,14 @@ const ALLOWED = new Set([
   // Model serving — the org's deployed kserve InferenceServices.
   'ml/models',
   // fine-tuning broker (custom-data runs, HF search) — the ONE training door.
-  'finetune/jobs',
-  'finetune/job',
-  'finetune/cancel',
-  'finetune/deploy',
-  'finetune/presets',
-  'finetune/hf/models',
-  'finetune/hf/datasets',
-  'finetune/hf/repo',
+  'ai/finetune/jobs',
+  'ai/finetune/job',
+  'ai/finetune/cancel',
+  'ai/finetune/deploy',
+  'ai/finetune/presets',
+  'ai/finetune/hf/models',
+  'ai/finetune/hf/datasets',
+  'ai/finetune/hf/repo',
 ])
 
 async function forward(req: NextRequest, path: string[]): Promise<NextResponse> {

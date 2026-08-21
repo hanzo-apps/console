@@ -2,7 +2,7 @@
 
 /**
  * Cloudflare — an org's Cloudflare Pages + Workers managed from the console, over
- * the cloud asset plane at `/v1/connectors/cloudflare/*` (cloud `clients/cloudflare`,
+ * the cloud asset plane at `/v1/integrations/cloudflare/*` (cloud `clients/cloudflare`,
  * a sibling of the `cloudflare` CONNECTOR that seals the token and of hanzodns which
  * drives the same token for `/v1/dns`).
  *

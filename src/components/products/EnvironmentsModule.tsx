@@ -4,7 +4,7 @@
  * Environments — deploy targets (production, staging, development).
  *
  * Reads the environment list from the unified cloud binary via the same-origin
- * user-bearer `/v1` proxy (`GET /v1/environments`), org resolved from the Bearer
+ * user-bearer `/v1` proxy (`GET /v1/platform/environments`), org resolved from the Bearer
  * owner. This is a derived, read-only aggregate; when the backend doesn't serve it
  * the load fails and the honest not-configured / unavailable card renders instead of
  * an empty grid.
@@ -34,7 +34,7 @@ export function EnvironmentsModule(_props: { params: Record<string, string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await restGet<{ environments?: Environment[] }>(cloudProxyV1Url('environments'))
+      const r = await restGet<{ environments?: Environment[] }>(cloudProxyV1Url('platform/environments'))
       setRows(r.environments ?? [])
       setLoadError(null)
     } catch (e) {

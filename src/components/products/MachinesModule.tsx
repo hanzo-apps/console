@@ -3,11 +3,11 @@
 /**
  * Machines — your compute machines and capacity across regions.
  *
- * Routes by role. A CUSTOMER reads THEIR OWN machines from the native `/v1/machines`
+ * Routes by role. A CUSTOMER reads THEIR OWN machines from the native `/v1/visor/machines`
  * surface (`CustomerMachines`, visor-backed via the user-bearer `/v1` proxy) — real
  * data, a launch flow, and a terminate action. A GLOBAL ADMIN sees the operator FLEET
  * view here (`AdminMachines`): a MACHINE is one node of a real cluster pool, projected
- * from the org's dedicated DOKS clusters (`GET /v1/clusters`, the native cloud surface,
+ * from the org's dedicated DOKS clusters (`GET /v1/visor/clusters`, the native cloud surface,
  * org-scoped by the Bearer owner). `machines/logic.ts` projects nodes from clusters;
  * every field is a real cluster/pool value, a deterministic function of one (vCPU/RAM
  * from the size slug; monthly cost ESTIMATE from the price table), or an explicit "—"
@@ -19,7 +19,7 @@
  * error, and a genuine empty (load succeeded, zero clusters). Per-node Reboot/Terminate
  * on the fleet view have no cluster-level endpoint, so they are disabled with a tooltip;
  * capacity is changed on the node pool from Clusters. (Per-machine terminate for a
- * customer's own machine lives on the customer view, wired to DELETE /v1/machines/:id.)
+ * customer's own machine lives on the customer view, wired to DELETE /v1/visor/machines/:id.)
  *
  * Org scope is `currentOrg()` (brand org by default; the native surfaces resolve the
  * org from the Bearer owner server-side).
@@ -717,7 +717,7 @@ function AdminMachines(_props: { params: Record<string, string> }) {
         <YStack gap="$2">
           <Fact label="Org scope" value={currentOrg()} />
           <Fact label="Backend" value="cloud-api (via /v1 user-bearer proxy)" />
-          <Fact label="Inventory source" value="GET /v1/clusters → node pools" />
+          <Fact label="Inventory source" value="GET /v1/visor/clusters → node pools" />
           <Fact label="Connection" value={stateLabel} />
           <Fact label="Clusters" value={String(clusters.length)} />
           <Fact label="Machines" value={String(machines.length)} />

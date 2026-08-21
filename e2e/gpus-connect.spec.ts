@@ -4,8 +4,8 @@
  *
  * Fully mocked network (no backend, no password), same harness as blank-audit:
  *   - /auth/session → a tenant customer (so CustomerGpus renders, not AdminGpus).
- *   - GET .../v1/machines → one BYO GB10 (provider=byo) + one cloud H100 (provider=doks).
- *   - GET .../v1/gpus → a small live catalog so the page reads real.
+ *   - GET .../v1/visor/machines → one BYO GB10 (provider=byo) + one cloud H100 (provider=doks).
+ *   - GET .../v1/visor/gpus → a small live catalog so the page reads real.
  *   - every other data path → an honest empty envelope.
  *
  * Writes two PNGs to e2e/shots/. Run:
@@ -43,7 +43,7 @@ const MACHINES = [
   { id: 'gpu-h100-sfo', name: 'gpu-h100-sfo', type: 'gpu-h100x1-80gb', provider: 'doks', gpu: 'H100', region: 'sfo3', status: 'running', costHourlyUsd: 2.49 },
 ]
 
-// BYO boxes — surfaced via /v1/fleet/workers (the connect fleet), NOT /v1/machines
+// BYO boxes — surfaced via /v1/visor/fleet/workers (the connect fleet), NOT /v1/visor/machines
 // (which excludes provider=byo). This is where a GB10 that dialed in via
 // `hanzo gpu connect` actually appears.
 const WORKERS = [
@@ -77,7 +77,7 @@ async function mock(route: Route) {
   // Data paths — match by suffix so it works regardless of /vm vs /cloud proxy prefix.
   if (/\/v1(\/vm)?\/machines$/.test(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: ok(MACHINES) })
   if (/\/v1(\/vm)?\/gpus$/.test(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: ok(CATALOG) })
-  // BYO machines surface via the connect FLEET, not /v1/machines (which excludes
+  // BYO machines surface via the connect FLEET, not /v1/visor/machines (which excludes
   // provider=byo). The GB10 lives here — where CustomerGpus actually renders it.
   if (/\/v1\/fleet\/workers$/.test(path)) return route.fulfill({ status: 200, contentType: 'application/json', body: ok({ workers: WORKERS }) })
   // Everything else (regions, sizes, clusters, billing, …) → honest empty.

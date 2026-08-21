@@ -199,7 +199,7 @@ export const EmbeddingsApi = {
 
   /** Ingest pasted text into a collection (source=upload — the balance-free path, inline). */
   ingestText: (store: string, name: string, content: string): Promise<IngestStats> =>
-    cloudPost<IngestStats>('docs/ingest', { store, source: 'upload', files: [{ name, content }] }).then((r) => r.data),
+    cloudPost<IngestStats>('ai/rag/ingest', { store, source: 'upload', files: [{ name, content }] }).then((r) => r.data),
 
   /**
    * Ingest a GitHub repo (source=github) — the backend clones it, code-aware-chunks
@@ -208,7 +208,7 @@ export const EmbeddingsApi = {
    * `workflowId` (tracked in the Tasks product), never a bespoke job. `repo` = "owner/name".
    */
   ingestGitHub: (store: string, repo: string, ref?: string): Promise<IngestStats> =>
-    cloudPost<IngestStats>('docs/ingest', {
+    cloudPost<IngestStats>('ai/rag/ingest', {
       store,
       source: 'github',
       github: { repo: repo.trim(), ...(ref?.trim() ? { ref: ref.trim() } : {}) },
@@ -219,7 +219,7 @@ export const EmbeddingsApi = {
    * `depth` links), extracts, chunks, embeds + indexes. Durable workflow like github.
    */
   ingestCrawl: (store: string, url: string, depth?: number): Promise<IngestStats> =>
-    cloudPost<IngestStats>('docs/ingest', {
+    cloudPost<IngestStats>('ai/rag/ingest', {
       store,
       source: 'crawl',
       crawl: { url: url.trim(), ...(depth && depth > 0 ? { depth } : {}) },

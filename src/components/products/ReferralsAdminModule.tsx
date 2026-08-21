@@ -2,7 +2,7 @@
 
 /**
  * Referrals (admin) — the GLOBAL-ADMIN operator board over cloud-api's
- * `GET /v1/admin/referrals` + `POST /v1/admin/referrals/sweep` (cloud
+ * `GET /v1/admin/affiliates/referrals` + `POST /v1/admin/referrals/sweep` (cloud
  * `clients/referrals`). Every referral across the fleet with both orgs, statuses,
  * and the promo credit granted, plus a "Run sweep" action (the periodic qualify
  * path). Reads terminate at the global-admin-gated `app/admin/aggregate` proxy
@@ -92,7 +92,7 @@ export function ReferralsAdminModule() {
           <ErrorState
             err={state.err}
             onRetry={load}
-            copy={{ notFound: 'The referrals aggregate is not routed on this deployment yet (GET /v1/admin/referrals).' }}
+            copy={{ notFound: 'The referrals aggregate is not routed on this deployment yet (GET /v1/admin/affiliates/referrals).' }}
           />
         )
       ) : state.data.referrals.length === 0 ? (
@@ -101,7 +101,7 @@ export function ReferralsAdminModule() {
           title="No referrals yet"
           description="Referrals appear here as customers share their link and new organizations sign up."
           bullets={[
-            'Source: GET /v1/admin/referrals — the cloud referrals store (Base/SQLite), global-admin only.',
+            'Source: GET /v1/admin/affiliates/referrals — the cloud referrals store (Base/SQLite), global-admin only.',
             'Run a sweep to qualify-check pending referrals and grant the ones that now qualify.',
           ]}
         />

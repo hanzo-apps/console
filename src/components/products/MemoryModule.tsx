@@ -5,7 +5,7 @@
  *
  * List + search (kind filter + text query) at `/memory`; one memory's detail +
  * edit at `/memory/<id>` (the `:id` route param selects the view, like
- * ProvidersModule). Reads/writes the per-user `/v1/memory` backend through
+ * ProvidersModule). Reads/writes the per-user `/v1/ai/memory` backend through
  * MemoryApi; tenancy is server-side, so the browser sends cookie credentials
  * only. Until that Go backend deploys the routes 404 and we render an honest
  * "initializing" state — never fabricated memories. Mutations report through the
@@ -50,7 +50,7 @@ function NotReady({ state, onRetry }: { state: BackendState; onRetry: () => void
     <BackendStateCard
       state={state}
       onRetry={onRetry}
-      hint="The per-user memory backend (/v1/memory) is being deployed. Your memories — what you've told the assistant to remember — appear here automatically once it is live."
+      hint="The per-user memory backend (/v1/ai/memory) is being deployed. Your memories — what you've told the assistant to remember — appear here automatically once it is live."
     />
   )
 }

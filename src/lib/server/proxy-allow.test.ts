@@ -54,14 +54,14 @@ describe('allowPlansSurface', () => {
 
 describe('v1Head', () => {
   it('extracts the head of a v1 path', () => {
-    expect(v1Head('v1/vector')).toBe('vector')
-    expect(v1Head('v1/vector/mydb')).toBe('vector')
+    expect(v1Head('v1/provisioning')).toBe('provisioning')
+    expect(v1Head('v1/provisioning/vector/mydb')).toBe('provisioning')
     expect(v1Head('v1/functions/foo/logs')).toBe('functions')
-    expect(v1Head('/v1/kv')).toBe('kv') // tolerant of a leading slash
+    expect(v1Head('/v1/visor')).toBe('visor') // tolerant of a leading slash
   })
 
   it('returns null for a non-v1 path', () => {
-    expect(v1Head('vector')).toBeNull()
+    expect(v1Head('provisioning')).toBeNull()
     expect(v1Head('')).toBeNull()
   })
 })
@@ -149,6 +149,39 @@ describe('allowCloudSurface', () => {
     expect(allowCloudSurface('v1/code/ask')).toBe(true)
     expect(allowCloudSurface('v1/code/context')).toBe(true)
     expect(allowCloudSurface('v1/code/index')).toBe(true)
+  })
+
+  it('admits each capability at the ONE root that answers for it', () => {
+    // The fold wave gave every capability one address. A head that answered a fold's
+    // OLD root would send a live call at a route cloud no longer serves — forward only,
+    // so the old roots are absent and the owners are present.
+    for (const owner of ['visor', 'account', 'entitlements', 'provisioning', 'integrations', 'explorer', 'pricing', 'openapi', 'knowledge', 'link', 'auto', 'treasury']) {
+      expect(CLOUD_HEADS).toContain(owner)
+    }
+    for (const gone of ['machines', 'gpus', 'fleet', 'clusters', 'k8s', 'compute', 'keys', 'orgs', 'csrf', 'appearance', 'avatar', 'embed', 'builds', 'environments', 'pipelines', 'releases', 'edge', 'tags', 'indexers', 'oracles', 'enablement', 'docs', 'finance', 'commands', 'connectors', 'links', 'automations', 'kb', 'plans', 'sql', 'vector', 'kv', 'datastore', 'docdb', 'instances']) {
+      expect(CLOUD_HEADS).not.toContain(gone)
+      expect(allowCloudSurface(`v1/${gone}`)).toBe(false)
+    }
+  })
+
+  it('routes the folded reads to their owner', () => {
+    expect(allowCloudSurface('v1/visor/machines')).toBe(true)
+    expect(allowCloudSurface('v1/visor/clusters/c1/pools/p1/scale')).toBe(true)
+    expect(allowCloudSurface('v1/account/keys')).toBe(true)
+    expect(allowCloudSurface('v1/entitlements/orgs/acme')).toBe(true)
+    expect(allowCloudSurface('v1/provisioning/vector')).toBe(true)
+    expect(allowCloudSurface('v1/platform/builds')).toBe(true)
+    expect(allowCloudSurface('v1/projects/edge')).toBe(true)
+    expect(allowCloudSurface('v1/projects/tags')).toBe(true)
+    expect(allowCloudSurface('v1/integrations/connectors')).toBe(true)
+    expect(allowCloudSurface('v1/explorer/indexers')).toBe(true)
+    expect(allowCloudSurface('v1/pricing/enablement')).toBe(true)
+    expect(allowCloudSurface('v1/openapi/commands')).toBe(true)
+    expect(allowCloudSurface('v1/knowledge/graph')).toBe(true)
+    expect(allowCloudSurface('v1/link/route')).toBe(true)
+    expect(allowCloudSurface('v1/auto/flows')).toBe(true)
+    expect(allowCloudSurface('v1/treasury')).toBe(true)
+    expect(allowCloudSurface('v1/ai/router/policy')).toBe(true)
   })
 
   it('admits the ai service the console uses (Embeddings · Collections)', () => {

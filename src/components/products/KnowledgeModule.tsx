@@ -1,15 +1,15 @@
 'use client'
 
 /**
- * Knowledge — the org's KB knowledge graph over the REAL cloud `/v1/kb` surface
+ * Knowledge — the org's KB knowledge graph over the REAL cloud `/v1/knowledge` surface
  * (cloud `clients/knowledge`). Two lenses, one module:
  *
- *  - Graph: a force-directed view of `/v1/kb/graph` — kb-page / kb-memory / kb-source
+ *  - Graph: a force-directed view of `/v1/knowledge/graph` — kb-page / kb-memory / kb-source
  *    nodes, with the parent tree, wikilinks, and connector provenance as edges. Rendered
  *    on a dependency-free canvas (CSP-safe) driven by the pure `graph-logic`; click a
  *    node to inspect it and its connections.
  *  - Import: choose an Obsidian vault zip, Notion export zip, Roam JSON, or Evernote
- *    .enex and file it as a kb-page tree with the links intact (`POST /v1/kb/import`).
+ *    .enex and file it as a kb-page tree with the links intact (`POST /v1/knowledge/import`).
  *
  * Org-scoped SERVER-SIDE (the `/v1` bearer proxy); no credential in the browser. Honest
  * states throughout: loading, BackendStateCard, and an empty "import your notes" call to
@@ -96,7 +96,7 @@ export function KnowledgeModule() {
           <Text color="$color11">Loading the knowledge graph…</Text>
         </Card>
       ) : state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="GET /v1/kb/graph" />
+        <BackendStateCard state={state.error} onRetry={load} hint="GET /v1/knowledge/graph" />
       ) : isEmpty ? (
         <EmptyGraph onImport={() => setTab('import')} />
       ) : (

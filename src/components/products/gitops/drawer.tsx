@@ -11,7 +11,7 @@
  *   Resources — the owned-resource TOPOLOGY (Service CR → Deployment → RS → Pods),
  *               folded by `treeToGraph` and rendered on the shared canvas; a node
  *               opens its live manifest + desired-vs-live verdict + events.
- *   Deploys   — the app's CI build history (`/v1/builds`) as a deploy timeline.
+ *   Deploys   — the app's CI build history (`/v1/platform/builds`) as a deploy timeline.
  *   Logs      — the newest pod's logs (`/v1/deploy/:name/logs`).
  *   Source    — the git repo + branch + HEAD commit and the declared image ref.
  */
@@ -228,7 +228,7 @@ function DeploysTab({ repo }: { repo: string }) {
   if (events === null)
     return (
       <Text fontSize="$2" color="$color10">
-        Build history is not available on this deployment ({err}). It appears here once `/v1/builds` is routed.
+        Build history is not available on this deployment ({err}). It appears here once `/v1/platform/builds` is routed.
       </Text>
     )
   return <DeployTimeline events={events} emptyLabel={`No recent builds for ${repo || 'this application'}.`} />

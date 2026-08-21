@@ -1,6 +1,6 @@
 /**
  * Pure view-logic for the native Automations module (unit-tested; no React, no
- * I/O). Every helper is a total function over the `/v1/automations` view-models so
+ * I/O). Every helper is a total function over the `/v1/auto` view-models so
  * the UI stays a thin render of honest, backend-derived state.
  */
 import type { AutomationFlow, FlowRun, Piece } from '~/lib/api/automations'

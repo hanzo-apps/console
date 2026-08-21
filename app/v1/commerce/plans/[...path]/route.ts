@@ -1,10 +1,10 @@
 /**
  * Same-origin user-bearer proxy to commerce for the PLATFORM PLAN admin surface
- * (`/v1/plans/entries` + `/v1/plans/seed`) — the SuperAdmin CMS for the subscription/DNS
+ * (`/v1/commerce/plans/entries` + `/v1/commerce/plans/seed`) — the SuperAdmin CMS for the subscription/DNS
  * plan authority (`models/plan`, the source of truth `GET /v1/billing/plans` and the
  * internal-ledger renewal charge derive from).
  *
- * The browser calls this OWN-origin route (`/v1/plans/...`) with just its session
+ * The browser calls this OWN-origin route (`/v1/commerce/plans/...`) with just its session
  * cookie; `forwardWithUserBearer` resolves the user, mints a short-lived user-bound IAM
  * token, and forwards to commerce with that Bearer. Commerce's `requireSuperAdmin`
  * (owner=="admin") is the AUTHORITATIVE gate: the plan authority is cross-tenant
@@ -12,13 +12,12 @@
  * org-level admin is refused 403. The org is server-authoritative (the Bearer owner).
  *
  * The ADMIN twin of the tenant `/v1/commerce/*` store proxy and the sibling
- * `/v1/catalog/*` proxy: a DISTINCT least-privilege boundary (`allowPlansSurface`) that
+ * `/v1/commerce/catalog/*` proxy: a DISTINCT least-privilege boundary (`allowPlansSurface`) that
  * admits ONLY the plan entries + seed paths, so it can never tunnel commerce's
  * `/v1/billing`, `/v1/checkout`, `/_/commerce/tenants`, or the merchant store models. It
- * lives at `app/v1/plans/[...path]` — MORE SPECIFIC than the `app/v1/[...path]` cloud BFF
- * catch-all, so Next resolves `/v1/plans/*` here. The path is `/v1/plans/*` (the REAL
- * commerce mount), so the go:embed console (BFF pruned) reaches the SAME path on the
- * cloud binary's embedded commerce directly.
+ * lives at `app/v1/commerce/plans/[...path]` — MORE SPECIFIC than the
+ * `app/v1/commerce/[...path]` store proxy, so Next resolves `/v1/commerce/plans/*` here.
+ * Commerce's own mount is `/v1/plans/*`, which is what the upstream path below re-roots at.
  */
 import { type NextRequest } from 'next/server'
 
@@ -36,9 +35,9 @@ type Ctx = { params: Promise<{ path: string[] }> }
 
 function handle(req: NextRequest, ctx: Ctx) {
   return (async () => {
-    // This handler lives under `app/v1/plans/[...path]`, so the catch-all captures ONLY
-    // the sub-path after `/v1/plans/` (e.g. `entries`, `entries/pro`, `seed`). Commerce
-    // serves the plan admin CRUD at `/v1/plans/*`, so re-root the upstream path at
+    // This handler lives under `app/v1/commerce/plans/[...path]`, so the catch-all captures
+    // ONLY the sub-path after `/v1/commerce/plans/` (e.g. `entries`, `entries/pro`, `seed`).
+    // Commerce serves the plan admin CRUD at `/v1/plans/*`, so re-root the upstream path at
     // `v1/plans/` — the same path `allowPlansSurface` and `forwardWithUserBearer` see.
     const path = `v1/plans/${(await ctx.params).path.join('/')}`
     return forwardWithUserBearer(req, {

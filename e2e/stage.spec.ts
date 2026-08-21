@@ -36,7 +36,7 @@ function mock(beta: boolean) {
     const json = (body: unknown, status = 200) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
     if (url.pathname.startsWith('/auth/')) return json({ ok: true })
-    if (url.pathname.endsWith('/v1/enablement')) {
+    if (url.pathname.endsWith('/v1/pricing/enablement')) {
       const item = { kind: 'feature', id: 'beta', state: 'beta', effective: beta, optedIn: beta, canOptIn: !beta }
       return json({ org: 'maxpower', items: [item], betas: beta ? [] : [item] })
     }

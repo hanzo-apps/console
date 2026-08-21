@@ -1,6 +1,6 @@
 /**
  * Memory API — the user's personal memory store on the cloud `/v1` backend
- * (hanzoai/ai). Plain REST over `/v1/memory` (restGet/restPost): the backend
+ * (hanzoai/ai). Plain REST over `/v1/ai/memory` (restGet/restPost): the backend
  * returns raw JSON (200) or an error body; tenancy is server-side — the gateway
  * scopes every call to the caller from the validated session, so the browser
  * sends cookie credentials only and never an owner/user in the body.

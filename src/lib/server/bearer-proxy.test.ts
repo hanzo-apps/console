@@ -355,7 +355,7 @@ describe('forwardWithUserBearer — rewrite-fed traversal fails closed (RED LOW-
  * A BINARY deploy artifact (a zip/tar.gz static build) must forward through the ONE
  * proxy VERBATIM — its bytes intact and its OWN Content-Type — never text-decoded
  * (which UTF-8-corrupts binary) and never re-stamped `application/json`. This is the
- * deploy-upload path (`POST /v1/platform/sites/:slug/deploy`).
+ * deploy-upload path (`POST /v1/projects/:slug/deploy`).
  */
 describe('forwardWithUserBearer — binary artifact passthrough (deploy upload)', () => {
   // "PK\x03\x04" (zip magic) + a byte (0xFF) that is INVALID UTF-8 — a text read would drop/replace it.
@@ -388,7 +388,7 @@ describe('forwardWithUserBearer — binary artifact passthrough (deploy upload)'
   it('forwards the exact bytes + the artifact Content-Type (not application/json)', async () => {
     const res = await forwardWithUserBearer(req(), {
       target: 'http://cloud-api.hanzo.svc.cluster.local:8000',
-      path: 'v1/platform/sites/my-app/deploy',
+      path: 'v1/projects/my-app/deploy',
       allow: allowCloudSurface,
     })
     expect(res.status).toBe(200)

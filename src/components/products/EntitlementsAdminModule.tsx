@@ -5,7 +5,7 @@
  *
  * A super admin masquerades into an org (the org picker / switcher scopes
  * `currentOrg()`), then this surface reads + edits that org's entitlement set over
- * the real `/v1/orgs/{org}/entitlements` API. Toggling a product POSTs a patch and
+ * the real `/v1/entitlements/orgs/{org}` API. Toggling a product POSTs a patch and
  * adopts the returned set. Always-on essentials are shown as "Included" (locked —
  * an org can never lose billing/settings/its own home). Access is super-admin only
  * (the catalog entry is `admin: true`) and enforced server-side too.
@@ -122,7 +122,7 @@ export function EntitlementsAdminModule() {
         <BackendStateCard
           state={classifyBackend(error)}
           onRetry={load}
-          hint="GET /v1/orgs/{org}/entitlements — the entitlement API may not be deployed on this environment yet."
+          hint="GET /v1/entitlements/orgs/{org} — the entitlement API may not be deployed on this environment yet."
         />
       ) : !enabled ? (
         <XStack items="center" gap="$2" py="$4">

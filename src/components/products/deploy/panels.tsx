@@ -10,7 +10,7 @@
  *   CD      → `GET /v1/deploy/applications` (`GitopsApi`). The reconciliation
  *             projection over the operator's App CRs — sync + health per app.
  *             Tenant-scoped server-side: a member sees only its own org's apps.
- *   CI      → `GET /v1/builds` (`BuildsApi`). The native build record written by
+ *   CI      → `GET /v1/platform/builds` (`BuildsApi`). The native build record written by
  *             git push → Actions → image. There is no forge-runs endpoint.
  *   Storage → `GET /v1/s3/buckets` (`StorageApi`). Org-scoped object storage.
  *   Domains → the hosts already bound to this org's apps and sites, folded from

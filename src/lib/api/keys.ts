@@ -1,7 +1,7 @@
 /**
  * Cloud API key client — the per-user `sk-` credential.
  *
- * The address is `/v1/keys`, which is cloud's own. It used to be `/v1/iam/keys`,
+ * The address is `/v1/account/keys`, which is cloud's own. It used to be `/v1/iam/keys`,
  * and that is the whole of this bug: `api.hanzo.ai` routes `/v1/iam/*` to IAM, so
  * a request to the old address never reached cloud at all — IAM answered it, saw
  * no bearer of its own, and returned its own 401. The console told a signed-in
@@ -67,7 +67,7 @@ type ApiKey = {
  */
 const SECRET = 'secret'
 
-const keysUrl = (): string => originV1Url('keys')
+const keysUrl = (): string => originV1Url('account/keys')
 
 /** The rows cloud listed, whether it answered `{keys:[…]}` or a bare array. */
 const rowsOf = (out: unknown): ApiKey[] => {

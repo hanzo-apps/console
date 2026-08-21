@@ -2,7 +2,7 @@
  * Catalog & Pricing admin editor — render + edit-persists proof (increment 2).
  *
  * Drives the REAL CatalogModule (client + form + metadata editor) against a
- * mock of commerce's `/v1/catalog/*` CRUD, seeded with the REAL 17 infra tiers
+ * mock of commerce's `/v1/commerce/catalog/*` CRUD, seeded with the REAL 17 infra tiers
  * increment 1 seeds (11 cloud + 3 gpu + 3 datastore). The mock is a live
  * in-memory store: a PUT mutates it, so a save → re-fetch shows the NEW price —
  * the exact "edit persists" loop the module drives against commerce (whose CRUD
@@ -10,7 +10,7 @@
  *
  * Proves: the table renders every real tier with its price + spec; opening a
  * cloud tier shows the editable form (name/price/published/category/metadata);
- * changing the price + Save issues `PUT /v1/catalog/entries/<slug>` with the new
+ * changing the price + Save issues `PUT /v1/commerce/catalog/entries/<slug>` with the new
  * priceCents; and the table then reflects the persisted price. Screenshots the
  * table + the open edit form (admin-catalog-editor.png).
  *
@@ -27,7 +27,7 @@ requireFixtureServer()
 const SHOTS = join(process.cwd(), 'e2e-shots')
 
 /** The REAL 17 infra tiers commerce seeds (models/catalogentry/seed/infra-tiers.json),
- *  in the raw `catalog-entry` shape the admin GET /v1/catalog/entries returns. */
+ *  in the raw `catalog-entry` shape the admin GET /v1/commerce/catalog/entries returns. */
 function seedEntries(): Record<string, unknown>[] {
   const cloud = (
     [
@@ -79,7 +79,7 @@ test('catalog editor renders the infra tiers, edits a price, and persists', asyn
     const path = url.pathname
 
     // Catalog admin CRUD (bare JSON, not the casibase envelope).
-    if (path === '/v1/catalog/entries' && req.method() === 'GET') {
+    if (path === '/v1/commerce/catalog/entries' && req.method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...store.values()]) })
     }
     const m = path.match(/^\/v1\/catalog\/entries\/(.+)$/)

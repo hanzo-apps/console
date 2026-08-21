@@ -76,18 +76,18 @@ describe('ProvisioningApi transport → /v1 bearer BFF', () => {
 
   const kinds: ResourceKind[] = ['sql', 'vector', 'datastore', 'kv', 'search', 's3', 'docdb']
 
-  it.each(kinds)('list(%s) hits <origin>/v1/<kind> (prefix-free, ZERO /cloud)', async (kind) => {
+  it.each(kinds)('list(%s) hits <origin>/v1/provisioning/<kind> (prefix-free, ZERO /cloud)', async (kind) => {
     await ProvisioningApi.list(kind)
-    expect(lastUrl).toBe(`${ORIGIN}/v1/${kind}`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/${kind}`)
     expect(lastUrl).not.toMatch(new RegExp(`^${ORIGIN}/(cloud|vm|ai|billing|commerce)/v1/`))
   })
 
   it('get/create/remove address the same /v1 bearer BFF', async () => {
     await ProvisioningApi.get('vector', 'gooo')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/vector/gooo`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/vector/gooo`)
     await ProvisioningApi.create('vector', 'gooo')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/vector`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/vector`)
     await ProvisioningApi.remove('vector', 'gooo')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/vector/gooo`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/provisioning/vector/gooo`)
   })
 })

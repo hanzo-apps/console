@@ -12,7 +12,7 @@
  *     same thing independently.
  *
  *   BETA — the org opted into pre-GA products. It rides the platform's existing
- *     org-scoped opt-in (`/v1/enablement`, `kind: 'feature'`), which keys on the
+ *     org-scoped opt-in (`/v1/pricing/enablement`, `kind: 'feature'`), which keys on the
  *     VALIDATED caller org, so the switch is org-wide by construction rather than
  *     by convention: two members of one org can never see different products, and
  *     nobody can opt in an org they are not in.

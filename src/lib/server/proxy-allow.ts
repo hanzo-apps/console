@@ -10,28 +10,34 @@
 /**
  * Cloud-api `/v1/<head>` surfaces reachable through `/v1` as the signed-in user.
  * These are exactly the data + serverless products whose backends authorize on the
- * Bearer owner claim (and 403 a cookie-only call): the seven managed data resources
- * plus the serverless / prompt / agent surfaces.
+ * Bearer owner claim (and 403 a cookie-only call): the managed data resources plus the
+ * serverless / prompt / agent surfaces.
+ *
+ * One head per CAPABILITY, which is what a head-based list is for. Where a capability
+ * answered at several roots the list carried each of them; those roots folded under the
+ * app that serves them, so the list carries the owner instead — `visor` for six compute
+ * roots, `account` for six per-person ones, `platform` for the four build aggregates —
+ * and a head nothing answers at is removed rather than kept as a second spelling.
  */
 export const CLOUD_HEADS: readonly string[] = [
-  // The API describing itself (/v1/commands) — every operation cloud answers, each
+  // The API describing itself (/v1/openapi/commands) — every operation cloud answers, each
   // reduced to the name it is addressed by, its method, path and prose. Cloud composes
   // it from each subsystem's own projection of its router, so nothing in it is written
   // twice, and it grants nothing: every route it names stays individually gated, which
   // is why cloud serves it unauthenticated. The per-product brief reads a product's
   // operations from here, through the one same-origin form every other read uses.
-  'commands',
-  // The per-user sk- credential. It lives on cloud's OWN head: /v1/iam/* routes to
-  // IAM, which answers a request meant for cloud with its own 401.
-  'keys',
-  // Managed data resources (provisioning service) — one REST head per kind.
-  'sql',
-  'vector',
-  'datastore',
-  'kv',
+  'openapi',
+  // The signed-in person's own account (cloud apps/account): /v1/account/{keys,orgs,
+  // appearance,avatar,csrf,embed}. The per-user sk- credential lives here, on cloud's OWN
+  // head: /v1/iam/* routes to IAM, which answers a request meant for cloud with its own 401.
+  'account',
+  // Managed data resources (provisioning service): /v1/provisioning/<kind> — one owner,
+  // one root, seven kinds under it.
+  'provisioning',
+  // Search and object storage are their own apps, not provisioning kinds of the same name:
+  // /v1/search[/{indexes,stats}] and /v1/s3/buckets[/…].
   'search',
   's3',
-  'docdb',
   // DNS control plane (hanzoai/dns at dns.hanzo.ai): /v1/dns/{zones,sync}[/…]. The
   // consolidated DNS service — authoritative zones served by CoreDNS plus
   // third-party providers (Cloudflare) via the org's KMS-sealed token. The
@@ -50,19 +56,19 @@ export const CLOUD_HEADS: readonly string[] = [
   // exactly like agents/prompts. Discovery only — `/v1/tools/call` is refused below,
   // because running a tool belongs to whatever runs an agent, not to a browser tab.
   'tools',
-  // Login manager (cloud clients/link): /v1/links[/…] — the org+user-scoped registry
+  // Login manager (cloud clients/link): /v1/link[/…] — the org+user-scoped registry
   // of which AI provider accounts are signed in on which machines + their usage. The
   // handler resolves org from the Bearer owner + the user from the validated subject
   // and 403s a cookie-only/forged call, so it routes through /v1 like agents/prompts.
-  'links',
-  // Automations (cloud clients/automations): /v1/automations/{pieces,flows,runs,mcp}[/…].
+  'link',
+  // Automations (cloud clients/automations): /v1/auto/{pieces,flows,runs,mcp}[/…].
   // The ONE native Connectors + Automations engine — flows/versions/runs over the
   // go:embed'd 706-connector catalogue, run durably on the shared hanzoai/tasks engine.
   // The handler resolves the org from the Bearer owner (principal.Tenant) and 403s a
   // cookie-only or forged-header call, so it routes through /v1 exactly like
-  // prompts/agents — the single `automations` head admits every sub-path (pieces,
-  // flows CRUD + enable/disable/run, runs, mcp). Replaces the retired /v1/auto proxy.
-  'automations',
+  // prompts/agents — the single `auto` head admits every sub-path (pieces,
+  // flows CRUD + enable/disable/run, runs, mcp).
+  'auto',
   // Webhooks (cloud clients/webhooks): /v1/webhooks[/:id[/{deliveries,test,secret}]].
   // The org's outbound event destinations — the handler resolves the org from the Bearer
   // owner (principal.Tenant) and 403s a cookie-only or forged-header call, so it routes
@@ -76,11 +82,10 @@ export const CLOUD_HEADS: readonly string[] = [
   // /v1 exactly like prompts/agents — the single `framework` head admits every sub-path
   // (doctypes, roles, modules install, and the generic /:doctype document CRUD).
   'framework',
-  // Knowledge (cloud clients/knowledge): /v1/kb/{graph,import,search,connectors}[/…] and
-  // its /v1/knowledge alias — the KB knowledge graph + vault import + RAG retrieval. The
-  // handler resolves the org from the Bearer owner (principal.Org) and 403s a cookie-only
-  // call, so both heads route through /v1 exactly like framework/prompts.
-  'kb',
+  // Knowledge (cloud clients/knowledge): /v1/knowledge/{graph,import,search,connectors}[/…]
+  // — the knowledge graph + vault import + RAG retrieval. The handler resolves the org from
+  // the Bearer owner (principal.Org) and 403s a cookie-only call, so it routes through /v1
+  // exactly like framework/prompts. `kb` was a second name for it and is gone.
   'knowledge',
   // ML serving (cloud clients/ml): /v1/ml/{models,health}[/:name[/predict]] — the org's
   // deployed KServe InferenceServices. The handler resolves the org from the Bearer owner
@@ -181,7 +186,7 @@ export const CLOUD_HEADS: readonly string[] = [
   // /v1 exactly like crm/tracker — the single `tel` head admits every sub-path
   // (the availability search, a number's :id release, a call's :id hangup).
   'tel',
-  // Connectors (cloud clients/connectors): /v1/connectors[/:provider[/connect|
+  // Connectors (cloud clients/connectors): /v1/integrations/connectors[/:provider[/connect|
   // /disconnect]]. The generic, provider-agnostic OAuth framework — sixteen
   // providers over ONE flow, so this single head admits the whole catalog: the
   // list, per-provider detail, and the connect/disconnect POST actions. They
@@ -189,7 +194,7 @@ export const CLOUD_HEADS: readonly string[] = [
   // call, so they route through /v1 exactly like crm/agents. (A provider's
   // `callback` is provider-initiated, state-authed, and hits cloud DIRECTLY at
   // api.hanzo.ai — never through this proxy — so it is out of scope here.)
-  'connectors',
+  'integrations',
   // Unified analytics (cloud clients/analytics): /v1/analytics/{overview,timeseries,
   // realtime,top/*,llm/*}. Read-only per-org warehouse (Hanzo Datastore); the
   // handler resolves the org from the Bearer owner (X-Org-Id) and 403s a cookie-only
@@ -244,25 +249,25 @@ export const CLOUD_HEADS: readonly string[] = [
   // it routes through /v1 like platform — the single `sbom` head admits the by-ref
   // lookup (the deployments view's read-only SBOM panel).
   'sbom',
-  // Finance ledger (hanzoai/finance, embedded in cloud): /v1/finance/{balance,credits,
-  // usage,invoices,payment-methods,ledger,treasury}. Per-org double-entry ledger on
-  // Base; the handler resolves the org from the Bearer owner and 403s a cookie-only
-  // call, so it routes through /v1 like platform/analytics. Read-only; writes stay
-  // in the billing portal. The single `finance` head admits every finance sub-path.
-  'finance',
+  // The reserve fund (cloud apps/treasury): /v1/treasury[/accounts] — the pool backing
+  // partner and author payouts, and the ledger accounts a caller may see. Tenant-isolated
+  // server-side (an ordinary caller sees only its own org's accounts), so it routes through
+  // /v1 like platform/analytics. The rest of the money surface is /v1/billing/*, which the
+  // console reaches through its own billing proxy, not this one. `/v1/finance` was a second
+  // spelling of both and is gone.
+  'treasury',
   // ── Native cloud infra surfaces (the unified cloud binary now serves these
   // per-org at /v1/*, previously the admin `/paas` control plane). Each resolves the
   // org from the Bearer owner (X-Org-Id) and 403s a cookie-only call, so it routes
   // through /v1 exactly like the rest; one head admits every sub-path.
   //
-  // Compute (visor-backed): machines inventory + launch/quote/terminate
-  // (/v1/machines[/launch|/:id]); GPU inventory + alerts + pools (/v1/gpus[/alerts|
-  // /pools]); the BYO connect fleet with live heartbeat (/v1/fleet/workers); dedicated
-  // clusters + node-pool add/scale/delete (/v1/clusters[/:cid/pools[/:pid[/scale]]]).
-  'machines',
-  'gpus',
-  'fleet',
-  'clusters',
+  // Compute (cloud apps/visor): machines inventory + launch/terminate
+  // (/v1/visor/machines[/:id]); GPU inventory + alerts (/v1/visor/gpus[/alerts]); the BYO
+  // connect fleet with live heartbeat (/v1/visor/fleet/workers); dedicated clusters +
+  // node-pool add/scale/delete (/v1/visor/clusters[/:cid/pools[/:pid[/scale]]]); the
+  // public size/region catalog (/v1/visor/compute/*) and k8s (/v1/visor/k8s/*). Six roots
+  // answered for one subsystem; one owner now answers for all of them.
+  'visor',
   // Sandboxes (cloud apps/sandbox): the org's leased gVisor pods — lease/list/get/
   // end, exec, fs, and the ticket that opens an interactive terminal
   // (/v1/sandboxes[/:id[/exec|/fs|/terminal]]). Same gate as the rest: the handler
@@ -279,18 +284,15 @@ export const CLOUD_HEADS: readonly string[] = [
   'vpcs',
   'balancers',
   // (`dns` — the managed-DNS head — is declared ONCE above, with the data resources.)
-  // Platform aggregates (read-only, derived): deploy targets, CI pipelines, image/
-  // binary builds, and versioned releases (/v1/{environments,pipelines,builds,releases}).
-  'environments',
-  'pipelines',
-  'builds',
-  'releases',
+  // Platform aggregates (read-only, derived): deploy targets, CI pipelines, image/binary
+  // builds, versioned releases and the push hook — all under the `platform` head above
+  // (/v1/platform/{environments,pipelines,builds,releases,run,runner,hook}).
   // Networking (zt-backed, Hanzo Zero Trust / OpenZiti fabric): the org's overlay
-  // networks (/v1/networks[/:id]), mesh services (/v1/mesh/services), and edge nodes
-  // (/v1/edge/nodes). One head per console page — Networks / ServiceMesh / Edge.
+  // networks (/v1/networks[/:id]) and mesh services (/v1/mesh/services). One head per
+  // console page — Networks / ServiceMesh. The edge is a POSITION, not a product, so the
+  // app that holds it answers for it: /v1/projects/edge, on the `projects` head.
   'networks',
   'mesh',
-  'edge',
   // Fine-grained authorization (hanzoai/authz, order 70): the org's access-control
   // policy set (/v1/authz/policies) plus check/health. The subsystem picks the
   // per-org enforcer from the Bearer-derived X-Org-Id — a cookie-only call has none —
@@ -326,19 +328,18 @@ export const CLOUD_HEADS: readonly string[] = [
   // `/v1/websearch/scrape`, no nested inner version).
   'websearch',
   // Chain data (graph-backed, luxfi/indexer + luxfi/graph): the deployment's chain
-  // indexing status (/v1/indexers — chain/network/height/health) and on-chain
-  // price/data oracle feeds (/v1/oracles — O-Chain PriceFeed registry). The cloud
+  // indexing status (/v1/explorer/indexers — chain/network/height/health) and on-chain
+  // price/data oracle feeds (/v1/explorer/oracles — O-Chain PriceFeed registry). The cloud
   // `graph` subsystem principal-gates every read (a cookie-only call 403s) and scopes
   // per brand (each brand's cloud is wired to its own indexer/graph), so it routes
-  // through /v1 like the rest. One head per console page — Indexer / Oracles.
-  'indexers',
-  'oracles',
-  // Enablement registry USER surface (cloud clients/pricing): /v1/enablement[/optin|optout].
+  // through /v1 like the rest. One head, two console pages — Indexer / Oracles.
+  'explorer',
+  // Enablement registry USER surface (cloud clients/pricing): /v1/pricing/enablement[/optin|optout].
   // Any authenticated user's effective feature/model view + self-service beta opt-in;
   // the handler scopes to the SANITIZED caller org (X-Org-Id from the Bearer owner) and
   // refuses a non-beta item, so it routes through /v1 like the rest (a cookie-only
-  // call 403s). Distinct from the global-admin /v1/admin/enablement (the aggregate proxy).
-  'enablement',
+  // call 403s). Distinct from the global-admin /v1/admin/pricing/enablement (the aggregate proxy).
+  'pricing',
   // Casibase store-admin surface (cloud binary, casibase `*-store(s)` routes): the org's
   // knowledge STORES that back Embeddings · Collections and store settings. Each is a
   // Bearer-required, org-scoped (owner from the token) casibase-envelope call, so a
@@ -347,11 +348,10 @@ export const CLOUD_HEADS: readonly string[] = [
   // heads the console actually calls — read (list/get), mutate (add/update/delete/refresh).
   // Deliberately NOT `get-global-stores` (a cross-tenant read the console never invokes)
   // nor `get-store-names` (unused) — do not widen the tunnel past what's used.
-  // Knowledge-store ingest + per-file index status (casibase docs surface): the
-  // Embeddings product's ingest actions (`/v1/docs/ingest` — upload/github/crawl) and
-  // per-file status (`/v1/get-files`). Bearer-required + org-scoped (owner from the
-  // token); a cookie-only call 401s, so they route through /v1 like the stores.
-  'docs',
+  // Knowledge-store ingest + per-file index status: the Embeddings product's ingest
+  // actions (`/v1/ai/rag/ingest` — upload/github/crawl) and per-file status. Both are on
+  // the `ai` head below, where the service that indexes them answers; `docs` was a third
+  // address over that one store and is gone.
   // The ai service (hanzoai/ai): /v1/ai/{stores,files,vectors,chats,messages,
   // providers,routes,tasks,records,usages,account,…}. ONE SERVICE head, which is
   // what a head-based allow-list is supposed to mean — this used to enumerate
@@ -360,15 +360,14 @@ export const CLOUD_HEADS: readonly string[] = [
   'ai',
   // Embeddings/collections usage slice of the cloud-usage read API (`/v1/get-cloud-usages`).
   // Bearer-required; degrades to "—" but should read real data through /v1.
-  // Per-org product entitlements (cloud clients/entitlements): /v1/orgs/{org}/entitlements
+  // Per-org product entitlements (cloud clients/entitlements): /v1/entitlements/orgs/{org}
   // — the set of products the org has enabled (out-of-box each org assembles its own
   // backend from the catalog). GET reads the enabled ids; POST { add?, remove? } toggles
   // them. The handler resolves + PINS the org from the Bearer owner (a customer can only
   // read/mutate their OWN org's entitlements; a super admin any org, server-enforced),
   // so it routes through /v1 exactly like the rest — a cookie-only call 403s. The single
-  // `orgs` head admits the org-scoped entitlements sub-path (the console never calls any
-  // other `orgs/*` surface; keep the tunnel to exactly what's used).
-  'orgs',
+  // `entitlements` head admits the org-scoped sub-path and nothing else.
+  'entitlements',
   // CD / deploy plane (cloud clients/deploy reads the operator hanzo.ai/v1 App CRs):
   // /v1/deploy/{applications, health, :name/tree, :name/resource/:ref, :name/logs} +
   // POST :name/{rollback,sync}. cloud holds the k8s client + enforces authz
@@ -417,14 +416,8 @@ export const CLOUD_HEADS: readonly string[] = [
   // and its test send. A destination's API credential is sealed into KMS server-side and
   // is never in a response — the head carries connection STATE, never a secret.
   'destinations',
-  // Browser tag door (cloud apps/projects tagdoor.go): GET /v1/tags?key=<pk->. The
-  // resolved client-side pixel set for one site — which tags the hosted tag will inject,
-  // with their non-secret ids. PUBLIC and fail-safe by design (CORS *, an unresolvable
-  // key is an empty set at 200), because a customer's page fetches it directly; it is
-  // allow-listed only so the console can PREVIEW what a site will inject through the
-  // same one same-origin form as every other read. Read-only — the ids are SET by
-  // PATCH /v1/projects/:slug, on the `projects` head.
-  'tags',
+  // (The browser tag door, GET /v1/projects/tags?key=<pk->, is the `projects` head's:
+  // tags belong to the app that holds the site they are injected on.)
 ]
 
 /** The `<head>` of a `v1/<head>/...` path, or null when it isn't a `v1/` path. */
@@ -508,12 +501,12 @@ export function allowCommerceSurface(path: string): boolean {
 }
 
 /**
- * Commerce PLATFORM-CATALOG admin surface reachable through `/v1/catalog` as the
+ * Commerce PLATFORM-CATALOG admin surface reachable through `/v1/commerce/catalog` as the
  * signed-in SuperAdmin. Commerce serves the catalog CMS under `/v1/catalog/*` on
- * its `/v1` bundle: `entries` (GET list incl. cost/margin, POST create),
+ * its own `/v1` bundle: `entries` (GET list incl. cost/margin, POST create),
  * `entries/:slug` (PUT update, DELETE remove), and `seed` (POST upsert). This list
  * is the least-privilege boundary — it admits ONLY those catalog paths, so the
- * `/v1/catalog` proxy can never tunnel commerce's money/tenant surfaces
+ * `/v1/commerce/catalog` proxy can never tunnel commerce's money/tenant surfaces
  * (`billing`, `checkout`, `_/commerce/tenants`, the merchant store models) that
  * share the binary. Commerce's own `requireSuperAdmin` (owner=="admin") is the
  * authoritative auth gate on top of this; this only bounds the reachable PATHS.
@@ -527,12 +520,12 @@ export function allowCatalogSurface(path: string): boolean {
 }
 
 /**
- * Commerce PLATFORM-PLAN admin surface reachable through `/v1/plans` as the signed-in
- * SuperAdmin. Commerce serves the subscription/DNS plan authority CMS under
- * `/v1/plans/*` on its `/v1` bundle: `entries` (GET list, POST create), `entries/:slug`
+ * Commerce PLATFORM-PLAN admin surface reachable through `/v1/commerce/plans` as the
+ * signed-in SuperAdmin. Commerce serves the subscription/DNS plan authority CMS under
+ * `/v1/plans/*` on its own `/v1` bundle: `entries` (GET list, POST create), `entries/:slug`
  * (PUT update, DELETE remove), and `seed` (POST upsert). The sibling of
  * `allowCatalogSurface` — the same least-privilege boundary, admitting ONLY those plan
- * paths, so the `/v1/plans` proxy can never tunnel commerce's money/tenant surfaces
+ * paths, so the `/v1/commerce/plans` proxy can never tunnel commerce's money/tenant surfaces
  * (`billing`, `checkout`, `_/commerce/tenants`, the merchant store models). Commerce's
  * own `requireSuperAdmin` (owner=="admin") is the authoritative auth gate on top of
  * this — money-adjacent, since a plan's price is the real renewal charge; this only

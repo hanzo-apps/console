@@ -58,20 +58,20 @@ describe('normalizeLink', () => {
 })
 
 describe('LinksApi transport contract', () => {
-  it('list() GETs /v1/links and normalizes links + devices', async () => {
+  it('list() GETs /v1/link and normalizes links + devices', async () => {
     stub({
       links: [{ id: 'l1', provider: 'claude', kind: 'subscription' }],
       devices: [{ machine: 'm1', host: 'box', accounts: [{ id: 'l1', provider: 'claude' }], activeSessions: 2 }],
     })
     const out = await LinksApi.list()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/links`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/link`)
     expect(lastInit?.method ?? 'GET').toBe('GET')
     expect(out.links).toHaveLength(1)
     expect(out.devices[0]?.activeSessions).toBe(2)
     expect(out.devices[0]?.accounts[0]?.id).toBe('l1')
   })
 
-  it('route() GETs /v1/links/route and normalizes candidates + primary', async () => {
+  it('route() GETs /v1/link/route and normalizes candidates + primary', async () => {
     stub({
       candidates: [
         { provider: 'claude', kind: 'subscription', billing: 'plan', available: true, headroomPct: 90, linkId: 'a' },
@@ -80,23 +80,23 @@ describe('LinksApi transport contract', () => {
       primary: { provider: 'claude', kind: 'subscription', billing: 'plan', available: true, headroomPct: 90, linkId: 'a' },
     })
     const plan = await LinksApi.route()
-    expect(lastUrl).toBe(`${ORIGIN}/v1/links/route`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/link/route`)
     expect(plan.candidates).toHaveLength(2)
     expect(plan.primary?.linkId).toBe('a')
     expect(plan.candidates[1]?.billing).toBe('commerce')
   })
 
-  it('revoke(id) DELETEs /v1/links/:id (url-escaped)', async () => {
+  it('revoke(id) DELETEs /v1/link/:id (url-escaped)', async () => {
     stub({ revoked: 1, sessionsStopped: 1 })
     await LinksApi.revoke('link_1')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/links/link_1`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/link/link_1`)
     expect(lastInit?.method).toBe('DELETE')
   })
 
-  it('revokeDevice(machine) POSTs /v1/links/devices/:machine/revoke and returns the counts', async () => {
+  it('revokeDevice(machine) POSTs /v1/link/devices/:machine/revoke and returns the counts', async () => {
     stub({ revoked: 2, sessionsStopped: 3 })
     const r = await LinksApi.revokeDevice('m1')
-    expect(lastUrl).toBe(`${ORIGIN}/v1/links/devices/m1/revoke`)
+    expect(lastUrl).toBe(`${ORIGIN}/v1/link/devices/m1/revoke`)
     expect(lastInit?.method).toBe('POST')
     expect(r).toEqual({ revoked: 2, sessionsStopped: 3 })
   })

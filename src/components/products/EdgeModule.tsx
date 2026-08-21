@@ -1,88 +1,73 @@
 'use client'
 
 /**
- * Edge — globally-distributed edge compute nodes run by the platform.
+ * Edge — the network in front of every published site: which provider fronts it,
+ * whether it can act, what it caches and for how long.
  *
- * Reads the edge-node inventory from the PaaS via the same-origin `/paas` proxy
- * (`GET /v1/edge/nodes`), which injects the service token server-side. When the
- * edge service isn't provisioned for the org the list load fails and the
- * honest not-configured / unavailable card renders instead of an empty grid —
- * matching every other infra module.
+ * Reads `GET /v1/projects/edge` through the same-origin `/v1` bearer BFF. `edge` names a
+ * POSITION rather than a product, so it has no root of its own — the app that holds the
+ * edge answers for it. The read is a STATE, not an inventory: this module used to ask for
+ * a node list, an address nothing ever served, so the table of nodes is gone and what the
+ * edge actually reports is shown instead.
+ *
+ * A 503 says a publish is not reaching readers promptly — a true statement about the
+ * product, not a broken read — so it renders as "no edge yet", and only a genuine
+ * transport failure gets the retry card.
  */
-import { Button, Spinner, Text, XStack } from '@hanzo/gui'
+import { useCallback, useEffect, useState } from 'react'
+import { Button, Spinner, Text, XStack, YStack } from '@hanzo/gui'
 import { RefreshCw, Radio } from '@hanzogui/lucide-icons-2'
 
 import { config } from '~/config'
-import { PlatformStateCard } from './platform/state'
-import { useResourceList } from './useResourceList'
-import { DataTable, EmptyState, PageHeader, StatusTag, type Column } from '@hanzo/ui/product'
+import { originV1Url, restGet } from '~/lib/api/client'
+import { interpretPlatformError, PlatformStateCard, type PlatformError } from './platform/state'
+import { EmptyState, PageHeader, StatusTag } from '@hanzo/ui/product'
 
-type EdgeNode = {
-  id: string
-  name?: string
-  region?: string
+/** What `GET /v1/projects/edge` answers, on 200 and on 503 alike. */
+type Edge = {
+  provider?: string
   status?: string
-  requests?: string
-  latency?: string
+  configured?: boolean
+  freshness?: string
+  reach?: string[]
+  policy?: Record<string, string>
+  error?: string
 }
 
 export function EdgeModule(_props: { params: Record<string, string> }) {
-  const { rows, loading, error: loadError, reload: load } =
-    useResourceList<EdgeNode>('edge/nodes', 'nodes')
+  const [edge, setEdge] = useState<Edge | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<PlatformError | null>(null)
 
-  const columns: Column<EdgeNode>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      render: (n) => (
-        <Text fontSize="$3" fontWeight="600" color="$color12" numberOfLines={1}>
-          {n.name || n.id}
-        </Text>
-      ),
-    },
-    {
-      key: 'region',
-      header: 'Region',
-      width: 140,
-      render: (n) => (
-        <Text fontSize="$3" color="$color11">
-          {n.region || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'requests',
-      header: 'Requests',
-      width: 120,
-      render: (n) => (
-        <Text fontSize="$3" color="$color11">
-          {n.requests || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'latency',
-      header: 'Latency',
-      width: 110,
-      render: (n) => (
-        <Text fontSize="$3" color="$color11">
-          {n.latency || '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: 120,
-      render: (n) => <StatusTag status={n.status ?? 'unknown'} />,
-    },
-  ]
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setEdge(await restGet<Edge>(originV1Url('projects/edge')))
+      setLoadError(null)
+    } catch (e) {
+      setEdge(null)
+      setLoadError(interpretPlatformError(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const row = (label: string, value: string) => (
+    <XStack key={label} py="$2" gap="$4" justify="space-between">
+      <Text fontSize="$3" color="$color11">{label}</Text>
+      <Text fontSize="$3" color="$color12" numberOfLines={1}>{value}</Text>
+    </XStack>
+  )
 
   return (
     <>
       <PageHeader
         title="Edge"
-        subtitle="Globally-distributed edge compute nodes."
+        subtitle="The network in front of every published site."
         actions={
           <Button icon={<RefreshCw size={16} />} onPress={() => void load()}>
             Refresh
@@ -94,26 +79,33 @@ export function EdgeModule(_props: { params: Record<string, string> }) {
         <XStack p="$6" justify="center">
           <Spinner size="large" color="$color11" />
         </XStack>
-      ) : rows.length ? (
-        // Real edge nodes reported by the platform → the live inventory.
-        <DataTable columns={columns} rows={rows} rowKey={(n) => n.id} empty="No edge nodes yet." />
       ) : loadError && loadError.kind === 'error' ? (
-        // A genuine transient failure (not "no backend") → the honest retry card.
         <PlatformStateCard error={loadError} onRetry={() => void load()} />
+      ) : edge && edge.configured ? (
+        <YStack>
+          <XStack py="$2" gap="$4" justify="space-between" items="center">
+            <Text fontSize="$3" color="$color11">Status</Text>
+            <StatusTag status={edge.status ?? 'unknown'} />
+          </XStack>
+          {row('Provider', edge.provider || '—')}
+          {row('Freshness', edge.freshness || '—')}
+          {row('Reach', edge.reach?.length ? edge.reach.join(' · ') : '—')}
+          {Object.entries(edge.policy ?? {}).map(([kind, cacheControl]) => row(`Cache · ${kind}`, cacheControl))}
+          {edge.error ? row('Blocked by', edge.error) : null}
+        </YStack>
       ) : (
-        // Live edge fabric with no nodes tagged to this org yet → an honest empty
-        // state (managed by Hanzo), never a fabricated node grid.
         <EmptyState
           icon={Radio}
-          title="No edge nodes yet"
-          description="Edge compute runs your functions and containers close to the people calling them, on nodes Hanzo manages. Nodes tagged to your org appear here as they come online; until then your workloads run in the shared Hanzo Cloud regions."
+          title="No edge in front of your sites yet"
+          description={
+            edge?.error ||
+            'The edge purges a publish so readers see it immediately. Until one holds credentials, a publish is live as soon as caches expire on their own.'
+          }
           bullets={[
-            'Deploy once — served from the edge location nearest each request',
-            'Backed by the same functions + containers you already run',
-            'Nodes and traffic appear here as each edge location comes online',
+            'A publish is invalidated by cache-tag, on every apex it is served from',
+            'Documents revalidate; fingerprinted assets are immutable',
           ]}
           primary={{ label: 'Edge docs', href: `${config.docsUrl}/docs/edge` }}
-          secondary={{ label: 'Containers', onPress: () => { if (typeof window !== 'undefined') window.location.assign('/containers') } }}
         />
       )}
     </>

@@ -2,7 +2,7 @@
 
 /**
  * GPUs · Pools (customer) — the org's GPU NODE POOLS, derived from its OWN clusters
- * (`data.clusters` ← the user-bearer `/v1/clusters`, org-scoped). A pool is a
+ * (`data.clusters` ← the user-bearer `/v1/visor/clusters`, org-scoped). A pool is a
  * cluster node pool whose size is a GPU Droplet/instance; we show the real per-pool GPU
  * total and the cluster's real state. No pool backend is invented: an org with no GPU
  * clusters sees an honest "No node pools yet" (never fabricated pools, never the admin

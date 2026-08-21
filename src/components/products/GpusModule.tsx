@@ -140,7 +140,7 @@ function AdminGpus({ params }: { params: Record<string, string> }) {
       ) : tab === 'clusters' ? (
         <ClustersTab data={data} />
       ) : tab === 'pools' ? (
-        <PoolsTab />
+        <PoolsTab data={data} />
       ) : tab === 'pricing' ? (
         <PricingTab onNav={onNav} />
       ) : tab === 'alerts' ? (

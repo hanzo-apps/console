@@ -2,13 +2,13 @@
  * Provisioning API — managed data/storage resources, one REST surface per kind.
  *
  * Contract (hanzoai/cloud, mounted by clients/provisioningsvc):
- *   POST   /v1/<kind>        {name}        -> 201 ResourceCreated (password ONCE)
- *   GET    /v1/<kind>                      -> 200 Resource[]
- *   GET    /v1/<kind>/<name>               -> 200 Resource
- *   DELETE /v1/<kind>/<name>               -> 204
+ *   POST   /v1/provisioning/<kind>  {name} -> 201 ResourceCreated (password ONCE)
+ *   GET    /v1/provisioning/<kind>         -> 200 Resource[]
+ *   GET    /v1/provisioning/<kind>/<name>  -> 200 Resource
+ *   DELETE /v1/provisioning/<kind>/<name>  -> 204
  *
  * Transport: the browser calls the console's OWN-origin `/v1` user-bearer proxy
- * (`cloudProxyV1Url` → `<origin>/v1/<kind>`), NEVER a bare `/v1/<kind>`. On the
+ * (`cloudProxyV1Url` → `<origin>/v1/provisioning/<kind>`), NEVER a bare one. On the
  * live console ingress a bare `/v1/*` is routed straight to hanzoai/gateway (bypassing
  * Next), where the provisioning backends authorize on the Bearer owner claim and 403 a
  * cookie-only call ("X-Org-Id required") — surfacing as a FALSE "Not enabled for your
@@ -64,7 +64,7 @@ export type ResourceCreated = Resource & {
  * or one level of nesting (e.g. a Qdrant-style `{ result: { collections: [...] } }`).
  * A non-array body reaching the list view's `for…of` / `.length` throws DURING
  * render and blanks the whole module behind the error boundary — the observed
- * Vector regression (`GET /v1/vector` 200, but the API returns a wrapped
+ * Vector regression (`GET /v1/provisioning/vector` 200, but the API returns a wrapped
  * shape, so nothing renders while SQL/KV — which return bare arrays — render fine).
  *
  * So we validate + unwrap at the transport boundary (ONE place, every kind) and
@@ -93,16 +93,19 @@ export function normalizeResourceList(body: unknown): Resource[] {
   )
 }
 
+/** One kind's collection. The seven share one owner, so they share one root. */
+const root = (kind: ResourceKind) => `provisioning/${kind}`
+
 export const ProvisioningApi = {
   list: async (kind: ResourceKind): Promise<Resource[]> =>
-    normalizeResourceList(await restGet<unknown>(cloudProxyV1Url(kind))),
+    normalizeResourceList(await restGet<unknown>(cloudProxyV1Url(root(kind)))),
 
   get: (kind: ResourceKind, name: string) =>
-    restGet<Resource>(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restGet<Resource>(cloudProxyV1Url(`${root(kind)}/${encodeURIComponent(name)}`)),
 
   create: (kind: ResourceKind, name: string) =>
-    restPost<ResourceCreated>(cloudProxyV1Url(kind), { name }),
+    restPost<ResourceCreated>(cloudProxyV1Url(root(kind)), { name }),
 
   remove: (kind: ResourceKind, name: string) =>
-    restDelete(cloudProxyV1Url(`${kind}/${encodeURIComponent(name)}`)),
+    restDelete(cloudProxyV1Url(`${root(kind)}/${encodeURIComponent(name)}`)),
 }

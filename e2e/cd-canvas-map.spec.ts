@@ -5,7 +5,7 @@
  * network mocked (same pattern as budgets-responsive): `/auth/session` → a global
  * admin so the shell mounts and the admin-only Deploy product renders, the
  * `/v1/deploy/*` CD projection → real-shaped rows (the fleet + one app's tree +
- * logs), `/v1/git/repos` + `/v1/builds` → enrichment, everything else → empty-ok.
+ * logs), `/v1/git/repos` + `/v1/platform/builds` → enrichment, everything else → empty-ok.
  *
  * It proves: the fleet renders as canvas NODES, a node OPENS the drawer, the
  * resource TOPOLOGY mounts in the drawer, and — the CTO requirement — at a NARROW
@@ -90,7 +90,7 @@ async function mock(route: Route) {
   if (path === '/v1/git/repos') return json(REPOS)
   if (/^\/v1\/git\/repos\/[^/]+\/refs$/.test(path)) return json({ branches: [{ name: 'main', sha: 'abc' }], tags: [{ name: 'v1.4.10', sha: 'a' }, { name: 'v1.4.9', sha: 'b' }], default: 'main' })
   if (/^\/v1\/git\/repos\//.test(path)) return json({ id: 'r1', org: 'hanzoai', name: 'iam', defaultBranch: 'main', branches: ['main'], head: 'abc1234def', cloneUrl: '', sshUrl: '', sizeBytes: 0, createdAt: '2026-01-01T00:00:00Z' })
-  if (path === '/v1/builds') return json(BUILDS)
+  if (path === '/v1/platform/builds') return json(BUILDS)
 
   const sameOrigin = url.origin === new URL(BASE_URL).origin
   if (sameOrigin && !API_RE.test(path)) return route.continue()

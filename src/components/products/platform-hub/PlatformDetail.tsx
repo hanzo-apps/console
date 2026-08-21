@@ -214,13 +214,13 @@ export function PlatformDetail({ name }: { name: string }) {
       </Card>
 
       {loadErr && !site ? (
-        <BackendStateCard state={classifyRead(loadErr) ?? { kind: 'error', message: asApiError(loadErr).message }} onRetry={() => void load()} hint="GET /v1/platform/sites/:slug" />
+        <BackendStateCard state={classifyRead(loadErr) ?? { kind: 'error', message: asApiError(loadErr).message }} onRetry={() => void load()} hint="GET /v1/projects/sites/:slug" />
       ) : null}
 
       {/* Deploy */}
       <SectionCard
         title={latest ? 'Deploy a new version' : 'Deploy your build'}
-        subtitle="A zip/tar.gz of the built static site (index.html at the root), or a folder — uploaded to /v1/platform/sites/:slug/deploy."
+        subtitle="A zip/tar.gz of the built static site (index.html at the root), or a folder — uploaded to /v1/projects/sites/:slug/deploy."
       >
         <DeployDropzone busy={busy} onDeploy={onDeploy} />
       </SectionCard>

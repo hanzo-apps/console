@@ -3,7 +3,7 @@
 /**
  * admin.hanzo.ai ENABLEMENT board (#30/#31) — the global feature/model registry.
  * GLOBAL-ADMIN sets each item off | beta | ga (and optionally grants a beta to
- * specific orgs). GLOBAL-ADMIN ONLY (`admin: true`; the `/v1/admin/enablement`
+ * specific orgs). GLOBAL-ADMIN ONLY (`admin: true`; the `/v1/admin/pricing/enablement`
  * surface is server-gated). `off` is an absolute kill switch; `beta` is visible only
  * to opted-in/granted orgs; `ga` is on for everyone. Customers opt into betas from
  * their own Settings › Beta features (a separate, non-admin surface).

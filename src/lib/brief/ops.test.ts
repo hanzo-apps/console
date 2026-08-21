@@ -88,7 +88,7 @@ describe('opsFor', () => {
     })
 
     expect((await opsFor('widget')).length).toBe(3)
-    expect(urls).toEqual(['https://console.hanzo.ai/v1/commands'])
+    expect(urls).toEqual(['https://console.hanzo.ai/v1/openapi/commands'])
 
     // A second product reuses the list in hand — one read per session, not per press.
     expect((await opsFor('gadget')).length).toBe(1)
@@ -96,6 +96,6 @@ describe('opsFor', () => {
   })
 
   it('is admitted by the same-origin proxy', () => {
-    expect(allowCloudSurface('v1/commands')).toBe(true)
+    expect(allowCloudSurface('v1/openapi/commands')).toBe(true)
   })
 })

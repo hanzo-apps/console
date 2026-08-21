@@ -3,7 +3,7 @@
  *
  * Runs against a LOCAL server (BASE_URL=http://localhost:4000) with the whole
  * network mocked (same pattern as budgets-responsive): `/auth/session` → a CUSTOMER
- * (non-admin, non-super-admin) account, and `/v1/orgs/<org>/entitlements` →
+ * (non-admin, non-super-admin) account, and `/v1/entitlements/orgs/<org>` →
  * `{ enabled: ['agents'] }`. Everything else → an empty-ok envelope.
  *
  * It proves the out-of-box gate: a customer's sidebar shows ONLY the products the
@@ -50,7 +50,7 @@ async function mock(route: Route) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
   }
   // The gate under test — the org has ONLY Agents enabled beyond the essentials.
-  if (path === `/v1/orgs/${ORG}/entitlements`) {
+  if (path === `/v1/entitlements/orgs/${ORG}`) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: ['agents'] }) })
   }
 

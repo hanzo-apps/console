@@ -220,7 +220,7 @@ import { SettlementModule } from '~/components/products/SettlementModule'
 import { AlertsModule } from '~/components/products/AlertsModule'
 // Admin operator compute boards (cross-tenant, admin-only) — kind='bot'|'machine'
 // lenses over the datastore. Aliased to avoid the clash with the per-org customer
-// `MachinesModule` (Compute › Machines, over visor-backed `/v1/machines`).
+// `MachinesModule` (Compute › Machines, over visor-backed `/v1/visor/machines`).
 import { BotsModule, MachinesModule as AdminMachinesModule, ClustersModule as AdminClustersModule, FunctionsModule as AdminFunctionsModule } from '~/components/products/ComputeModule'
 import { AnalyticsModule } from '~/components/products/AnalyticsModule'
 import { TagsModule, TagDestinations } from '~/components/products/TagsModule'
@@ -649,7 +649,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai CATALOG & PRICING — the CMS editor for the platform product +
     // pricing catalog (commerce `catalog-entry`, the SoT: the 17 infra tiers +
     // every product surface docs/pricing/the console read from). A filterable table
-    // + create/edit form over the SuperAdmin CRUD (/v1/catalog/entries); an edit
+    // + create/edit form over the SuperAdmin CRUD (/v1/commerce/catalog/entries); an edit
     // here flows to the live pricing pages (the pricing service reads the same rows
     // via GET /v1/commerce/catalog). GLOBAL-ADMIN ONLY (`admin: true` hides it from
     // every customer; commerce's requireSuperAdmin (owner=="admin") is the
@@ -667,7 +667,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai SUBSCRIPTION PLANS — the CMS editor for the platform plan authority
     // (commerce `models/plan`, the SoT for subscription/DNS pricing that GET
     // /v1/billing/plans and the internal-ledger renewal charge read). A filterable table
-    // + create/edit form over the SuperAdmin CRUD (/v1/plans/entries). LIVE BILLING
+    // + create/edit form over the SuperAdmin CRUD (/v1/commerce/plans/entries). LIVE BILLING
     // CONTROL: a plan's monthly price is the real renewal charge — the sibling of the
     // Catalog editor. GLOBAL-ADMIN ONLY (`admin: true` hides it from every customer;
     // commerce's requireSuperAdmin (owner=="admin") is the authoritative server-side gate).
@@ -931,7 +931,7 @@ const declared: Declaration[] = [
     // admin.hanzo.ai MACHINES board — the operator view of raw compute (kind='machine')
     // visor opens across EVERY org, and its spend, grouped org → app → project. The
     // CROSS-TENANT operator lens (id `vms` — the per-org customer `machines` entry is a
-    // different, non-admin surface over visor-backed `/v1/machines`). GLOBAL-ADMIN ONLY,
+    // different, non-admin surface over visor-backed `/v1/visor/machines`). GLOBAL-ADMIN ONLY,
     // same datastore aggregate as Bots (`?kind=machine`). Honest-empty until wired.
     id: 'vms',
     label: 'Machines',
@@ -1007,7 +1007,7 @@ const declared: Declaration[] = [
   {
     // The org-user AI Usage & Training surface — the customer face of the virtual
     // `auto`/`zen-router` model, in three tabs:
-    //   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
+    //   Overview — routing observability + TRAINING status over `GET /v1/ai/router/stats`
     //     (org-scoped): cost saved (a blended $/MTok proxy), a quality proxy, the
     //     per-task model mix, the last-retrain gate verdict, and the opt-in
     //     training-contribution toggle (the toggle lives ONLY here).
@@ -1015,7 +1015,7 @@ const declared: Declaration[] = [
     //     imported connected-provider usage, via the shared `<AiUsagePanels>` that
     //     the `ai-metrics` module also renders (one usage implementation, DRY).
     //   Policy   — the org's own task→model-pool prefer table + cost ceiling over
-    //     `/v1/router/policy` (GET read + PUT write).
+    //     `/v1/ai/router/policy` (GET read + PUT write).
     // All org-admin gated + self-scoped server-side (org > "*" > conf per task key).
     // DISTINCT from the two routing surfaces beside it: `models`' admin "Routing" tab
     // flips PLATFORM ModelRoute config, and `ai-accounts`' Routing tab is the user's
@@ -1212,7 +1212,7 @@ const declared: Declaration[] = [
   },
   {
     // Hanzo Automations — the ONE native Connectors + Automations engine
-    // (hanzoai/cloud clients/automations, /v1/automations; HIP-0106 / task #51):
+    // (hanzoai/cloud clients/automations, /v1/auto; HIP-0106 / task #51):
     // an org's flows run durably on the shared hanzoai/tasks engine over the
     // go:embed'd 706-connector catalogue, credentials KMS-sealed per org. Rendered
     // NATIVELY in-console (flows + connector catalogue + runs) over the /v1
@@ -1311,8 +1311,8 @@ const declared: Declaration[] = [
   {
     // Knowledge — the org's KB knowledge graph (cloud clients/knowledge). Pages,
     // agent memories, and ingested sources as a force-directed graph over
-    // /v1/kb/graph, plus a vault importer (Obsidian/Notion/Roam/Evernote) over
-    // /v1/kb/import. Org-scoped SERVER-SIDE via the /v1 bearer proxy.
+    // /v1/knowledge/graph, plus a vault importer (Obsidian/Notion/Roam/Evernote) over
+    // /v1/knowledge/import. Org-scoped SERVER-SIDE via the /v1 bearer proxy.
     id: 'knowledge',
     icon: Network,
     description: 'Your wiki, agent memory, and sources as one force-directed graph.',
@@ -1957,7 +1957,7 @@ const declared: Declaration[] = [
   //    the CI/CD pipeline ships incrementally.
   {
     // The project HUB: create an IAM-native project → deploy a static build (drag-drop
-    // zip/tar.gz → /v1/platform/sites) → manage deployments, domains, config → and
+    // zip/tar.gz → /v1/projects/sites) → manage deployments, domains, config → and
     // deep-link the SAME project to hanzo.app (edit) + hanzo.chat (chat) on one shared
     // key. The Infrastructure-category flagship; `projects` stays the thin scope picker.
     id: 'platform',
@@ -1994,9 +1994,9 @@ const declared: Declaration[] = [
   {
     // Deploy — the front door for shipping. ONE section over the two things an org
     // deploys (container apps via `/v1/platform/projects/:p/apps`, static sites via
-    // `/v1/platform/sites`) plus readings of the three planes a deploy touches:
+    // `/v1/projects/sites`) plus readings of the three planes a deploy touches:
     // CD (`/v1/deploy/applications` — reconciliation of the caller's own App CRs),
-    // CI (`/v1/builds`), and Storage (`/v1/s3/buckets`). Each is the ONE canonical
+    // CI (`/v1/platform/builds`), and Storage (`/v1/s3/buckets`). Each is the ONE canonical
     // head for its subject; there is deliberately no `/v1/platform/cd|ci|s3` alias,
     // which would give the estate two paths to the same data.
     //
@@ -2180,7 +2180,7 @@ const declared: Declaration[] = [
   },
   {
     // CUSTOMER self-service — provision a dedicated DOKS cluster and manage its node
-    // pools (add / scale / delete) over the native cloud `/v1/clusters*` surface,
+    // pools (add / scale / delete) over the native cloud `/v1/visor/clusters*` surface,
     // org-scoped by the Bearer owner. Not admin-gated: a paying customer runs their
     // own clusters. The unified fleet cockpit (see + attach + connect) is Kubernetes.
     id: 'clusters',
@@ -2193,9 +2193,9 @@ const declared: Declaration[] = [
   },
   {
     // CUSTOMER self-service — the UNIFIED COMPUTE FLEET: managed + attached BYO
-    // clusters (with GPU inventory) MERGED from `GET /v1/clusters`, plus dialed-in
-    // BYO machines from `GET /v1/machines`, and the three connect actions (attach a
-    // BYO cluster via `POST /v1/clusters`, connect a box via `hanzo gpu connect`,
+    // clusters (with GPU inventory) MERGED from `GET /v1/visor/clusters`, plus dialed-in
+    // BYO machines from `GET /v1/visor/machines`, and the three connect actions (attach a
+    // BYO cluster via `POST /v1/visor/clusters`, connect a box via `hanzo gpu connect`,
     // connect a cloud account — coming). Org-scoped by the Bearer owner; honest states.
     id: 'kubernetes',
     icon: Boxes,
@@ -2448,7 +2448,7 @@ const declared: Declaration[] = [
   {
     // The signed-in org's per-tenant view of the UNIFIED finance ledger (hanzoai/
     // finance, embedded in cloud): balance, metered spend, credits, invoices, payment
-    // methods, and the double-entry ledger, over /v1/finance/* scoped to the caller's
+    // methods, and the double-entry ledger, each at the address that owns it, scoped to the caller's
     // org (the `/v1` bearer proxy resolves the org from the token owner). Renders the
     // SHARED @hanzo/finance-ui board — the SAME component finance.hanzo.ai renders — so
     // a spend/usage/credits card is identical across both surfaces (the shared-reuse
@@ -2636,7 +2636,7 @@ const declared: Declaration[] = [
     // Super-admin per-org entitlements editor (hidden from every customer nav/
     // palette). Masquerade into an org, then toggle which products its
     // console shows — the admin half of the out-of-box "assemble your own backend"
-    // flow. Reads/writes /v1/orgs/{org}/entitlements (org-scoped server-side).
+    // flow. Reads/writes /v1/entitlements/orgs/{org} (org-scoped server-side).
     id: 'entitlements',
     icon: ShieldCheck,
     category: 'Settings',
@@ -3474,7 +3474,7 @@ const declared: Declaration[] = [
   //    work into the one console, on real /v1 backends with honest states.
   {
     // The user's personal memory — what they've asked the assistant to remember.
-    // Per-user, on the /v1/memory backend (hanzoai/ai). `enabled`: the module
+    // Per-user, on the /v1/ai/memory backend (hanzoai/ai). `enabled`: the module
     // renders now and shows an honest "initializing" card until the backend is
     // deployed — never fabricated memories.
     id: 'memory',
@@ -3696,7 +3696,7 @@ export const visibleCatalog = (viewer: Viewer, enabled?: string[] | null): Catal
     .filter(inBrand)
   // ENTITLEMENT (customer only): what the org's PLAN grants — always-on essentials
   // plus its `enabled` set. A different question from stage and a live one (the
-  // `/v1/orgs/{org}/entitlements` backend answers), so it composes here rather than
+  // `/v1/entitlements/orgs/{org}` backend answers), so it composes here rather than
   // collapsing into the stage predicate. An operator bypasses; a `null` set is
   // ungated. ONE predicate, `filterEntitled`, unchanged.
   return filterEntitled(byStage, enabled, viewer.admin)

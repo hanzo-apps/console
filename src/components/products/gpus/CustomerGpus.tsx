@@ -8,10 +8,10 @@
  * `params.tab`) but every tab is CUSTOMER-scoped, per-org, over the user-bearer proxies —
  * NEVER the admin `/paas` fleet, never the "PAAS_SERVICE_TOKEN" message:
  *
- *  - Overview / GPUs → visor's REAL catalog (`GET /v1/gpus`) + the org's OWN GPU
- *    machines (`GET /v1/machines`, GPU-filtered) via the `/v1/vm` proxy.
+ *  - Overview / GPUs → visor's REAL catalog (`GET /v1/visor/gpus`) + the org's OWN GPU
+ *    machines (`GET /v1/visor/machines`, GPU-filtered) via the `/v1/vm` proxy.
  *  - Clusters → the org's OWN dedicated clusters (`PlatformApi.listClusters` ←
- *    user-bearer `/v1/clusters`), honest-empty if none. (Reuses `ClustersTab`.)
+ *    user-bearer `/v1/visor/clusters`), honest-empty if none. (Reuses `ClustersTab`.)
  *  - Pools → GPU node pools derived from those real clusters (honest-empty).
  *  - Pricing → the REAL per-accelerator price list from the same live visor catalog.
  *  - Alerts → real alerts derived from the org's OWN GPU machines' health (honest-empty).
@@ -167,8 +167,8 @@ type CustomerGpuData = {
 }
 
 /** Load every CUSTOMER-scoped GPU source: the visor catalog, the org's cloud GPU
- *  machines (`/v1/machines`), the BYO connect fleet (`/v1/fleet/workers`), and the
- *  org's own clusters (`/v1/clusters`). All independent so a slow/denied source never
+ *  machines (`/v1/visor/machines`), the BYO connect fleet (`/v1/visor/fleet/workers`), and the
+ *  org's own clusters (`/v1/visor/clusters`). All independent so a slow/denied source never
  *  blocks another; the catalog gates first render. */
 function useCustomerGpuData(): CustomerGpuData {
   const [catalog, setCatalog] = useState<VisorGpuSize[]>([])

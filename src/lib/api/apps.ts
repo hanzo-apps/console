@@ -26,7 +26,7 @@
  *   GET   /v1/projects/:slug               get              → App
  *   GET   /v1/projects/:slug/deployments   deploy history   → AppDeployment[]
  *   PATCH /v1/projects/:slug               update           → App
- *   GET   /v1/tags?key=<pk->               resolved tags    → BrowserTag[]
+ *   GET   /v1/projects/tags?key=<pk->               resolved tags    → BrowserTag[]
  *
  * A site carries its own browser TAG CONFIG (`App.tags`, platform → non-secret pixel
  * id) and the publishable `key` the hosted tag ships in the page. Both live here
@@ -103,7 +103,7 @@ export type App = {
 }
 
 /**
- * One resolved browser tag from the public door (`GET /v1/tags`) — what the hosted
+ * One resolved browser tag from the public door (`GET /v1/projects/tags`) — what the hosted
  * tag will actually inject. `type` is the injector cloud dispatches on, so it is the
  * proof a configured id reached the page, not just the stored config echoed back.
  */
@@ -275,7 +275,7 @@ const TAG_HOST = 'https://api.hanzo.ai'
 
 /**
  * The one-line install for a site, keyed by its publishable `pk-`. The tag then
- * fetches `GET /v1/tags?key=` itself to learn which pixels to inject, so this line
+ * fetches `GET /v1/projects/tags?key=` itself to learn which pixels to inject, so this line
  * never changes as the site's tags do. `defer` keeps it off the parser's critical
  * path. Pure + host-defaulted so it is testable, matching `builderEditUrl`.
  */
@@ -308,11 +308,11 @@ export const AppsApi = {
 
   /**
    * The tags a site's hosted tag will actually inject, straight from the public door
-   * (`GET /v1/tags?key=`). This is the RESOLVED set — cloud drops a platform with no
+   * (`GET /v1/projects/tags?key=`). This is the RESOLVED set — cloud drops a platform with no
    * browser pixel and any empty id — so it answers "what will the page do", which the
    * stored config alone cannot. Public and fail-safe: an unresolvable key is an empty
    * set at 200, never an error.
    */
   browserTags: (key: string): Promise<BrowserTag[]> =>
-    restGet<unknown>(originV1Url(`tags?key=${enc(key)}`)).then(normalizeBrowserTags),
+    restGet<unknown>(originV1Url(`projects/tags?key=${enc(key)}`)).then(normalizeBrowserTags),
 }

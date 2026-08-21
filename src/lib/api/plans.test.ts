@@ -54,7 +54,7 @@ const CATALOG = [
 describe('PlansApi.plans', () => {
   afterEach(teardown)
 
-  it('reads the per-tenant billing proxy directly (NOT a bare /v1/pricing or /v1/plans that 401s live)', async () => {
+  it('reads the per-tenant billing proxy directly (NOT a bare /v1/pricing or /v1/plan that 401s live)', async () => {
     stubPlans(CATALOG)
     await PlansApi.plans()
     expect(lastUrl).toBe(`${ORIGIN}/v1/billing/plans`)

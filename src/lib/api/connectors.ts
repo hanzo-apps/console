@@ -1,11 +1,11 @@
 /**
  * Integrations API — the org-authed connector framework over the REAL cloud
- * `/v1/connectors` surface (cloud `clients/connectors`, a generic provider-
+ * `/v1/integrations` surface (cloud `clients/connectors`, a generic provider-
  * agnostic OAuth connector store on Base/SQLite; Slack is the reference impl,
- * GitHub the registered seam, Google/Salesforce plug into the same registry).
+ * GitHub the registered surface, Google/Salesforce plug into the same registry).
  *
  * Every call is same-origin, keyless and prefix-free (`originV1Url('integrations/...')`
- * → `<origin>/v1/connectors/...`, the CTO one-endpoint form — NOTHING before `/v1/`).
+ * → `<origin>/v1/integrations/...`, the CTO one-endpoint form — NOTHING before `/v1/`).
  * The console's OWN `app/v1` user-bearer BFF serves the `integrations` head — it mints a
  * short-lived user-bound IAM token server-side and forwards it; the cloud backend
  * resolves the org from the token's `owner` claim, so every list/connect/disconnect is
@@ -14,12 +14,14 @@
  * `proxy-allow.ts` CLOUD_HEADS). A cookie-only call would 403 ("X-Org-Id required"), so
  * the bearer BFF is mandatory.
  *
- * Routes (from the CONNECTORS_CONTRACT, cloud `clients/connectors`):
- *   GET  /v1/connectors                        list → { providers: [Provider] }
- *   GET  /v1/connectors/:provider              detail (404 unknown id)
- *   POST /v1/connectors/:provider/connect      → { authorizeUrl } | 503 not-configured
- *   POST /v1/connectors/:provider/disconnect   → { disconnected: true }
- *   GET  /v1/connectors/:provider/callback     PUBLIC (state-authed) — NOT called here;
+ * Routes (from the CONNECTORS_CONTRACT, cloud `clients/connectors`). The connector
+ * STORE is a leaf of the app — the provider rows it holds — while connect/disconnect
+ * act on the provider itself and answer at the app's own root:
+ *   GET  /v1/integrations/connectors           list → { providers: [Provider] }
+ *   GET  /v1/integrations/connectors/:provider detail (404 unknown id)
+ *   POST /v1/integrations/:provider/connect    → { authorizeUrl } | 503 not-configured
+ *   POST /v1/integrations/:provider/disconnect → { disconnected: true }
+ *   GET  /v1/integrations/:provider/callback   PUBLIC (state-authed) — NOT called here;
  *                                                it 302s the browser back to /integrations.
  *
  * Plain REST (raw JSON, real HTTP status). Payloads are normalized DEFENSIVELY — a
@@ -33,7 +35,7 @@
  */
 import { restGet, restPost, originV1Url } from './client'
 
-const BASE = 'connectors'
+const BASE = 'integrations'
 const enc = encodeURIComponent
 
 // ── Coercion helpers (defensive; crm.ts style) ──────────────────────────────
@@ -195,11 +197,11 @@ export function normalizeConnectResult(raw: unknown): ConnectResult {
 export const ConnectorsApi = {
   /** All connectable providers for the current org (org from the Bearer owner). */
   list: (): Promise<Provider[]> =>
-    restGet<unknown>(originV1Url(BASE)).then(normalizeProviders),
+    restGet<unknown>(originV1Url(`${BASE}/connectors`)).then(normalizeProviders),
 
   /** One provider by id (404 → the caller's honest "unavailable"). */
   get: (id: string): Promise<Provider> =>
-    restGet<unknown>(originV1Url(`${BASE}/${enc(id)}`)).then(normalizeProvider),
+    restGet<unknown>(originV1Url(`${BASE}/connectors/${enc(id)}`)).then(normalizeProvider),
 
   /**
    * Connect. ONE method for both kinds, because it is one route: an oauth
@@ -221,8 +223,8 @@ export const ConnectorsApi = {
 // these list the org's granted repos and import them into git.hanzo.ai. Every call
 // is org-scoped SERVER-SIDE (the granted set rides the org's own installation token),
 // over the SAME `integrations` head — nothing before `/v1/`.
-//   GET  /v1/connectors/github/repos          → { repos: [GitHubRepo] }
-//   POST /v1/connectors/github/repos/import   → { queued, repos }  (202)
+//   GET  /v1/integrations/github/repos          → { repos: [GitHubRepo] }
+//   POST /v1/integrations/github/repos/import   → { queued, repos }  (202)
 
 /** One repo the installation grants, annotated with its native import + sync status. */
 export type GitHubRepo = {

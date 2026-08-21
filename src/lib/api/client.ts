@@ -596,7 +596,7 @@ export const billingProxyV1Url = (path: string): string =>
  * `/v1/vm/<path>`.
  *
  * NB: the visor `/v1/vm/gpus` catalog (accelerator models + VRAM + price) is DISTINCT from
- * the cloud-api GPU INVENTORY at `/v1/gpus` (a per-org shape served by the cloud BFF) — the
+ * the cloud-api GPU INVENTORY at `/v1/visor/gpus` (a per-org shape served by the cloud BFF) — the
  * catalog MUST read visor, never cloud-api.
  */
 export const vmProxyV1Url = (path: string): string =>

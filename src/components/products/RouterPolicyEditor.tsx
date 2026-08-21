@@ -173,7 +173,7 @@ export function RouterPolicyEditor(_props: { params: Record<string, string> }) {
       {state.phase === 'loading' ? (
         <Loader label="Loading router policy…" />
       ) : state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={load} hint="GET /v1/router/policy" />
+        <BackendStateCard state={state.error} onRetry={load} hint="GET /v1/ai/router/policy" />
       ) : (
         <YStack gap="$4">
           {/* Enabled models — the allowlist the router may pick from. Empty = all allowed. */}

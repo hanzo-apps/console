@@ -4,7 +4,7 @@
  * Router — the per-org AI Usage & Training surface (registry `''` + `:tab`, AI
  * category). The customer face of the virtual `auto`/`zen-router` model, in three
  * tabs:
- *   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
+ *   Overview — routing observability + TRAINING status over `GET /v1/ai/router/stats`
  *     (org-scoped): (a) cost saved (a blended $/MTok PROXY, not billed dollars),
  *     (b) a quality proxy (learned reward / learned share / confidence / shadow
  *     agreement), (c) the per-task routed-model distribution, the last-retrain gate
@@ -129,7 +129,7 @@ function RouterOverview() {
       {state.phase === 'loading' ? (
         <Loader label="Loading routing stats…" />
       ) : state.phase === 'error' ? (
-        <BackendStateCard state={state.error} onRetry={() => load(range)} hint="GET /v1/router/stats" />
+        <BackendStateCard state={state.error} onRetry={() => load(range)} hint="GET /v1/ai/router/stats" />
       ) : (
         <RouterBoard stats={state.data} />
       )}

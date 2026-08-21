@@ -40,7 +40,7 @@ describe('AccountApi.setAvatar', () => {
   beforeEach(() => postForm.mockReset())
 
   it('sends the image as the multipart part named "file" and returns the served URL', async () => {
-    const url = 'https://api.hanzo.ai/v1/avatar/hanzo/u-antje/' + 'a'.repeat(64)
+    const url = 'https://api.hanzo.ai/v1/account/avatar/hanzo/u-antje/' + 'a'.repeat(64)
     postForm.mockResolvedValueOnce({ avatar: url })
 
     expect(await AccountApi.setAvatar(png())).toBe(url)

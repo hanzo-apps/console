@@ -62,7 +62,7 @@ async function mockNetwork(page: Page): Promise<void> {
   await page.route('**/*', (route) => {
     const path = new URL(route.request().url()).pathname
     if (/\/(v1\/)?paas\/apps$/.test(path)) return json(route, APPS)
-    if (path.endsWith('/v1/clusters')) return json(route, { data: [] })
+    if (path.endsWith('/v1/visor/clusters')) return json(route, { data: [] })
     if (path.includes('/v1/') || path.includes('/paas/')) return json(route, {})
     return route.continue()
   })

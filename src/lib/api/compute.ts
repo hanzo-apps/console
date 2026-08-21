@@ -9,9 +9,9 @@
  * or an honest not-configured / unavailable / empty state.
  *
  * THREE real sources, in honest priority:
- *  1. GPU inventory — `GET /v1/gpus` (the unified cloud binary, via the same-origin
- *     user-bearer `/v1` proxy → cloud-api /v1/gpus, org resolved from the Bearer
- *     owner). Per-GPU rows + live telemetry (`/v1/gpus/alerts`, `/v1/gpus/pools`).
+ *  1. GPU inventory — `GET /v1/visor/gpus` (the unified cloud binary, via the same-origin
+ *     user-bearer `/v1` proxy → cloud-api /v1/visor/gpus, org resolved from the Bearer
+ *     owner). Per-GPU rows + live telemetry (`/v1/visor/gpus/alerts`).
  *     A not-yet-served route (404) → the caller renders the honest not-configured /
  *     unavailable card, never an empty grid.
  *  2. Cluster inventory — `PlatformApi.listClusters()` (the org's DOKS). GPU-bearing
@@ -23,9 +23,11 @@
  *     Powers cost. Not yet registered on the backend → 404 → the caller degrades to
  *     the commerce usage total (`BillingApi.usage`) and finally to `—`.
  *
- * Per-GPU telemetry time-series (utilization-over-time, temps), pools, and alerts
- * stay honestly empty until a provider/agent connects them upstream. ALL calls are
- * org-scoped server-side: `/v1/gpus*` by the minted Bearer's owner claim, and the
+ * Per-GPU telemetry time-series (utilization-over-time, temps) and alerts stay honestly
+ * empty until a provider/agent connects them upstream. Pools are DERIVED from the org's
+ * own clusters (`gpuPoolsFromClusters`) — visor serves no pool inventory, so there is no
+ * pool read here to serve one. ALL calls are
+ * org-scoped server-side: `/v1/visor/gpus*` by the minted Bearer's owner claim, and the
  * `/v1` usage ledger by the `X-Org-Id` (`currentOrg()`) `client.ts` stamps.
  *
  * Reuses (does NOT duplicate) `PlatformApi.listClusters` / `clustersFromApps` from
@@ -195,18 +197,6 @@ export function normalizeAlert(raw: unknown, i = 0): GpuAlert {
     gpu: str(r.gpu) ?? str(r.gpuId) ?? str(r.device),
     cluster: str(r.cluster) ?? str(r.clusterName),
     at: str(r.at) ?? str(r.timestamp) ?? str(r.createdAt) ?? str(r.time),
-  }
-}
-
-export function normalizePool(raw: unknown, i = 0): GpuPool {
-  const r = rec(raw)
-  return {
-    id: str(r.id) ?? str(r.name) ?? `pool-${i}`,
-    name: str(r.name) ?? str(r.id),
-    model: str(r.model) ?? str(r.gpuModel),
-    size: num(r.size) ?? num(r.capacity) ?? num(r.total),
-    available: num(r.available) ?? num(r.free),
-    status: str(r.status) ?? str(r.state),
   }
 }
 
@@ -477,25 +467,18 @@ export const GPU_NODE_SIZES = [
 ] as const
 
 export const ComputeApi = {
-  /** Per-GPU inventory + telemetry from the native cloud (`GET /v1/gpus`). */
+  /** Per-GPU inventory + telemetry from the native cloud (`GET /v1/visor/gpus`). */
   gpus: async (): Promise<Gpu[]> => {
-    const r = await restGet<unknown>(cloudProxyV1Url('gpus'))
+    const r = await restGet<unknown>(cloudProxyV1Url('visor/gpus'))
     const arr = Array.isArray(r) ? r : rec(r).gpus
     return (Array.isArray(arr) ? arr : []).map((g) => normalizeGpu(g))
   },
 
-  /** GPU alerts from the native cloud (`GET /v1/gpus/alerts`). */
+  /** GPU alerts from the native cloud (`GET /v1/visor/gpus/alerts`). */
   alerts: async (): Promise<GpuAlert[]> => {
-    const r = await restGet<unknown>(cloudProxyV1Url('gpus/alerts'))
+    const r = await restGet<unknown>(cloudProxyV1Url('visor/gpus/alerts'))
     const arr = Array.isArray(r) ? r : rec(r).alerts
     return (Array.isArray(arr) ? arr : []).map((a, i) => normalizeAlert(a, i))
-  },
-
-  /** GPU scheduling pools from the native cloud (`GET /v1/gpus/pools`). */
-  pools: async (): Promise<GpuPool[]> => {
-    const r = await restGet<unknown>(cloudProxyV1Url('gpus/pools'))
-    const arr = Array.isArray(r) ? r : rec(r).pools
-    return (Array.isArray(arr) ? arr : []).map((p, i) => normalizePool(p, i))
   },
 
   /**

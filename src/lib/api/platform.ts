@@ -3,7 +3,7 @@
  *
  * TWO transports, cleanly split by authority:
  *   - Cluster INVENTORY + node-pool lifecycle (list / get / add-pool / scale-pool /
- *     delete-pool) go through the unified cloud binary at `/v1/clusters*`, via the
+ *     delete-pool) go through the unified cloud binary at `/v1/visor/clusters*`, via the
  *     same-origin user-bearer `/v1` proxy (app/v1/[...path]/route.ts → cloud-api,
  *     org resolved from the Bearer owner). This is the native, per-org surface every
  *     cluster consumer reads — one source of truth.
@@ -15,11 +15,11 @@
  *
  * REAL surfaces:
  *   - GET /v1/apps                 → the apps inventory (Status + Kubernetes modules).
- *   - GET /v1/clusters[/:id]       → the org's DEDICATED Hanzo K8S (DOKS) clusters, with
+ *   - GET /v1/visor/clusters[/:id]       → the org's DEDICATED Hanzo K8S (DOKS) clusters, with
  *     their node pools. Honest empty when the org has none (shared Hanzo Cloud is default).
- *   - POST   /v1/clusters/:cid/pools            → add a node pool.
- *   - POST   /v1/clusters/:cid/pools/:pid/scale → scale a pool's node count.
- *   - DELETE /v1/clusters/:cid/pools/:pid       → remove a node pool.
+ *   - POST   /v1/visor/clusters/:cid/pools            → add a node pool.
+ *   - POST   /v1/visor/clusters/:cid/pools/:pid/scale → scale a pool's node count.
+ *   - DELETE /v1/visor/clusters/:cid/pools/:pid       → remove a node pool.
  *   - POST /v1/org/{org}/cluster   → provision a fresh dedicated cluster (`/paas`).
  */
 import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
@@ -102,7 +102,7 @@ export type ProvisionClusterInput = {
 
 /**
  * Attach a BYO ("bring your own") Kubernetes cluster to the org's fleet
- * (`POST /v1/clusters`). The kubeconfig is validated by REACHING the cluster (its
+ * (`POST /v1/visor/clusters`). The kubeconfig is validated by REACHING the cluster (its
  * node + GPU inventory), sealed in the org's KMS server-side, and never stored or
  * returned by the console. `provider` is a free label (byo | k3s | …); `default`
  * makes it the org's default workload target. Returns the attached cluster
@@ -115,7 +115,7 @@ export type AttachClusterInput = {
   default?: boolean
 }
 
-/** Add a node pool to an existing cluster (`POST /v1/clusters/:cid/pools`). */
+/** Add a node pool to an existing cluster (`POST /v1/visor/clusters/:cid/pools`). */
 export type AddPoolInput = {
   /** DigitalOcean size slug (e.g. `s-4vcpu-8gb`, `gpu-h100x1-80gb`). */
   size: string
@@ -274,9 +274,9 @@ const clustersOf = (payload: unknown): Cluster[] => {
   return []
 }
 
-/** Canonical path for the clusters surface (`/v1/clusters…`); `next.config` rewrites
+/** Canonical path for the clusters surface (`/v1/visor/clusters…`); `next.config` rewrites
  *  it to the same-origin user-bearer `/v1` proxy. */
-const clustersUrl = (path = ''): string => cloudProxyV1Url(`clusters${path}`)
+const clustersUrl = (path = ''): string => cloudProxyV1Url(`visor/clusters${path}`)
 
 export const PlatformApi = {
   /** The apps inventory — the real "what is running" board across all clusters (`/paas`). */
@@ -286,7 +286,7 @@ export const PlatformApi = {
   },
 
   /**
-   * The signed-in org's dedicated DOKS clusters (`GET /v1/clusters`, org-scoped by the
+   * The signed-in org's dedicated DOKS clusters (`GET /v1/visor/clusters`, org-scoped by the
    * Bearer owner; honest empty when none provisioned). Each cluster carries its
    * `nodePools` (size + count) — the real source of the org's compute MACHINES (the
    * Machines page projects nodes from these pools).
@@ -301,7 +301,7 @@ export const PlatformApi = {
   },
 
   /**
-   * Attach a BYO cluster by kubeconfig (`POST /v1/clusters`). The backend validates
+   * Attach a BYO cluster by kubeconfig (`POST /v1/visor/clusters`). The backend validates
    * it by reaching the cluster (node + GPU inventory), seals the kubeconfig in the
    * org's KMS, and returns the attached cluster (`kind:"byo"`, `status:"attached"`).
    * Honest failures propagate as `ApiError`: 503 (BYO attach not configured — KMS
@@ -311,19 +311,19 @@ export const PlatformApi = {
   attachCluster: async (input: AttachClusterInput): Promise<Cluster> =>
     (await restPost<Cluster>(clustersUrl(), input)) ?? ({} as Cluster),
 
-  /** Detach a BYO cluster from the org's fleet (`DELETE /v1/clusters/:id`, id = its
+  /** Detach a BYO cluster from the org's fleet (`DELETE /v1/visor/clusters/:id`, id = its
    *  name). Only touches BYO clusters; managed pools use the node-pool routes. */
   detachCluster: (id: string): Promise<void> => restDelete(clustersUrl(`/${enc(id)}`)),
 
-  /** Add a node pool to a cluster (`POST /v1/clusters/:cid/pools`). */
+  /** Add a node pool to a cluster (`POST /v1/visor/clusters/:cid/pools`). */
   addPool: (clusterId: string, input: AddPoolInput): Promise<void> =>
     restPost<unknown>(clustersUrl(`/${enc(clusterId)}/pools`), input).then(() => undefined),
 
-  /** Scale a node pool's count (`POST /v1/clusters/:cid/pools/:pid/scale`). */
+  /** Scale a node pool's count (`POST /v1/visor/clusters/:cid/pools/:pid/scale`). */
   scalePool: (clusterId: string, poolId: string, count: number): Promise<void> =>
     restPost<unknown>(clustersUrl(`/${enc(clusterId)}/pools/${enc(poolId)}/scale`), { count }).then(() => undefined),
 
-  /** Remove a node pool (`DELETE /v1/clusters/:cid/pools/:pid`). */
+  /** Remove a node pool (`DELETE /v1/visor/clusters/:cid/pools/:pid`). */
   deletePool: (clusterId: string, poolId: string): Promise<void> =>
     restDelete(clustersUrl(`/${enc(clusterId)}/pools/${enc(poolId)}`)),
 

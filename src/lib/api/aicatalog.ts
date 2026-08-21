@@ -8,7 +8,7 @@
  *     provider, specs, tier, per-Mtok pricing, features). 375+ real models.
  *   • `/v1/models`        — the live routing set; a catalog model is "Available"
  *     iff it is actually servable right now (cross-referenced by stable id).
- *   • `/v1/plans`         — the subscription tiers + entitlements (rpm/tpm/quota),
+ *   • `/v1/plan`          — the subscription tiers + entitlements (rpm/tpm/quota),
  *     honest-empty when gated (401/404) — pure enrichment, never page-breaking.
  *
  * Nothing is fabricated: an unreachable endpoint yields an honest empty/error
@@ -395,7 +395,7 @@ export function fmtContext(n: number | null | undefined): string {
 
 // ── Plans (subscription tiers + entitlements) ────────────────────────────────
 
-/** Per-tier limits as the live `/v1/plans` surface publishes them (all optional-safe). */
+/** Per-tier limits as the live `/v1/plan` surface publishes them (all optional-safe). */
 export type PlanLimits = {
   requestsPerMinute?: number
   tokensPerMinute?: number
@@ -408,7 +408,7 @@ export type PlanLimits = {
   maxMembers?: number
 }
 
-/** One subscription plan as `/v1/plans` returns it (the rpm/tpm/quota rate card). */
+/** One subscription plan as `/v1/plan` returns it (the rpm/tpm/quota rate card). */
 export type Plan = {
   id: string
   name: string
@@ -434,7 +434,7 @@ export type Plan = {
  */
 export async function fetchPlans(): Promise<Plan[]> {
   try {
-    const r = await restGet<{ plans?: Plan[] } | Plan[]>(originV1Url('plans'))
+    const r = await restGet<{ plans?: Plan[] } | Plan[]>(originV1Url('plan'))
     if (Array.isArray(r)) return r
     return Array.isArray(r?.plans) ? r.plans : []
   } catch {

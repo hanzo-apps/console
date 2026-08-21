@@ -1,6 +1,6 @@
 /**
  * Platform sites — the per-org STATIC-SITE engine of the embedded PaaS
- * (`hanzoai/cloud` clients/projectsvc, exposed at **`/v1/platform/sites/*`** — the
+ * (`hanzoai/cloud` clients/projectsvc, exposed at **`/v1/projects/sites/*`** — the
  * SAME org-scoped store hanzo.app's builder deploys to). This is the console HUB's
  * deploy backend: create a site → upload a zip/tar.gz static build → view
  * deployments → bind custom domains.
@@ -10,9 +10,12 @@
  * the SAME identifier deep-links to hanzo.app/hanzo.chat (`?project=my-app`). There is
  * no `svc` suffix and no second copy of project state.
  *
- * Transport: `cloudProxyV1Url('platform/sites/...')` → the same-origin `/v1`
- * user-bearer BFF; org is server-authoritative from the Bearer `owner` claim (a
- * cookie-only call 403s). The `platform` head is allow-listed in `proxy-allow.ts`.
+ * Transport: `cloudProxyV1Url('projects/...')` → the same-origin `/v1` user-bearer BFF;
+ * org is server-authoritative from the Bearer `owner` claim (a cookie-only call 403s).
+ * The `projects` head is allow-listed in `proxy-allow.ts`. The collection lives under
+ * `projects/sites`; a site's OWN record, deployments and domains are the project's, so
+ * they are addressed at `projects/:slug` — the per-slug twins under the sites path were
+ * deleted rather than moved.
  * The deploy artifact is posted RAW (`restPostRaw`) so its binary bytes + Content-Type
  * ride through the proxy verbatim (never JSON-encoded).
  */
@@ -105,29 +108,33 @@ export const ARTIFACT_ZIP = 'application/zip'
 export const ARTIFACT_GZIP = 'application/gzip'
 
 const seg = (s: string) => encodeURIComponent(s)
-const base = (slug: string) => `platform/sites/${seg(slug)}`
+/** The site READ — "is it live yet?", answered whether or not anything is deployed. */
+const site = (slug: string) => `projects/sites/${seg(slug)}`
+/** The project a site IS: its record, its deployments, its domains. The per-slug twins
+ *  under the sites path are gone, so every write and every sub-resource is addressed here. */
+const project = (slug: string) => `projects/${seg(slug)}`
 
 export const PlatformSitesApi = {
   /** Every site the caller's org owns (newest-updated first). Honest empty when none. */
   list: (): Promise<Site[]> =>
-    restGet<Site[]>(cloudProxyV1Url('platform/sites')).then((r) => r ?? []),
+    restGet<Site[]>(cloudProxyV1Url('projects/sites')).then((r) => r ?? []),
 
   /** One site by slug, or null when it doesn't exist yet. */
   get: async (slug: string): Promise<Site | null> => {
     try {
-      return (await restGet<Site>(cloudProxyV1Url(base(slug)))) ?? null
+      return (await restGet<Site>(cloudProxyV1Url(site(slug)))) ?? null
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return null
       throw e
     }
   },
 
-  /** Create a site (`POST /v1/platform/sites`). 201 → the new site; 409 → slug taken. */
+  /** Create a site (`POST /v1/projects/sites`). 201 → the new site; 409 → slug taken. */
   create: (input: CreateSiteInput): Promise<Site> =>
-    restPost<Site>(cloudProxyV1Url('platform/sites'), input) as Promise<Site>,
+    restPost<Site>(cloudProxyV1Url('projects/sites'), input) as Promise<Site>,
 
   update: (slug: string, patch: UpdateSiteInput): Promise<Site> =>
-    restPatch<Site>(cloudProxyV1Url(base(slug)), patch) as Promise<Site>,
+    restPatch<Site>(cloudProxyV1Url(project(slug)), patch) as Promise<Site>,
 
   /**
    * Ensure a deployable site exists for `slug` (the IAM project name). Create it if
@@ -150,7 +157,7 @@ export const PlatformSitesApi = {
 
   /**
    * Deploy a BUILT static site: POST the raw zip/tar.gz bytes to
-   * `/v1/platform/sites/:slug/deploy`. Synchronous — returns the `live` deployment
+   * `/v1/projects/:slug/deploy`. Synchronous — returns the `live` deployment
    * (or an `error` one with a message). `contentType` is `ARTIFACT_ZIP`/`ARTIFACT_GZIP`;
    * cloud content-sniffs the real format by magic bytes regardless.
    */
@@ -159,14 +166,14 @@ export const PlatformSitesApi = {
     artifact: ArrayBuffer | Uint8Array | Blob,
     contentType: string,
   ): Promise<SiteDeployment> =>
-    restPostRaw<SiteDeployment>(cloudProxyV1Url(`${base(slug)}/deploy`), artifact, contentType) as Promise<SiteDeployment>,
+    restPostRaw<SiteDeployment>(cloudProxyV1Url(`${project(slug)}/deploy`), artifact, contentType) as Promise<SiteDeployment>,
 
   listDeployments: (slug: string): Promise<SiteDeployment[]> =>
-    restGet<SiteDeployment[]>(cloudProxyV1Url(`${base(slug)}/deployments`)).then((r) => r ?? []),
+    restGet<SiteDeployment[]>(cloudProxyV1Url(`${project(slug)}/deployments`)).then((r) => r ?? []),
 
   getDeployment: async (slug: string, id: string): Promise<SiteDeployment | null> => {
     try {
-      return (await restGet<SiteDeployment>(cloudProxyV1Url(`${base(slug)}/deployments/${seg(id)}`))) ?? null
+      return (await restGet<SiteDeployment>(cloudProxyV1Url(`${project(slug)}/deployments/${seg(id)}`))) ?? null
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return null
       throw e
@@ -175,7 +182,7 @@ export const PlatformSitesApi = {
 
   /** Every public host bound to this site (its hanzo.app subdomain + custom domains). */
   listDomains: (slug: string): Promise<string[]> =>
-    restGet<{ domains?: string[] }>(cloudProxyV1Url(`${base(slug)}/domains`)).then((r) => r?.domains ?? []),
+    restGet<{ domains?: string[] }>(cloudProxyV1Url(`${project(slug)}/domains`)).then((r) => r?.domains ?? []),
 
   /**
    * Bind one or more custom hostnames (`POST .../domains`). Returns the just-`bound`
@@ -184,7 +191,7 @@ export const PlatformSitesApi = {
    * bind it today") — the caller surfaces that, never fabricates a binding.
    */
   bindDomains: (slug: string, domains: string[]): Promise<{ bound: string[]; domains: string[] }> =>
-    restPost<{ bound?: string[]; domains?: string[] }>(cloudProxyV1Url(`${base(slug)}/domains`), { domains }).then(
+    restPost<{ bound?: string[]; domains?: string[] }>(cloudProxyV1Url(`${project(slug)}/domains`), { domains }).then(
       (r) => ({ bound: r?.bound ?? [], domains: r?.domains ?? [] }),
     ),
 }

@@ -1,12 +1,12 @@
 /**
- * Login-manager client — the browser face of the cloud `/v1/links` registry: the
+ * Login-manager client — the browser face of the cloud `/v1/link` registry: the
  * org+user-scoped record of which AI provider accounts (Claude Max, ChatGPT Plus, a
  * Hanzo/api key) are signed in on which machines, with each account's live usage.
  *
- * Same-origin, keyless, prefix-free (`cloudProxyV1Url('links')` → `<origin>/v1/links`):
- * the `links` head terminates at the console's `app/v1` user-bearer BFF (org from the
+ * Same-origin, keyless, prefix-free (`cloudProxyV1Url('link')` → `<origin>/v1/link`):
+ * the `link` head terminates at the console's `app/v1` user-bearer BFF (org from the
  * token owner, user from the validated subject; a cookie-only call 403s) in the
- * standalone build, and at cloud's native `/v1/links` under the session cookie in the
+ * standalone build, and at cloud's native `/v1/link` under the session cookie in the
  * go:embed build. Bare JSON (not the casibase envelope), so the plain-REST transport.
  *
  * Payloads are normalized DEFENSIVELY (snake_case tolerated, missing fields → honest
@@ -16,7 +16,7 @@ import { restGet, restPost, restDelete, cloudProxyV1Url } from './client'
 
 const url = (p: string): string => {
   const clean = p.replace(/^\/+/, '')
-  return cloudProxyV1Url(clean ? `links/${clean}` : 'links')
+  return cloudProxyV1Url(clean ? `link/${clean}` : 'link')
 }
 
 /** How an account bills its usage: a subscription bills the user's own plan (metered

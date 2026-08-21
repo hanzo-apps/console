@@ -277,7 +277,7 @@ Findings + fixes (all in console2; honest states everywhere, no fakes):
 - **Platform contract was wrong.** The real platform serves `GET /v1/apps` (the
   apps inventory: declared/running/latest tag + drift + health + cluster +
   namespace, ~100 services) and `GET|POST /v1/org/{org}/cluster` — NOT
-  `/v1/clusters` and NOT any `/k8s/{kind}` passthrough (those 401/404). `lib/api/
+  `/v1/visor/clusters` and NOT any `/k8s/{kind}` passthrough (those 401/404). `lib/api/
   platform.ts` reworked to `PlatformApi.apps()` + org-scoped `listClusters`/
   `provisionCluster`; dead `KubernetesApi`/`CLUSTER_ROUTES` removed.
   - **Status** now reads `/v1/apps` → REAL health board (Services/Healthy/Clusters).
@@ -485,7 +485,7 @@ editor + create; nothing is forked.
   `POST /v1/embeddings` via the keyless `/ai` proxy (already allow-listed).
 - **Jobs** = per-file index status (`get-files`: Pending/Processing/Finished/
   Error — there is no async job entity) + a real upload ingest
-  (`POST /v1/docs/ingest`, source=upload).
+  (`POST /v1/ai/rag/ingest`, source=upload).
 - **Overview** metric cards (vectors/storage/queries/latency/cost) read
   `GET /v1/get-cloud-usages` — a forward-compatible client coded to the documented
   shape that degrades EVERY field to "—" with no sparkline today (the read API
@@ -666,7 +666,7 @@ this pass is small and precise, not padding.
 - **Intentionally NOT built (honest):** Feature Flags / Backups / Support Tickets have NO backend
   anywhere in the Hanzo stack — adding permanent empty-state pages would be fabricated padding.
   Regions/Nodes duplicate `clusters`/`kubernetes`/`machines` (nodes derive from cluster node
-  pools; there is no `/v1/machines` route by design). Jobs is intentionally Tasks (registry's own
+  pools; there is no `/v1/visor/machines` route by design). Jobs is intentionally Tasks (registry's own
   decision). No `Billing` category exists in `brand-scope.ts` — billing lives under `Observe`.
 - **No cloud changes.** The billing sub-pages ride the existing `/billing/*` proxy (which already
   forwards any path with server-side org scoping); commerce already serves subscriptions +
@@ -735,7 +735,7 @@ not configured" message. Plus a rich **Agents** dashboard over `/v1/agents`.
   `proxy-allow.ts`); Containers / Applications → **paas** `/paas`; Tasks → **tasksd**
   `/tasksd/v1/tasks/*`; Edge → honest managed/coming-soon (no backend). Verified live
   in-cluster: visor `/v1/regions|sizes|gpus` = 200 real DO catalog + pricing,
-  `/v1/machines` = 403 without the bearer (per-org); cloud `/v1/agents`/`/v1/functions`
+  `/v1/visor/machines` = 403 without the bearer (per-org); cloud `/v1/agents`/`/v1/functions`
   = 404 (concurrent cloud lane binding them), `/v1/prompts` = 200 `{data,meta}`; tasks
   `/v1/tasks/cluster/health` = 200.
 - **Agents dashboard** (`AgentsModule` + `lib/api/agents.ts` + `agents/{parts,forms}.tsx`):
@@ -1617,7 +1617,7 @@ backend's real tenancy model (RED-checkable).
   real desk once reachable. `erp.ts` `ErpApi`.
 - **Commerce — Products full CRUD + real store settings.** Products is now create +
   list + **delete** over `/v1/product` (validator needs name+sku+slug — auto-slugified);
-  Store settings reads the org's REAL storefront (`/v1/store/current`,
+  Store settings reads the org's REAL storefront (`/v1/commerce/store/current`,
   `CommerceApi.currentStore`). Orders/Customers/Inventory/Promotions stay real per-org
   reads on the shared `CommerceResource`. All via the `/commerce` bearer proxy (org from
   the token owner; per-org SQLite). Kind-names verified live (product/order/user=
@@ -1662,7 +1662,7 @@ same live pass surfaced, folds in RED's LOW-1, and lands the two Playground fixe
   `''` (rowKey collisions). Fixed with a number-aware `idStr`. And the media bytes url carries
   a `?prefix=<tenant>` query my filename-reconstruction dropped → new `cmsMediaSrc` proxies the
   doc's REAL `url` (path+query) through `/cms` (never the cross-origin host). +5 cms tests.
-- **[live-shape] Commerce store settings.** `/v1/store/current` wraps the record as
+- **[live-shape] Commerce store settings.** `/v1/commerce/store/current` wraps the record as
   `{ store: {...} }` (verified live) — `currentStore` now unwraps `.store` before normalizing
   (a bare object still works), so the Store-settings page shows the real name/currency.
 - **[RED LOW-1] `/erp` allow-list pinned to the 3 UI DocTypes.** Was any `api/resource/
@@ -2393,7 +2393,7 @@ search}` all 403 while their `/v1/*` twins 200.
   Indexer/Oracles/Authz. All heads are already in `proxy-allow.ts` `CLOUD_HEADS`, so
   the `/v1` proxy admits them; the response shape is identical (same cloud-api
   handler, just a minted bearer). `memory` was LEFT on bare `/v1` — verified live it
-  is session-scoped (`/v1/memory/list` = 200). `canonical-paths.test.ts` MOVED
+  is session-scoped (`/v1/ai/memory/list` = 200). `canonical-paths.test.ts` MOVED
   gpus/clusters/functions/paas from the "canonical /v1" block to the "/cloud
   exception" block (it had ENSHRINED the broken bare-path assumption) + `functions.
   test.ts` now asserts `/v1/functions`.
@@ -2614,7 +2614,7 @@ Affiliates, nothing forked.
   `/vm`, `/v1/billing/*` → `/billing/v1`, `/v1/commerce/*` → `/commerce/v1`. These are
   server-internal (client only ever builds `/v1/…`); `/billing`+`/commerce` use their own
   service-token / different-audience proxies, so they stay namespaced (out of scope).
-- **Acceptance (live, built server):** `GET /v1/automations/connectors` → 401 JSON
+- **Acceptance (live, built server):** `GET /v1/auto/connectors` → 401 JSON
   `{"error":"Sign in to use Hanzo Cloud."}` (reaches the cloud BFF, NOT a 404, NOT the SPA
   shell); `/v1/agents`, `/v1/platform/projects` → 401 JSON (regression OK); `/v1/billing/balance`
   → 401 JSON `"Sign in to view billing."` (the distinct message proves the billing dispatch
@@ -2767,7 +2767,7 @@ the removed billing band, and single-level nav are untouched).
   cross-surface ?project= value` — no `svc` suffix, no second copy of project state.
   `ProjectApi.create` gained an optional `displayName` (friendly label; the slug is the
   id) — additive, backward-compatible.
-- **Deploy = the embedded PaaS static engine** (`/v1/platform/sites/*`, the SAME store
+- **Deploy = the embedded PaaS static engine** (`/v1/projects/sites/*`, the SAME store
   hanzo.app deploys to; cloud `clients/projectsvc`, PR #204). New client
   `lib/api/platform-sites.ts` (`PlatformSitesApi` — list/get/create/ensure/update,
   `deploy` (raw artifact), listDeployments/getDeployment, list/bindDomains) over the
@@ -2835,7 +2835,7 @@ UNROUTED. So:
   cookie-authenticated via SanitizeIdentity) — the Next BFF proxies (`app/v1`,
   `/ai`, …) are pruned by build:embed. So client code must work against cloud's
   native `/v1` (it does; the HUB's deploy upload POSTs the raw artifact straight
-  to cloud's `/v1/platform/sites/:slug/deploy`). The `bearer-proxy` binary-body
+  to cloud's `/v1/projects/:slug/deploy`). The `bearer-proxy` binary-body
   fix only matters for the (unrouted) standalone console — harmless in the embed.
 - Net: the HUB (create/deploy/domains/cross-surface links) goes live on
   console.hanzo.ai on the next `hanzoai/cloud` release from main (CONSOLE_REF=main
@@ -2950,7 +2950,7 @@ contract. The law: a client-facing same-origin API path is `/v1/<head>/…` — 
   `ai` head so `/v1/ai/connections` dispatches (never shadows a cloud head — `ai` ≠ `ai-accounts`
   as a segment). This also fixes image/video/connections on the go:embed console (the old
   `/ai/v1/*` had no cloud route there).
-- **Nested inner-version dropped.** `/v1/websearch/v1/scrape` → `/v1/websearch/scrape` (the
+- **Nested inner-version dropped.** `/v1/websearch/v1/websearch/scrape` → `/v1/websearch/scrape` (the
   scrape descriptor/Fact — the console documents it, never calls it live; the cloud websearch
   backend should serve the flat form). `/v1/o11y/*` was already version-less (v8.4.124).
   `apm.ts` stale SigNoz-upstream `/api/v1/<resource>` doc comments repointed to the
@@ -3046,7 +3046,7 @@ origin/main did NOT build; the consistency fix is folded in here, no package bum
   and is EMBEDDED as the Policy tab — never a second copy. The `router` id keeps the
   clean `/router` URL (the old `inference-router` id is retired; the feature is fresh
   from v8.4.136).
-- **Overview reads `GET /v1/router/stats`** (org-scoped, RequirePrincipal upstream)
+- **Overview reads `GET /v1/ai/router/stats`** (org-scoped, RequirePrincipal upstream)
   via `RouterStatsApi` (`lib/api/router.ts`, `originGet('router/stats', {hours})` —
   casibase envelope, same transport as `get-router-policy`). A range toggle
   (24h/7d/30d → `?hours=`, within the server's 90d cap). Renders: **(a) Cost saved**
@@ -3739,9 +3739,10 @@ re-opened a closed money hole to fix nothing. The trial credit still lands — c
 grants it server-side when a card is vaulted, and signup grants it server-side — and
 that path is untouched. `src/lib/billing/welcome.ts` had no callers left at all.
 
-Scope, checked rather than assumed: `/v1/finance/payment-methods` is still 401 (alive)
-and `/v1/finance/methods` is 404, so the finance ledger keeps the compound name — a
-blanket repo-wide rename would have broken it. The Billing Center's tab slugs
+Scope, checked rather than assumed at the time: `/v1/finance/payment-methods` was 401
+(alive) and `/v1/finance/methods` 404, so the finance ledger kept the compound name.
+SUPERSEDED by the fold — `/v1/finance` is gone entirely and the saved cards answer at
+`/v1/billing/methods`; see the last section. The Billing Center's tab slugs
 (`/billing/payment-methods`, `/billing/credits`) are console page URLs, not server
 routes, and are unchanged.
 
@@ -4128,7 +4129,7 @@ resolves the org from the Bearer owner and requires the org-admin bit to mutate)
 form as every other read — the ids are SET on the `projects` head).
 
 The preview is deliberately a separate read from the form above it. The door drops a
-platform with no browser pixel and any empty id, so `GET /v1/tags?key=` answers "what the
+platform with no browser pixel and any empty id, so `GET /v1/projects/tags?key=` answers "what the
 page will do", which the stored config alone cannot. And the install snippet names
 `api.hanzo.ai` explicitly, NOT `config.cloudUrl` — in the browser that resolves to the
 console's own origin, so the snippet would have told a customer to load `event.js` from
@@ -4193,8 +4194,9 @@ answered by the site's active release, not by a line in a Dockerfile. The Docker
 says why the old way went: a console CSS fix was a CLOUD release (~22 min) on a
 single-replica `strategy: Recreate`, which took api.hanzo.ai down for a measured 2m15s.
 
-The publish route exists and is org-gated — `GET /v1/sites/hanzo-console/releases`
-answers **403 `X-Org-Id required`**, not 404. `apps/sites` pulls no OCI image; a release
+The publish route exists and is org-gated — `GET /v1/projects/hanzo-console/releases`
+answers **403 `X-Org-Id required`**, not 404 (it was `/v1/sites/…` when this was
+measured; sites folded under projects). `apps/sites` pulls no OCI image; a release
 is uploaded bytes.
 
 **Consequence, measured 2026-08-08:** console `main` carries the design-system work
@@ -4818,3 +4820,76 @@ nothing about provenance).
 `pnpm build` compiled in 88s, 20/20 static pages · `node scripts/sync-catalog.mjs
 --check` reports the record, the registry and the platform agree (and exits 1 with
 "nothing was compared" when pointed at a dead address).
+
+## Every read moves to the one address its capability answers at
+
+HIP-0139 gives a capability ONE address, and cloud closed the misfiled ones by fold:
+each route moved a segment down under the app that serves it, with no alias and no
+redirect behind it. Forward only — the old addresses stop resolving when the next
+cloud release rolls, so a console that still spells them is a console whose pages go
+blank on the deploy, not one that degrades.
+
+**The document is the oracle, not the memory of it.** `openapi.yaml` at cloud main
+lists every path the binary serves; `public.yaml` is the customer half. The method
+that found the stale ones is mechanical and self-checking: enumerate every `/v1/…`
+literal AND every builder stem (`cloudProxyV1Url('machines')` carries no `/v1/` to
+grep for, which is exactly why a literal-only sweep reads clean and ships broken),
+normalise `{id}`/`:id`/`${…}` to one wildcard, and match against the document. What
+it does not serve is stale; the destination is the same TAIL under the new root.
+
+**What moved.** visor took six roots (`machines · gpus · clusters · fleet · k8s ·
+compute`); `account` took six per-person ones (`keys · orgs · appearance · avatar ·
+csrf · embed`); `platform` took the four build aggregates; `projects` took `sites ·
+edge · tags`; `ai` took `router · org/settings · finetune · memory · rag ·
+docs/ingest · feedback · traffic`; commerce took `cart · catalog · payments ·
+plans/{entries,seed} · store`; and `entitlements · provisioning · integrations ·
+explorer · pricing · openapi · knowledge · link · auto · lsp · dataset · label ·
+reference · leaderboard · admission · treasury` each answer at their own name now.
+`proxy-allow.ts` carries the OWNER, never the old root, which is what a head-based
+list was always supposed to mean.
+
+**Three that are not a rename.**
+
+- `POST /v1/machines/launch` was never cloud's; it is visor's upstream spelling, and
+  cloud answers a launch as `POST` on the collection — now `/v1/visor/machines`. The
+  console had been posting at an address only the far side of the proxy knows.
+- `GET /v1/gpus/pools` had no server before the fold and has no head after it. The
+  read is gone; the operator Pools tab derives its rows from the org's own clusters,
+  the same pure function the customer tab already used.
+- `GET /v1/edge/nodes` likewise. `/v1/projects/edge` answers a STATE — which provider
+  fronts the sites, whether it can act, what it caches and for how long — so the
+  module shows that instead of a node table nothing ever filled.
+
+**The money reads changed shape, not just address.** `/v1/finance` was a second
+spelling of one capability: `balance` and `usage` are billing's own reads under
+another name, `credits`/`invoices`/`payment-methods` are addresses commerce already
+serves under `/v1/billing`, `ledger` is cloud's typed op at `/v1/billing/ledger`, and
+the reserve fund is `/v1/treasury`. A fold onto an address somebody already answers
+is a DELETION, so three of them re-parse as well as re-point (`finance-ledger.ts`):
+
+- `balance` — `{balance,holds,available,account}` in cents, where the old shape named
+  `pending` what commerce calls `holds`, and a prepaid wallet owes nothing.
+- `usage` — one row per BILLED call, where the old address answered a rollup over
+  `?range=`. The rollup has no server; it is computed from the rows with the SAME
+  normalizer AI Metrics reads them with, never a second parse of one wire.
+- `credits` — commerce's own creditgrant rows, keyed by `userId`. The browser never
+  sends one: the billing proxy pins `user`/`userId`/`customerId` to the caller's
+  server-resolved subject on every request, which is the same pin that keeps the
+  read inside the caller's own tenant.
+
+`/v1/billing/ledger` gets a static route of its own (`app/v1/billing/ledger`). It has
+to: the `[...path]` catch-all beside it forwards `/v1/billing/*` to commerce with the
+service token, and commerce does not answer that one — cloud does, from the caller's
+own bearer.
+
+**Two BFFs stopped being their own front door.** The catalog and plan CMS proxies
+moved to `app/v1/commerce/{catalog,plans}/[...path]`, because that is where the
+document serves them. Commerce's OWN mount is still `/v1/{catalog,plans}/*` — a
+standalone binary opens its bundle at `/v1`, and only the co-resident mount inside
+cloud moved — so the upstream path each handler builds is unchanged. Client address
+from the document, upstream address from the service: they are different facts and
+the handler is where they meet.
+
+**Verified:** `pnpm typecheck` clean · `pnpm test` 289 files / 3615 tests pass · a
+grep of the final tree for every folded root finds no live caller, only the notes
+that say where it went.

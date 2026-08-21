@@ -4,21 +4,22 @@
  * commerce owns the plan authority as the source of truth (`models/plan`, the "system"
  * namespace): the subscription tiers + DNS plans that `GET /v1/billing/plans` and the
  * internal-ledger renewal charge derive from. This client drives its SuperAdmin CRUD:
- *   GET    /v1/plans/entries          — list (raw admin rows)
- *   POST   /v1/plans/entries          — create (unique slug)
- *   PUT    /v1/plans/entries/:slug     — update (slug IMMUTABLE — the handler rejects a
+ *   GET    /v1/commerce/plans/entries          — list (raw admin rows)
+ *   POST   /v1/commerce/plans/entries          — create (unique slug)
+ *   PUT    /v1/commerce/plans/entries/:slug     — update (slug IMMUTABLE — the handler rejects a
  *                                        body slug ≠ path slug with 400)
- *   DELETE /v1/plans/entries/:slug     — delete
- *   POST   /v1/plans/seed             — upsert the embedded seed (non-destructive)
+ *   DELETE /v1/commerce/plans/entries/:slug     — delete
+ *   POST   /v1/commerce/plans/seed             — upsert the embedded seed (non-destructive)
  *
  * MONEY-ADJACENT: a plan's `price` is the real monthly renewal charge, so editing it
  * changes what subscribers pay — this is a live billing control, SuperAdmin-gated by
  * commerce (`requireSuperAdmin`, owner=="admin"). The free($0) vs custom(null,
  * `contactSales`) distinction is preserved as sent (never coerced null→0).
  *
- * SOURCE + AUTH: the console's OWN same-origin `/v1/plans/*` (`cloudProxyV1Url`) →
- * the standalone `app/v1/plans/[...path]` user-bearer proxy → commerce; on the go:embed
- * console the SAME path hits the cloud binary's embedded commerce. Bare JSON (not the
+ * SOURCE + AUTH: the console's OWN same-origin `/v1/commerce/plans/*` (`cloudProxyV1Url`)
+ * → the standalone `app/v1/commerce/plans/[...path]` user-bearer proxy → commerce, whose
+ * own mount is `/v1/plans/*`; on the go:embed console the SAME path hits the cloud
+ * binary's embedded commerce, where the plan CMS is a leaf of the commerce root. Bare JSON (not the
  * casibase envelope), so the plain-REST transport is used. Optional-safe normalizers.
  */
 import { cloudProxyV1Url, restGet, restPost, restPut, restDelete } from './client'
@@ -113,16 +114,16 @@ export type PlanInput = {
   metadata: Record<string, unknown>
 }
 
-const entryUrl = (slug: string): string => cloudProxyV1Url(`plans/entries/${encodeURIComponent(slug)}`)
+const entryUrl = (slug: string): string => cloudProxyV1Url(`commerce/plans/entries/${encodeURIComponent(slug)}`)
 
 export const PlansAdminApi = {
   /** List every plan (admin view). Throws a typed `ApiError` (403 non-admin, 404 not
    *  routed) the caller renders as an honest state. */
-  list: async (): Promise<Plan[]> => normalizeList(await restGet<unknown>(cloudProxyV1Url('plans/entries'))),
+  list: async (): Promise<Plan[]> => normalizeList(await restGet<unknown>(cloudProxyV1Url('commerce/plans/entries'))),
 
   /** Create a plan (unique slug required). Returns the created plan. */
   create: async (input: PlanInput): Promise<Plan> =>
-    normalizePlan(await restPost<unknown>(cloudProxyV1Url('plans/entries'), input)),
+    normalizePlan(await restPost<unknown>(cloudProxyV1Url('commerce/plans/entries'), input)),
 
   /** Update a plan by slug (the slug identity is immutable — commerce pins the path slug). */
   update: async (slug: string, input: PlanInput): Promise<Plan> =>
@@ -135,7 +136,7 @@ export const PlansAdminApi = {
 
   /** Upsert the embedded plan seed (idempotent, non-destructive). Returns the number created. */
   seed: async (): Promise<number> => {
-    const r = (await restPost<{ created?: number }>(cloudProxyV1Url('plans/seed'))) ?? {}
+    const r = (await restPost<{ created?: number }>(cloudProxyV1Url('commerce/plans/seed'))) ?? {}
     return typeof r.created === 'number' ? r.created : 0
   },
 }
