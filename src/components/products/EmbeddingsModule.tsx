@@ -11,7 +11,7 @@
  *   Collections  the org's knowledge stores (get-stores) as vector collections,
  *                each → the Qdrant/Search index `{owner}-{store}-docs`.
  *   Ingest       one surface, three real sources (text · GitHub repo · website) →
- *                POST /v1/docs/ingest; repos/crawls run as durable hanzoai/tasks
+ *                POST /v1/ai/rag/ingest; repos/crawls run as durable hanzoai/tasks
  *                workflows (tracked in Tasks), plus the store's real indexed files.
  *   Models       the gateway's embedding models (/v1/models) + generate (/v1/embeddings).
  *   Settings     org embedding defaults + the wiring this page depends on.

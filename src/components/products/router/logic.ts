@@ -3,7 +3,7 @@
  *
  * Dependency-free by construction (no React, no @hanzo/gui, no registry), so it
  * unit-tests in node and is the single home for the honest-state decisions:
- *   - a partial/garbage `/v1/router/stats` payload → a well-formed `RouterStats`
+ *   - a partial/garbage `/v1/ai/router/stats` payload → a well-formed `RouterStats`
  *     with honest defaults (`normalizeStats`), never a throw at render;
  *   - a nullable/absent metric → an em-dash "—" (never a fabricated number);
  *   - the cost indices are labeled a BLENDED $/MTok PROXY, not billed dollars
@@ -35,7 +35,7 @@ function countMap(v: unknown): Record<string, number> {
 }
 
 /**
- * Normalize any `/v1/router/stats` payload into a well-formed `RouterStats`. The
+ * Normalize any `/v1/ai/router/stats` payload into a well-formed `RouterStats`. The
  * backend contract is trusted but partial-safe: a missing block degrades to an
  * honest empty (no cost, empty distributions, zero window) rather than throwing
  * during render. `cost` stays absent (null) when there are no priced events so the

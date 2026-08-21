@@ -41,12 +41,12 @@ const ALLOWED = new Set([
   'v1/videos/generations', // text-to-video CREATE — async: JSON in → a queued job object out (Sora-style)
   'v1/ai/connections', // AI Login Manager (ai#79/#80): GET list + POST link a BYO provider key (KMS-sealed server-side)
   'v1/training/clients', // Interactive Training: GET list clients + POST create a LoRA training client (engine plane)
-  'v1/router/policy', // Router: GET the caller's org policy + PUT upsert it (org-admin gated upstream, self-scoped)
-  'v1/router/stats', // Router: the caller org's routing observability aggregate (RequirePrincipal upstream, self-scoped)
+  'v1/ai/router/policy', // Router: GET the caller's org policy + PUT upsert it (org-admin gated upstream, self-scoped)
+  'v1/ai/router/stats', // Router: the caller org's routing observability aggregate (RequirePrincipal upstream, self-scoped)
   'v1/get-training-contribution', // Router: the caller org's training opt-in flag (org-admin gated upstream)
   'v1/update-training-contribution', // Router: set the caller org's training opt-in flag (org-admin gated upstream)
-  'v1/org/settings', // Routing admin: one org's settings row — GET read, PUT upsert (PATCH-merge), DELETE revert (super-admin gated upstream)
-  'v1/org/settings/list', // Routing admin: per-org settings rows (super-admin gated upstream)
+  'v1/ai/org/settings', // Routing admin: one org's settings row — GET read, PUT upsert (PATCH-merge), DELETE revert (super-admin gated upstream)
+  'v1/ai/org/settings/list', // Routing admin: per-org settings rows (super-admin gated upstream)
 ])
 
 /**

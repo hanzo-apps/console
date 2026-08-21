@@ -312,16 +312,13 @@ export const CLOUD_HEADS: readonly string[] = [
   // heads the console actually calls — read (list/get), mutate (add/update/delete/refresh).
   // Deliberately NOT `get-global-stores` (a cross-tenant read the console never invokes)
   // nor `get-store-names` (unused) — do not widen the tunnel past what's used.
-  // Knowledge-store ingest + per-file index status (casibase docs surface): the
-  // Embeddings product's ingest actions (`/v1/docs/ingest` — upload/github/crawl) and
-  // per-file status (`/v1/get-files`). Bearer-required + org-scoped (owner from the
-  // token); a cookie-only call 401s, so they route through /v1 like the stores.
-  'docs',
   // The ai service (hanzoai/ai): /v1/ai/{stores,files,vectors,chats,messages,
-  // providers,routes,tasks,records,usages,account,…}. ONE SERVICE head, which is
-  // what a head-based allow-list is supposed to mean — this used to enumerate
-  // eight individual ROUTES (get-stores, add-store, …) because the surface had no
-  // namespace to enumerate.
+  // providers,routes,tasks,records,usages,account,rag,memory,router,org,finetune,…}.
+  // ONE SERVICE head, which is what a head-based allow-list is supposed to mean —
+  // this used to enumerate eight individual ROUTES (get-stores, add-store, …) plus a
+  // `docs` head for ingest, because the surface had no namespace to enumerate. It has
+  // one now: every route the capability serves is under /v1/ai (HIP-0139 §3.1), and
+  // the Embeddings ingest action came with it (`/v1/ai/rag/ingest`).
   'ai',
   // Embeddings/collections usage slice of the cloud-usage read API (`/v1/get-cloud-usages`).
   // Bearer-required; degrades to "—" but should read real data through /v1.

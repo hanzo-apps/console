@@ -1026,7 +1026,7 @@ export const catalog: CatalogEntry[] = [
   {
     // The org-user AI Usage & Training surface — the customer face of the virtual
     // `auto`/`zen-router` model, in three tabs:
-    //   Overview — routing observability + TRAINING status over `GET /v1/router/stats`
+    //   Overview — routing observability + TRAINING status over `GET /v1/ai/router/stats`
     //     (org-scoped): cost saved (a blended $/MTok proxy), a quality proxy, the
     //     per-task model mix, the last-retrain gate verdict, and the opt-in
     //     training-contribution toggle (the toggle lives ONLY here).
@@ -1034,7 +1034,7 @@ export const catalog: CatalogEntry[] = [
     //     imported connected-provider usage, via the shared `<AiUsagePanels>` that
     //     the `ai-metrics` module also renders (one usage implementation, DRY).
     //   Policy   — the org's own task→model-pool prefer table + cost ceiling over
-    //     `/v1/router/policy` (GET read + PUT write).
+    //     `/v1/ai/router/policy` (GET read + PUT write).
     // All org-admin gated + self-scoped server-side (org > "*" > conf per task key).
     // DISTINCT from the two routing surfaces beside it: `models`' admin "Routing" tab
     // flips PLATFORM ModelRoute config, and `ai-accounts`' Routing tab is the user's
@@ -3633,7 +3633,7 @@ export const catalog: CatalogEntry[] = [
   //    work into the one console, on real /v1 backends with honest states.
   {
     // The user's personal memory — what they've asked the assistant to remember.
-    // Per-user, on the /v1/memory backend (hanzoai/ai). `enabled`: the module
+    // Per-user, on the /v1/ai/memory backend (hanzoai/ai). `enabled`: the module
     // renders now and shows an honest "initializing" card until the backend is
     // deployed — never fabricated memories.
     id: 'memory',

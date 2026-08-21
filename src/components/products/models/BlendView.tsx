@@ -18,7 +18,7 @@
  *
  * HONESTY ABOUT PERSISTENCE. The gateway does not yet store the blend columns (see the
  * TODO in `~/lib/api/org-blend.ts` naming the required fields on the existing
- * `/v1/org/settings` GET + PUT noun). The client writes them for real and then re-reads to
+ * `/v1/ai/org/settings` GET + PUT noun). The client writes them for real and then re-reads to
  * check they survived; when they did not, this view says the blend could not be saved
  * rather than showing a confirmation for a write the backend discarded.
  */

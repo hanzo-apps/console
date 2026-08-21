@@ -4,7 +4,7 @@
  *
  * ┌─ ENDPOINT STATUS ──────────────────────────────────────────────────────────┐
  * │ TODO(hanzoai/ai): the OrgSettings row does not yet PERSIST the three blend  │
- * │ columns. Required, on the existing `/v1/org/settings` GET + PUT noun         │
+ * │ columns. Required, on the existing `/v1/ai/org/settings` GET + PUT noun      │
  * │ (no new endpoint — the row is the natural                                   │
  * │ home, beside routerPrefer/routerCostCeiling):                               │
  * │                                                                             │

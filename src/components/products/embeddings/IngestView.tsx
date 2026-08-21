@@ -95,7 +95,7 @@ export function IngestView({ owner }: { owner: string }) {
     if (!canIngest) return
     setIngest({ phase: 'loading' })
     try {
-      // One trigger, three real sources → the ONE /v1/docs/ingest endpoint. github/crawl
+      // One trigger, three real sources → the ONE /v1/ai/rag/ingest endpoint. github/crawl
       // return a durable tasks workflow id (async); upload indexes inline. No bespoke job.
       const stats =
         source === 'github'

@@ -44,7 +44,7 @@ export async function PUT(req: NextRequest) {
 
   // Cookie-only, deliberately. cloud-api now enforces per-org auto-routing via
   // `OrgSettings.AutoRouting` (hanzoai/ai), toggled through
-  // `PUT /v1/org/settings`. But that endpoint is `RequireGlobalAdmin`-gated
+  // `PUT /v1/ai/org/settings`. But that endpoint is `RequireGlobalAdmin`-gated
   // (like every /v1/*-model-route admin route) and is NOT gateway-exposed — it is
   // reachable only on the direct api.cloud.hanzo.ai ingress with a global-admin
   // session. This Routing tab is a CUSTOMER surface: `resolveUser` here is a tenant

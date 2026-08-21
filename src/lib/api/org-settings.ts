@@ -1,7 +1,7 @@
 /**
  * Org Settings (auto-routing) admin client — the config-as-Base surface over the
- * hanzoai/ai OrgSettings CRUD (`GET/PUT/DELETE /v1/org/settings` + `GET
- * /v1/org/settings/list`, all RequireSuperAdmin upstream).
+ * hanzoai/ai OrgSettings CRUD (`GET/PUT/DELETE /v1/ai/org/settings` + `GET
+ * /v1/ai/org/settings/list`, all RequireSuperAdmin upstream).
  *
  * OrgSettings is ONE Base/SQLite row per org keyed on `owner`, plus a reserved
  * `GlobalDefaultOwner` ("*") row that is the platform-wide default. Runtime policy
@@ -10,7 +10,7 @@
  * `autoRouting` (three-state: "" inherit / "enabled" / "disabled").
  *
  * READ-MODIFY-WRITE is the convention: the write reads the current row, overrides
- * only `autoRouting`, and PUTs the whole row back. The backend `PUT /v1/org/settings`
+ * only `autoRouting`, and PUTs the whole row back. The backend `PUT /v1/ai/org/settings`
  * PATCH-merges (a field ABSENT from the body keeps its value), so carrying the full raw
  * row through can never clobber the sibling routing-policy fields (routerPrefer,
  * routerCostCeiling, defaultSessionRouting, trainingContribution) that OTHER endpoints
@@ -67,7 +67,7 @@ export function normalizeOrgSettings(raw: unknown): OrgSettings {
   }
 }
 
-/** Parse the `org/settings/list` payload (an array) into rows, dropping any
+/** Parse the `ai/org/settings/list` payload (an array) into rows, dropping any
  *  row with no owner. Honest-empty on a null/garbage payload. */
 export function settingsFrom(payload: unknown): OrgSettings[] {
   const list = Array.isArray(payload) ? payload : []
@@ -129,13 +129,13 @@ export const OrgSettingsApi = {
    *  0-or-1 row per owner (owner is the PK) — the console composes these with the
    *  global "*" row and admin-added orgs. */
   list: async (owner?: string): Promise<OrgSettings[]> => {
-    const data = await originGet<unknown>('org/settings/list', owner ? { owner } : undefined)
+    const data = await originGet<unknown>('ai/org/settings/list', owner ? { owner } : undefined)
     return settingsFrom(data)
   },
 
   /** One org's settings row, or `null` when the org has no override yet. */
   get: async (owner: string): Promise<OrgSettings | null> => {
-    const data = await originGet<unknown>('org/settings', { owner })
+    const data = await originGet<unknown>('ai/org/settings', { owner })
     return data ? normalizeOrgSettings(data) : null
   },
 
@@ -150,12 +150,12 @@ export const OrgSettingsApi = {
     const current = await OrgSettingsApi.get(owner)
     if (state === 'inherit') {
       const plan = planRevert(current)
-      if (plan.op === 'delete') await originDelete('org/settings', { owner: plan.owner })
-      else if (plan.op === 'update') await originPut('org/settings', plan.row, { owner })
+      if (plan.op === 'delete') await originDelete('ai/org/settings', { owner: plan.owner })
+      else if (plan.op === 'update') await originPut('ai/org/settings', plan.row, { owner })
       return null
     }
     const row = planSave(current, owner, state)
-    await originPut('org/settings', row, { owner })
+    await originPut('ai/org/settings', row, { owner })
     return normalizeOrgSettings(row)
   },
 }

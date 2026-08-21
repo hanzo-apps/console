@@ -7,7 +7,7 @@
  * proxy (the live ingress does not rewrite bare `/v1/*`). Each call uses the transport
  * its endpoint speaks:
  *   - envelope (`{status,msg,data}`): ai/stores, ai/usages/cloud, ai/files,
- *     ai/stores, docs/ingest, index            → `cloudGet`/`cloudPost` (→ /v1)
+ *     ai/stores, ai/rag/ingest, index          → `cloudGet`/`cloudPost` (→ /v1)
  *   - raw JSON: search (`{hits}`), search/stats (`{documentCount,…}`) → `restGet`/`restPost`
  *     on `cloudProxyV1Url` (→ /v1)
  *   - OpenAI gateway (Bearer-only): embeddings  → the keyless `/ai` proxy (`originV1Url`)
@@ -199,7 +199,7 @@ export const EmbeddingsApi = {
 
   /** Ingest pasted text into a collection (source=upload — the balance-free path, inline). */
   ingestText: (store: string, name: string, content: string): Promise<IngestStats> =>
-    cloudPost<IngestStats>('docs/ingest', { store, source: 'upload', files: [{ name, content }] }).then((r) => r.data),
+    cloudPost<IngestStats>('ai/rag/ingest', { store, source: 'upload', files: [{ name, content }] }).then((r) => r.data),
 
   /**
    * Ingest a GitHub repo (source=github) — the backend clones it, code-aware-chunks
@@ -208,7 +208,7 @@ export const EmbeddingsApi = {
    * `workflowId` (tracked in the Tasks product), never a bespoke job. `repo` = "owner/name".
    */
   ingestGitHub: (store: string, repo: string, ref?: string): Promise<IngestStats> =>
-    cloudPost<IngestStats>('docs/ingest', {
+    cloudPost<IngestStats>('ai/rag/ingest', {
       store,
       source: 'github',
       github: { repo: repo.trim(), ...(ref?.trim() ? { ref: ref.trim() } : {}) },
@@ -219,7 +219,7 @@ export const EmbeddingsApi = {
    * `depth` links), extracts, chunks, embeds + indexes. Durable workflow like github.
    */
   ingestCrawl: (store: string, url: string, depth?: number): Promise<IngestStats> =>
-    cloudPost<IngestStats>('docs/ingest', {
+    cloudPost<IngestStats>('ai/rag/ingest', {
       store,
       source: 'crawl',
       crawl: { url: url.trim(), ...(depth && depth > 0 ? { depth } : {}) },
